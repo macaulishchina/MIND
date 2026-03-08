@@ -119,6 +119,15 @@ MIND 当前聚焦于四个核心问题：
 
 ---
 
+## 文档结构
+
+- [文档索引](./docs/README.md)
+- [阶段 A 正式规范](./docs/foundation/spec.md)
+- [设计拆解与实施主文档](./docs/design/design_breakdown.md)
+- [阶段验收与 phase gates](./docs/foundation/phase_gates.md)
+- [初始讨论文档](./docs/research/research_notes.md)
+---
+
 ## 路线图
 
 - [ ] 正式化 MIND 框架
