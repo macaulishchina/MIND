@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
+from mind.kernel.retrieval import build_query_embedding
 from mind.kernel.store import MemoryStore, PrimitiveTransaction, StoreError
 
 from .contracts import (
@@ -46,6 +47,7 @@ SummaryScope = {"episode", "task", "object_set"}
 InaccessibleStatuses = {"invalid"}
 PositiveReasonHints = ("boost", "increase", "raise", "up", "urgent")
 type VectorRetriever = Callable[[str | dict[str, Any], list[dict[str, Any]]], dict[str, float]]
+type QueryEmbedder = Callable[[str | dict[str, Any]], tuple[float, ...]]
 
 
 class PrimitiveService:
@@ -57,11 +59,13 @@ class PrimitiveService:
         *,
         clock: Callable[[], datetime] | None = None,
         vector_retriever: VectorRetriever | None = None,
+        query_embedder: QueryEmbedder | None = None,
     ) -> None:
         self.store = store
         self._clock = clock or _utc_now
         self._runtime = PrimitiveRuntime(store, clock=self._clock)
         self._vector_retriever = vector_retriever
+        self._query_embedder = query_embedder
 
     def write_raw(
         self,
@@ -314,42 +318,63 @@ class PrimitiveService:
         context: PrimitiveExecutionContext,
         store: MemoryStore,
     ) -> PrimitiveHandlerResult[RetrieveResponse]:
-        latest_objects = self._latest_objects(store.iter_objects())
-        filtered_objects = [
-            obj
-            for obj in latest_objects
-            if self._matches_filters(obj, request.filters.model_dump())
-        ]
+        filtered_objects = store.iter_latest_objects(
+            object_types=request.filters.object_types,
+            statuses=request.filters.statuses,
+            episode_id=request.filters.episode_id,
+            task_id=request.filters.task_id,
+        )
 
-        if RetrieveQueryMode.VECTOR in request.query_modes and self._vector_retriever is None:
+        if (
+            RetrieveQueryMode.VECTOR in request.query_modes
+            and self._vector_retriever is None
+            and self._query_embedder is None
+        ):
             raise self._reject(
                 PrimitiveErrorCode.RETRIEVAL_BACKEND_UNAVAILABLE,
                 "vector retrieval backend unavailable",
             )
 
-        scores: list[tuple[dict[str, Any], float]] = []
-        vector_scores = (
-            self._vector_retriever(request.query, filtered_objects)
-            if (
-                RetrieveQueryMode.VECTOR in request.query_modes
-                and self._vector_retriever is not None
-            )
-            else {}
-        )
-        for obj in filtered_objects:
-            score = 0.0
-            if RetrieveQueryMode.KEYWORD in request.query_modes:
-                score += self._keyword_score(request.query, obj)
-            if RetrieveQueryMode.TIME_WINDOW in request.query_modes:
-                score += self._time_window_score(request.query, obj)
-            if RetrieveQueryMode.VECTOR in request.query_modes:
-                score += vector_scores.get(obj["id"], 0.0)
-            if score > 0:
-                scores.append((obj, score))
+        max_candidates = request.budget.max_candidates or max(len(filtered_objects), 1)
+        if RetrieveQueryMode.VECTOR in request.query_modes and self._vector_retriever is not None:
+            scores: list[tuple[dict[str, Any], float]] = []
+            vector_scores = self._vector_retriever(request.query, filtered_objects)
+            for obj in filtered_objects:
+                score = 0.0
+                if RetrieveQueryMode.KEYWORD in request.query_modes:
+                    score += self._keyword_score(request.query, obj)
+                if RetrieveQueryMode.TIME_WINDOW in request.query_modes:
+                    score += self._time_window_score(request.query, obj)
+                if RetrieveQueryMode.VECTOR in request.query_modes:
+                    score += vector_scores.get(obj["id"], 0.0)
+                if score > 0:
+                    scores.append((obj, score))
 
-        scores.sort(key=lambda item: (item[1], item[0]["updated_at"]), reverse=True)
-        max_candidates = request.budget.max_candidates or len(scores)
-        selected = scores[:max_candidates]
+            scores.sort(key=lambda item: (item[1], item[0]["updated_at"]), reverse=True)
+            selected = scores[:max_candidates]
+            candidate_ids = [item[0]["id"] for item in selected]
+            candidate_scores = [round(item[1], 4) for item in selected]
+            retrieval_backend = "legacy_vector_override"
+        else:
+            query_embedding = (
+                (self._query_embedder or build_query_embedding)(request.query)
+                if RetrieveQueryMode.VECTOR in request.query_modes
+                else None
+            )
+            matches = store.search_latest_objects(
+                query=request.query,
+                query_modes=request.query_modes,
+                max_candidates=max_candidates,
+                object_types=request.filters.object_types,
+                statuses=request.filters.statuses,
+                episode_id=request.filters.episode_id,
+                task_id=request.filters.task_id,
+                query_embedding=query_embedding,
+            )
+            candidate_ids = [match.object["id"] for match in matches]
+            candidate_scores = [round(match.score, 4) for match in matches]
+            retrieval_backend = "store_search"
+
         retrieval_cost = [
             BudgetCost(
                 category=PrimitiveCostCategory.RETRIEVAL,
@@ -358,12 +383,11 @@ class PrimitiveService:
         ]
         self._enforce_budget(context, retrieval_cost, request.budget.max_cost)
 
-        candidate_ids = [item[0]["id"] for item in selected]
-        candidate_scores = [round(item[1], 4) for item in selected]
         evidence_summary = {
             "matched_modes": [mode.value for mode in request.query_modes],
             "filtered_count": len(filtered_objects),
             "returned_count": len(candidate_ids),
+            "retrieval_backend": retrieval_backend,
         }
         return PrimitiveHandlerResult(
             response=RetrieveResponse(
@@ -778,47 +802,6 @@ class PrimitiveService:
             cost=costs,
             metadata=metadata or {},
         )
-
-    @staticmethod
-    def _latest_objects(objects: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        latest_by_id: dict[str, dict[str, Any]] = {}
-        for obj in objects:
-            existing = latest_by_id.get(obj["id"])
-            if existing is None or int(obj["version"]) > int(existing["version"]):
-                latest_by_id[obj["id"]] = obj
-        return list(latest_by_id.values())
-
-    @staticmethod
-    def _matches_filters(obj: dict[str, Any], filters: dict[str, Any]) -> bool:
-        statuses: list[str] = filters.get("statuses", [])
-        if statuses:
-            if obj["status"] not in statuses:
-                return False
-        elif obj["status"] in InaccessibleStatuses:
-            return False
-
-        object_types: list[str] = filters.get("object_types", [])
-        if object_types and obj["type"] not in object_types:
-            return False
-
-        episode_id = filters.get("episode_id")
-        if episode_id is not None and not PrimitiveService._matches_episode(obj, episode_id):
-            return False
-
-        task_id = filters.get("task_id")
-        if task_id is not None and obj.get("metadata", {}).get("task_id") != task_id:
-            return False
-
-        return True
-
-    @staticmethod
-    def _matches_episode(obj: dict[str, Any], episode_id: str) -> bool:
-        metadata = obj.get("metadata", {})
-        if metadata.get("episode_id") == episode_id:
-            return True
-        if obj["id"] == episode_id:
-            return True
-        return episode_id in obj.get("source_refs", [])
 
     @staticmethod
     def _keyword_score(query: str | dict[str, Any], obj: dict[str, Any]) -> float:

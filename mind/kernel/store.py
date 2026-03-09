@@ -10,8 +10,9 @@ from pathlib import Path
 from types import TracebackType
 from typing import Any, Protocol
 
-from mind.primitives.contracts import BudgetEvent, PrimitiveCallLog
+from mind.primitives.contracts import BudgetEvent, PrimitiveCallLog, RetrieveQueryMode
 
+from .retrieval import RetrievalMatch, latest_objects, matches_retrieval_filters, search_objects
 from .schema import ensure_valid_object
 
 
@@ -35,6 +36,28 @@ class MemoryStore(Protocol):
     def read_object(self, object_id: str, version: int | None = None) -> dict[str, Any]: ...
 
     def iter_objects(self) -> list[dict[str, Any]]: ...
+
+    def iter_latest_objects(
+        self,
+        *,
+        object_types: Iterable[str] = (),
+        statuses: Iterable[str] = (),
+        episode_id: str | None = None,
+        task_id: str | None = None,
+    ) -> list[dict[str, Any]]: ...
+
+    def search_latest_objects(
+        self,
+        *,
+        query: str | dict[str, Any],
+        query_modes: Iterable[RetrieveQueryMode],
+        max_candidates: int,
+        object_types: Iterable[str] = (),
+        statuses: Iterable[str] = (),
+        episode_id: str | None = None,
+        task_id: str | None = None,
+        query_embedding: tuple[float, ...] | None = None,
+    ) -> list[RetrievalMatch]: ...
 
     def raw_records_for_episode(self, episode_id: str) -> list[dict[str, Any]]: ...
 
@@ -316,6 +339,51 @@ class SQLiteMemoryStore:
         ).fetchall()
         return [self._decode_row(row) for row in rows]
 
+    def iter_latest_objects(
+        self,
+        *,
+        object_types: Iterable[str] = (),
+        statuses: Iterable[str] = (),
+        episode_id: str | None = None,
+        task_id: str | None = None,
+    ) -> list[dict[str, Any]]:
+        latest_objects = _latest_objects(self.iter_objects())
+        return [
+            obj
+            for obj in latest_objects
+            if _matches_retrieval_filters(
+                obj,
+                object_types=object_types,
+                statuses=statuses,
+                episode_id=episode_id,
+                task_id=task_id,
+            )
+        ]
+
+    def search_latest_objects(
+        self,
+        *,
+        query: str | dict[str, Any],
+        query_modes: Iterable[RetrieveQueryMode],
+        max_candidates: int,
+        object_types: Iterable[str] = (),
+        statuses: Iterable[str] = (),
+        episode_id: str | None = None,
+        task_id: str | None = None,
+        query_embedding: tuple[float, ...] | None = None,
+    ) -> list[RetrievalMatch]:
+        return search_objects(
+            self.iter_objects(),
+            query=query,
+            query_modes=list(query_modes),
+            max_candidates=max_candidates,
+            object_types=list(object_types),
+            statuses=list(statuses),
+            episode_id=episode_id,
+            task_id=task_id,
+            query_embedding=query_embedding,
+        )
+
     def raw_records_for_episode(self, episode_id: str) -> list[dict[str, Any]]:
         records = [
             obj
@@ -517,6 +585,21 @@ class _SQLiteStoreTransaction:
     def iter_objects(self) -> list[dict[str, Any]]:
         return self._store.iter_objects()
 
+    def iter_latest_objects(
+        self,
+        *,
+        object_types: Iterable[str] = (),
+        statuses: Iterable[str] = (),
+        episode_id: str | None = None,
+        task_id: str | None = None,
+    ) -> list[dict[str, Any]]:
+        return self._store.iter_latest_objects(
+            object_types=object_types,
+            statuses=statuses,
+            episode_id=episode_id,
+            task_id=task_id,
+        )
+
     def raw_records_for_episode(self, episode_id: str) -> list[dict[str, Any]]:
         return self._store.raw_records_for_episode(episode_id)
 
@@ -525,3 +608,24 @@ class _SQLiteStoreTransaction:
 
     def record_budget_event(self, event: BudgetEvent | dict[str, Any]) -> None:
         self._store._write_budget_event(event)
+
+
+def _latest_objects(objects: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
+    return latest_objects(list(objects))
+
+
+def _matches_retrieval_filters(
+    obj: dict[str, Any],
+    *,
+    object_types: Iterable[str] = (),
+    statuses: Iterable[str] = (),
+    episode_id: str | None = None,
+    task_id: str | None = None,
+) -> bool:
+    return matches_retrieval_filters(
+        obj,
+        object_types=list(object_types),
+        statuses=list(statuses),
+        episode_id=episode_id,
+        task_id=task_id,
+    )

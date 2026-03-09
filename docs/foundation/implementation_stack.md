@@ -141,7 +141,15 @@
 - Phase D 是 PostgreSQL 迁移的自然触发点：`pgvector` 和 `pg_trgm` 要求 Postgres，将存储迁移与检索引入合并到同一阶段可减少集成风险。
 - 对中文、多语言和半结构文本，`pg_trgm` 比单纯依赖英文导向的 FTS 更稳妥，因此将其冻结为关键词检索的主路径。
 - `pgvector` 与 `Postgres` 同库共存，避免早期引入独立向量数据库带来的同步、权限、备份和一致性复杂度。
+- Phase D 之后的运行口径不是“双主库存储并存”，而是“`PostgreSQL` 作为正式主存储，`SQLite` 作为参考/测试后端保留”。
 - PostgreSQL backend 切换完成后，必须在新 backend 上重新执行 Phase B 的核心不变量检查，至少包括 round-trip、replay fidelity、source trace coverage 和 version integrity。
+
+当前状态：
+
+- PostgreSQL backend、Alembic migration、Retrieval v1、Workspace builder v1 已落地。
+- 当前仓库已建立 `RetrievalBenchmark v1`、`EpisodeAnswerBench v1`、本地 `Phase D smoke`、冻结的 `raw-top20 / workspace` context protocol，以及 answer-level `D-5` A/B benchmark。
+- 当前工作树已经通过本地 `Phase D acceptance gate`；正式口径见 [phase_d_acceptance_report.md](../reports/phase_d_acceptance_report.md)。
+- Phase D 之后的剩余工作不再是“补齐 D-5”，而是进入独立审计与 Phase E 的长期维护闭环。
 
 ### 3.4 Phase E：离线维护 / 反思 / 重组
 
@@ -255,6 +263,14 @@
 - `PostgreSQL 16` 是正式主存储（Phase D 起）
 - `SQLite` 保留为 Phase B / C 基线、CI 与测试后端
 - Redis 不作为主存储
+
+进一步说明：
+
+- `SQLite` 和 `PostgreSQL` 不是两个正式主存储；项目只有一个正式真相源，即 `PostgreSQL`。
+- `SQLite` 保留的目的，是提供一个低依赖、快启动、确定性的 reference backend，用于 Phase B / C 基线、单元测试、CI 和快速本地原型。
+- 新的正式能力以 `PostgreSQL` 为准，尤其是依赖 `JSONB`、`pg_trgm`、`pgvector`、Alembic migration、真实事务与索引能力的部分。
+- `SQLite` 继续存在，是为了验证上层 `MemoryStore` 语义没有漂移，而不是为了长期双写、双活或双真相源。
+- 一旦某项能力明显依赖 PostgreSQL 特性，不要求 `SQLite` 与其完全等价；此时 `SQLite` 只需继续承担最小语义基线与回归检查职责。
 
 ### 6.2 数据建模原则
 

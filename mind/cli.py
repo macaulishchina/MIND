@@ -15,6 +15,7 @@ from .kernel.postgres_store import (
     temporary_postgres_database,
 )
 from .primitives.phase_c import assert_phase_c_gate, evaluate_phase_c_gate
+from .workspace import assert_phase_d_smoke, evaluate_phase_d_smoke
 
 
 def phase_b_gate_main() -> int:
@@ -105,9 +106,15 @@ def postgres_regression_main(argv: Sequence[str] | None = None) -> int:
         store_factory = build_postgres_store_factory(database_dsn)
         phase_c_result = evaluate_phase_c_gate(Path("phase_c.pg"), store_factory=store_factory)
 
+    with temporary_postgres_database(args.dsn, prefix="mind_phase_d") as database_dsn:
+        run_postgres_migrations(database_dsn)
+        store_factory = build_postgres_store_factory(database_dsn)
+        phase_d_result = evaluate_phase_d_smoke(Path("phase_d.pg"), store_factory=store_factory)
+
     try:
         assert_phase_b_gate(phase_b_result)
         assert_phase_c_gate(phase_c_result)
+        assert_phase_d_smoke(phase_d_result)
     except RuntimeError as exc:
         raise SystemExit(str(exc)) from exc
 
@@ -115,6 +122,7 @@ def postgres_regression_main(argv: Sequence[str] | None = None) -> int:
     print("backend=postgresql")
     print(f"phase_b_gate={'PASS' if phase_b_result.phase_b_pass else 'FAIL'}")
     print(f"phase_c_gate={'PASS' if phase_c_result.phase_c_pass else 'FAIL'}")
+    print(f"phase_d_smoke={'PASS' if phase_d_result.phase_d_smoke_pass else 'FAIL'}")
     print(
         "phase_b_round_trip="
         f"{phase_b_result.round_trip_match_count}/{phase_b_result.round_trip_total}"
@@ -132,4 +140,67 @@ def postgres_regression_main(argv: Sequence[str] | None = None) -> int:
         "phase_c_rollback_atomic="
         f"{phase_c_result.rollback_atomic_count}/{phase_c_result.rollback_total}"
     )
+    print(
+        "phase_d_recall_at_20="
+        f"{phase_d_result.candidate_recall_at_20:.2f}"
+    )
+    print(
+        "phase_d_workspace_coverage="
+        f"{phase_d_result.workspace_gold_fact_coverage:.2f}"
+    )
+    print(
+        "phase_d_workspace_discipline="
+        f"{phase_d_result.workspace_slot_discipline_rate:.2f}"
+    )
+    print(
+        "phase_d_token_cost_ratio="
+        f"{phase_d_result.median_token_cost_ratio:.2f}"
+    )
+    print(
+        "phase_d_task_success_drop_pp="
+        f"{phase_d_result.task_success_drop_pp:.2f}"
+    )
+    return 0
+
+
+def phase_d_smoke_main() -> int:
+    """Run the local Phase D retrieval/workspace smoke baseline."""
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        result = evaluate_phase_d_smoke(Path(tmpdir) / "phase_d.sqlite3")
+
+    try:
+        assert_phase_d_smoke(result)
+    except RuntimeError as exc:
+        raise SystemExit(str(exc)) from exc
+
+    print("Phase D smoke baseline report")
+    print(f"retrieval_smoke_cases={result.smoke_case_count}")
+    print(f"retrieval_benchmark_cases={result.benchmark_case_count}")
+    print(f"answer_benchmark_cases={result.answer_benchmark_case_count}")
+    print(
+        "mode_smoke_successes="
+        f"keyword={result.keyword_smoke_successes},"
+        f"time_window={result.time_window_smoke_successes},"
+        f"vector={result.vector_smoke_successes}"
+    )
+    print(f"candidate_recall_at_20={result.candidate_recall_at_20:.2f}")
+    print(f"workspace_gold_fact_coverage={result.workspace_gold_fact_coverage:.2f}")
+    print(f"workspace_slot_discipline={result.workspace_slot_discipline_rate:.2f}")
+    print(f"workspace_source_ref_coverage={result.workspace_source_ref_coverage:.2f}")
+    print(f"median_token_cost_ratio={result.median_token_cost_ratio:.2f}")
+    print(f"raw_top20_task_success={result.raw_top20_task_success_rate:.2f}")
+    print(f"workspace_task_success={result.workspace_task_success_rate:.2f}")
+    print(f"task_success_drop_pp={result.task_success_drop_pp:.2f}")
+    print(f"raw_top20_answer_quality_score={result.raw_top20_answer_quality_score:.2f}")
+    print(f"workspace_answer_quality_score={result.workspace_answer_quality_score:.2f}")
+    print(f"raw_top20_task_success_proxy={result.raw_top20_task_success_proxy_rate:.2f}")
+    print(f"workspace_task_success_proxy={result.workspace_task_success_proxy_rate:.2f}")
+    print(f"task_success_proxy_drop_pp={result.task_success_proxy_drop_pp:.2f}")
+    print(f"D-1={'PASS' if result.d1_pass else 'FAIL'}")
+    print(f"D-2={'PASS' if result.d2_pass else 'FAIL'}")
+    print(f"D-3={'PASS' if result.d3_pass else 'FAIL'}")
+    print(f"D-4={'PASS' if result.d4_pass else 'FAIL'}")
+    print(f"D-5={'PASS' if result.d5_pass else 'FAIL'}")
+    print(f"phase_d_smoke={'PASS' if result.phase_d_smoke_pass else 'FAIL'}")
     return 0

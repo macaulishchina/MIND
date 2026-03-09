@@ -25,6 +25,7 @@ dev = [
 [project.scripts]
 mind-phase-b-gate = "mind.cli:phase_b_gate_main"
 mind-phase-c-gate = "mind.cli:phase_c_gate_main"
+mind-phase-d-smoke = "mind.cli:phase_d_smoke_main"
 mind-postgres-regression = "mind.cli:postgres_regression_main"
 
 [tool.pytest.ini_options]

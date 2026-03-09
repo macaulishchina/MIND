@@ -11,6 +11,7 @@ from mind.primitives.contracts import (
     PrimitiveExecutionContext,
     PrimitiveName,
     PrimitiveOutcome,
+    RetrieveResponse,
 )
 from mind.primitives.service import PrimitiveService
 
@@ -155,6 +156,89 @@ def test_budget_rejection_returns_explicit_error_code(tmp_path: Path) -> None:
         assert logs[0].outcome is PrimitiveOutcome.REJECTED
         assert logs[0].error is not None
         assert logs[0].error.code is PrimitiveErrorCode.BUDGET_EXHAUSTED
+
+
+def test_retrieve_uses_latest_versions_and_store_filters(tmp_path: Path) -> None:
+    db_path = tmp_path / "phase_d_retrieve.sqlite3"
+    showcase = build_core_object_showcase()
+    episode = build_golden_episode_set()[3]
+    invalid_task_episode: dict[str, Any] = {
+        "id": "invalid-showcase-episode",
+        "type": "TaskEpisode",
+        "content": {"title": "invalid showcase episode"},
+        "source_refs": [showcase[0]["id"]],
+        "created_at": FIXED_TIMESTAMP.isoformat(),
+        "updated_at": FIXED_TIMESTAMP.isoformat(),
+        "version": 1,
+        "status": "invalid",
+        "priority": 0.8,
+        "metadata": {
+            "task_id": "showcase-task",
+            "goal": "invalid task should not be retrieved by default",
+            "result": "failure",
+            "success": False,
+            "record_refs": [showcase[0]["id"]],
+        },
+    }
+
+    with SQLiteMemoryStore(db_path) as store:
+        store.insert_objects(showcase)
+        store.insert_objects(episode.objects)
+        store.insert_object(invalid_task_episode)
+        service = PrimitiveService(store, clock=lambda: FIXED_TIMESTAMP)
+        context = _context()
+
+        summary_result = service.retrieve(
+            {
+                "query": "revised corrected replay hints",
+                "query_modes": ["keyword"],
+                "budget": {"max_cost": 5.0, "max_candidates": 10},
+                "filters": {"object_types": ["SummaryNote"]},
+            },
+            context,
+        )
+        task_result = service.retrieve(
+            {
+                "query": "showcase episode",
+                "query_modes": ["keyword"],
+                "budget": {"max_cost": 5.0, "max_candidates": 10},
+                "filters": {"object_types": ["TaskEpisode"], "task_id": "showcase-task"},
+            },
+            context,
+        )
+
+        assert summary_result.outcome is PrimitiveOutcome.SUCCESS
+        assert summary_result.response is not None
+        summary_response = RetrieveResponse.model_validate(summary_result.response)
+        assert summary_response.candidate_ids.count(f"{episode.episode_id}-summary") == 1
+
+        assert task_result.outcome is PrimitiveOutcome.SUCCESS
+        assert task_result.response is not None
+        task_response = RetrieveResponse.model_validate(task_result.response)
+        assert task_response.candidate_ids == ["showcase-episode"]
+
+
+def test_retrieve_vector_requires_explicit_backend(tmp_path: Path) -> None:
+    db_path = tmp_path / "phase_c_vector_unavailable.sqlite3"
+    showcase = build_core_object_showcase()
+
+    with SQLiteMemoryStore(db_path) as store:
+        store.insert_objects(showcase)
+        service = PrimitiveService(store, clock=lambda: FIXED_TIMESTAMP)
+
+        result = service.retrieve(
+            {
+                "query": "vector:showcase-summary",
+                "query_modes": ["vector"],
+                "budget": {"max_cost": 5.0, "max_candidates": 5},
+                "filters": {"object_types": ["SummaryNote"]},
+            },
+            _context(),
+        )
+
+        assert result.outcome is PrimitiveOutcome.REJECTED
+        assert result.error is not None
+        assert result.error.code is PrimitiveErrorCode.RETRIEVAL_BACKEND_UNAVAILABLE
 
 
 def test_reorganize_simple_rollback_keeps_store_atomic(tmp_path: Path) -> None:

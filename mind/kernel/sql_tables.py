@@ -5,6 +5,9 @@ from __future__ import annotations
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB
 
+from .pgvector import Vector
+from .retrieval import EMBEDDING_DIM
+
 postgres_metadata = sa.MetaData()
 
 object_versions_table = sa.Table(
@@ -20,6 +23,7 @@ object_versions_table = sa.Table(
     sa.Column("status", sa.Text(), nullable=False),
     sa.Column("priority", sa.Float(), nullable=False),
     sa.Column("metadata_json", JSONB(astext_type=sa.Text()), nullable=False),
+    sa.Column("search_text", sa.Text(), nullable=False),
     sa.Column(
         "inserted_at",
         sa.DateTime(timezone=True),
@@ -31,6 +35,50 @@ object_versions_table = sa.Table(
 
 sa.Index("idx_object_versions_object_id", object_versions_table.c.object_id)
 sa.Index("idx_object_versions_type", object_versions_table.c.type)
+sa.Index("idx_object_versions_status", object_versions_table.c.status)
+sa.Index("idx_object_versions_updated_at", object_versions_table.c.updated_at)
+sa.Index(
+    "idx_object_versions_search_text_trgm",
+    object_versions_table.c.search_text,
+    postgresql_using="gin",
+    postgresql_ops={"search_text": "gin_trgm_ops"},
+)
+sa.Index(
+    "idx_object_versions_episode_id",
+    object_versions_table.c.metadata_json.op("->>")("episode_id"),
+)
+sa.Index(
+    "idx_object_versions_task_id",
+    object_versions_table.c.metadata_json.op("->>")("task_id"),
+)
+sa.Index(
+    "idx_object_versions_source_refs_gin",
+    object_versions_table.c.source_refs_json,
+    postgresql_using="gin",
+)
+
+object_embeddings_table = sa.Table(
+    "object_embeddings",
+    postgres_metadata,
+    sa.Column("object_id", sa.Text(), nullable=False),
+    sa.Column("version", sa.Integer(), nullable=False),
+    sa.Column("embedding_model", sa.Text(), nullable=False),
+    sa.Column("embedding", Vector(EMBEDDING_DIM), nullable=False),
+    sa.Column(
+        "inserted_at",
+        sa.DateTime(timezone=True),
+        nullable=False,
+        server_default=sa.text("CURRENT_TIMESTAMP"),
+    ),
+    sa.ForeignKeyConstraint(
+        ["object_id", "version"],
+        ["object_versions.object_id", "object_versions.version"],
+        ondelete="CASCADE",
+    ),
+    sa.PrimaryKeyConstraint("object_id", "version"),
+)
+
+sa.Index("idx_object_embeddings_model", object_embeddings_table.c.embedding_model)
 
 primitive_call_logs_table = sa.Table(
     "primitive_call_logs",
