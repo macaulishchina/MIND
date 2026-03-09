@@ -2,10 +2,18 @@
 
 from __future__ import annotations
 
+import argparse
+import os
 import tempfile
+from collections.abc import Sequence
 from pathlib import Path
 
 from .kernel.phase_b import assert_phase_b_gate, evaluate_phase_b_gate
+from .kernel.postgres_store import (
+    build_postgres_store_factory,
+    run_postgres_migrations,
+    temporary_postgres_database,
+)
 from .primitives.phase_c import assert_phase_c_gate, evaluate_phase_c_gate
 
 
@@ -67,4 +75,61 @@ def phase_c_gate_main() -> int:
     print(f"C-4={'PASS' if result.c4_pass else 'FAIL'}")
     print(f"C-5={'PASS' if result.c5_pass else 'FAIL'}")
     print(f"phase_c_gate={'PASS' if result.phase_c_pass else 'FAIL'}")
+    return 0
+
+
+def postgres_regression_main(argv: Sequence[str] | None = None) -> int:
+    """Run Phase B/C gates against a migrated PostgreSQL database."""
+
+    parser = argparse.ArgumentParser(
+        prog="mind-postgres-regression",
+        description="Run Phase B and Phase C regressions on PostgreSQL.",
+    )
+    parser.add_argument(
+        "--dsn",
+        default=os.environ.get("MIND_POSTGRES_DSN"),
+        help="Admin PostgreSQL DSN. Falls back to MIND_POSTGRES_DSN.",
+    )
+    args = parser.parse_args(list(argv) if argv is not None else None)
+
+    if not args.dsn:
+        raise SystemExit("Provide --dsn or set MIND_POSTGRES_DSN.")
+
+    with temporary_postgres_database(args.dsn, prefix="mind_phase_b") as database_dsn:
+        run_postgres_migrations(database_dsn)
+        store_factory = build_postgres_store_factory(database_dsn)
+        phase_b_result = evaluate_phase_b_gate(Path("phase_b.pg"), store_factory=store_factory)
+
+    with temporary_postgres_database(args.dsn, prefix="mind_phase_c") as database_dsn:
+        run_postgres_migrations(database_dsn)
+        store_factory = build_postgres_store_factory(database_dsn)
+        phase_c_result = evaluate_phase_c_gate(Path("phase_c.pg"), store_factory=store_factory)
+
+    try:
+        assert_phase_b_gate(phase_b_result)
+        assert_phase_c_gate(phase_c_result)
+    except RuntimeError as exc:
+        raise SystemExit(str(exc)) from exc
+
+    print("PostgreSQL regression report")
+    print("backend=postgresql")
+    print(f"phase_b_gate={'PASS' if phase_b_result.phase_b_pass else 'FAIL'}")
+    print(f"phase_c_gate={'PASS' if phase_c_result.phase_c_pass else 'FAIL'}")
+    print(
+        "phase_b_round_trip="
+        f"{phase_b_result.round_trip_match_count}/{phase_b_result.round_trip_total}"
+    )
+    print(f"phase_b_replay={phase_b_result.replay_match_count}/{phase_b_result.replay_total}")
+    print(
+        "phase_c_schema="
+        f"{phase_c_result.schema_valid_calls}/{phase_c_result.total_calls}"
+    )
+    print(
+        "phase_c_budget_rejections="
+        f"{phase_c_result.budget_rejection_match_count}/{phase_c_result.budget_total}"
+    )
+    print(
+        "phase_c_rollback_atomic="
+        f"{phase_c_result.rollback_atomic_count}/{phase_c_result.rollback_total}"
+    )
     return 0

@@ -142,6 +142,7 @@ MIND 当前聚焦于四个核心问题：
 - [Phase B 验收报告](./docs/reports/phase_b_acceptance_report.md)
 - [Phase C 独立审计报告](./docs/reports/phase_c_independent_audit.md)
 - [Phase C Golden Calls 独立审计报告](./docs/reports/phase_c_golden_calls_audit.md)
+- [PostgreSQL Store 审核报告](./docs/reports/postgres_store_audit.md)
 - [Phase C 验收报告](./docs/reports/phase_c_acceptance_report.md)
 
 ## 运行方式
@@ -153,16 +154,18 @@ uv sync --extra dev
 uv run pytest -q
 uv run mind-phase-b-gate
 uv run mind-phase-c-gate
+uv run mind-postgres-regression --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:5432/postgres
 uv run ruff check mind tests scripts
 uv run mypy
 ```
 
-如果本地还没有 `uv`，当前仓库仍兼容脚本执行方式：
+如果本地还没有 `uv`，当前仓库仍兼容项目虚拟环境下的脚本执行方式：
 
 ```bash
-python3 -m pytest -q
-python3 scripts/run_phase_b_gate.py
-python3 scripts/run_phase_c_gate.py
+.venv/bin/python -m pytest -q
+.venv/bin/python scripts/run_phase_b_gate.py
+.venv/bin/python scripts/run_phase_c_gate.py
+.venv/bin/python scripts/run_postgres_regression.py --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:5432/postgres
 ```
 
 当前本地 gate 基线输出应满足：
