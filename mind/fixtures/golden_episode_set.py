@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from mind.kernel.replay import episode_record_hash
 
@@ -18,7 +18,7 @@ class EpisodeFixture:
 
 def build_golden_episode_set() -> list[EpisodeFixture]:
     fixtures: list[EpisodeFixture] = []
-    base_time = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    base_time = datetime(2026, 1, 1, tzinfo=UTC)
 
     for index in range(1, 21):
         episode_id = f"episode-{index:03d}"
@@ -37,10 +37,15 @@ def build_golden_episode_set() -> list[EpisodeFixture]:
             clock += timedelta(minutes=1)
             return value
 
-        def raw_record(record_index: int, record_kind: str, content: dict) -> dict:
+        def raw_record(
+            record_index: int,
+            record_kind: str,
+            content: dict,
+            episode_identifier: str = episode_id,
+        ) -> dict:
             created_at = next_timestamp()
             return {
-                "id": f"{episode_id}-raw-{record_index:02d}",
+                "id": f"{episode_identifier}-raw-{record_index:02d}",
                 "type": "RawRecord",
                 "content": content,
                 "source_refs": [],
@@ -51,7 +56,7 @@ def build_golden_episode_set() -> list[EpisodeFixture]:
                 "priority": 0.4,
                 "metadata": {
                     "record_kind": record_kind,
-                    "episode_id": episode_id,
+                    "episode_id": episode_identifier,
                     "timestamp_order": record_index,
                 },
             }
@@ -162,7 +167,10 @@ def build_golden_episode_set() -> list[EpisodeFixture]:
             "id": summary_id,
             "type": "SummaryNote",
             "content": {
-                "summary": f"Episode {index} {'succeeded' if success else 'failed'} with concise replay cues."
+                "summary": (
+                    f"Episode {index} {'succeeded' if success else 'failed'} "
+                    "with concise replay cues."
+                )
             },
             "source_refs": raw_ids,
             "created_at": summary_v1_created_at,
@@ -211,7 +219,9 @@ def build_golden_episode_set() -> list[EpisodeFixture]:
                     "id": f"{episode_id}-reflection",
                     "type": "ReflectionNote",
                     "content": {
-                        "summary": f"Episode {index} exposed stale memory and should be revalidated."
+                        "summary": (
+                            f"Episode {index} exposed stale memory and should be revalidated."
+                        )
                     },
                     "source_refs": [task_episode["id"]] + raw_ids[-2:],
                     "created_at": reflection_created_at,
@@ -359,7 +369,7 @@ def build_core_object_showcase() -> list[dict]:
         "status": "active",
         "priority": 0.6,
         "metadata": {
-            "task_id": episode["metadata"]["task_id"],
+            "task_id": "showcase-task",
             "slot_limit": 4,
             "slots": [
                 {
@@ -393,4 +403,3 @@ def build_core_object_showcase() -> list[dict]:
         },
     }
     return [raw, episode, summary, reflection, entity, link, workspace, schema]
-

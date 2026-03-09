@@ -69,12 +69,12 @@ Phase C 的核心任务不是基础设施迁移，而是：
 
 ### 3.2 启动后第一时间要做
 
-- [ ] 建立 `pyproject.toml`
-- [ ] 建立 `uv` 依赖与命令入口
-- [ ] 引入 `pytest`
-- [ ] 引入 `ruff`
-- [ ] 引入 `mypy`
-- [ ] 建立 primitive request / response 的 typed schema
+- [x] 建立 `pyproject.toml`
+- [x] 建立 `uv` 依赖与命令入口
+- [x] 引入 `pytest`
+- [x] 引入 `ruff`
+- [x] 引入 `mypy`
+- [x] 建立 primitive request / response 的 typed schema
 
 这些项不阻断 Phase C 启动，但应作为第一个工作流优先完成；否则后续 contract test 和接口迭代会立刻失去约束。
 

@@ -4,9 +4,13 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Callable, Iterable
 from contextlib import AbstractContextManager
 from pathlib import Path
-from typing import Any, Callable, Iterable, Protocol, TypeAlias
+from types import TracebackType
+from typing import Any, Protocol
+
+from mind.primitives.contracts import BudgetEvent, PrimitiveCallLog
 
 from .schema import ensure_valid_object
 
@@ -22,6 +26,8 @@ class MemoryStore(Protocol):
 
     def insert_objects(self, objects: Iterable[dict[str, Any]]) -> None: ...
 
+    def transaction(self) -> PrimitiveTransactionContextManager: ...
+
     def has_object(self, object_id: str) -> bool: ...
 
     def versions_for_object(self, object_id: str) -> list[int]: ...
@@ -32,9 +38,40 @@ class MemoryStore(Protocol):
 
     def raw_records_for_episode(self, episode_id: str) -> list[dict[str, Any]]: ...
 
+    def record_primitive_call(self, log: PrimitiveCallLog | dict[str, Any]) -> None: ...
 
-MemoryStoreContextManager: TypeAlias = AbstractContextManager[MemoryStore]
-MemoryStoreFactory: TypeAlias = Callable[[Path], MemoryStoreContextManager]
+    def iter_primitive_call_logs(self) -> list[PrimitiveCallLog]: ...
+
+    def record_budget_event(self, event: BudgetEvent | dict[str, Any]) -> None: ...
+
+    def iter_budget_events(self) -> list[BudgetEvent]: ...
+
+
+class PrimitiveTransaction(Protocol):
+    """Primitive-scoped transaction contract for atomic write paths."""
+
+    def insert_object(self, obj: dict[str, Any]) -> None: ...
+
+    def insert_objects(self, objects: Iterable[dict[str, Any]]) -> None: ...
+
+    def has_object(self, object_id: str) -> bool: ...
+
+    def versions_for_object(self, object_id: str) -> list[int]: ...
+
+    def read_object(self, object_id: str, version: int | None = None) -> dict[str, Any]: ...
+
+    def iter_objects(self) -> list[dict[str, Any]]: ...
+
+    def raw_records_for_episode(self, episode_id: str) -> list[dict[str, Any]]: ...
+
+    def record_primitive_call(self, log: PrimitiveCallLog | dict[str, Any]) -> None: ...
+
+    def record_budget_event(self, event: BudgetEvent | dict[str, Any]) -> None: ...
+
+
+type MemoryStoreContextManager = AbstractContextManager[MemoryStore]
+type PrimitiveTransactionContextManager = AbstractContextManager[PrimitiveTransaction]
+type MemoryStoreFactory = Callable[[Path], MemoryStoreContextManager]
 
 
 class SQLiteMemoryStore:
@@ -45,15 +82,24 @@ class SQLiteMemoryStore:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.connection = sqlite3.connect(self.path)
         self.connection.row_factory = sqlite3.Row
+        self._transaction_open = False
         self._init_schema()
 
     def close(self) -> None:
+        if self._transaction_open:
+            self.connection.rollback()
+            self._transaction_open = False
         self.connection.close()
 
-    def __enter__(self) -> "SQLiteMemoryStore":
+    def __enter__(self) -> SQLiteMemoryStore:
         return self
 
-    def __exit__(self, exc_type, exc, tb) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
         self.close()
 
     def _init_schema(self) -> None:
@@ -81,30 +127,86 @@ class SQLiteMemoryStore:
         self.connection.execute(
             "CREATE INDEX IF NOT EXISTS idx_object_versions_type ON object_versions(type)"
         )
+        self.connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS primitive_call_logs (
+                call_id TEXT PRIMARY KEY,
+                primitive TEXT NOT NULL,
+                actor TEXT NOT NULL,
+                timestamp TEXT NOT NULL,
+                target_ids_json TEXT NOT NULL,
+                cost_json TEXT NOT NULL,
+                outcome TEXT NOT NULL,
+                request_json TEXT NOT NULL,
+                response_json TEXT,
+                error_json TEXT
+            )
+            """
+        )
+        self.connection.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_primitive_call_logs_timestamp
+            ON primitive_call_logs(timestamp)
+            """
+        )
+        self.connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS budget_events (
+                event_id TEXT PRIMARY KEY,
+                call_id TEXT NOT NULL,
+                scope_id TEXT NOT NULL,
+                primitive TEXT NOT NULL,
+                actor TEXT NOT NULL,
+                timestamp TEXT NOT NULL,
+                outcome TEXT NOT NULL,
+                cost_json TEXT NOT NULL,
+                metadata_json TEXT NOT NULL
+            )
+            """
+        )
+        self.connection.execute(
+            "CREATE INDEX IF NOT EXISTS idx_budget_events_call_id ON budget_events(call_id)"
+        )
         self.connection.commit()
 
     def insert_object(self, obj: dict[str, Any]) -> None:
-        ensure_valid_object(obj)
-        self._validate_and_insert(obj)
-        self.connection.commit()
+        with self.transaction() as transaction:
+            transaction.insert_object(obj)
 
     def insert_objects(self, objects: Iterable[dict[str, Any]]) -> None:
-        """Atomically insert a batch of objects.
+        with self.transaction() as transaction:
+            transaction.insert_objects(objects)
 
-        Either all objects are persisted or none are.  Pre-validates every
-        object *before* touching the database so that a validation failure
-        in the Nth object does not leave the first N-1 committed.
-        """
-        obj_list = list(objects)
-        for obj in obj_list:
-            ensure_valid_object(obj)
-        try:
-            for obj in obj_list:
-                self._validate_and_insert(obj)
-            self.connection.commit()
-        except Exception:
-            self.connection.rollback()
-            raise
+    def transaction(self) -> PrimitiveTransactionContextManager:
+        return _SQLiteStoreTransaction(self)
+
+    def record_primitive_call(self, log: PrimitiveCallLog | dict[str, Any]) -> None:
+        with self.transaction() as transaction:
+            transaction.record_primitive_call(log)
+
+    def iter_primitive_call_logs(self) -> list[PrimitiveCallLog]:
+        rows = self.connection.execute(
+            """
+            SELECT *
+            FROM primitive_call_logs
+            ORDER BY timestamp ASC, call_id ASC
+            """
+        ).fetchall()
+        return [self._decode_primitive_call_log(row) for row in rows]
+
+    def record_budget_event(self, event: BudgetEvent | dict[str, Any]) -> None:
+        with self.transaction() as transaction:
+            transaction.record_budget_event(event)
+
+    def iter_budget_events(self) -> list[BudgetEvent]:
+        rows = self.connection.execute(
+            """
+            SELECT *
+            FROM budget_events
+            ORDER BY timestamp ASC, event_id ASC
+            """
+        ).fetchall()
+        return [self._decode_budget_event(row) for row in rows]
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -222,6 +324,104 @@ class SQLiteMemoryStore:
         ]
         return sorted(records, key=lambda item: item["metadata"]["timestamp_order"])
 
+    def _begin_transaction(self) -> None:
+        if self._transaction_open:
+            raise StoreError("nested primitive transactions are not supported")
+        self.connection.execute("BEGIN")
+        self._transaction_open = True
+
+    def _commit_transaction(self) -> None:
+        if not self._transaction_open:
+            raise StoreError("no active transaction to commit")
+        self.connection.commit()
+        self._transaction_open = False
+
+    def _rollback_transaction(self) -> None:
+        if not self._transaction_open:
+            return
+        self.connection.rollback()
+        self._transaction_open = False
+
+    def _write_primitive_call(self, log: PrimitiveCallLog | dict[str, Any]) -> None:
+        validated = PrimitiveCallLog.model_validate(log)
+        self.connection.execute(
+            """
+            INSERT INTO primitive_call_logs (
+                call_id,
+                primitive,
+                actor,
+                timestamp,
+                target_ids_json,
+                cost_json,
+                outcome,
+                request_json,
+                response_json,
+                error_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                validated.call_id,
+                validated.primitive.value,
+                validated.actor,
+                validated.timestamp.isoformat(),
+                json.dumps(validated.target_ids, ensure_ascii=True),
+                json.dumps(
+                    [item.model_dump(mode="json") for item in validated.cost],
+                    ensure_ascii=True,
+                    sort_keys=True,
+                ),
+                validated.outcome.value,
+                json.dumps(validated.request, ensure_ascii=True, sort_keys=True),
+                (
+                    json.dumps(validated.response, ensure_ascii=True, sort_keys=True)
+                    if validated.response is not None
+                    else None
+                ),
+                (
+                    json.dumps(
+                        validated.error.model_dump(mode="json"),
+                        ensure_ascii=True,
+                        sort_keys=True,
+                    )
+                    if validated.error is not None
+                    else None
+                ),
+            ),
+        )
+
+    def _write_budget_event(self, event: BudgetEvent | dict[str, Any]) -> None:
+        validated = BudgetEvent.model_validate(event)
+        self.connection.execute(
+            """
+            INSERT INTO budget_events (
+                event_id,
+                call_id,
+                scope_id,
+                primitive,
+                actor,
+                timestamp,
+                outcome,
+                cost_json,
+                metadata_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                validated.event_id,
+                validated.call_id,
+                validated.scope_id,
+                validated.primitive.value,
+                validated.actor,
+                validated.timestamp.isoformat(),
+                validated.outcome.value,
+                json.dumps(
+                    [item.model_dump(mode="json") for item in validated.cost],
+                    ensure_ascii=True,
+                    sort_keys=True,
+                ),
+                json.dumps(validated.metadata, ensure_ascii=True, sort_keys=True),
+            ),
+        )
+
     @staticmethod
     def _decode_row(row: sqlite3.Row) -> dict[str, Any]:
         return {
@@ -236,3 +436,92 @@ class SQLiteMemoryStore:
             "priority": float(row["priority"]),
             "metadata": json.loads(row["metadata_json"]),
         }
+
+    @staticmethod
+    def _decode_primitive_call_log(row: sqlite3.Row) -> PrimitiveCallLog:
+        payload: dict[str, Any] = {
+            "call_id": row["call_id"],
+            "primitive": row["primitive"],
+            "actor": row["actor"],
+            "timestamp": row["timestamp"],
+            "target_ids": json.loads(row["target_ids_json"]),
+            "cost": json.loads(row["cost_json"]),
+            "outcome": row["outcome"],
+            "request": json.loads(row["request_json"]),
+            "response": json.loads(row["response_json"]) if row["response_json"] else None,
+            "error": json.loads(row["error_json"]) if row["error_json"] else None,
+        }
+        return PrimitiveCallLog.model_validate(payload)
+
+    @staticmethod
+    def _decode_budget_event(row: sqlite3.Row) -> BudgetEvent:
+        payload: dict[str, Any] = {
+            "event_id": row["event_id"],
+            "call_id": row["call_id"],
+            "scope_id": row["scope_id"],
+            "primitive": row["primitive"],
+            "actor": row["actor"],
+            "timestamp": row["timestamp"],
+            "outcome": row["outcome"],
+            "cost": json.loads(row["cost_json"]),
+            "metadata": json.loads(row["metadata_json"]),
+        }
+        return BudgetEvent.model_validate(payload)
+
+
+class _SQLiteStoreTransaction:
+    """Explicit transaction wrapper used by Phase C write paths."""
+
+    def __init__(self, store: SQLiteMemoryStore) -> None:
+        self._store = store
+
+    def __enter__(self) -> _SQLiteStoreTransaction:
+        self._store._begin_transaction()
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
+        if exc_type is None:
+            try:
+                self._store._commit_transaction()
+            except Exception:
+                self._store._rollback_transaction()
+                raise
+            return
+        self._store._rollback_transaction()
+
+    def insert_object(self, obj: dict[str, Any]) -> None:
+        ensure_valid_object(obj)
+        self._store._validate_and_insert(obj)
+
+    def insert_objects(self, objects: Iterable[dict[str, Any]]) -> None:
+        obj_list = list(objects)
+        for obj in obj_list:
+            ensure_valid_object(obj)
+        for obj in obj_list:
+            self._store._validate_and_insert(obj)
+
+    def has_object(self, object_id: str) -> bool:
+        return self._store.has_object(object_id)
+
+    def versions_for_object(self, object_id: str) -> list[int]:
+        return self._store.versions_for_object(object_id)
+
+    def read_object(self, object_id: str, version: int | None = None) -> dict[str, Any]:
+        return self._store.read_object(object_id, version)
+
+    def iter_objects(self) -> list[dict[str, Any]]:
+        return self._store.iter_objects()
+
+    def raw_records_for_episode(self, episode_id: str) -> list[dict[str, Any]]:
+        return self._store.raw_records_for_episode(episode_id)
+
+    def record_primitive_call(self, log: PrimitiveCallLog | dict[str, Any]) -> None:
+        self._store._write_primitive_call(log)
+
+    def record_budget_event(self, event: BudgetEvent | dict[str, Any]) -> None:
+        self._store._write_budget_event(event)

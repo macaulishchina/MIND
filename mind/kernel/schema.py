@@ -5,7 +5,6 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-
 CORE_OBJECT_TYPES = {
     "RawRecord",
     "TaskEpisode",
@@ -89,7 +88,7 @@ def _validate_slot(slot: Any, index: int) -> list[str]:
         errors.append(f"workspace slot {index} source_refs must be a list")
     if "evidence_refs" in slot and not isinstance(slot["evidence_refs"], list):
         errors.append(f"workspace slot {index} evidence_refs must be a list")
-    if "priority" in slot and not isinstance(slot["priority"], (int, float)):
+    if "priority" in slot and not isinstance(slot["priority"], int | float):
         errors.append(f"workspace slot {index} priority must be numeric")
     return errors
 
@@ -124,10 +123,12 @@ def validate_object(obj: dict[str, Any]) -> list[str]:
     if object_type not in CORE_OBJECT_TYPES:
         errors.append(f"field 'type' must be one of {sorted(CORE_OBJECT_TYPES)}")
 
-    if not isinstance(content, (str, dict)):
+    if not isinstance(content, str | dict):
         errors.append("field 'content' must be a string or object")
 
-    if not isinstance(source_refs, list) or any(not isinstance(item, str) or not item for item in source_refs):
+    if not isinstance(source_refs, list) or any(
+        not isinstance(item, str) or not item for item in source_refs
+    ):
         errors.append("field 'source_refs' must be a list of non-empty strings")
 
     if not _is_iso_datetime(obj["created_at"]):
@@ -142,7 +143,7 @@ def validate_object(obj: dict[str, Any]) -> list[str]:
     if status not in VALID_STATUS:
         errors.append(f"field 'status' must be one of {sorted(VALID_STATUS)}")
 
-    if not isinstance(priority, (int, float)) or not 0 <= float(priority) <= 1:
+    if not isinstance(priority, int | float) or not 0 <= float(priority) <= 1:
         errors.append("field 'priority' must be a float in [0, 1]")
 
     if not isinstance(metadata, dict):
@@ -188,7 +189,11 @@ def validate_object(obj: dict[str, Any]) -> list[str]:
             errors.append("LinkEdge content must be an object")
         else:
             for field in ("src_id", "dst_id", "relation_type"):
-                if field not in content or not isinstance(content[field], str) or not content[field]:
+                if (
+                    field not in content
+                    or not isinstance(content[field], str)
+                    or not content[field]
+                ):
                     errors.append(f"LinkEdge content missing non-empty string field '{field}'")
         if "evidence_refs" in metadata and not isinstance(metadata["evidence_refs"], list):
             errors.append("LinkEdge metadata.evidence_refs must be a list")
@@ -216,4 +221,3 @@ def ensure_valid_object(obj: dict[str, Any]) -> None:
     if errors:
         joined = "; ".join(errors)
         raise SchemaValidationError(joined)
-

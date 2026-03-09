@@ -142,8 +142,21 @@ MIND 当前聚焦于四个核心问题：
 
 ## 运行方式
 
+推荐从 Phase C 起统一使用 `pyproject.toml` + `uv`：
+
+```bash
+uv sync --extra dev
+uv run pytest
+uv run mind-phase-b-gate
+uv run ruff check .
+uv run mypy
+```
+
+如果本地还没有 `uv`，当前仓库仍兼容原有 Phase B 基线命令：
+
 ```bash
 python3 -m unittest discover -s tests -v
+python3 -m pytest
 python3 scripts/run_phase_b_gate.py
 ```
 
