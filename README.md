@@ -108,14 +108,24 @@ MIND 当前聚焦于四个核心问题：
 
 ## 当前状态
 
-这个项目目前处于 **概念设计 / 研究框架** 阶段。
+这个项目目前已有一套 **通过本地 Phase B gate 的基线实现**。
 
 当前重点包括：
 
-- 定义记忆世界（memory world）
-- 设计基础记忆原语（primitive operations）
-- 构建记忆成长闭环（memory growth loop）
-- 调研 agent memory 与 test-time learning 相关工作
+- 冻结 Phase A 规范与验收标准
+- 落地 Phase B 最小记忆内核
+- 构建可追溯、可回放、可版本化的对象存储
+- 为后续 primitive API 和 retrieval/workspace 阶段打底
+
+当前 Phase B 基线实现包括：
+
+- `mind/kernel/schema.py`：8 类核心对象的 schema validator
+- `mind/kernel/store.py`：基于 SQLite 的 append-only version store
+- `mind/kernel/integrity.py`：trace / cycle / version chain 完整性检查
+- `mind/kernel/replay.py`：golden episode replay 与事件顺序 hash
+- `mind/fixtures/golden_episode_set.py`：`20` 个 golden episodes 与 8 类对象样例
+- `scripts/run_phase_b_gate.py`：本地 gate baseline 检查入口
+- `tests/test_phase_b_gate.py`：Phase B 单元测试
 
 ---
 
@@ -124,8 +134,27 @@ MIND 当前聚焦于四个核心问题：
 - [文档索引](./docs/README.md)
 - [阶段 A 正式规范](./docs/foundation/spec.md)
 - [设计拆解与实施主文档](./docs/design/design_breakdown.md)
+- [Phase C 启动清单](./docs/design/phase_c_startup_checklist.md)
 - [阶段验收与 phase gates](./docs/foundation/phase_gates.md)
+- [实现技术栈冻结文档](./docs/foundation/implementation_stack.md)
 - [初始讨论文档](./docs/research/research_notes.md)
+- [Phase B 验收报告](./docs/reports/phase_b_acceptance_report.md)
+
+## 运行方式
+
+```bash
+python3 -m unittest discover -s tests -v
+python3 scripts/run_phase_b_gate.py
+```
+
+当前 Phase B 基线 gate 输出应满足：
+
+- `source_trace_coverage=1.00`
+- `metadata_coverage=1.00`
+- `dangling_refs=0`
+- `cycles=0`
+- `version_chain_issues=0`
+
 ---
 
 ## 路线图
