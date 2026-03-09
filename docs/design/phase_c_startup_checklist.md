@@ -1,11 +1,12 @@
 # Phase C 启动清单
 
 日期：`2026-03-08`
+最近更新：`2026-03-09`
 
 适用对象：
 
-- 当前仓库的 Phase B 基线实现
-- 即将开始的 Phase C `Primitive API` 工作
+- 当前仓库的 Phase C 启动与收敛工作
+- 已完成 Phase B、已通过本地 Phase C gate 的实现基线
 
 相关文档：
 
@@ -14,6 +15,8 @@
 - 技术栈冻结见 [implementation_stack.md](../foundation/implementation_stack.md)
 - Phase B 验收见 [phase_b_acceptance_report.md](../reports/phase_b_acceptance_report.md)
 - Phase B 独立审计见 [phase_b_independent_audit.md](../reports/phase_b_independent_audit.md)
+- Phase C 独立审计见 [phase_c_independent_audit.md](../reports/phase_c_independent_audit.md)
+- Phase C 验收见 [phase_c_acceptance_report.md](../reports/phase_c_acceptance_report.md)
 
 ---
 
@@ -31,18 +34,21 @@ Phase C 的核心任务不是基础设施迁移，而是：
 
 ---
 
-## 2. 当前起点
+## 2. 当前状态
 
-当前仓库已经满足 Phase C 启动的最低前置条件：
+当前仓库已经不再只是“满足 Phase C 启动条件”，而是已经完成启动项并通过本地 Phase C gate：
 
 - Phase A 规范已冻结
 - Phase B gate 已通过
-- 独立审计已完成，且没有留下阻断 Phase C 启动的未修复缺陷
+- Phase C 独立审计已完成
+- `PrimitiveGoldenCalls v1` 已建立
+- Phase C gate 已通过
 
 当前已验证事实：
 
-- `python3 -m unittest discover -s tests -v`：`8/8` 通过
+- `python3 -m pytest -q`：`22 passed`
 - `python3 scripts/run_phase_b_gate.py`：`B-1 ~ B-5` 全部 `PASS`
+- `python3 scripts/run_phase_c_gate.py`：`C-1 ~ C-5` 全部 `PASS`
 
 当前已有的底座能力：
 
@@ -51,8 +57,11 @@ Phase C 的核心任务不是基础设施迁移，而是：
 - source trace / cycle / version chain 审计
 - episode replay 与事件顺序 hash
 - `GoldenEpisodeSet v1`
-- `MemoryStore` 最小协议
-- 可复用的 Phase B gate 入口
+- `MemoryStore` 最小协议与 primitive 级事务边界
+- typed primitive request / response contract
+- `PrimitiveService`、结构化调用日志与 budget events
+- `PrimitiveGoldenCalls v1`
+- 可复用的 Phase B / Phase C gate 入口
 
 ---
 
@@ -67,7 +76,7 @@ Phase C 的核心任务不是基础设施迁移，而是：
 - [x] 跨版本类型变更已被 store 拒绝
 - [x] `MemoryStore` 协议已从 SQLite 实现中抽出
 
-### 3.2 启动后第一时间要做
+### 3.2 已完成的启动项
 
 - [x] 建立 `pyproject.toml`
 - [x] 建立 `uv` 依赖与命令入口
@@ -76,13 +85,13 @@ Phase C 的核心任务不是基础设施迁移，而是：
 - [x] 引入 `mypy`
 - [x] 建立 primitive request / response 的 typed schema
 
-这些项不阻断 Phase C 启动，但应作为第一个工作流优先完成；否则后续 contract test 和接口迭代会立刻失去约束。
+这些项已完成，保留在清单中作为 Phase C 启动收敛记录。
 
 ---
 
 ## 4. 优先级分级
 
-### P0：Phase C 第一周内必须完成
+### P0：已完成
 
 1. **工程骨架收敛**
    - 建立 `pyproject.toml`
@@ -106,7 +115,7 @@ Phase C 的核心任务不是基础设施迁移，而是：
    - 冻结 `actor / timestamp / target_ids / cost / outcome`
    - 明确 success / failure / rejected / rolled_back 等 outcome 值域
 
-### P1：Phase C 周期内应完成
+### P1：已完成
 
 1. **metadata typed validation 增强**
    - 优先补 `EntityNode.alias`
@@ -123,14 +132,14 @@ Phase C 的核心任务不是基础设施迁移，而是：
    - 补 slot 的最小 traceability 规则
 
 4. **PrimitiveGoldenCalls v1**
-   - 建立 `>= 200` 条 primitive 调用样例
-   - 覆盖正常、异常、超预算、回滚场景
+   - 已建立 `200` 条 primitive 调用样例
+   - 已覆盖正常、异常、超预算、回滚场景
 
 5. **对象覆盖补强**
    - 把 `EntityNode / LinkEdge / SchemaNote / WorkspaceView` 纳入端到端调用路径
    - 不再只靠 showcase 验证“可被 store 接受”
 
-### P2：Phase C 中后段或 D 前完成
+### P2：后续阶段继续推进
 
 1. **局部性能债清理**
    - `raw_records_for_episode()` 改为 SQL 级过滤
@@ -197,33 +206,31 @@ Phase C 的核心任务不是基础设施迁移，而是：
 
 ### 高优先级问题
 
-1. `MemoryStore` 还没有 primitive 级事务 API。
-2. `B-5` 当前更接近“metadata 字段存在率”，还不是严格 typed compliance。
-3. `WorkspaceView` 的关键 contract 已在 spec 冻结，但 validator 尚未执行这些约束。
+1. 当前无阻断 Phase C 的高优先级缺口。
 
 ### 中优先级问题
 
-1. `LinkEdge` 的语义引用不在 integrity report 审计范围内。
-2. `GoldenEpisodeSet v1` 的 episode 级路径只覆盖 `4/8` 对象类型。
-3. `raw_records_for_episode()` 仍然是全表扫描。
+1. `_enforce_budget` 仍在 Python 侧遍历全部 budget events，Phase D 前应收敛到 SQL 级过滤。
+2. `_retrieve` 与 `raw_records_for_episode()` 仍存在全表扫描路径。
+3. 时间一致性规则（如 `created_at <= updated_at`）尚未执行化。
 
 ### 低优先级问题
 
-1. 时间戳一致性规则尚未执行化。
-2. `content` 深度校验尚未冻结。
-3. 文档索引仍可继续补全，例如将独立审计纳入统一入口。
+1. `_summarize_text` 仍是占位实现，质量优化属于后续阶段工作。
+2. `GoldenEpisodeSet v1` 仍主要服务 Phase B，episode 级对象覆盖仍可继续补强。
+3. `content` 深度校验尚未冻结。
 
 ---
 
-## 8. 开放问题
+## 8. 关键决策收敛
 
-以下问题建议在 Phase C 第一周内明确，不要边做边摇摆：
+以下关键决策已经在 Phase C 内收敛完成：
 
-1. primitive 的默认暴露形态是否统一为 Python service object，而不是裸函数集合？
-2. `MemoryStore` 的事务 API 采用显式 `transaction()` 上下文，还是更高层的 unit-of-work？
-3. `budget state` 是否在 Phase C 就落为可持久化对象，还是先作为独立 side-channel contract？
-4. `reorganize_simple` 是否在实现层立即拆成内部子操作，还是先保留单入口、内部枚举 action kind？
-5. `Pydantic v2` 是否只用于 request / response，还是直接逐步替换当前对象 validator？
+1. primitive 的默认暴露形态统一为 Python service object，而不是裸函数集合。
+2. `MemoryStore` 的事务 API 采用显式 `transaction()` 上下文。
+3. `budget state` 先以持久化 `budget_events` + contract 约束落地，不提前抽象为独立对象体系。
+4. `reorganize_simple` 继续保留单入口，内部使用 action kind 区分子操作。
+5. `Pydantic v2` 已用于 primitive request / response，对象 validator 继续按需增量补强。
 
 ---
 
@@ -244,19 +251,20 @@ Phase C 的核心任务不是基础设施迁移，而是：
 
 ## 10. 完成定义
 
-当且仅当以下条件满足时，可以认为 Phase C 启动完成并进入稳定开发轨道：
+以下条件现均已满足，因此可以认为 Phase C 启动工作已经完成并进入稳定开发轨道：
 
 - 工程骨架已经统一
 - `7` 个 primitive 的 typed contract 已冻结
 - primitive 的执行边界和失败语义已明确
 - 结构化日志模型已存在
 - transaction / rollback 路径已可测试
-- `PrimitiveGoldenCalls v1` 已开始建立
+- `PrimitiveGoldenCalls v1` 已建立并纳入 gate
+- Phase C smoke gate 已通过
 
-这并不等于 `Phase C PASS`，但意味着可以开始按 gate 收敛，而不是继续争论起步方式。
+这不仅意味着“启动完成”，也意味着 Phase C 已经具备可验收、可回归的闭环。
 
 ---
 
 ## 11. 一句话结论
 
-Phase C 现在可以启动，但应该按“先 contract、再事务、再日志、再覆盖面”的顺序推进，而不是先引入新基础设施或提前做检索系统。
+Phase C 启动工作已经完成；这份文档现在的作用是保留启动与收敛轨迹。后续重点应转向 Phase D 的 retrieval / workspace，而不是继续争论 Phase C 该如何起步。

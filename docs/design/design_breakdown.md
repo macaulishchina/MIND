@@ -140,19 +140,17 @@ MIND 可以被理解为下面这个闭环：
 
 ### 3. Primitive Operations
 
-模型可以对记忆世界执行的基础动作，例如：
+当前冻结的基础动作是：
 
+- `write_raw`
 - `read`
-- `write`
 - `retrieve`
 - `summarize`
 - `link`
-- `split`
-- `merge`
 - `reflect`
-- `reorganize`
-- `archive`
-- `evaluate`
+- `reorganize_simple`
+
+更细粒度的 `split / merge / archive / evaluate` 只保留为后续候选动作，不属于当前冻结的 primitive 集合。
 
 ### 4. Utility Objective
 

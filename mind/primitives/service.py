@@ -248,6 +248,7 @@ class PrimitiveService:
             },
         }
         transaction.insert_object(raw_object)
+        self._after_write_operation(PrimitiveName.WRITE_RAW)
         return PrimitiveHandlerResult(
             response=WriteRawResponse(object_id=object_id, version=1),
             target_ids=(object_id,),
@@ -433,6 +434,7 @@ class PrimitiveService:
                 "summary validation failed",
                 details={"input_refs": list(request.input_refs)},
             ) from exc
+        self._after_write_operation(PrimitiveName.SUMMARIZE)
 
         return PrimitiveHandlerResult(
             response=SummarizeResponse(summary_object_id=summary_object_id),
@@ -492,6 +494,7 @@ class PrimitiveService:
             },
         }
         transaction.insert_object(link_object)
+        self._after_write_operation(PrimitiveName.LINK)
 
         return PrimitiveHandlerResult(
             response=LinkResponse(link_object_id=link_object_id),
@@ -561,6 +564,7 @@ class PrimitiveService:
                 "reflection validation failed",
                 details={"episode_id": request.episode_id},
             ) from exc
+        self._after_write_operation(PrimitiveName.REFLECT)
 
         return PrimitiveHandlerResult(
             response=ReflectResponse(reflection_object_id=reflection_object_id),
@@ -620,6 +624,7 @@ class PrimitiveService:
                 next_version = self._reorganized_version(target_object, request)
                 transaction.insert_object(next_version)
                 updated_ids.append(target_object["id"])
+        self._after_write_operation(PrimitiveName.REORGANIZE_SIMPLE)
 
         return PrimitiveHandlerResult(
             response=ReorganizeSimpleResponse(
@@ -920,6 +925,9 @@ class PrimitiveService:
     @staticmethod
     def _new_object_id(prefix: str) -> str:
         return f"{prefix}-{uuid4().hex[:12]}"
+
+    def _after_write_operation(self, primitive: PrimitiveName) -> None:
+        """Optional hook for tests and gate fault injection."""
 
 
 def _tokenize(text: str) -> set[str]:

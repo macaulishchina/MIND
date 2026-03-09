@@ -2,6 +2,8 @@
 
 审计日期：`2026-03-09`
 
+时点说明：本报告记录的是 Phase C 从“准备完毕”推进到“primitive 开始可用”这一审计时点的结论。后续 `PrimitiveGoldenCalls v1` 建立完成、Phase C gate 全量通过后的最新状态，见 [phase_c_acceptance_report.md](./phase_c_acceptance_report.md)。
+
 审计人：独立审计（非原开发者）
 
 审计范围：

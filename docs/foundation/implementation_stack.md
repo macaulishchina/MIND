@@ -1,6 +1,7 @@
 # MIND 实现技术栈冻结文档
 
 冻结日期：`2026-03-08`
+最近更新：`2026-03-09`
 
 适用范围：
 
@@ -37,7 +38,7 @@
 | --- | --- | --- | --- |
 | 核心实现语言 | `Python 3.12` | 已冻结 | 作为 Phase B 之后的主实现语言 |
 | 项目配置与依赖管理 | `pyproject.toml` + `uv` | 已冻结 | 后续依赖、脚本、锁文件统一走这一套 |
-| 数据模型校验 | `Pydantic v2` | 已冻结 | Phase B 当前仍有手写 validator，Phase C 起转为显式 typed models |
+| 数据模型校验 | `Pydantic v2` | 已冻结 | 对象 validator 仍保留手写实现；primitive request / response 已转为显式 typed models |
 | SQL 访问层 | `SQLAlchemy 2 Core` + `psycopg 3` | 已冻结 | 只用 Core，不采用 ORM domain mapping |
 | 数据库迁移 | `Alembic` | 已冻结 | Postgres 阶段的 schema 变更必须走 migration |
 | 本地最小存储 | `SQLite` | 已冻结 | Phase B / C 基线、CI、快速本地原型 |
@@ -108,6 +109,12 @@
 - `MemoryStore` 抽象是 Phase C 的必做项，因为 primitive 一旦直接绑定到 SQLite 细节，Phase D 的主存储迁移就会变成接口重写，而不是 backend 替换。
 - `FastAPI` 在此阶段不引入；primitive 的第一公民形态是库函数，服务化暴露推迟到 Phase D/E，符合"库优先、服务其次"原则。
 - PostgreSQL、SQLAlchemy、Alembic 统一推迟到 Phase D，与检索基础设施一起引入，符合"分阶段引入复杂度"原则。
+
+当前状态：
+
+- `pyproject.toml`、`uv`、`pytest`、`ruff`、`mypy` 已建立并成为默认工程入口
+- primitive contract、runtime、service object 和 Phase C gate 已落地
+- `PrimitiveGoldenCalls v1` 已建立，`C-1 ~ C-5` 可在 SQLite 基线上直接验证
 
 ### 3.3 Phase D：Retrieval / Workspace
 
@@ -222,8 +229,8 @@
 
 当前状态：
 
-- Phase B 以直接模块执行方式运行，尚未建立 `pyproject.toml`。
-- 该配置应在 Phase C 开始时优先建立，作为后续依赖管理和测试入口的基础。
+- `pyproject.toml` 已建立，`uv` 负责依赖、虚拟环境和脚本入口。
+- 当前默认开发入口包括 `uv run pytest`、`uv run mind-phase-b-gate`、`uv run mind-phase-c-gate`。
 
 ### 5.2 代码质量工具
 

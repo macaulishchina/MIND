@@ -50,15 +50,13 @@ MIND 倾向于保留原始交互轨迹、事件、工具使用记录和任务历
 ### 2. 简单原语，复杂涌现
 MIND 不希望把高层记忆功能全部手工写死，而是提供一组基础操作，例如：
 
-- read（读取）
-- write（写入）
+- write_raw（写入原始记录）
+- read（按引用读取）
+- retrieve（检索候选）
+- summarize（生成摘要）
 - link（建立关联）
-- split（拆分）
-- merge（合并）
-- summarize（总结）
-- retrieve（检索）
-- reflect（反思）
-- reorganize（重组）
+- reflect（生成反思）
+- reorganize_simple（执行轻量重组）
 
 复杂的记忆结构应当从这些简单操作的组合中涌现出来。
 
@@ -108,24 +106,27 @@ MIND 当前聚焦于四个核心问题：
 
 ## 当前状态
 
-这个项目目前已有一套 **通过本地 Phase B gate 的基线实现**。
+这个项目目前已有一套 **通过本地 Phase C gate 的实现基线**。
 
-当前重点包括：
+当前落地包括：
 
 - 冻结 Phase A 规范与验收标准
 - 落地 Phase B 最小记忆内核
 - 构建可追溯、可回放、可版本化的对象存储
-- 为后续 primitive API 和 retrieval/workspace 阶段打底
+- 落地 Phase C typed primitive contract、结构化日志、预算约束与失败原子性
+- 建立 `PrimitiveGoldenCalls v1` 与本地 Phase C gate
 
-当前 Phase B 基线实现包括：
+当前实现包括：
 
 - `mind/kernel/schema.py`：8 类核心对象的 schema validator
 - `mind/kernel/store.py`：基于 SQLite 的 append-only version store
 - `mind/kernel/integrity.py`：trace / cycle / version chain 完整性检查
 - `mind/kernel/replay.py`：golden episode replay 与事件顺序 hash
 - `mind/fixtures/golden_episode_set.py`：`20` 个 golden episodes 与 8 类对象样例
-- `scripts/run_phase_b_gate.py`：本地 gate baseline 检查入口
-- `tests/test_phase_b_gate.py`：Phase B 单元测试
+- `mind/primitives/contracts.py` / `runtime.py` / `service.py`：Phase C primitive contract、运行时包装与服务实现
+- `mind/fixtures/primitive_golden_calls.py`：`200` 条 primitive 调用样例
+- `scripts/run_phase_b_gate.py` / `scripts/run_phase_c_gate.py`：本地 gate 检查入口
+- `tests/test_phase_b_gate.py` / `tests/test_phase_c_gate.py`：阶段 gate 测试
 
 ---
 
@@ -139,6 +140,9 @@ MIND 当前聚焦于四个核心问题：
 - [实现技术栈冻结文档](./docs/foundation/implementation_stack.md)
 - [初始讨论文档](./docs/research/research_notes.md)
 - [Phase B 验收报告](./docs/reports/phase_b_acceptance_report.md)
+- [Phase C 独立审计报告](./docs/reports/phase_c_independent_audit.md)
+- [Phase C Golden Calls 独立审计报告](./docs/reports/phase_c_golden_calls_audit.md)
+- [Phase C 验收报告](./docs/reports/phase_c_acceptance_report.md)
 
 ## 运行方式
 
@@ -146,27 +150,25 @@ MIND 当前聚焦于四个核心问题：
 
 ```bash
 uv sync --extra dev
-uv run pytest
+uv run pytest -q
 uv run mind-phase-b-gate
-uv run ruff check .
+uv run mind-phase-c-gate
+uv run ruff check mind tests scripts
 uv run mypy
 ```
 
-如果本地还没有 `uv`，当前仓库仍兼容原有 Phase B 基线命令：
+如果本地还没有 `uv`，当前仓库仍兼容脚本执行方式：
 
 ```bash
-python3 -m unittest discover -s tests -v
-python3 -m pytest
+python3 -m pytest -q
 python3 scripts/run_phase_b_gate.py
+python3 scripts/run_phase_c_gate.py
 ```
 
-当前 Phase B 基线 gate 输出应满足：
+当前本地 gate 基线输出应满足：
 
-- `source_trace_coverage=1.00`
-- `metadata_coverage=1.00`
-- `dangling_refs=0`
-- `cycles=0`
-- `version_chain_issues=0`
+- Phase B：`phase_b_gate=PASS`
+- Phase C：`phase_c_gate=PASS`
 
 ---
 
@@ -189,4 +191,4 @@ python3 scripts/run_phase_b_gate.py
 
 ## License
 
-TBD
+尚未指定 License。
