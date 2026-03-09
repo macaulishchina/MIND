@@ -171,6 +171,12 @@
 - Phase E 不引入 `Celery`、`Kafka`、`Airflow` 这类重型系统。
 - 优先用数据库表驱动的轻量作业模型，保证 traceability 和调试简单性。
 
+当前状态：
+
+- 当前仓库已经落地 `offline_jobs`、`OfflineWorker.run_once(...)`、`OfflineMaintenanceService`、promotion policy、`LongHorizonDev v1` 和 formal `Phase E gate`。
+- PostgreSQL claim 路径已采用 `FOR UPDATE SKIP LOCKED + advisory lock` 的最小实现，并已接入 Phase E regression 路径。
+- 当前本地口径已经是 `Phase E = PASS`；下一步重点转向 Phase F 的 `LongHorizonEval v1` 和 benchmark comparison。
+
 ### 3.5 Phase F / G：评测、优化、部署演进
 
 目标：

@@ -624,6 +624,7 @@ class PrimitiveService:
         if request.operation is ReorganizeOperation.SYNTHESIZE_SCHEMA:
             schema_object_id = self._new_object_id("schema")
             created_at = self._clock().isoformat()
+            supporting_episode_ids = self._supporting_episode_ids(target_objects)
             schema_object = {
                 "id": schema_object_id,
                 "type": "SchemaNote",
@@ -637,8 +638,12 @@ class PrimitiveService:
                 "metadata": {
                     "kind": "semantic",
                     "evidence_refs": list(request.target_refs),
-                    "stability_score": 0.5,
+                    "stability_score": self._schema_stability_score(
+                        target_objects,
+                        supporting_episode_ids,
+                    ),
                     "promotion_source_refs": list(request.target_refs),
+                    "supporting_episode_ids": supporting_episode_ids,
                 },
             }
             transaction.insert_object(schema_object)
@@ -889,6 +894,29 @@ class PrimitiveService:
         lowered_reason = reason.lower()
         delta = 0.2 if any(hint in lowered_reason for hint in PositiveReasonHints) else -0.2
         return round(min(1.0, max(0.0, current_priority + delta)), 4)
+
+    @staticmethod
+    def _supporting_episode_ids(target_objects: list[dict[str, Any]]) -> list[str]:
+        return sorted(
+            {
+                str(obj.get("metadata", {}).get("episode_id"))
+                for obj in target_objects
+                if obj.get("metadata", {}).get("episode_id")
+            }
+        )
+
+    @staticmethod
+    def _schema_stability_score(
+        target_objects: list[dict[str, Any]],
+        supporting_episode_ids: list[str],
+    ) -> float:
+        return round(
+            min(
+                0.95,
+                0.45 + 0.10 * len(target_objects) + 0.10 * len(supporting_episode_ids),
+            ),
+            4,
+        )
 
     @staticmethod
     def _reject(

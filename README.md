@@ -106,7 +106,7 @@ MIND 当前聚焦于四个核心问题：
 
 ## 当前状态
 
-这个项目目前已有一套 **通过本地 Phase D gate 的实现基线**。
+这个项目目前已有一套 **通过本地 Phase E gate 的实现基线**。
 
 当前落地包括：
 
@@ -120,6 +120,9 @@ MIND 当前聚焦于四个核心问题：
 - 落地 `pg_trgm / pgvector / object_embeddings`
 - 建立 `EpisodeAnswerBench v1` 与 answer-level `D-5` A/B benchmark
 - 完成本地 Phase D smoke、Phase D 验收与 PostgreSQL regression
+- 建立 Phase E 离线维护基础层：`offline_jobs`、worker、promotion policy v0
+- 建立 `LongHorizonDev v1`、`ReplayLift` baseline 与本地 Phase E startup baseline
+- 完成本地 Phase E gate：`SchemaValidationPrecision`、`PromotionPrecision@10`、`PUS / PollutionRate` A/B dev eval
 
 当前实现包括：
 
@@ -134,9 +137,12 @@ MIND 当前聚焦于四个核心问题：
 - `mind/fixtures/primitive_golden_calls.py`：`200` 条 primitive 调用样例
 - `mind/workspace/builder.py` / `mind/workspace/context_protocol.py` / `mind/workspace/phase_d.py`：Workspace builder、冻结的 Phase D context protocol 与 Phase D smoke 评估器
 - `mind/workspace/answer_benchmark.py`：answer-level `D-5` 评分与 A/B benchmark runner
+- `mind/offline/jobs.py` / `mind/offline/service.py` / `mind/offline/worker.py`：Phase E 离线 job contract、maintenance service 与单进程 worker
+- `mind/offline/replay.py` / `mind/offline/audit.py` / `mind/offline/phase_e.py`：Replay target ranking、evidence audit、`LongHorizonDev v1` 与 Phase E gate
 - `mind/fixtures/retrieval_benchmark.py`：固定的 RetrievalBenchmark v0 / v1
 - `mind/fixtures/episode_answer_bench.py`：固定的 `EpisodeAnswerBench v1`
-- `scripts/run_phase_b_gate.py` / `scripts/run_phase_c_gate.py` / `scripts/run_phase_d_smoke.py`：本地 gate 检查入口
+- `mind/fixtures/long_horizon_dev.py`：固定的 `LongHorizonDev v1`
+- `scripts/run_phase_b_gate.py` / `scripts/run_phase_c_gate.py` / `scripts/run_phase_d_smoke.py` / `scripts/run_phase_e_startup.py` / `scripts/run_offline_worker_once.py`：本地 gate / worker 入口
 - `tests/test_phase_b_gate.py` / `tests/test_phase_c_gate.py` / `tests/test_phase_d_smoke.py`：阶段 gate 测试
 
 当前存储口径：
@@ -153,6 +159,7 @@ MIND 当前聚焦于四个核心问题：
 - [阶段 A 正式规范](./docs/foundation/spec.md)
 - [设计拆解与实施主文档](./docs/design/design_breakdown.md)
 - [Phase C 启动清单](./docs/design/phase_c_startup_checklist.md)
+- [Phase E 启动清单](./docs/design/phase_e_startup_checklist.md)
 - [阶段验收与 phase gates](./docs/foundation/phase_gates.md)
 - [实现技术栈冻结文档](./docs/foundation/implementation_stack.md)
 - [初始讨论文档](./docs/research/research_notes.md)
@@ -163,6 +170,8 @@ MIND 当前聚焦于四个核心问题：
 - [Phase D Smoke 与 D-5 Benchmark 当前状态报告](./docs/reports/phase_d_smoke_report.md)
 - [Phase D 独立审计报告](./docs/reports/phase_d_independent_audit.md)
 - [Phase D 验收报告](./docs/reports/phase_d_acceptance_report.md)
+- [Phase E 验收报告](./docs/reports/phase_e_acceptance_report.md)
+- [Phase E 独立审计报告](./docs/reports/phase_e_independent_audit.md)
 - [Phase C 验收报告](./docs/reports/phase_c_acceptance_report.md)
 
 ## 运行方式
@@ -175,7 +184,10 @@ uv run pytest -q
 uv run mind-phase-b-gate
 uv run mind-phase-c-gate
 uv run mind-phase-d-smoke
+uv run mind-phase-e-startup
+uv run mind-phase-e-gate
 uv run mind-postgres-regression --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:5432/postgres
+uv run mind-offline-worker-once --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:5432/postgres --max-jobs 5
 uv run ruff check mind tests scripts
 uv run mypy
 ```
@@ -187,7 +199,10 @@ uv run mypy
 .venv/bin/python scripts/run_phase_b_gate.py
 .venv/bin/python scripts/run_phase_c_gate.py
 .venv/bin/python scripts/run_phase_d_smoke.py
+.venv/bin/python scripts/run_phase_e_startup.py
+.venv/bin/python scripts/run_phase_e_gate.py
 .venv/bin/python scripts/run_postgres_regression.py --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:5432/postgres
+.venv/bin/python scripts/run_offline_worker_once.py --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:5432/postgres --max-jobs 5
 ```
 
 当前本地 gate 基线输出应满足：
@@ -195,12 +210,16 @@ uv run mypy
 - Phase B：`phase_b_gate=PASS`
 - Phase C：`phase_c_gate=PASS`
 - Phase D smoke：`phase_d_smoke=PASS`
+- Phase E startup：`phase_e_startup=PASS`
+- Phase E gate：`phase_e_gate=PASS`
 
-当前 Phase D 状态说明：
+当前阶段状态说明：
 
-- 当前工作树已通过 `Phase D acceptance gate`。
+- 当前工作树已通过 `Phase E acceptance gate`，并已完成 Phase E 独立审计。
 - `D-5` 现在使用 `EpisodeAnswerBench v1` 的 answer-level A/B benchmark，而不是 `task_success_proxy`。
 - `Phase D smoke report` 保留为启动期 / pre-acceptance 基线记录；最新正式口径见 [Phase D 验收报告](./docs/reports/phase_d_acceptance_report.md)。
+- Phase E 已完成本地 gate 与独立审计；正式口径见 [Phase E 验收报告](./docs/reports/phase_e_acceptance_report.md) 和 [Phase E 独立审计报告](./docs/reports/phase_e_independent_audit.md)。
+- [Phase E 启动清单](./docs/design/phase_e_startup_checklist.md) 继续保留启动与收敛轨迹，不再代表当前通过口径。
 
 ---
 

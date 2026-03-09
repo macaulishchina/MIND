@@ -113,3 +113,31 @@ budget_events_table = sa.Table(
 
 sa.Index("idx_budget_events_call_id", budget_events_table.c.call_id)
 sa.Index("idx_budget_events_scope_id", budget_events_table.c.scope_id)
+
+offline_jobs_table = sa.Table(
+    "offline_jobs",
+    postgres_metadata,
+    sa.Column("job_id", sa.Text(), primary_key=True),
+    sa.Column("job_kind", sa.Text(), nullable=False),
+    sa.Column("status", sa.Text(), nullable=False),
+    sa.Column("payload_json", JSONB(astext_type=sa.Text()), nullable=False),
+    sa.Column("priority", sa.Float(), nullable=False),
+    sa.Column("available_at", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("attempt_count", sa.Integer(), nullable=False),
+    sa.Column("max_attempts", sa.Integer(), nullable=False),
+    sa.Column("locked_by", sa.Text(), nullable=True),
+    sa.Column("locked_at", sa.DateTime(timezone=True), nullable=True),
+    sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
+    sa.Column("result_json", JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column("error_json", JSONB(astext_type=sa.Text()), nullable=True),
+)
+
+sa.Index(
+    "idx_offline_jobs_ready_queue",
+    offline_jobs_table.c.status,
+    offline_jobs_table.c.available_at,
+    offline_jobs_table.c.priority,
+)
+sa.Index("idx_offline_jobs_kind", offline_jobs_table.c.job_kind)

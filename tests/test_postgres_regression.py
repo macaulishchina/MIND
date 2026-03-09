@@ -1,8 +1,9 @@
-"""Optional PostgreSQL integration coverage for Phase B/C gates."""
+"""Optional PostgreSQL integration coverage for Phase B/C/D/E gates."""
 
 from __future__ import annotations
 
 import os
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -19,11 +20,19 @@ from mind.kernel.postgres_store import (
 )
 from mind.kernel.retrieval import build_query_embedding
 from mind.kernel.sql_tables import object_embeddings_table, object_versions_table
+from mind.offline import (
+    OfflineJobKind,
+    OfflineJobStatus,
+    ReflectEpisodeJobPayload,
+    evaluate_phase_e_gate,
+    new_offline_job,
+)
 from mind.primitives.contracts import RetrieveQueryMode
 from mind.primitives.phase_c import evaluate_phase_c_gate
 from mind.workspace import WorkspaceBuilder, evaluate_phase_d_smoke
 
 POSTGRES_DSN = os.environ.get("MIND_TEST_POSTGRES_DSN")
+FIXED_TIMESTAMP = datetime(2026, 3, 9, 19, 0, tzinfo=UTC)
 
 pytestmark = pytest.mark.skipif(
     POSTGRES_DSN is None,
@@ -173,3 +182,89 @@ def test_postgres_phase_d_smoke() -> None:
     assert result.median_token_cost_ratio <= 0.60
     assert result.task_success_drop_pp == 0.0
     assert result.task_success_proxy_drop_pp == 0.0
+
+
+def test_postgres_offline_job_lifecycle() -> None:
+    assert POSTGRES_DSN is not None
+
+    with temporary_postgres_database(POSTGRES_DSN, prefix="mind_phase_e") as database_dsn:
+        run_postgres_migrations(database_dsn)
+        with PostgresMemoryStore(database_dsn) as store:
+            store.enqueue_offline_job(
+                new_offline_job(
+                    job_id="job-late",
+                    job_kind=OfflineJobKind.REFLECT_EPISODE,
+                    payload=ReflectEpisodeJobPayload(
+                        episode_id="episode-004",
+                        focus="lower priority reflection",
+                    ),
+                    priority=0.4,
+                    now=FIXED_TIMESTAMP,
+                )
+            )
+            store.enqueue_offline_job(
+                new_offline_job(
+                    job_id="job-now",
+                    job_kind=OfflineJobKind.REFLECT_EPISODE,
+                    payload=ReflectEpisodeJobPayload(
+                        episode_id="episode-008",
+                        focus="higher priority reflection",
+                    ),
+                    priority=0.9,
+                    now=FIXED_TIMESTAMP,
+                )
+            )
+
+            claimed = store.claim_offline_job(
+                worker_id="phase-e-worker",
+                now=FIXED_TIMESTAMP,
+                job_kinds=[OfflineJobKind.REFLECT_EPISODE],
+            )
+            assert claimed is not None
+            assert claimed.job_id == "job-now"
+            assert claimed.status is OfflineJobStatus.RUNNING
+            store.complete_offline_job(
+                claimed.job_id,
+                worker_id="phase-e-worker",
+                completed_at=FIXED_TIMESTAMP,
+                result={"ok": True},
+            )
+
+            next_claim = store.claim_offline_job(
+                worker_id="phase-e-worker",
+                now=FIXED_TIMESTAMP,
+                job_kinds=[OfflineJobKind.REFLECT_EPISODE],
+            )
+            assert next_claim is not None
+            assert next_claim.job_id == "job-late"
+            store.fail_offline_job(
+                next_claim.job_id,
+                worker_id="phase-e-worker",
+                failed_at=FIXED_TIMESTAMP,
+                error={"message": "expected failure"},
+            )
+
+            jobs = store.iter_offline_jobs()
+
+    assert [job.job_id for job in jobs] == ["job-late", "job-now"]
+    assert [job.status for job in jobs] == [
+        OfflineJobStatus.FAILED,
+        OfflineJobStatus.SUCCEEDED,
+    ]
+
+
+def test_postgres_phase_e_gate() -> None:
+    assert POSTGRES_DSN is not None
+
+    with temporary_postgres_database(POSTGRES_DSN, prefix="mind_phase_e_gate") as database_dsn:
+        run_postgres_migrations(database_dsn)
+        store_factory = build_postgres_store_factory(database_dsn)
+        result = evaluate_phase_e_gate(Path("phase_e.pg"), store_factory=store_factory)
+
+    assert result.phase_e_pass
+    assert result.integrity_report.source_trace_coverage == 1.0
+    assert result.startup_result.replay_lift >= 1.5
+    assert result.startup_result.schema_validation_precision >= 0.85
+    assert result.startup_result.promotion_precision_at_10 >= 0.80
+    assert result.dev_eval.pus_improvement >= 0.05
+    assert result.dev_eval.pollution_rate_delta <= 0.02

@@ -17,6 +17,7 @@ from sqlalchemy.engine.url import URL, make_url
 
 from alembic import command
 from alembic.config import Config
+from mind.offline.jobs import OfflineJob, OfflineJobKind, OfflineJobStatus
 from mind.primitives.contracts import BudgetEvent, PrimitiveCallLog, RetrieveQueryMode
 
 from .pgvector import Vector
@@ -26,6 +27,7 @@ from .sql_tables import (
     budget_events_table,
     object_embeddings_table,
     object_versions_table,
+    offline_jobs_table,
     primitive_call_logs_table,
 )
 from .store import MemoryStoreFactory, PrimitiveTransactionContextManager, StoreError
@@ -173,6 +175,154 @@ class PostgresMemoryStore:
                 )
             ).mappings()
             return [self._decode_budget_event(row) for row in rows]
+
+    def enqueue_offline_job(self, job: OfflineJob | dict[str, Any]) -> None:
+        validated = OfflineJob.model_validate(job)
+        with self.engine.begin() as connection:
+            connection.execute(
+                sa.insert(offline_jobs_table).values(
+                    job_id=validated.job_id,
+                    job_kind=validated.job_kind.value,
+                    status=validated.status.value,
+                    payload_json=validated.payload,
+                    priority=float(validated.priority),
+                    available_at=validated.available_at,
+                    created_at=validated.created_at,
+                    updated_at=validated.updated_at,
+                    attempt_count=validated.attempt_count,
+                    max_attempts=validated.max_attempts,
+                    locked_by=validated.locked_by,
+                    locked_at=validated.locked_at,
+                    completed_at=validated.completed_at,
+                    result_json=validated.result,
+                    error_json=validated.error,
+                )
+            )
+
+    def iter_offline_jobs(
+        self,
+        *,
+        statuses: Iterable[OfflineJobStatus] = (),
+    ) -> list[OfflineJob]:
+        with self.engine.connect() as connection:
+            statement = sa.select(offline_jobs_table)
+            status_values = [status.value for status in statuses]
+            if status_values:
+                statement = statement.where(offline_jobs_table.c.status.in_(status_values))
+            rows = connection.execute(
+                statement.order_by(
+                    offline_jobs_table.c.created_at.asc(),
+                    offline_jobs_table.c.job_id.asc(),
+                )
+            ).mappings()
+            return [self._decode_offline_job(row) for row in rows]
+
+    def claim_offline_job(
+        self,
+        *,
+        worker_id: str,
+        now: datetime,
+        job_kinds: Iterable[OfflineJobKind] = (),
+    ) -> OfflineJob | None:
+        kind_values = [job_kind.value for job_kind in job_kinds]
+        kind_filter = "AND job_kind = ANY(:job_kinds)" if kind_values else ""
+        bindparams: list[sa.BindParameter[Any]] = [
+            sa.bindparam("worker_id", type_=sa.Text()),
+            sa.bindparam("now", type_=sa.DateTime(timezone=True)),
+        ]
+        if kind_values:
+            bindparams.append(sa.bindparam("job_kinds", type_=sa.ARRAY(sa.Text())))
+
+        statement = sa.text(
+            f"""
+            WITH candidate AS (
+                SELECT job_id
+                FROM offline_jobs
+                WHERE status = 'pending'
+                  AND available_at <= :now
+                  AND attempt_count < max_attempts
+                  {kind_filter}
+                ORDER BY priority DESC, available_at ASC, created_at ASC, job_id ASC
+                LIMIT 1
+                FOR UPDATE SKIP LOCKED
+            ),
+            locked AS (
+                SELECT job_id
+                FROM candidate
+                WHERE pg_try_advisory_xact_lock(hashtext(job_id))
+            )
+            UPDATE offline_jobs AS jobs
+            SET status = 'running',
+                locked_by = :worker_id,
+                locked_at = :now,
+                updated_at = :now,
+                attempt_count = jobs.attempt_count + 1
+            FROM locked
+            WHERE jobs.job_id = locked.job_id
+            RETURNING jobs.*
+            """
+        ).bindparams(*bindparams)
+        params: dict[str, Any] = {
+            "worker_id": worker_id,
+            "now": now,
+        }
+        if kind_values:
+            params["job_kinds"] = kind_values
+        with self.engine.begin() as connection:
+            row = connection.execute(statement, params).mappings().first()
+        if row is None:
+            return None
+        return self._decode_offline_job(row)
+
+    def complete_offline_job(
+        self,
+        job_id: str,
+        *,
+        worker_id: str,
+        completed_at: datetime,
+        result: dict[str, Any],
+    ) -> None:
+        with self.engine.begin() as connection:
+            updated = connection.execute(
+                sa.update(offline_jobs_table)
+                .where(offline_jobs_table.c.job_id == job_id)
+                .where(offline_jobs_table.c.status == OfflineJobStatus.RUNNING.value)
+                .where(offline_jobs_table.c.locked_by == worker_id)
+                .values(
+                    status=OfflineJobStatus.SUCCEEDED.value,
+                    completed_at=completed_at,
+                    updated_at=completed_at,
+                    result_json=result,
+                    error_json=None,
+                )
+            )
+            if updated.rowcount != 1:
+                raise StoreError(f"unable to complete offline job '{job_id}'")
+
+    def fail_offline_job(
+        self,
+        job_id: str,
+        *,
+        worker_id: str,
+        failed_at: datetime,
+        error: dict[str, Any],
+    ) -> None:
+        with self.engine.begin() as connection:
+            updated = connection.execute(
+                sa.update(offline_jobs_table)
+                .where(offline_jobs_table.c.job_id == job_id)
+                .where(offline_jobs_table.c.status == OfflineJobStatus.RUNNING.value)
+                .where(offline_jobs_table.c.locked_by == worker_id)
+                .values(
+                    status=OfflineJobStatus.FAILED.value,
+                    completed_at=failed_at,
+                    updated_at=failed_at,
+                    result_json=None,
+                    error_json=error,
+                )
+            )
+            if updated.rowcount != 1:
+                raise StoreError(f"unable to fail offline job '{job_id}'")
 
     def _begin_transaction(self) -> tuple[Connection, RootTransaction]:
         if self._transaction_open:
@@ -382,6 +532,27 @@ class PostgresMemoryStore:
             "metadata": row["metadata_json"],
         }
         return BudgetEvent.model_validate(payload)
+
+    @staticmethod
+    def _decode_offline_job(row: RowMapping) -> OfflineJob:
+        payload: dict[str, Any] = {
+            "job_id": row["job_id"],
+            "job_kind": row["job_kind"],
+            "status": row["status"],
+            "payload": row["payload_json"],
+            "priority": float(row["priority"]),
+            "available_at": row["available_at"],
+            "created_at": row["created_at"],
+            "updated_at": row["updated_at"],
+            "attempt_count": int(row["attempt_count"]),
+            "max_attempts": int(row["max_attempts"]),
+            "locked_by": row["locked_by"],
+            "locked_at": row["locked_at"],
+            "completed_at": row["completed_at"],
+            "result": row["result_json"],
+            "error": row["error_json"],
+        }
+        return OfflineJob.model_validate(payload)
 
     def _latest_objects_statement(
         self,
