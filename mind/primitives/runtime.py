@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from mind.kernel.store import MemoryStore, PrimitiveTransaction
 
@@ -70,9 +70,22 @@ class PrimitiveRuntime:
         request_payload: RequestModelT | dict[str, Any],
         handler: ReadPrimitiveHandler[RequestModelT, ResponseModelT],
     ) -> PrimitiveExecutionResult:
-        request = request_model.model_validate(request_payload)
         call_id = _new_call_id(primitive)
         timestamp = self._clock()
+        try:
+            request = request_model.model_validate(request_payload)
+        except ValidationError as exc:
+            failure_result, failure_log = self._build_failure_result(
+                primitive=primitive,
+                actor=actor,
+                call_id=call_id,
+                timestamp=timestamp,
+                request_payload=request_payload,
+                error=_schema_error(exc),
+                outcome=PrimitiveOutcome.FAILURE,
+            )
+            self.store.record_primitive_call(failure_log)
+            return failure_result
 
         try:
             result = handler(request, self.store)
@@ -83,7 +96,7 @@ class PrimitiveRuntime:
                 actor=actor,
                 call_id=call_id,
                 timestamp=timestamp,
-                request=request,
+                request_payload=request,
                 error=exc.error,
                 outcome=PrimitiveOutcome.REJECTED,
             )
@@ -95,7 +108,7 @@ class PrimitiveRuntime:
                 actor=actor,
                 call_id=call_id,
                 timestamp=timestamp,
-                request=request,
+                request_payload=request,
                 error=_unexpected_error(exc),
                 outcome=PrimitiveOutcome.FAILURE,
             )
@@ -135,9 +148,22 @@ class PrimitiveRuntime:
         request_payload: RequestModelT | dict[str, Any],
         handler: WritePrimitiveHandler[RequestModelT, ResponseModelT],
     ) -> PrimitiveExecutionResult:
-        request = request_model.model_validate(request_payload)
         call_id = _new_call_id(primitive)
         timestamp = self._clock()
+        try:
+            request = request_model.model_validate(request_payload)
+        except ValidationError as exc:
+            failure_result, failure_log = self._build_failure_result(
+                primitive=primitive,
+                actor=actor,
+                call_id=call_id,
+                timestamp=timestamp,
+                request_payload=request_payload,
+                error=_schema_error(exc),
+                outcome=PrimitiveOutcome.FAILURE,
+            )
+            self.store.record_primitive_call(failure_log)
+            return failure_result
 
         try:
             with self.store.transaction() as transaction:
@@ -172,7 +198,7 @@ class PrimitiveRuntime:
                 actor=actor,
                 call_id=call_id,
                 timestamp=timestamp,
-                request=request,
+                request_payload=request,
                 error=exc.error,
                 outcome=PrimitiveOutcome.REJECTED,
             )
@@ -184,7 +210,7 @@ class PrimitiveRuntime:
                 actor=actor,
                 call_id=call_id,
                 timestamp=timestamp,
-                request=request,
+                request_payload=request,
                 error=_unexpected_error(exc),
                 outcome=PrimitiveOutcome.ROLLED_BACK,
             )
@@ -198,10 +224,15 @@ class PrimitiveRuntime:
         actor: str,
         call_id: str,
         timestamp: datetime,
-        request: BaseModel,
+        request_payload: BaseModel | dict[str, Any],
         error: PrimitiveError,
         outcome: PrimitiveOutcome,
     ) -> tuple[PrimitiveExecutionResult, PrimitiveCallLog]:
+        request_data = (
+            request_payload.model_dump()
+            if isinstance(request_payload, BaseModel)
+            else dict(request_payload)
+        )
         result = PrimitiveExecutionResult(
             primitive=primitive,
             outcome=outcome,
@@ -213,7 +244,7 @@ class PrimitiveRuntime:
             actor=actor,
             timestamp=timestamp,
             outcome=outcome,
-            request=request.model_dump(),
+            request=request_data,
             error=error,
         )
         return result, log
@@ -232,4 +263,12 @@ def _unexpected_error(exc: Exception) -> PrimitiveError:
         code=PrimitiveErrorCode.INTERNAL_ERROR,
         message=str(exc) or exc.__class__.__name__,
         details={"exception_type": exc.__class__.__name__},
+    )
+
+
+def _schema_error(exc: ValidationError) -> PrimitiveError:
+    return PrimitiveError(
+        code=PrimitiveErrorCode.SCHEMA_INVALID,
+        message="request schema validation failed",
+        details={"errors": exc.errors(include_url=False)},
     )

@@ -86,8 +86,12 @@ def _validate_slot(slot: Any, index: int) -> list[str]:
 
     if "source_refs" in slot and not isinstance(slot["source_refs"], list):
         errors.append(f"workspace slot {index} source_refs must be a list")
+    elif "source_refs" in slot and not slot["source_refs"]:
+        errors.append(f"workspace slot {index} source_refs must be non-empty")
     if "evidence_refs" in slot and not isinstance(slot["evidence_refs"], list):
         errors.append(f"workspace slot {index} evidence_refs must be a list")
+    elif "evidence_refs" in slot and not slot["evidence_refs"]:
+        errors.append(f"workspace slot {index} evidence_refs must be non-empty")
     if "priority" in slot and not isinstance(slot["priority"], int | float):
         errors.append(f"workspace slot {index} priority must be numeric")
     return errors
@@ -195,14 +199,24 @@ def validate_object(obj: dict[str, Any]) -> list[str]:
                     or not content[field]
                 ):
                     errors.append(f"LinkEdge content missing non-empty string field '{field}'")
+        confidence = metadata.get("confidence")
+        if confidence is not None and (
+            not isinstance(confidence, int | float) or not 0 <= float(confidence) <= 1
+        ):
+            errors.append("LinkEdge metadata.confidence must be a float in [0, 1]")
         if "evidence_refs" in metadata and not isinstance(metadata["evidence_refs"], list):
             errors.append("LinkEdge metadata.evidence_refs must be a list")
 
     if object_type == "WorkspaceView":
+        slot_limit = metadata.get("slot_limit")
+        if not isinstance(slot_limit, int) or slot_limit < 1:
+            errors.append("WorkspaceView metadata.slot_limit must be an integer >= 1")
         slots = metadata.get("slots")
         if not isinstance(slots, list):
             errors.append("WorkspaceView metadata.slots must be a list")
         else:
+            if isinstance(slot_limit, int) and len(slots) > slot_limit:
+                errors.append("WorkspaceView slot_count must be <= slot_limit")
             for index, slot in enumerate(slots):
                 errors.extend(_validate_slot(slot, index))
 
@@ -210,6 +224,25 @@ def validate_object(obj: dict[str, Any]) -> list[str]:
         kind = metadata.get("kind")
         if kind not in VALID_SCHEMA_KIND:
             errors.append(f"SchemaNote kind must be one of {sorted(VALID_SCHEMA_KIND)}")
+        stability_score = metadata.get("stability_score")
+        if stability_score is not None and (
+            not isinstance(stability_score, int | float) or not 0 <= float(stability_score) <= 1
+        ):
+            errors.append("SchemaNote metadata.stability_score must be a float in [0, 1]")
+        if "evidence_refs" in metadata and not isinstance(metadata["evidence_refs"], list):
+            errors.append("SchemaNote metadata.evidence_refs must be a list")
+        if "promotion_source_refs" in metadata and not isinstance(
+            metadata["promotion_source_refs"], list
+        ):
+            errors.append("SchemaNote metadata.promotion_source_refs must be a list")
+
+    if object_type == "EntityNode":
+        alias = metadata.get("alias")
+        if alias is not None and (
+            not isinstance(alias, list)
+            or any(not isinstance(item, str) or not item for item in alias)
+        ):
+            errors.append("EntityNode metadata.alias must be a list of non-empty strings")
 
     return errors
 

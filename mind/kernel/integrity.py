@@ -32,6 +32,11 @@ def build_integrity_report(objects: Iterable[dict]) -> IntegrityReport:
         for ref in refs:
             if ref not in object_ids:
                 dangling_refs.append((obj["id"], ref))
+        if obj["type"] == "LinkEdge" and isinstance(obj["content"], dict):
+            for field in ("src_id", "dst_id"):
+                ref = obj["content"].get(field)
+                if isinstance(ref, str) and ref not in object_ids:
+                    dangling_refs.append((obj["id"], ref))
 
     source_trace_coverage = 1.0 if not derived else valid_trace_count / len(derived)
 
@@ -96,4 +101,3 @@ def _find_version_chain_issues(objects: list[dict]) -> list[str]:
         if ordered != expected:
             issues.append(f"{object_id}: expected versions {expected}, got {ordered}")
     return issues
-

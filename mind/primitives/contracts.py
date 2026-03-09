@@ -108,6 +108,12 @@ class PrimitiveError(ContractModel):
     details: dict[str, Any] = Field(default_factory=dict)
 
 
+class PrimitiveExecutionContext(ContractModel):
+    actor: str = Field(min_length=1)
+    budget_scope_id: str = Field(default="global", min_length=1)
+    budget_limit: NonNegativeFloat | None = None
+
+
 class MemoryObject(ContractModel):
     id: str = Field(min_length=1)
     type: str = Field(min_length=1)
@@ -209,12 +215,6 @@ class LinkRequest(ContractModel):
     dst_id: str = Field(min_length=1)
     relation_type: str = Field(min_length=1)
     evidence_refs: list[str] = Field(min_length=1)
-
-    @model_validator(mode="after")
-    def reject_self_links(self) -> LinkRequest:
-        if self.src_id == self.dst_id:
-            raise ValueError("link source and destination must be different")
-        return self
 
 
 class LinkResponse(ContractModel):
