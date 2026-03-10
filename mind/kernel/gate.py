@@ -1,4 +1,4 @@
-"""Phase B gate evaluation helpers."""
+"""Kernel gate evaluation helpers."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from .store import MemoryStoreFactory, SQLiteMemoryStore
 
 
 @dataclass(frozen=True)
-class PhaseBGateResult:
+class KernelGateResult:
     golden_episode_count: int
     round_trip_match_count: int
     round_trip_total: int
@@ -46,14 +46,14 @@ class PhaseBGateResult:
         return self.integrity_report.metadata_coverage == 1.0
 
     @property
-    def phase_b_pass(self) -> bool:
+    def kernel_gate_pass(self) -> bool:
         return self.b1_pass and self.b2_pass and self.b3_pass and self.b4_pass and self.b5_pass
 
 
-def evaluate_phase_b_gate(
+def evaluate_kernel_gate(
     db_path: str | Path | None = None,
     store_factory: MemoryStoreFactory | None = None,
-) -> PhaseBGateResult:
+) -> KernelGateResult:
     from mind.fixtures.golden_episode_set import (
         build_core_object_showcase,
         build_golden_episode_set,
@@ -65,7 +65,7 @@ def evaluate_phase_b_gate(
     def default_store_factory(store_path: Path) -> SQLiteMemoryStore:
         return SQLiteMemoryStore(store_path)
 
-    def run(store_path: Path, store_factory: MemoryStoreFactory) -> PhaseBGateResult:
+    def run(store_path: Path, store_factory: MemoryStoreFactory) -> KernelGateResult:
         with store_factory(store_path) as store:
             for episode in fixtures:
                 store.insert_objects(episode.objects)
@@ -87,7 +87,7 @@ def evaluate_phase_b_gate(
 
             report = build_integrity_report(store.iter_objects())
 
-        return PhaseBGateResult(
+        return KernelGateResult(
             golden_episode_count=len(fixtures),
             round_trip_match_count=round_trip_match_count,
             round_trip_total=round_trip_total,
@@ -103,10 +103,10 @@ def evaluate_phase_b_gate(
         return run(Path(db_path), factory)
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        return run(Path(tmpdir) / "phase_b.sqlite3", factory)
+        return run(Path(tmpdir) / "kernel_gate.sqlite3", factory)
 
 
-def assert_phase_b_gate(result: PhaseBGateResult) -> None:
+def assert_kernel_gate(result: KernelGateResult) -> None:
     if not result.b1_pass:
         raise RuntimeError(
             "B-1 failed: round-trip mismatch "

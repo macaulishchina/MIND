@@ -1,4 +1,4 @@
-"""Strategy primitives for Phase G optimization work."""
+"""Strategy primitives for optimization work."""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ class StrategyStepDecision:
 
 
 class MindStrategy:
-    """Interface implemented by fixed-rule and optimized Phase G strategies."""
+    """Interface implemented by fixed-rule and optimized strategies."""
 
     strategy_id = "abstract"
 
@@ -40,7 +40,7 @@ class MindStrategy:
 
 @dataclass(frozen=True)
 class FixedRuleMindStrategy(MindStrategy):
-    """The frozen Phase F fixed-rule strategy baseline used as the Phase G anchor."""
+    """The frozen fixed-rule strategy baseline used as the optimization anchor."""
 
     strategy_id = "fixed_rule_v1"
     step_budget: int = 1
@@ -77,7 +77,7 @@ class FixedRuleMindStrategy(MindStrategy):
 
 @dataclass(frozen=True)
 class OptimizedMindStrategy(MindStrategy):
-    """Budget-preserving heuristic strategy used as the first Phase G optimizer."""
+    """Budget-preserving heuristic strategy used as the first optimizer."""
 
     strategy_id = "optimized_v1"
     base_step_budget: int = 1

@@ -1,4 +1,4 @@
-"""Phase I runtime access mode contracts."""
+"""Runtime access mode contracts."""
 
 from .benchmark import (
     AccessBenchmarkResult,
@@ -20,12 +20,12 @@ from .contracts import (
     AccessTaskFamily,
     AccessTraceKind,
 )
-from .phase_i import (
+from .gate import (
     AccessAutoAuditResult,
-    PhaseIGateResult,
-    assert_phase_i_gate,
-    evaluate_phase_i_gate,
-    write_phase_i_gate_report_json,
+    AccessGateResult,
+    assert_access_gate,
+    evaluate_access_gate,
+    write_access_gate_report_json,
 )
 from .service import AccessService, AccessServiceError
 
@@ -48,9 +48,9 @@ __all__ = [
     "AccessSwitchKind",
     "AccessTaskFamily",
     "AccessTraceKind",
-    "PhaseIGateResult",
-    "assert_phase_i_gate",
+    "AccessGateResult",
+    "assert_access_gate",
     "evaluate_access_benchmark",
-    "evaluate_phase_i_gate",
-    "write_phase_i_gate_report_json",
+    "evaluate_access_gate",
+    "write_access_gate_report_json",
 ]

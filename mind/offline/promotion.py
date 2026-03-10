@@ -1,4 +1,4 @@
-"""Promotion policy helpers for Phase E offline maintenance."""
+"""Promotion policy helpers for offline maintenance."""
 
 from __future__ import annotations
 

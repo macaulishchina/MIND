@@ -1,4 +1,4 @@
-"""MIND system runner for LongHorizonEval-based Phase F and G evaluation."""
+"""MIND system runner for LongHorizonEval-based benchmark evaluation."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from itertools import combinations
 from pathlib import Path
 
 from mind.fixtures.long_horizon_eval import LongHorizonEvalSequence, build_long_horizon_eval_v1
-from mind.fixtures.retrieval_benchmark import build_phase_d_seed_objects
+from mind.fixtures.retrieval_benchmark import build_canonical_seed_objects
 from mind.kernel.store import SQLiteMemoryStore
 from mind.offline import (
     OfflineJobKind,
@@ -48,7 +48,7 @@ class MindRunCostSnapshot:
 
 
 class MindLongHorizonSystem:
-    """Phase F MIND system using workspace-style selection and offline promotion."""
+    """MIND system using workspace-style selection and offline promotion."""
 
     def __init__(
         self,
@@ -154,9 +154,9 @@ class MindLongHorizonSystem:
         if resources is not None:
             return resources
 
-        tempdir = tempfile.TemporaryDirectory(prefix=f"mind_phase_f_run_{run_id}_")
-        store = SQLiteMemoryStore(Path(tempdir.name) / "mind_phase_f.sqlite3")
-        seed_objects = build_phase_d_seed_objects()
+        tempdir = tempfile.TemporaryDirectory(prefix=f"mind_benchmark_run_{run_id}_")
+        store = SQLiteMemoryStore(Path(tempdir.name) / "mind_benchmark.sqlite3")
+        seed_objects = build_canonical_seed_objects()
         base_object_count = len(seed_objects)
         store.insert_objects(seed_objects)
         promotion_schema_ids: dict[str, str] = {}
@@ -178,7 +178,7 @@ class MindLongHorizonSystem:
                     ),
                 )
                 try:
-                    result = maintenance_service.process_job(job, actor=f"phase_f_run_{run_id}")
+                    result = maintenance_service.process_job(job, actor=f"benchmark_run_{run_id}")
                 except Exception:
                     continue
                 promotion_schema_ids[sequence.sequence_id] = str(result["schema_object_id"])

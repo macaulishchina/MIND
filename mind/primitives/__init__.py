@@ -1,4 +1,4 @@
-"""Phase C primitive contracts and runtime helpers."""
+"""Primitive contracts and runtime helpers."""
 
 from .contracts import (
     BudgetConstraint,

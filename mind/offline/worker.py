@@ -1,4 +1,4 @@
-"""Single-process offline worker for Phase E."""
+"""Single-process offline worker."""
 
 from __future__ import annotations
 

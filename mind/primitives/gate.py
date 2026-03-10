@@ -1,4 +1,4 @@
-"""Phase C gate evaluation helpers."""
+"""Primitive gate evaluation helpers."""
 
 from __future__ import annotations
 
@@ -13,8 +13,8 @@ from pydantic import BaseModel, ValidationError
 
 from mind.fixtures.primitive_golden_calls import (
     PrimitiveGoldenCallCase,
-    build_phase_c_seed_objects,
     build_primitive_golden_calls_v1,
+    build_primitive_seed_objects,
 )
 from mind.kernel.store import MemoryStoreFactory, SQLiteMemoryStore
 from mind.primitives.contracts import (
@@ -77,7 +77,7 @@ class PrimitiveGoldenCallRun:
 
 
 @dataclass(frozen=True)
-class PhaseCGateResult:
+class PrimitiveGateResult:
     total_calls: int
     schema_valid_calls: int
     structured_log_calls: int
@@ -110,21 +110,21 @@ class PhaseCGateResult:
         return self.rollback_total == 50 and self.rollback_atomic_count == self.rollback_total
 
     @property
-    def phase_c_pass(self) -> bool:
+    def primitive_gate_pass(self) -> bool:
         return self.c1_pass and self.c2_pass and self.c3_pass and self.c4_pass and self.c5_pass
 
 
-def evaluate_phase_c_gate(
+def evaluate_primitive_gate(
     db_path: str | Path | None = None,
     store_factory: MemoryStoreFactory | None = None,
-) -> PhaseCGateResult:
+) -> PrimitiveGateResult:
     calls = build_primitive_golden_calls_v1()
-    seed_objects = build_phase_c_seed_objects()
+    seed_objects = build_primitive_seed_objects()
 
     def default_store_factory(store_path: Path) -> SQLiteMemoryStore:
         return SQLiteMemoryStore(store_path)
 
-    def run(store_path: Path, active_store_factory: MemoryStoreFactory) -> PhaseCGateResult:
+    def run(store_path: Path, active_store_factory: MemoryStoreFactory) -> PrimitiveGateResult:
         clock = _StepClock()
         with active_store_factory(store_path) as store:
             store.insert_objects(seed_objects)
@@ -185,7 +185,7 @@ def evaluate_phase_c_gate(
                     )
                 )
 
-        return PhaseCGateResult(
+        return PrimitiveGateResult(
             total_calls=len(calls),
             schema_valid_calls=sum(run.schema_valid for run in runs),
             structured_log_calls=sum(run.log_covered for run in runs),
@@ -209,13 +209,13 @@ def evaluate_phase_c_gate(
         return run(Path(db_path), active_factory)
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        return run(Path(tmpdir) / "phase_c.sqlite3", active_factory)
+        return run(Path(tmpdir) / "primitive_gate.sqlite3", active_factory)
 
 
-def assert_phase_c_gate(result: PhaseCGateResult) -> None:
+def assert_primitive_gate(result: PrimitiveGateResult) -> None:
     if result.expectation_match_count != result.total_calls:
         raise RuntimeError(
-            "Phase C golden call mismatch "
+            "primitive golden call mismatch "
             f"({result.expectation_match_count}/{result.total_calls})"
         )
     if not result.c1_pass:

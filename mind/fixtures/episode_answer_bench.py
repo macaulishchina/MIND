@@ -1,4 +1,4 @@
-"""EpisodeAnswerBench v1 fixtures for answer-level Phase D evaluation."""
+"""EpisodeAnswerBench v1 fixtures for answer-level workspace evaluation."""
 
 from __future__ import annotations
 

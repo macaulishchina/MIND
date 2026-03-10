@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from mind.cli import phase_e_startup_main
+from mind.cli import offline_startup_main
 
 if __name__ == "__main__":
-    raise SystemExit(phase_e_startup_main())
+    raise SystemExit(offline_startup_main())

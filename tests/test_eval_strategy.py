@@ -13,7 +13,7 @@ from mind.fixtures.long_horizon_eval import (
     build_long_horizon_eval_manifest_v1,
     build_long_horizon_eval_v1,
 )
-from mind.fixtures.retrieval_benchmark import build_phase_d_seed_objects
+from mind.fixtures.retrieval_benchmark import build_canonical_seed_objects
 from mind.kernel.store import SQLiteMemoryStore
 from mind.offline import select_replay_targets
 
@@ -22,7 +22,7 @@ def test_fixed_rule_strategy_returns_frozen_decision_shape(tmp_path: Path) -> No
     db_path = tmp_path / "fixed_rule_strategy.sqlite3"
     store = SQLiteMemoryStore(db_path)
     try:
-        store.insert_objects(build_phase_d_seed_objects())
+        store.insert_objects(build_canonical_seed_objects())
         sequence = build_long_horizon_eval_v1()[0]
         step = sequence.steps[0]
         ranking = select_replay_targets(

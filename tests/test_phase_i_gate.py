@@ -5,16 +5,16 @@ from pathlib import Path
 
 from mind.access import (
     AccessMode,
-    assert_phase_i_gate,
-    evaluate_phase_i_gate,
-    write_phase_i_gate_report_json,
+    assert_access_gate,
+    evaluate_access_gate,
+    write_access_gate_report_json,
 )
 
 
 def test_phase_i_gate_passes_current_thresholds(tmp_path: Path) -> None:
-    result = evaluate_phase_i_gate(tmp_path / "phase_i_gate.sqlite3")
+    result = evaluate_access_gate(tmp_path / "phase_i_gate.sqlite3")
 
-    assert_phase_i_gate(result)
+    assert_access_gate(result)
     assert result.i1_pass
     assert result.i2_pass
     assert result.i3_pass
@@ -23,7 +23,7 @@ def test_phase_i_gate_passes_current_thresholds(tmp_path: Path) -> None:
     assert result.i6_pass
     assert result.i7_pass
     assert result.i8_pass
-    assert result.phase_i_pass
+    assert result.access_gate_pass
     assert set(result.callable_modes) == {
         AccessMode.AUTO,
         AccessMode.FLASH,
@@ -37,13 +37,13 @@ def test_phase_i_gate_passes_current_thresholds(tmp_path: Path) -> None:
 
 
 def test_phase_i_gate_report_writes_json(tmp_path: Path) -> None:
-    result = evaluate_phase_i_gate(tmp_path / "phase_i_report.sqlite3")
+    result = evaluate_access_gate(tmp_path / "phase_i_report.sqlite3")
 
-    output_path = write_phase_i_gate_report_json(tmp_path / "phase_i_report.json", result)
+    output_path = write_access_gate_report_json(tmp_path / "phase_i_report.json", result)
     payload = json.loads(output_path.read_text(encoding="utf-8"))
 
-    assert payload["schema_version"] == "phase_i_gate_report_v1"
-    assert payload["phase_i_pass"] is True
+    assert payload["schema_version"] == "access_gate_report_v1"
+    assert payload["access_gate_pass"] is True
     assert sorted(payload["callable_modes"]) == [
         "auto",
         "flash",

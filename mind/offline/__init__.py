@@ -1,5 +1,16 @@
-"""Phase E offline maintenance interfaces."""
+"""Offline maintenance interfaces."""
 
+from .assessment import (
+    LongHorizonSequenceRun,
+    MaintenanceSequenceRun,
+    OfflineDevEvalResult,
+    OfflineGateResult,
+    OfflineStartupResult,
+    assert_offline_gate,
+    assert_offline_startup,
+    evaluate_offline_gate,
+    evaluate_offline_startup,
+)
 from .audit import (
     PromotionAudit,
     SchemaEvidenceAudit,
@@ -14,17 +25,6 @@ from .jobs import (
     PromoteSchemaJobPayload,
     ReflectEpisodeJobPayload,
     new_offline_job,
-)
-from .phase_e import (
-    LongHorizonSequenceRun,
-    MaintenanceSequenceRun,
-    PhaseEDevEvalResult,
-    PhaseEGateResult,
-    PhaseEStartupResult,
-    assert_phase_e_gate,
-    assert_phase_e_startup,
-    evaluate_phase_e_gate,
-    evaluate_phase_e_startup,
 )
 from .promotion import PromotionDecision, assess_schema_promotion
 from .replay import (
@@ -46,9 +46,9 @@ __all__ = [
     "OfflineWorker",
     "LongHorizonSequenceRun",
     "MaintenanceSequenceRun",
-    "PhaseEDevEvalResult",
-    "PhaseEGateResult",
-    "PhaseEStartupResult",
+    "OfflineDevEvalResult",
+    "OfflineGateResult",
+    "OfflineStartupResult",
     "PromoteSchemaJobPayload",
     "PromotionAudit",
     "PromotionDecision",
@@ -59,11 +59,11 @@ __all__ = [
     "assess_schema_promotion",
     "audit_promotion_within_window",
     "audit_schema_evidence",
-    "assert_phase_e_gate",
-    "assert_phase_e_startup",
+    "assert_offline_gate",
+    "assert_offline_startup",
     "deterministic_random_decile",
-    "evaluate_phase_e_gate",
-    "evaluate_phase_e_startup",
+    "evaluate_offline_gate",
+    "evaluate_offline_startup",
     "future_reuse_rate",
     "new_offline_job",
     "select_replay_targets",

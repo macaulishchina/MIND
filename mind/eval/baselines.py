@@ -1,4 +1,4 @@
-"""Baseline system runners for Phase F benchmark comparison."""
+"""Baseline system runners for benchmark comparison."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from typing import Any
 
 from mind.fixtures.long_horizon_dev import LongHorizonStep
 from mind.fixtures.long_horizon_eval import LongHorizonEvalSequence
-from mind.fixtures.retrieval_benchmark import build_phase_d_seed_objects
+from mind.fixtures.retrieval_benchmark import build_canonical_seed_objects
 from mind.kernel.retrieval import (
     build_query_embedding,
     keyword_score,
@@ -21,7 +21,7 @@ _RAW_TOPK_BASELINE_SIZE = 10.0
 
 
 class NoMemoryBaselineSystem:
-    """Zero-memory baseline used for Phase F benchmark comparison."""
+    """Zero-memory baseline used for benchmark comparison."""
 
     def run_sequence(
         self,
@@ -35,7 +35,7 @@ class NoMemoryBaselineSystem:
 
 
 class FixedSummaryMemoryBaselineSystem:
-    """Summary-only fixed memory baseline for Phase F."""
+    """Summary-only fixed memory baseline."""
 
     def __init__(self) -> None:
         self._objects = _latest_object_map()
@@ -147,7 +147,7 @@ class PlainRagBaselineSystem:
 
 
 def _latest_object_map() -> dict[str, dict[str, Any]]:
-    return {obj["id"]: obj for obj in latest_objects(build_phase_d_seed_objects())}
+    return {obj["id"]: obj for obj in latest_objects(build_canonical_seed_objects())}
 
 
 def _score_sequence(

@@ -1,4 +1,4 @@
-"""LongHorizonEval v1 fixtures and manifest helpers for Phase F."""
+"""LongHorizonEval v1 fixtures and manifest helpers for benchmark evaluation."""
 
 from __future__ import annotations
 

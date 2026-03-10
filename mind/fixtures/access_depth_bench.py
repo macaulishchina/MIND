@@ -1,4 +1,4 @@
-"""AccessDepthBench v1 fixtures for Phase I runtime access evaluation."""
+"""AccessDepthBench v1 fixtures for runtime access evaluation."""
 
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ class AccessDepthBenchCase:
 
 
 def build_access_depth_bench_v1() -> list[AccessDepthBenchCase]:
-    """Return the fixed AccessDepthBench v1 set for Phase I evaluation."""
+    """Return the fixed AccessDepthBench v1 set for access evaluation."""
 
     cases: list[AccessDepthBenchCase] = []
     for episode in build_golden_episode_set():

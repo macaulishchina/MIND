@@ -1,4 +1,4 @@
-"""Phase E startup and gate evaluation helpers."""
+"""Offline maintenance startup and gate evaluation helpers."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from mind.fixtures.long_horizon_dev import (
     LongHorizonStep,
     build_long_horizon_dev_v1,
 )
-from mind.fixtures.retrieval_benchmark import build_phase_d_seed_objects
+from mind.fixtures.retrieval_benchmark import build_canonical_seed_objects
 from mind.kernel.integrity import IntegrityReport, build_integrity_report
 from mind.kernel.store import MemoryStore, MemoryStoreFactory, SQLiteMemoryStore
 
@@ -65,7 +65,7 @@ class MaintenanceSequenceRun:
 
 
 @dataclass(frozen=True)
-class PhaseEStartupResult:
+class OfflineStartupResult:
     sequence_count: int
     min_step_count: int
     max_step_count: int
@@ -95,7 +95,7 @@ class PhaseEStartupResult:
         return self.promotion_sequence_count > 0 and self.promotion_precision_at_10 >= 0.80
 
     @property
-    def phase_e_startup_pass(self) -> bool:
+    def offline_startup_pass(self) -> bool:
         return (
             self.long_horizon_fixture_pass
             and self.replay_lift_pass
@@ -105,7 +105,7 @@ class PhaseEStartupResult:
 
 
 @dataclass(frozen=True)
-class PhaseEDevEvalResult:
+class OfflineDevEvalResult:
     sequence_count: int
     step_count: int
     no_maintenance_task_success_rate: float
@@ -132,9 +132,9 @@ class PhaseEDevEvalResult:
 
 
 @dataclass(frozen=True)
-class PhaseEGateResult:
-    startup_result: PhaseEStartupResult
-    dev_eval: PhaseEDevEvalResult
+class OfflineGateResult:
+    startup_result: OfflineStartupResult
+    dev_eval: OfflineDevEvalResult
     integrity_report: IntegrityReport
     generated_reflection_count: int
     generated_schema_count: int
@@ -160,7 +160,7 @@ class PhaseEGateResult:
         return self.dev_eval.e5_pass
 
     @property
-    def phase_e_pass(self) -> bool:
+    def offline_gate_pass(self) -> bool:
         return self.e1_pass and self.e2_pass and self.e3_pass and self.e4_pass and self.e5_pass
 
 
@@ -172,7 +172,7 @@ class _PromotionAuditBundle:
 
 
 @dataclass(frozen=True)
-class _PreparedPhaseEState:
+class _PreparedOfflineAssessmentState:
     sequences: tuple[LongHorizonSequence, ...]
     runs: tuple[LongHorizonSequenceRun, ...]
     promotion_audits: dict[str, _PromotionAuditBundle]
@@ -180,57 +180,57 @@ class _PreparedPhaseEState:
     generated_reflection_ids: tuple[str, ...]
 
 
-def evaluate_phase_e_startup(
+def evaluate_offline_startup(
     db_path: str | Path | None = None,
     store_factory: MemoryStoreFactory | None = None,
-) -> PhaseEStartupResult:
-    """Evaluate the Phase E startup baseline without the full E-5 A/B gate."""
+) -> OfflineStartupResult:
+    """Evaluate the offline startup baseline without the full A/B gate."""
 
     active_factory = store_factory or _default_store_factory
     if db_path is not None:
         return _run_startup(Path(db_path), active_factory)
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        return _run_startup(Path(tmpdir) / "phase_e.sqlite3", active_factory)
+        return _run_startup(Path(tmpdir) / "offline_startup.sqlite3", active_factory)
 
 
-def assert_phase_e_startup(result: PhaseEStartupResult) -> None:
+def assert_offline_startup(result: OfflineStartupResult) -> None:
     if not result.long_horizon_fixture_pass:
         raise RuntimeError(
-            "Phase E startup failed: LongHorizonDev v1 invalid "
+            "offline startup failed: LongHorizonDev v1 invalid "
             f"(sequence_count={result.sequence_count}, "
             f"min_step_count={result.min_step_count}, "
             f"max_step_count={result.max_step_count})"
         )
     if not result.replay_lift_pass:
-        raise RuntimeError(f"Phase E startup failed: ReplayLift ({result.replay_lift:.2f})")
+        raise RuntimeError(f"offline startup failed: ReplayLift ({result.replay_lift:.2f})")
     if not result.schema_validation_pass:
         raise RuntimeError(
-            "Phase E startup failed: SchemaValidationPrecision "
+            "offline startup failed: SchemaValidationPrecision "
             f"({result.schema_validation_precision:.2f})"
         )
     if not result.promotion_precision_pass:
         raise RuntimeError(
-            "Phase E startup failed: PromotionPrecision@10 "
+            "offline startup failed: PromotionPrecision@10 "
             f"({result.promotion_precision_at_10:.2f})"
         )
 
 
-def evaluate_phase_e_gate(
+def evaluate_offline_gate(
     db_path: str | Path | None = None,
     store_factory: MemoryStoreFactory | None = None,
-) -> PhaseEGateResult:
-    """Evaluate the formal Phase E gate."""
+) -> OfflineGateResult:
+    """Evaluate the formal offline maintenance gate."""
 
     active_factory = store_factory or _default_store_factory
     if db_path is not None:
         return _run_gate(Path(db_path), active_factory)
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        return _run_gate(Path(tmpdir) / "phase_e_gate.sqlite3", active_factory)
+        return _run_gate(Path(tmpdir) / "offline_gate.sqlite3", active_factory)
 
 
-def assert_phase_e_gate(result: PhaseEGateResult) -> None:
+def assert_offline_gate(result: OfflineGateResult) -> None:
     if not result.e1_pass:
         raise RuntimeError(
             "E-1 failed: derived trace coverage "
@@ -256,18 +256,21 @@ def assert_phase_e_gate(result: PhaseEGateResult) -> None:
         )
 
 
-def _run_startup(store_path: Path, active_store_factory: MemoryStoreFactory) -> PhaseEStartupResult:
+def _run_startup(
+    store_path: Path,
+    active_store_factory: MemoryStoreFactory,
+) -> OfflineStartupResult:
     with active_store_factory(store_path) as store:
-        state = _prepare_phase_e_state(store)
+        state = _prepare_offline_assessment_state(store)
     return _build_startup_result(state.runs)
 
 
-def _run_gate(store_path: Path, active_store_factory: MemoryStoreFactory) -> PhaseEGateResult:
+def _run_gate(store_path: Path, active_store_factory: MemoryStoreFactory) -> OfflineGateResult:
     with active_store_factory(store_path) as store:
-        state = _prepare_phase_e_state(store)
+        state = _prepare_offline_assessment_state(store)
         dev_eval = _evaluate_offline_dev_eval(store, state)
     startup_result = _build_startup_result(state.runs)
-    return PhaseEGateResult(
+    return OfflineGateResult(
         startup_result=startup_result,
         dev_eval=dev_eval,
         integrity_report=state.integrity_report,
@@ -276,8 +279,8 @@ def _run_gate(store_path: Path, active_store_factory: MemoryStoreFactory) -> Pha
     )
 
 
-def _prepare_phase_e_state(store: MemoryStore) -> _PreparedPhaseEState:
-    store.insert_objects(build_phase_d_seed_objects())
+def _prepare_offline_assessment_state(store: MemoryStore) -> _PreparedOfflineAssessmentState:
+    store.insert_objects(build_canonical_seed_objects())
     sequences = tuple(build_long_horizon_dev_v1())
     maintenance_service = OfflineMaintenanceService(store)
     generated_reflection_ids = _run_failure_episode_reflections(maintenance_service)
@@ -299,7 +302,7 @@ def _prepare_phase_e_state(store: MemoryStore) -> _PreparedPhaseEState:
         for sequence in sequences
     )
     integrity_report = build_integrity_report(store.iter_objects())
-    return _PreparedPhaseEState(
+    return _PreparedOfflineAssessmentState(
         sequences=sequences,
         runs=runs,
         promotion_audits=promotion_audits,
@@ -308,7 +311,7 @@ def _prepare_phase_e_state(store: MemoryStore) -> _PreparedPhaseEState:
     )
 
 
-def _build_startup_result(runs: tuple[LongHorizonSequenceRun, ...]) -> PhaseEStartupResult:
+def _build_startup_result(runs: tuple[LongHorizonSequenceRun, ...]) -> OfflineStartupResult:
     top_rate = round(sum(run.top_decile_reuse_rate for run in runs) / float(len(runs)), 4)
     random_rate = round(sum(run.random_decile_reuse_rate for run in runs) / float(len(runs)), 4)
     schema_precisions = [
@@ -317,7 +320,7 @@ def _build_startup_result(runs: tuple[LongHorizonSequenceRun, ...]) -> PhaseESta
     promotion_precisions = [
         run.promotion_precise for run in runs if run.promotion_precise is not None
     ]
-    return PhaseEStartupResult(
+    return OfflineStartupResult(
         sequence_count=len(runs),
         min_step_count=min(run.step_count for run in runs),
         max_step_count=max(run.step_count for run in runs),
@@ -375,14 +378,14 @@ def _run_failure_episode_reflections(
         if not any(obj["id"] == reflection_id for obj in episode.objects):
             continue
         job = new_offline_job(
-            job_id=f"phase-e-reflect-{episode.episode_id}",
+            job_id=f"offline-reflect-{episode.episode_id}",
             job_kind=OfflineJobKind.REFLECT_EPISODE,
             payload=ReflectEpisodeJobPayload(
                 episode_id=episode.episode_id,
                 focus="offline maintenance reflection",
             ),
         )
-        result = maintenance_service.process_job(job, actor="phase_e_gate")
+        result = maintenance_service.process_job(job, actor="offline_gate")
         generated_ids.append(str(result["reflection_object_id"]))
     return tuple(generated_ids)
 
@@ -400,7 +403,7 @@ def _run_sequence_promotion_audit(
             reason="promote repeated stale-memory pattern",
         ),
     )
-    result = maintenance_service.process_job(job, actor="phase_e_gate")
+    result = maintenance_service.process_job(job, actor="offline_gate")
     schema_object_id = str(result["schema_object_id"])
     return _PromotionAuditBundle(
         schema_object_id=schema_object_id,
@@ -411,8 +414,8 @@ def _run_sequence_promotion_audit(
 
 def _evaluate_offline_dev_eval(
     store: MemoryStore,
-    state: _PreparedPhaseEState,
-) -> PhaseEDevEvalResult:
+    state: _PreparedOfflineAssessmentState,
+) -> OfflineDevEvalResult:
     no_maintenance_runs = tuple(
         _evaluate_maintenance_sequence(
             store,
@@ -490,7 +493,7 @@ def _evaluate_offline_dev_eval(
         pollution_rate=maintenance_pollution_rate,
     )
 
-    return PhaseEDevEvalResult(
+    return OfflineDevEvalResult(
         sequence_count=len(state.sequences),
         step_count=step_count,
         no_maintenance_task_success_rate=no_task_success,

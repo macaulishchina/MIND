@@ -1,4 +1,4 @@
-"""Answer-level benchmark helpers for Phase D D-5 evaluation."""
+"""Answer-level benchmark helpers for workspace evaluation."""
 
 from __future__ import annotations
 

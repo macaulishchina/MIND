@@ -1,18 +1,18 @@
-"""Phase H governance control-plane interfaces."""
+"""Governance control-plane interfaces."""
 
-from .phase_h import (
-    PhaseHGateResult,
-    assert_phase_h_gate,
-    evaluate_phase_h_gate,
-    write_phase_h_gate_report_json,
+from .gate import (
+    GovernanceGateResult,
+    assert_governance_gate,
+    evaluate_governance_gate,
+    write_governance_gate_report_json,
 )
 from .service import GovernanceService, GovernanceServiceError
 
 __all__ = [
     "GovernanceService",
     "GovernanceServiceError",
-    "PhaseHGateResult",
-    "assert_phase_h_gate",
-    "evaluate_phase_h_gate",
-    "write_phase_h_gate_report_json",
+    "GovernanceGateResult",
+    "assert_governance_gate",
+    "evaluate_governance_gate",
+    "write_governance_gate_report_json",
 ]

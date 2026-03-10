@@ -1,4 +1,4 @@
-"""Persistence and CI reporting helpers for Phase F benchmark runs."""
+"""Persistence and CI reporting helpers for benchmark runs."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from .runner import (
     LongHorizonScoreCard,
 )
 
-_REPORT_SCHEMA_VERSION = "phase_f_benchmark_report_v1"
+_REPORT_SCHEMA_VERSION = "benchmark_suite_report_v1"
 
 
 # MetricConfidenceInterval is re-exported from ._ci for backward compatibility.

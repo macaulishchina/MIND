@@ -1,4 +1,4 @@
-"""Integrity checks for the Phase B memory kernel."""
+"""Integrity checks for the memory kernel."""
 
 from __future__ import annotations
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from mind.fixtures.primitive_golden_calls import build_primitive_golden_calls_v1
-from mind.primitives.phase_c import assert_phase_c_gate, evaluate_phase_c_gate
+from mind.primitives.gate import assert_primitive_gate, evaluate_primitive_gate
 
 
 def test_primitive_golden_calls_v1_has_required_coverage() -> None:
@@ -14,7 +14,7 @@ def test_primitive_golden_calls_v1_has_required_coverage() -> None:
 
 
 def test_phase_c_gate_metrics() -> None:
-    result = evaluate_phase_c_gate()
+    result = evaluate_primitive_gate()
 
     assert result.total_calls == 200
     assert result.expectation_match_count == result.total_calls
@@ -30,5 +30,5 @@ def test_phase_c_gate_metrics() -> None:
     assert result.c3_pass
     assert result.c4_pass
     assert result.c5_pass
-    assert result.phase_c_pass
-    assert_phase_c_gate(result)
+    assert result.primitive_gate_pass
+    assert_primitive_gate(result)

@@ -12,26 +12,26 @@ from mind.eval import (
     MindLongHorizonSystem,
     OptimizedMindStrategy,
     evaluate_fixed_rule_cost_report,
-    evaluate_phase_g_gate,
-    write_phase_g_gate_report_json,
+    evaluate_strategy_gate,
+    write_strategy_gate_report_json,
 )
 from mind.eval._ci import MetricConfidenceInterval, metric_interval, t_critical
+from mind.eval.benchmark_gate import comparison_interval
 from mind.eval.costing import (
     _relative_bias,
 )
-from mind.eval.phase_f import comparison_interval
-from mind.eval.phase_g import PhaseGGateResult, _budget_bias_within_limit
 from mind.eval.strategy import (
     first_completable_multi_object_step,
     handle_coverage,
     needed_object_bonus,
     optimized_budget_schedule,
 )
+from mind.eval.strategy_gate import StrategyGateResult, _budget_bias_within_limit
 from mind.fixtures.long_horizon_eval import (
     build_long_horizon_eval_manifest_v1,
     build_long_horizon_eval_v1,
 )
-from mind.fixtures.retrieval_benchmark import build_phase_d_seed_objects
+from mind.fixtures.retrieval_benchmark import build_canonical_seed_objects
 from mind.kernel.store import SQLiteMemoryStore
 
 # ---------------------------------------------------------------------------
@@ -270,15 +270,15 @@ class TestBudgetBiasWithinLimit:
 
 
 class TestAssertPhaseGGateFailures:
-    """Verify that assert_phase_g_gate raises on each individual gate failure."""
+    """Verify that assert_strategy_gate raises on each individual gate failure."""
 
-    def _make_passing_result(self) -> PhaseGGateResult:
+    def _make_passing_result(self) -> StrategyGateResult:
         """Run the real gate to get a passing result as template."""
-        return evaluate_phase_g_gate(repeat_count=3)
+        return evaluate_strategy_gate(repeat_count=3)
 
     def test_g5_requires_minimum_repeat_count(self) -> None:
         """G-5 requires repeat_count >= 3."""
-        result = evaluate_phase_g_gate(repeat_count=3)
+        result = evaluate_strategy_gate(repeat_count=3)
         assert result.g5_pass is True
         assert result.repeat_count >= 3
 
@@ -290,15 +290,15 @@ class TestAssertPhaseGGateFailures:
 
 class TestPhaseGGateReportJson:
     def test_gate_report_persists(self, tmp_path: Path) -> None:
-        result = evaluate_phase_g_gate(repeat_count=3)
-        output_path = write_phase_g_gate_report_json(
+        result = evaluate_strategy_gate(repeat_count=3)
+        output_path = write_strategy_gate_report_json(
             tmp_path / "gate_report.json", result
         )
         assert output_path.exists()
         import json
 
         payload = json.loads(output_path.read_text())
-        assert payload["phase_g_pass"] is True
+        assert payload["strategy_gate_pass"] is True
         assert payload["g1_pass"] is True
         assert payload["g2_pass"] is True
         assert payload["g3_pass"] is True
@@ -349,7 +349,7 @@ class TestHandleCoverage:
     def test_non_schema_object_covers_only_self(self, tmp_path: Path) -> None:
         store = SQLiteMemoryStore(tmp_path / "coverage.sqlite3")
         try:
-            seed = build_phase_d_seed_objects()
+            seed = build_canonical_seed_objects()
             store.insert_objects(seed)
             # Pick a non-SchemaNote object
             raw_obj = next(
@@ -365,7 +365,7 @@ class TestHandleCoverage:
     def test_schema_expansion_disabled_covers_only_self(self, tmp_path: Path) -> None:
         store = SQLiteMemoryStore(tmp_path / "coverage2.sqlite3")
         try:
-            seed = build_phase_d_seed_objects()
+            seed = build_canonical_seed_objects()
             store.insert_objects(seed)
             for obj in seed:
                 coverage = handle_coverage(

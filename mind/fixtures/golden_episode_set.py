@@ -1,4 +1,4 @@
-"""GoldenEpisodeSet v1 for Phase B."""
+"""GoldenEpisodeSet v1 for kernel validation."""
 
 from __future__ import annotations
 

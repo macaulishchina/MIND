@@ -1,4 +1,4 @@
-"""Frozen Phase D context serialization protocol."""
+"""Frozen workspace context serialization protocol."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from typing import Any
 from mind.kernel.schema import strip_control_plane_metadata
 from mind.kernel.store import MemoryStore
 
-PHASE_D_CONTEXT_PROTOCOL = "mind.phase_d_context.v1"
+WORKSPACE_CONTEXT_PROTOCOL = "mind.smoke_context.v1"
 
 
 @dataclass(frozen=True)
@@ -26,14 +26,14 @@ def build_raw_topk_context(
     object_ids: tuple[str, ...],
 ) -> SerializedContext:
     payload = {
-        "protocol": PHASE_D_CONTEXT_PROTOCOL,
+        "protocol": WORKSPACE_CONTEXT_PROTOCOL,
         "kind": "raw_topk",
         "object_ids": list(object_ids),
         "objects": [_raw_object_payload(store.read_object(object_id)) for object_id in object_ids],
     }
     text = _canonical_json(payload)
     return SerializedContext(
-        protocol=PHASE_D_CONTEXT_PROTOCOL,
+        protocol=WORKSPACE_CONTEXT_PROTOCOL,
         kind="raw_topk",
         object_ids=object_ids,
         text=text,
@@ -44,7 +44,7 @@ def build_raw_topk_context(
 def build_workspace_context(workspace: dict[str, Any]) -> SerializedContext:
     selected_object_ids = tuple(workspace["content"]["selected_object_ids"])
     payload = {
-        "protocol": PHASE_D_CONTEXT_PROTOCOL,
+        "protocol": WORKSPACE_CONTEXT_PROTOCOL,
         "kind": "workspace",
         "task_id": workspace["metadata"]["task_id"],
         "selected_object_ids": list(selected_object_ids),
@@ -58,7 +58,7 @@ def build_workspace_context(workspace: dict[str, Any]) -> SerializedContext:
     }
     text = _canonical_json(payload)
     return SerializedContext(
-        protocol=PHASE_D_CONTEXT_PROTOCOL,
+        protocol=WORKSPACE_CONTEXT_PROTOCOL,
         kind="workspace",
         object_ids=selected_object_ids,
         text=text,

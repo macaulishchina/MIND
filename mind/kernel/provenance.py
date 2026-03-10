@@ -1,4 +1,4 @@
-"""Direct provenance models and helpers for Phase H foundation."""
+"""Direct provenance models and helpers."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Offline maintenance job contracts for Phase E."""
+"""Offline maintenance job contracts."""
 
 from __future__ import annotations
 
@@ -64,7 +64,7 @@ class OfflineJob(BaseModel):
 
 
 class OfflineJobStore(Protocol):
-    """Minimal queue interface used by the Phase E worker."""
+    """Minimal queue interface used by the offline worker."""
 
     def enqueue_offline_job(self, job: OfflineJob | dict[str, Any]) -> None: ...
 

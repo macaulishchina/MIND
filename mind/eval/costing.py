@@ -1,4 +1,4 @@
-"""Cost accounting helpers for Phase G strategy optimization work."""
+"""Cost accounting helpers for strategy optimization work."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ from ._ci import MetricConfidenceInterval, metric_interval, t_critical
 from .mind_system import MindLongHorizonSystem, MindRunCostSnapshot
 from .runner import LongHorizonBenchmarkRun, LongHorizonBenchmarkRunner
 
-_COST_REPORT_SCHEMA_VERSION = "phase_g_cost_report_v1"
+_COST_REPORT_SCHEMA_VERSION = "strategy_cost_report_v1"
 
 
 @dataclass(frozen=True)
@@ -34,7 +34,7 @@ class CostBudgetProfile:
 
 
 @dataclass(frozen=True)
-class PhaseGCostReport:
+class StrategyCostReport:
     schema_version: str
     generated_at: str
     fixture_name: str
@@ -54,7 +54,7 @@ class PhaseGCostReport:
     snapshots: tuple[MindRunCostSnapshot, ...]
 
 
-def evaluate_fixed_rule_cost_report(*, repeat_count: int = 3) -> PhaseGCostReport:
+def evaluate_fixed_rule_cost_report(*, repeat_count: int = 3) -> StrategyCostReport:
     """Run the frozen fixed-rule strategy and persist its budget profile."""
 
     if repeat_count < 1:
@@ -75,13 +75,13 @@ def evaluate_fixed_rule_cost_report(*, repeat_count: int = 3) -> PhaseGCostRepor
         system.close()
 
     budget_profile = build_cost_budget_profile(
-        profile_id="phase_g_fixed_rule_budget_v1",
+        profile_id="strategy_fixed_rule_budget_v1",
         fixture_name=manifest.fixture_name,
         fixture_hash=manifest.fixture_hash,
         runs=runs,
         snapshots=snapshots,
     )
-    return build_phase_g_cost_report(
+    return build_strategy_cost_report(
         system_id="mind_fixed_rule",
         strategy_id=snapshots[0].strategy_id,
         runs=runs,
@@ -126,7 +126,7 @@ def build_cost_budget_profile(
     )
 
 
-def build_phase_g_cost_report(
+def build_strategy_cost_report(
     *,
     system_id: str,
     strategy_id: str,
@@ -134,8 +134,8 @@ def build_phase_g_cost_report(
     snapshots: tuple[MindRunCostSnapshot, ...],
     budget_profile: CostBudgetProfile,
     generated_at: datetime | None = None,
-) -> PhaseGCostReport:
-    """Build a persisted Phase G cost report for a single strategy/system."""
+) -> StrategyCostReport:
+    """Build a persisted strategy cost report for a single strategy/system."""
 
     _validate_runs_and_snapshots(system_id=system_id, runs=runs, snapshots=snapshots)
     if len(runs) != budget_profile.repeat_count:
@@ -152,7 +152,7 @@ def build_phase_g_cost_report(
     total_costs = [
         _total_cost_ratio(run, snapshot) for run, snapshot in zip(runs, snapshots, strict=True)
     ]
-    return PhaseGCostReport(
+    return StrategyCostReport(
         schema_version=_COST_REPORT_SCHEMA_VERSION,
         generated_at=(generated_at or datetime.now(UTC)).isoformat(),
         fixture_name=runs[0].fixture_name,
@@ -184,9 +184,9 @@ def build_phase_g_cost_report(
     )
 
 
-def write_phase_g_cost_report_json(
+def write_strategy_cost_report_json(
     path: str | Path,
-    report: PhaseGCostReport,
+    report: StrategyCostReport,
 ) -> Path:
     output_path = Path(path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -197,11 +197,11 @@ def write_phase_g_cost_report_json(
     return output_path
 
 
-def read_phase_g_cost_report_json(path: str | Path) -> PhaseGCostReport:
+def read_strategy_cost_report_json(path: str | Path) -> StrategyCostReport:
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
     if payload.get("schema_version") != _COST_REPORT_SCHEMA_VERSION:
         raise ValueError(
-            "unexpected phase_g cost report schema_version "
+            "unexpected strategy cost report schema_version "
             f"({payload.get('schema_version')!r})"
         )
     return _cost_report_from_dict(payload)
@@ -251,7 +251,7 @@ def _total_cost_ratio(
     )
 
 
-def _cost_report_to_dict(report: PhaseGCostReport) -> dict[str, object]:
+def _cost_report_to_dict(report: StrategyCostReport) -> dict[str, object]:
     return {
         "schema_version": report.schema_version,
         "generated_at": report.generated_at,
@@ -273,8 +273,8 @@ def _cost_report_to_dict(report: PhaseGCostReport) -> dict[str, object]:
     }
 
 
-def _cost_report_from_dict(payload: dict[str, Any]) -> PhaseGCostReport:
-    return PhaseGCostReport(
+def _cost_report_from_dict(payload: dict[str, Any]) -> StrategyCostReport:
+    return StrategyCostReport(
         schema_version=str(payload["schema_version"]),
         generated_at=str(payload["generated_at"]),
         fixture_name=str(payload["fixture_name"]),

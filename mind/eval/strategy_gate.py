@@ -1,4 +1,4 @@
-"""Phase G strategy optimization evaluation and gate helpers."""
+"""Strategy optimization evaluation and gate helpers."""
 
 from __future__ import annotations
 
@@ -13,22 +13,22 @@ from ..fixtures.long_horizon_eval import (
     build_long_horizon_eval_manifest_v1,
     build_long_horizon_eval_v1,
 )
+from .benchmark_gate import ComparisonInterval, comparison_interval, comparison_interval_to_dict
 from .costing import (
-    PhaseGCostReport,
+    StrategyCostReport,
     build_cost_budget_profile,
-    build_phase_g_cost_report,
+    build_strategy_cost_report,
 )
 from .mind_system import MindLongHorizonSystem
-from .phase_f import ComparisonInterval, comparison_interval, comparison_interval_to_dict
 from .reporting import BenchmarkSuiteReport, BenchmarkSystemReport, build_benchmark_suite_report
 from .runner import LongHorizonBenchmarkRun, LongHorizonBenchmarkRunner
 from .strategy import FixedRuleMindStrategy, OptimizedMindStrategy
 
-_PHASE_G_GATE_SCHEMA_VERSION = "phase_g_gate_report_v1"
+_SCHEMA_VERSION = "strategy_gate_report_v1"
 
 
 @dataclass(frozen=True)
-class PhaseGFamilyImprovement:
+class StrategyFamilyImprovement:
     family: str
     fixed_rule_pus: float
     optimized_pus: float
@@ -36,14 +36,14 @@ class PhaseGFamilyImprovement:
 
 
 @dataclass(frozen=True)
-class PhaseGGateResult:
+class StrategyGateResult:
     manifest_hash: str
     repeat_count: int
     suite_report: BenchmarkSuiteReport
-    fixed_rule_cost_report: PhaseGCostReport
-    optimized_cost_report: PhaseGCostReport
+    fixed_rule_cost_report: StrategyCostReport
+    optimized_cost_report: StrategyCostReport
     pus_improvement: ComparisonInterval
-    family_improvements: tuple[PhaseGFamilyImprovement, ...]
+    family_improvements: tuple[StrategyFamilyImprovement, ...]
     pollution_rate_delta: ComparisonInterval
 
     @property
@@ -75,12 +75,12 @@ class PhaseGGateResult:
         return self.repeat_count >= 3 and self.pus_improvement.ci_lower > 0.0
 
     @property
-    def phase_g_pass(self) -> bool:
+    def strategy_gate_pass(self) -> bool:
         return self.g1_pass and self.g2_pass and self.g3_pass and self.g4_pass and self.g5_pass
 
 
-def evaluate_phase_g_gate(*, repeat_count: int = 3) -> PhaseGGateResult:
-    """Run the formal Phase G optimization gate on LongHorizonEval v1."""
+def evaluate_strategy_gate(*, repeat_count: int = 3) -> StrategyGateResult:
+    """Run the formal strategy optimization gate on LongHorizonEval v1."""
 
     manifest = build_long_horizon_eval_manifest_v1()
     sequences = build_long_horizon_eval_v1()
@@ -113,20 +113,20 @@ def evaluate_phase_g_gate(*, repeat_count: int = 3) -> PhaseGGateResult:
         }
     )
     budget_profile = build_cost_budget_profile(
-        profile_id="phase_g_fixed_rule_budget_v1",
+        profile_id="strategy_fixed_rule_budget_v1",
         fixture_name=manifest.fixture_name,
         fixture_hash=manifest.fixture_hash,
         runs=fixed_runs,
         snapshots=fixed_snapshots,
     )
-    fixed_rule_cost_report = build_phase_g_cost_report(
+    fixed_rule_cost_report = build_strategy_cost_report(
         system_id="mind_fixed_rule",
         strategy_id="fixed_rule_v1",
         runs=fixed_runs,
         snapshots=fixed_snapshots,
         budget_profile=budget_profile,
     )
-    optimized_cost_report = build_phase_g_cost_report(
+    optimized_cost_report = build_strategy_cost_report(
         system_id="mind_optimized_v1",
         strategy_id="optimized_v1",
         runs=optimized_runs,
@@ -140,7 +140,7 @@ def evaluate_phase_g_gate(*, repeat_count: int = 3) -> PhaseGGateResult:
         _family_improvement(family, fixed_runs, optimized_runs)
         for family in sorted({sequence.family for sequence in sequences})
     )
-    return PhaseGGateResult(
+    return StrategyGateResult(
         manifest_hash=manifest.fixture_hash,
         repeat_count=repeat_count,
         suite_report=suite_report,
@@ -158,7 +158,7 @@ def evaluate_phase_g_gate(*, repeat_count: int = 3) -> PhaseGGateResult:
     )
 
 
-def assert_phase_g_gate(result: PhaseGGateResult) -> None:
+def assert_strategy_gate(result: StrategyGateResult) -> None:
     if not result.g1_pass:
         raise RuntimeError(
             "G-1 failed: optimized strategy did not improve enough PUS "
@@ -194,16 +194,16 @@ def assert_phase_g_gate(result: PhaseGGateResult) -> None:
         )
 
 
-def write_phase_g_gate_report_json(
+def write_strategy_gate_report_json(
     path: str | Path,
-    result: PhaseGGateResult,
+    result: StrategyGateResult,
 ) -> Path:
-    """Persist the full Phase G gate result as JSON."""
+    """Persist the full strategy gate result as JSON."""
 
     output_path = Path(path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
-        "schema_version": _PHASE_G_GATE_SCHEMA_VERSION,
+        "schema_version": _SCHEMA_VERSION,
         "generated_at": datetime.now(UTC).isoformat(),
         "manifest_hash": result.manifest_hash,
         "repeat_count": result.repeat_count,
@@ -234,7 +234,7 @@ def write_phase_g_gate_report_json(
         "g3_pass": result.g3_pass,
         "g4_pass": result.g4_pass,
         "g5_pass": result.g5_pass,
-        "phase_g_pass": result.phase_g_pass,
+        "strategy_gate_pass": result.strategy_gate_pass,
     }
     output_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return output_path
@@ -244,10 +244,10 @@ def _family_improvement(
     family: str,
     fixed_runs: tuple[LongHorizonBenchmarkRun, ...],
     optimized_runs: tuple[LongHorizonBenchmarkRun, ...],
-) -> PhaseGFamilyImprovement:
+) -> StrategyFamilyImprovement:
     fixed_pus = _family_pus_values(fixed_runs, family)
     optimized_pus = _family_pus_values(optimized_runs, family)
-    return PhaseGFamilyImprovement(
+    return StrategyFamilyImprovement(
         family=family,
         fixed_rule_pus=round(mean(fixed_pus), 4),
         optimized_pus=round(mean(optimized_pus), 4),
@@ -283,12 +283,12 @@ def _budget_bias_within_limit(interval: Any) -> bool:
     return max(abs(interval.ci_lower), abs(interval.ci_upper)) <= 0.05
 
 
-# Use shared implementations from phase_f to avoid duplication.
+# Use the shared benchmark comparison helpers to avoid duplication.
 _comparison_interval = comparison_interval
 _comparison_interval_to_dict = comparison_interval_to_dict
 
 
-def _cost_report_summary(report: PhaseGCostReport) -> dict[str, object]:
+def _cost_report_summary(report: StrategyCostReport) -> dict[str, object]:
     return {
         "system_id": report.system_id,
         "strategy_id": report.strategy_id,

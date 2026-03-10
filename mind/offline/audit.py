@@ -1,4 +1,4 @@
-"""Evidence and promotion audit helpers for Phase E."""
+"""Evidence and promotion audit helpers."""
 
 from __future__ import annotations
 

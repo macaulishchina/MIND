@@ -1,1 +1,1 @@
-"""Phase B memory kernel."""
+"""Memory kernel."""

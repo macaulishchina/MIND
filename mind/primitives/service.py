@@ -1,4 +1,4 @@
-"""Phase C primitive service object implementations."""
+"""Primitive service object implementations."""
 
 from __future__ import annotations
 
@@ -54,7 +54,7 @@ type QueryEmbedder = Callable[[str | dict[str, Any]], tuple[float, ...]]
 
 
 class PrimitiveService:
-    """Library-first Phase C primitive surface."""
+    """Library-first primitive surface."""
 
     def __init__(
         self,

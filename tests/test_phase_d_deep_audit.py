@@ -45,7 +45,7 @@ from mind.workspace.answer_benchmark import (
 )
 from mind.workspace.builder import WorkspaceBuilder, WorkspaceBuildError
 from mind.workspace.context_protocol import (
-    PHASE_D_CONTEXT_PROTOCOL,
+    WORKSPACE_CONTEXT_PROTOCOL,
     build_raw_topk_context,
     build_workspace_context,
 )
@@ -406,7 +406,7 @@ class TestContextProtocolEdgeCases:
             store.insert_objects(showcase)
             ctx = build_raw_topk_context(store, ())
 
-        assert ctx.protocol == PHASE_D_CONTEXT_PROTOCOL
+        assert ctx.protocol == WORKSPACE_CONTEXT_PROTOCOL
         assert ctx.kind == "raw_topk"
         assert ctx.object_ids == ()
         payload = json.loads(ctx.text)

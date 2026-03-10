@@ -1,4 +1,4 @@
-"""Governance audit models for the Phase H control plane."""
+"""Governance audit models for the control plane."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Typed primitive request/response contracts for Phase C."""
+"""Typed primitive request/response contracts."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ from mind.kernel.schema import (
 
 
 class ContractModel(BaseModel):
-    """Strict base model shared by Phase C contracts."""
+    """Strict base model shared by primitive contracts."""
 
     model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
 

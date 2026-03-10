@@ -46,7 +46,7 @@ def test_benchmark_suite_report_persists_and_round_trips(tmp_path: Path) -> None
         generated_at=datetime(2026, 3, 9, 23, 0, tzinfo=UTC),
     )
 
-    assert report.schema_version == "phase_f_benchmark_report_v1"
+    assert report.schema_version == "benchmark_suite_report_v1"
     assert report.fixture_name == "LongHorizonEval v1"
     assert report.repeat_count == 3
     assert tuple(system.system_id for system in report.system_reports) == (

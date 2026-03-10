@@ -10,11 +10,11 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from mind.cli import phase_f_baselines_main
+from mind.cli import benchmark_baselines_main
 
 
 def main() -> int:
-    return phase_f_baselines_main()
+    return benchmark_baselines_main()
 
 
 if __name__ == "__main__":

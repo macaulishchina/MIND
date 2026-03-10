@@ -23,7 +23,7 @@ class StoreError(RuntimeError):
 
 
 class MemoryStore(Protocol):
-    """Minimal store contract shared by Phase B/C kernel code."""
+    """Minimal store contract shared by kernel and primitive code."""
 
     def insert_object(self, obj: dict[str, Any]) -> None: ...
 
@@ -170,7 +170,7 @@ type MemoryStoreFactory = Callable[[Path], MemoryStoreContextManager]
 
 
 class SQLiteMemoryStore:
-    """A minimal append-only memory store for Phase B."""
+    """A minimal append-only memory store."""
 
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
@@ -1051,7 +1051,7 @@ class SQLiteMemoryStore:
 
 
 class _SQLiteStoreTransaction:
-    """Explicit transaction wrapper used by Phase C write paths."""
+    """Explicit transaction wrapper used by write paths."""
 
     def __init__(self, store: SQLiteMemoryStore) -> None:
         self._store = store

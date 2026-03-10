@@ -124,15 +124,15 @@ MIND 当前聚焦于四个核心问题：
 
 ## 当前状态
 
-这个项目目前已有一套 **通过 Phase G 本地验收的实现基线**。
+这个项目目前已有一套 **通过 Phase J 本地验收的实现基线**。
 
 同时，文档层已经补充冻结了 provenance control plane、`support_unit` 和独立 `governance / reshape loop` 的语义。
 
 文档层也已经补充冻结了运行时 `Flash / Recall / Reconstruct / Reflective`（内部名 `reflective_access`）访问档位与 `auto` 调度语义，并把“记忆如何长成人格层”纳入设计主线与研究问题。
 
-当前文档已经把 `Phase H ~ K` 的 formal gate、阶段边界和启动清单补齐，用来约束 provenance foundation、runtime access、governance reshape 和 persona projection 的后续实现顺序。
+当前文档已经把 `Phase H ~ O` 的 formal gate、阶段边界和启动清单补齐，用来约束 provenance foundation、runtime access、统一 CLI、统一模型能力层、开发态 telemetry、前端体验、governance reshape 和 persona projection 的实现顺序。
 
-这些内容是**下一阶段之前的正式设计前置约束**；其中运行时访问档位已进入规范层，来源治理与人格层设计也已进入规范/设计层，但它们都不代表已经进入当前 Phase G 的实现基线。
+这些内容里，`Phase H / I / J` 已经进入实现基线并通过本地 formal gate；`Phase K ~ O` 仍然是后续阶段的正式设计前置约束。
 
 当前落地包括：
 
@@ -152,6 +152,8 @@ MIND 当前聚焦于四个核心问题：
 - 完成本地 Phase F gate：`LongHorizonEval v1`、3 个 baseline、`95% CI` report、`F-4 ~ F-7`
 - 完成本地 Phase G gate：`fixed-rule budget baseline`、`optimized_v1`、`G-1 ~ G-5`
 - 完成本地 Phase H gate：direct provenance、最小 governance control plane、online / offline conceal isolation、`H-1 ~ H-8`
+- 完成本地 Phase I gate：runtime access modes、`auto` 调度、`AccessDepthBench v1`、`I-1 ~ I-8`
+- 完成本地 Phase J gate：统一 `mind` CLI、8 个一级命令族、`MindCliScenarioSet v1`、config audit、`J-1 ~ J-6`
 
 当前实现包括：
 
@@ -169,10 +171,12 @@ MIND 当前聚焦于四个核心问题：
 - `mind/offline/jobs.py` / `mind/offline/service.py` / `mind/offline/worker.py`：Phase E 离线 job contract、maintenance service 与单进程 worker
 - `mind/offline/replay.py` / `mind/offline/audit.py` / `mind/offline/phase_e.py`：Replay target ranking、evidence audit、`LongHorizonDev v1` 与 Phase E gate
 - `mind/governance/service.py` / `mind/governance/phase_h.py`：Phase H governance control plane 与 formal gate
+- `mind/cli.py` / `mind/cli_config.py` / `mind/phase_j.py`：统一 `mind` CLI、profile/backend 解析与 Phase J formal gate
 - `mind/fixtures/retrieval_benchmark.py`：固定的 RetrievalBenchmark v0 / v1
 - `mind/fixtures/episode_answer_bench.py`：固定的 `EpisodeAnswerBench v1`
 - `mind/fixtures/long_horizon_dev.py`：固定的 `LongHorizonDev v1`
-- `scripts/run_phase_b_gate.py` / `scripts/run_phase_c_gate.py` / `scripts/run_phase_d_smoke.py` / `scripts/run_phase_e_startup.py` / `scripts/run_phase_e_gate.py` / `scripts/run_phase_f_manifest.py` / `scripts/run_phase_f_baselines.py` / `scripts/run_phase_f_report.py` / `scripts/run_phase_f_comparison.py` / `scripts/run_phase_f_gate.py` / `scripts/run_phase_h_gate.py` / `scripts/run_phase_i_gate.py` / `scripts/run_offline_worker_once.py`：本地 gate / worker 入口
+- `mind/fixtures/mind_cli_scenarios.py`：固定的 `MindCliScenarioSet v1`
+- `scripts/run_phase_b_gate.py` / `scripts/run_phase_c_gate.py` / `scripts/run_phase_d_smoke.py` / `scripts/run_phase_e_startup.py` / `scripts/run_phase_e_gate.py` / `scripts/run_phase_f_manifest.py` / `scripts/run_phase_f_baselines.py` / `scripts/run_phase_f_report.py` / `scripts/run_phase_f_comparison.py` / `scripts/run_phase_f_gate.py` / `scripts/run_phase_h_gate.py` / `scripts/run_phase_i_gate.py` / `scripts/run_phase_j_gate.py` / `scripts/run_offline_worker_once.py`：本地 gate / worker 入口
 - `tests/test_phase_b_gate.py` / `tests/test_phase_c_gate.py` / `tests/test_phase_d_smoke.py`：阶段 gate 测试
 
 当前存储口径：
@@ -217,6 +221,7 @@ MIND 当前聚焦于四个核心问题：
 - [Phase G 验收报告](./docs/reports/phase_g_acceptance_report.md)
 - [Phase H 验收报告](./docs/reports/phase_h_acceptance_report.md)
 - [Phase I 验收报告](./docs/reports/phase_i_acceptance_report.md)
+- [Phase J 验收报告](./docs/reports/phase_j_acceptance_report.md)
 - [Phase G 独立审计报告](./docs/reports/phase_g_independent_audit.md)
 - [Phase C 验收报告](./docs/reports/phase_c_acceptance_report.md)
 
@@ -226,6 +231,27 @@ MIND 当前聚焦于四个核心问题：
 
 ```bash
 uv sync --extra dev
+uv run mind -h
+uv run mind primitive -h
+uv run mind primitive write-raw --sqlite-path artifacts/dev/mind.sqlite3 --record-kind user_message --episode-id episode-demo --timestamp-order 1 --content "remember this"
+uv run mind primitive read --sqlite-path artifacts/dev/mind.sqlite3 --object-id raw-episode-demo-...
+uv run mind access -h
+uv run mind access run --sqlite-path artifacts/dev/mind.sqlite3 --seed-bench-fixtures --mode flash --task-id task-001 --episode-id episode-001 --query "For episode-001, reply with only success or failure."
+uv run mind access benchmark
+uv run mind governance -h
+uv run mind governance plan-conceal --sqlite-path artifacts/dev/mind.sqlite3 --episode-id episode-demo --reason "conceal demo episode"
+uv run mind demo -h
+uv run mind demo ingest-read
+uv run mind demo access-run
+uv run mind gate -h
+uv run mind gate phase-i --output artifacts/phase_i/gate_report.json
+uv run mind gate phase-j --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:55432/postgres --output artifacts/phase_j/gate_report.json
+uv run mind report -h
+uv run mind report acceptance --phase h
+uv run mind offline -h
+uv run mind offline worker --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:5432/postgres --max-jobs 5
+uv run mind config show
+uv run mind config doctor --backend postgresql
 uv run pytest -q
 uv run mind-phase-b-gate
 uv run mind-phase-c-gate
@@ -240,6 +266,7 @@ uv run mind-phase-f-gate --repeat-count 3 --output artifacts/phase_f/gate_report
 uv run mind-phase-g-cost-report --repeat-count 3 --output artifacts/phase_g/cost_report.json
 uv run mind-phase-g-strategy-dev --run-id 1
 uv run mind-phase-g-gate --repeat-count 3 --output artifacts/phase_g/gate_report.json
+uv run mind-phase-j-gate --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:55432/postgres --output artifacts/phase_j/gate_report.json
 uv run mind-postgres-regression --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:5432/postgres
 uv run mind-offline-worker-once --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:5432/postgres --max-jobs 5
 uv run ruff check mind tests scripts
@@ -263,6 +290,7 @@ uv run mypy
 .venv/bin/python scripts/run_phase_g_cost_report.py --repeat-count 3 --output /tmp/phase_g_cost_report.json
 .venv/bin/python scripts/run_phase_g_strategy_dev.py --run-id 1
 .venv/bin/python scripts/run_phase_g_gate.py --repeat-count 3 --output /tmp/phase_g_gate.json
+.venv/bin/python scripts/run_phase_j_gate.py --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:55432/postgres --output /tmp/phase_j_gate.json
 .venv/bin/python scripts/run_postgres_regression.py --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:5432/postgres
 .venv/bin/python scripts/run_offline_worker_once.py --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:5432/postgres --max-jobs 5
 ```
@@ -276,15 +304,19 @@ uv run mypy
 - Phase E gate：`phase_e_gate=PASS`
 - Phase F gate：`phase_f_gate=PASS`
 - Phase G gate：`phase_g_gate=PASS`
+- Phase J gate：`phase_j_gate=PASS`
 
 当前阶段状态说明：
 
-- 当前工作树已通过 `Phase G acceptance gate`。
+- 当前工作树已通过 `Phase J acceptance gate`。
 - `D-5` 现在使用 `EpisodeAnswerBench v1` 的 answer-level A/B benchmark，而不是 `task_success_proxy`。
 - `Phase D smoke report` 保留为启动期 / pre-acceptance 基线记录；最新正式口径见 [Phase D 验收报告](./docs/reports/phase_d_acceptance_report.md)。
 - Phase E 已完成本地 gate 与独立审计；正式口径见 [Phase E 验收报告](./docs/reports/phase_e_acceptance_report.md) 和 [Phase E 独立审计报告](./docs/reports/phase_e_independent_audit.md)。
 - Phase F 已完成本地验收与独立审计；正式口径见 [Phase F 验收报告](./docs/reports/phase_f_acceptance_report.md) 和 [Phase F 独立审计报告](./docs/reports/phase_f_independent_audit.md)。
 - Phase G 已完成本地验收与独立审计；正式口径见 [Phase G 验收报告](./docs/reports/phase_g_acceptance_report.md) 和 [Phase G 独立审计报告](./docs/reports/phase_g_independent_audit.md)。
+- Phase H 已完成本地 gate 与 PostgreSQL 集成验证；正式口径见 [Phase H 验收报告](./docs/reports/phase_h_acceptance_report.md)。
+- Phase I 已完成本地 gate 与 runtime access benchmark；正式口径见 [Phase I 验收报告](./docs/reports/phase_i_acceptance_report.md)。
+- Phase J 已完成统一 CLI formal gate；正式口径见 [Phase J 验收报告](./docs/reports/phase_j_acceptance_report.md)。
 - [Phase E 启动清单](./docs/design/phase_e_startup_checklist.md) 继续保留启动与收敛轨迹，不再代表当前通过口径。
 - [Phase F 启动清单](./docs/design/phase_f_startup_checklist.md) 继续保留启动与收敛轨迹，不再代表当前通过口径。
 - [Phase G 启动清单](./docs/design/phase_g_startup_checklist.md) 继续保留启动与收敛轨迹，不再代表当前通过口径。

@@ -1,4 +1,4 @@
-"""Phase I runtime access execution service."""
+"""Runtime access execution service."""
 
 from __future__ import annotations
 
@@ -122,7 +122,7 @@ _MODE_PLANS = {
 
 
 class AccessService:
-    """Library-first Phase I surface for fixed and auto runtime access modes."""
+    """Library-first surface for fixed and auto runtime access modes."""
 
     def __init__(
         self,

@@ -1,4 +1,4 @@
-"""WorkspaceView builder for Phase D."""
+"""WorkspaceView builder."""
 
 from __future__ import annotations
 

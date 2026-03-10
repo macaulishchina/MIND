@@ -1,4 +1,4 @@
-"""Replay target ranking and reuse metrics for Phase E."""
+"""Replay target ranking and reuse metrics."""
 
 from __future__ import annotations
 

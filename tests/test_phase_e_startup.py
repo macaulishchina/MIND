@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from mind.fixtures.long_horizon_dev import build_long_horizon_dev_v1
-from mind.offline import assert_phase_e_startup, evaluate_phase_e_startup
+from mind.offline import assert_offline_startup, evaluate_offline_startup
 
 
 def test_long_horizon_dev_v1_is_frozen_at_30_sequences() -> None:
@@ -15,9 +15,9 @@ def test_long_horizon_dev_v1_is_frozen_at_30_sequences() -> None:
 
 
 def test_phase_e_startup_baseline_passes(tmp_path: Path) -> None:
-    result = evaluate_phase_e_startup(tmp_path / "phase_e.sqlite3")
+    result = evaluate_offline_startup(tmp_path / "phase_e.sqlite3")
 
-    assert_phase_e_startup(result)
+    assert_offline_startup(result)
     assert result.sequence_count == 30
     assert result.min_step_count == 5
     assert result.max_step_count == 5

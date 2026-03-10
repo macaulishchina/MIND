@@ -1,4 +1,4 @@
-"""LongHorizonDev v1 fixtures for Phase E replay / promotion evaluation."""
+"""LongHorizonDev v1 fixtures for replay and promotion evaluation."""
 
 from __future__ import annotations
 

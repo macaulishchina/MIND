@@ -1,4 +1,4 @@
-"""Phase I runtime access formal gate evaluation helpers."""
+"""Runtime access formal gate evaluation helpers."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from mind.fixtures.access_depth_bench import build_access_depth_bench_v1
-from mind.fixtures.retrieval_benchmark import build_phase_d_seed_objects
+from mind.fixtures.retrieval_benchmark import build_canonical_seed_objects
 from mind.kernel.store import MemoryStoreFactory, SQLiteMemoryStore
 from mind.primitives.contracts import Capability, PrimitiveExecutionContext
 
@@ -28,7 +28,7 @@ from .contracts import (
 )
 from .service import AccessService
 
-_PHASE_I_GATE_SCHEMA_VERSION = "phase_i_gate_report_v1"
+_SCHEMA_VERSION = "access_gate_report_v1"
 _FIXED_TIMESTAMP = datetime(2026, 3, 10, 18, 0, tzinfo=UTC)
 
 
@@ -46,7 +46,7 @@ class AccessAutoAuditResult:
 
 
 @dataclass(frozen=True)
-class PhaseIGateResult:
+class AccessGateResult:
     case_count: int
     benchmark_run_count: int
     callable_modes: tuple[AccessMode, ...]
@@ -138,7 +138,7 @@ class PhaseIGateResult:
         )
 
     @property
-    def phase_i_pass(self) -> bool:
+    def access_gate_pass(self) -> bool:
         return (
             self.i1_pass
             and self.i2_pass
@@ -151,16 +151,16 @@ class PhaseIGateResult:
         )
 
 
-def evaluate_phase_i_gate(
+def evaluate_access_gate(
     db_path: str | Path | None = None,
     store_factory: MemoryStoreFactory | None = None,
-) -> PhaseIGateResult:
-    """Run the formal Phase I runtime access gate."""
+) -> AccessGateResult:
+    """Run the formal runtime access gate."""
 
     def default_store_factory(store_path: Path) -> SQLiteMemoryStore:
         return SQLiteMemoryStore(store_path)
 
-    def run(store_path: Path, active_store_factory: MemoryStoreFactory) -> PhaseIGateResult:
+    def run(store_path: Path, active_store_factory: MemoryStoreFactory) -> AccessGateResult:
         benchmark_result = evaluate_access_benchmark(
             db_path=store_path.with_name(f"{store_path.stem}_bench.sqlite3"),
             store_factory=active_store_factory,
@@ -189,7 +189,7 @@ def evaluate_phase_i_gate(
         )
 
         with active_store_factory(store_path) as store:
-            store.insert_objects(build_phase_d_seed_objects())
+            store.insert_objects(build_canonical_seed_objects())
             access_service = AccessService(store, clock=lambda: _FIXED_TIMESTAMP)
             fixed_runs = _run_fixed_lock_audit(access_service)
             auto_audit = _run_auto_audit(access_service)
@@ -208,7 +208,7 @@ def evaluate_phase_i_gate(
             )
         )
 
-        return PhaseIGateResult(
+        return AccessGateResult(
             case_count=benchmark_result.case_count,
             benchmark_run_count=benchmark_result.run_count,
             callable_modes=callable_modes,
@@ -237,10 +237,10 @@ def evaluate_phase_i_gate(
         return run(Path(db_path), active_factory)
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        return run(Path(tmpdir) / "phase_i_gate.sqlite3", active_factory)
+        return run(Path(tmpdir) / "access_gate.sqlite3", active_factory)
 
 
-def assert_phase_i_gate(result: PhaseIGateResult) -> None:
+def assert_access_gate(result: AccessGateResult) -> None:
     if not result.i1_pass:
         raise RuntimeError(
             "I-1 failed: access mode contract drift "
@@ -299,16 +299,16 @@ def assert_phase_i_gate(result: PhaseIGateResult) -> None:
         )
 
 
-def write_phase_i_gate_report_json(
+def write_access_gate_report_json(
     path: str | Path,
-    result: PhaseIGateResult,
+    result: AccessGateResult,
 ) -> Path:
-    """Persist the full Phase I gate result as JSON."""
+    """Persist the full runtime access gate result as JSON."""
 
     output_path = Path(path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
-        "schema_version": _PHASE_I_GATE_SCHEMA_VERSION,
+        "schema_version": _SCHEMA_VERSION,
         "generated_at": datetime.now(UTC).isoformat(),
         **asdict(result),
         "i1_pass": result.i1_pass,
@@ -319,7 +319,7 @@ def write_phase_i_gate_report_json(
         "i6_pass": result.i6_pass,
         "i7_pass": result.i7_pass,
         "i8_pass": result.i8_pass,
-        "phase_i_pass": result.phase_i_pass,
+        "access_gate_pass": result.access_gate_pass,
     }
     output_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return output_path
@@ -483,7 +483,7 @@ def _fixed_lock_overridden(run: AccessRunResponse) -> bool:
 def _context(*, actor: str) -> PrimitiveExecutionContext:
     return PrimitiveExecutionContext(
         actor=actor,
-        budget_scope_id=f"phase_i::{actor}",
+        budget_scope_id=f"access::{actor}",
         budget_limit=None,
         capabilities=[Capability.MEMORY_READ],
     )

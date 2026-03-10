@@ -1,4 +1,4 @@
-"""Phase F benchmark comparison helpers."""
+"""Benchmark comparison helpers."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ from .mind_system import MindLongHorizonSystem
 from .reporting import BenchmarkSuiteReport, build_benchmark_suite_report
 from .runner import LongHorizonBenchmarkRunner
 
-_COMPARISON_SCHEMA_VERSION = "phase_f_comparison_report_v1"
+_COMPARISON_SCHEMA_VERSION = "benchmark_comparison_report_v1"
 
 
 @dataclass(frozen=True)
@@ -35,7 +35,7 @@ class ComparisonInterval:
 
 
 @dataclass(frozen=True)
-class PhaseFComparisonResult:
+class BenchmarkComparisonResult:
     suite_report: BenchmarkSuiteReport
     versus_no_memory: ComparisonInterval
     versus_fixed_summary_memory: ComparisonInterval
@@ -71,17 +71,17 @@ class PhaseFComparisonResult:
         return self.versus_plain_rag.mean_diff >= -0.02
 
     @property
-    def phase_f_comparison_pass(self) -> bool:
+    def benchmark_comparison_pass(self) -> bool:
         return self.f2_pass and self.f3_pass and self.f4_pass and self.f5_pass and self.f6_pass
 
 
 @dataclass(frozen=True)
-class PhaseFGateResult:
+class BenchmarkGateResult:
     manifest_hash: str
     manifest_sequence_count: int
     manifest_min_step_count: int
     manifest_max_step_count: int
-    comparison_result: PhaseFComparisonResult
+    comparison_result: BenchmarkComparisonResult
     workspace_ablation: ComparisonInterval
     offline_maintenance_ablation: ComparisonInterval
 
@@ -123,7 +123,7 @@ class PhaseFGateResult:
         )
 
     @property
-    def phase_f_pass(self) -> bool:
+    def benchmark_gate_pass(self) -> bool:
         return (
             self.f1_pass
             and self.f2_pass
@@ -135,8 +135,8 @@ class PhaseFGateResult:
         )
 
 
-def evaluate_phase_f_comparison(*, repeat_count: int = 3) -> PhaseFComparisonResult:
-    """Run the current MIND system against the three Phase F baselines."""
+def evaluate_benchmark_comparison(*, repeat_count: int = 3) -> BenchmarkComparisonResult:
+    """Run the current MIND system against the three frozen baselines."""
 
     sequences = build_long_horizon_eval_v1()
     manifest = build_long_horizon_eval_manifest_v1()
@@ -171,7 +171,7 @@ def evaluate_phase_f_comparison(*, repeat_count: int = 3) -> PhaseFComparisonRes
         mind_system.close()
 
     report_by_system = {report.system_id: report for report in suite_report.system_reports}
-    return PhaseFComparisonResult(
+    return BenchmarkComparisonResult(
         suite_report=suite_report,
         versus_no_memory=_comparison_interval(
             report_by_system["mind"].pus.raw_values,
@@ -188,7 +188,7 @@ def evaluate_phase_f_comparison(*, repeat_count: int = 3) -> PhaseFComparisonRes
     )
 
 
-def assert_phase_f_comparison(result: PhaseFComparisonResult) -> None:
+def assert_benchmark_comparison(result: BenchmarkComparisonResult) -> None:
     if not result.f2_pass:
         raise RuntimeError("F-2 failed: not all required systems are present")
     if not result.f3_pass:
@@ -212,11 +212,11 @@ def assert_phase_f_comparison(result: PhaseFComparisonResult) -> None:
         )
 
 
-def evaluate_phase_f_gate(*, repeat_count: int = 3) -> PhaseFGateResult:
-    """Run the full local Phase F gate, including F-7 ablations."""
+def evaluate_benchmark_gate(*, repeat_count: int = 3) -> BenchmarkGateResult:
+    """Run the full local benchmark gate, including F-7 ablations."""
 
     manifest = build_long_horizon_eval_manifest_v1()
-    comparison_result = evaluate_phase_f_comparison(repeat_count=repeat_count)
+    comparison_result = evaluate_benchmark_comparison(repeat_count=repeat_count)
     sequences = build_long_horizon_eval_v1()
     runner = LongHorizonBenchmarkRunner(sequences=sequences, manifest=manifest)
 
@@ -251,7 +251,7 @@ def evaluate_phase_f_gate(*, repeat_count: int = 3) -> PhaseFGateResult:
         full_mind.pus.raw_values,
         tuple(run.average_pus for run in offline_ablation_runs),
     )
-    return PhaseFGateResult(
+    return BenchmarkGateResult(
         manifest_hash=manifest.fixture_hash,
         manifest_sequence_count=manifest.sequence_count,
         manifest_min_step_count=manifest.min_step_count,
@@ -262,14 +262,14 @@ def evaluate_phase_f_gate(*, repeat_count: int = 3) -> PhaseFGateResult:
     )
 
 
-def assert_phase_f_gate(result: PhaseFGateResult) -> None:
+def assert_benchmark_gate(result: BenchmarkGateResult) -> None:
     if not result.f1_pass:
         raise RuntimeError(
             "F-1 failed: LongHorizonEval manifest invalid "
             f"(sequence_count={result.manifest_sequence_count}, "
             f"step_range={result.manifest_min_step_count}..{result.manifest_max_step_count})"
         )
-    assert_phase_f_comparison(result.comparison_result)
+    assert_benchmark_comparison(result.comparison_result)
     if not result.f7_pass:
         raise RuntimeError(
             "F-7 failed: component ablation did not drop enough PUS "
@@ -278,11 +278,11 @@ def assert_phase_f_gate(result: PhaseFGateResult) -> None:
         )
 
 
-def write_phase_f_comparison_report_json(
+def write_benchmark_comparison_report_json(
     path: str | Path,
-    result: PhaseFComparisonResult,
+    result: BenchmarkComparisonResult,
 ) -> Path:
-    """Persist the Phase F comparison result as JSON."""
+    """Persist the benchmark comparison result as JSON."""
 
     output_path = Path(path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -300,22 +300,22 @@ def write_phase_f_comparison_report_json(
         "f4_pass": result.f4_pass,
         "f5_pass": result.f5_pass,
         "f6_pass": result.f6_pass,
-        "phase_f_comparison_pass": result.phase_f_comparison_pass,
+        "benchmark_comparison_pass": result.benchmark_comparison_pass,
     }
     output_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return output_path
 
 
-def write_phase_f_gate_report_json(
+def write_benchmark_gate_report_json(
     path: str | Path,
-    result: PhaseFGateResult,
+    result: BenchmarkGateResult,
 ) -> Path:
-    """Persist the full Phase F gate result as JSON."""
+    """Persist the full benchmark gate result as JSON."""
 
     output_path = Path(path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
-        "schema_version": "phase_f_gate_report_v1",
+        "schema_version": "benchmark_gate_report_v1",
         "generated_at": datetime.now(UTC).isoformat(),
         "manifest_hash": result.manifest_hash,
         "manifest_sequence_count": result.manifest_sequence_count,
@@ -345,7 +345,7 @@ def write_phase_f_gate_report_json(
         "f5_pass": result.f5_pass,
         "f6_pass": result.f6_pass,
         "f7_pass": result.f7_pass,
-        "phase_f_pass": result.phase_f_pass,
+        "benchmark_gate_pass": result.benchmark_gate_pass,
     }
     output_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return output_path

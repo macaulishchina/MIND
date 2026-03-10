@@ -1,4 +1,4 @@
-"""Schema validation for Phase B memory objects."""
+"""Schema validation for memory objects."""
 
 from __future__ import annotations
 

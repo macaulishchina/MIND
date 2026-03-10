@@ -11,6 +11,7 @@ import pytest
 import sqlalchemy as sa
 
 from mind.fixtures.golden_episode_set import build_core_object_showcase, build_golden_episode_set
+from mind.kernel.gate import evaluate_kernel_gate
 from mind.kernel.governance import (
     ConcealmentRecord,
     GovernanceAction,
@@ -19,7 +20,6 @@ from mind.kernel.governance import (
     GovernanceOutcome,
     GovernanceStage,
 )
-from mind.kernel.phase_b import evaluate_phase_b_gate
 from mind.kernel.postgres_store import (
     PostgresMemoryStore,
     build_postgres_store_factory,
@@ -33,13 +33,13 @@ from mind.offline import (
     OfflineJobKind,
     OfflineJobStatus,
     ReflectEpisodeJobPayload,
-    evaluate_phase_e_gate,
+    evaluate_offline_gate,
     new_offline_job,
 )
 from mind.primitives.contracts import PrimitiveExecutionContext, PrimitiveOutcome, RetrieveQueryMode
-from mind.primitives.phase_c import evaluate_phase_c_gate
+from mind.primitives.gate import evaluate_primitive_gate
 from mind.primitives.service import PrimitiveService
-from mind.workspace import WorkspaceBuilder, evaluate_phase_d_smoke
+from mind.workspace import WorkspaceBuilder, evaluate_workspace_smoke
 
 POSTGRES_DSN = os.environ.get("MIND_TEST_POSTGRES_DSN")
 FIXED_TIMESTAMP = datetime(2026, 3, 9, 19, 0, tzinfo=UTC)
@@ -61,15 +61,15 @@ def test_postgres_memory_store_round_trip_and_gates() -> None:
             assert store.iter_budget_events() == []
 
         store_factory = build_postgres_store_factory(database_dsn)
-        phase_b_result = evaluate_phase_b_gate(Path("phase_b.pg"), store_factory=store_factory)
+        phase_b_result = evaluate_kernel_gate(Path("phase_b.pg"), store_factory=store_factory)
 
     with temporary_postgres_database(POSTGRES_DSN, prefix="mind_pytest_c") as database_dsn:
         run_postgres_migrations(database_dsn)
         store_factory = build_postgres_store_factory(database_dsn)
-        phase_c_result = evaluate_phase_c_gate(Path("phase_c.pg"), store_factory=store_factory)
+        phase_c_result = evaluate_primitive_gate(Path("phase_c.pg"), store_factory=store_factory)
 
-    assert phase_b_result.phase_b_pass
-    assert phase_c_result.phase_c_pass
+    assert phase_b_result.kernel_gate_pass
+    assert phase_c_result.primitive_gate_pass
 
 
 def test_postgres_iter_latest_objects_applies_filters_and_latest_version() -> None:
@@ -311,9 +311,9 @@ def test_postgres_phase_d_smoke() -> None:
     with temporary_postgres_database(POSTGRES_DSN, prefix="mind_phase_d") as database_dsn:
         run_postgres_migrations(database_dsn)
         store_factory = build_postgres_store_factory(database_dsn)
-        result = evaluate_phase_d_smoke(Path("phase_d.pg"), store_factory=store_factory)
+        result = evaluate_workspace_smoke(Path("phase_d.pg"), store_factory=store_factory)
 
-    assert result.phase_d_smoke_pass
+    assert result.workspace_smoke_pass
     assert result.smoke_case_count == 12
     assert result.benchmark_case_count == 100
     assert result.answer_benchmark_case_count == 100
@@ -399,9 +399,9 @@ def test_postgres_phase_e_gate() -> None:
     with temporary_postgres_database(POSTGRES_DSN, prefix="mind_phase_e_gate") as database_dsn:
         run_postgres_migrations(database_dsn)
         store_factory = build_postgres_store_factory(database_dsn)
-        result = evaluate_phase_e_gate(Path("phase_e.pg"), store_factory=store_factory)
+        result = evaluate_offline_gate(Path("phase_e.pg"), store_factory=store_factory)
 
-    assert result.phase_e_pass
+    assert result.offline_gate_pass
     assert result.integrity_report.source_trace_coverage == 1.0
     assert result.startup_result.replay_lift >= 1.5
     assert result.startup_result.schema_validation_precision >= 0.85

@@ -1,4 +1,4 @@
-"""Phase D retrieval/workspace smoke evaluation helpers."""
+"""Retrieval/workspace smoke evaluation helpers."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from mind.fixtures.episode_answer_bench import (
 )
 from mind.fixtures.retrieval_benchmark import (
     RetrievalBenchmarkCase,
-    build_phase_d_seed_objects,
+    build_canonical_seed_objects,
     build_retrieval_benchmark_v0,
     build_retrieval_benchmark_v1,
 )
@@ -64,7 +64,7 @@ class RetrievalBenchmarkRun:
 
 
 @dataclass(frozen=True)
-class PhaseDSmokeResult:
+class WorkspaceSmokeResult:
     smoke_case_count: int
     benchmark_case_count: int
     answer_benchmark_case_count: int
@@ -119,23 +119,23 @@ class PhaseDSmokeResult:
         )
 
     @property
-    def phase_d_smoke_pass(self) -> bool:
+    def workspace_smoke_pass(self) -> bool:
         return self.d1_pass and self.d2_pass and self.d3_pass and self.d4_pass and self.d5_pass
 
 
-def evaluate_phase_d_smoke(
+def evaluate_workspace_smoke(
     db_path: str | Path | None = None,
     store_factory: MemoryStoreFactory | None = None,
-) -> PhaseDSmokeResult:
+) -> WorkspaceSmokeResult:
     smoke_cases = build_retrieval_benchmark_v0()
     benchmark_cases = build_retrieval_benchmark_v1()
     answer_cases = {case.case_id: case for case in build_episode_answer_bench_v1()}
-    seed_objects = build_phase_d_seed_objects()
+    seed_objects = build_canonical_seed_objects()
 
     def default_store_factory(store_path: Path) -> SQLiteMemoryStore:
         return SQLiteMemoryStore(store_path)
 
-    def run(store_path: Path, active_store_factory: MemoryStoreFactory) -> PhaseDSmokeResult:
+    def run(store_path: Path, active_store_factory: MemoryStoreFactory) -> WorkspaceSmokeResult:
         with active_store_factory(store_path) as store:
             store.insert_objects(seed_objects)
             service = PrimitiveService(store, query_embedder=build_query_embedding)
@@ -169,7 +169,7 @@ def evaluate_phase_d_smoke(
         workspace_proxy_rate = sum(
             run.workspace_task_success_proxy for run in runs
         ) / float(len(runs))
-        return PhaseDSmokeResult(
+        return WorkspaceSmokeResult(
             smoke_case_count=len(smoke_cases),
             benchmark_case_count=len(benchmark_cases),
             answer_benchmark_case_count=len(answer_cases),
@@ -231,10 +231,10 @@ def evaluate_phase_d_smoke(
         return run(Path(db_path), active_factory)
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        return run(Path(tmpdir) / "phase_d.sqlite3", active_factory)
+        return run(Path(tmpdir) / "workspace_smoke.sqlite3", active_factory)
 
 
-def assert_phase_d_smoke(result: PhaseDSmokeResult) -> None:
+def assert_workspace_smoke(result: WorkspaceSmokeResult) -> None:
     if not result.d1_pass:
         raise RuntimeError(
             "D-1 failed: retrieval mode coverage "
@@ -282,8 +282,8 @@ def _evaluate_case(
             "filters": case.filters,
         },
         PrimitiveExecutionContext(
-            actor="phase_d_smoke",
-            budget_scope_id=f"phase_d::{case.case_id}",
+            actor="workspace_smoke",
+            budget_scope_id=f"workspace::{case.case_id}",
         ),
     )
 

@@ -2,28 +2,28 @@
 
 from .builder import WorkspaceBuilder, WorkspaceBuildError, WorkspaceBuildResult
 from .context_protocol import (
-    PHASE_D_CONTEXT_PROTOCOL,
+    WORKSPACE_CONTEXT_PROTOCOL,
     SerializedContext,
     build_raw_topk_context,
     build_workspace_context,
 )
-from .phase_d import (
-    PhaseDSmokeResult,
+from .smoke import (
     RetrievalBenchmarkRun,
-    assert_phase_d_smoke,
-    evaluate_phase_d_smoke,
+    WorkspaceSmokeResult,
+    assert_workspace_smoke,
+    evaluate_workspace_smoke,
 )
 
 __all__ = [
-    "PHASE_D_CONTEXT_PROTOCOL",
-    "PhaseDSmokeResult",
+    "WORKSPACE_CONTEXT_PROTOCOL",
+    "WorkspaceSmokeResult",
     "RetrievalBenchmarkRun",
     "SerializedContext",
     "WorkspaceBuildError",
     "WorkspaceBuildResult",
     "WorkspaceBuilder",
-    "assert_phase_d_smoke",
+    "assert_workspace_smoke",
     "build_raw_topk_context",
     "build_workspace_context",
-    "evaluate_phase_d_smoke",
+    "evaluate_workspace_smoke",
 ]

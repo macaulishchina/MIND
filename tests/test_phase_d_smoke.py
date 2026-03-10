@@ -7,7 +7,7 @@ from mind.fixtures.retrieval_benchmark import (
     build_retrieval_benchmark_v0,
     build_retrieval_benchmark_v1,
 )
-from mind.workspace import assert_phase_d_smoke, evaluate_phase_d_smoke
+from mind.workspace import assert_workspace_smoke, evaluate_workspace_smoke
 
 
 def test_retrieval_benchmark_v0_is_frozen() -> None:
@@ -51,11 +51,11 @@ def test_episode_answer_bench_v1_is_frozen() -> None:
     assert cases[-1].case_id == "episode-020_keyword_final_raw"
 
 
-def test_phase_d_smoke_passes_on_sqlite(tmp_path: Path) -> None:
-    result = evaluate_phase_d_smoke(tmp_path / "phase_d_smoke.sqlite3")
+def test_workspace_smoke_passes_on_sqlite(tmp_path: Path) -> None:
+    result = evaluate_workspace_smoke(tmp_path / "phase_d_smoke.sqlite3")
 
-    assert_phase_d_smoke(result)
-    assert result.phase_d_smoke_pass
+    assert_workspace_smoke(result)
+    assert result.workspace_smoke_pass
     assert result.smoke_case_count == 12
     assert result.benchmark_case_count == 100
     assert result.answer_benchmark_case_count == 100

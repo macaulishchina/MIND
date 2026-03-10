@@ -1,4 +1,4 @@
-"""RetrievalBenchmark v0 fixtures for Phase D smoke evaluation."""
+"""RetrievalBenchmark v0 fixtures for workspace smoke evaluation."""
 
 from __future__ import annotations
 
@@ -28,8 +28,8 @@ class RetrievalBenchmarkCase:
     vector_scores: tuple[tuple[str, float], ...] = ()
 
 
-def build_phase_d_seed_objects() -> list[dict[str, Any]]:
-    """Return the canonical object seed used by Phase D smoke checks."""
+def build_canonical_seed_objects() -> list[dict[str, Any]]:
+    """Return the canonical object seed used by workspace smoke checks."""
 
     objects = build_core_object_showcase()
     for episode in build_golden_episode_set():
@@ -38,7 +38,7 @@ def build_phase_d_seed_objects() -> list[dict[str, Any]]:
 
 
 def build_retrieval_benchmark_v0() -> list[RetrievalBenchmarkCase]:
-    """Return the fixed RetrievalBenchmark v0 set for Phase D smoke."""
+    """Return the fixed RetrievalBenchmark v0 set for workspace smoke."""
 
     cases = [
         RetrievalBenchmarkCase(
@@ -184,7 +184,7 @@ def build_retrieval_benchmark_v0() -> list[RetrievalBenchmarkCase]:
 
 
 def build_retrieval_benchmark_v1() -> list[RetrievalBenchmarkCase]:
-    """Return the fixed RetrievalBenchmark v1 set for Phase D benchmark evaluation."""
+    """Return the fixed RetrievalBenchmark v1 set for retrieval/workspace evaluation."""
 
     cases: list[RetrievalBenchmarkCase] = []
     for episode in build_golden_episode_set():

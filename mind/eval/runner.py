@@ -56,7 +56,7 @@ class LongHorizonBenchmarkRun:
 
 
 class LongHorizonSystemRunner(Protocol):
-    """Protocol implemented by systems participating in Phase F benchmarks."""
+    """Protocol implemented by systems participating in benchmark runs."""
 
     def run_sequence(
         self,
@@ -156,7 +156,7 @@ def compute_pus(
     maintenance_cost_ratio: float,
     pollution_rate: float,
 ) -> float:
-    """Compute the frozen PUS score used by Phase E/F gate logic."""
+    """Compute the frozen PUS score used by gate logic."""
 
     _validate_ratio("task_success_rate", task_success_rate)
     _validate_ratio("gold_fact_coverage", gold_fact_coverage)

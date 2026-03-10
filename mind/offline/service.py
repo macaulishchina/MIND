@@ -1,4 +1,4 @@
-"""Offline maintenance service built on top of Phase C primitives."""
+"""Offline maintenance service built on top of primitives."""
 
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ class OfflineMaintenanceError(RuntimeError):
 
 
 class OfflineMaintenanceService:
-    """Execute Phase E offline jobs against the existing primitive surface."""
+    """Execute offline jobs against the existing primitive surface."""
 
     def __init__(
         self,

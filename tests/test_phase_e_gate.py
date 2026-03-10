@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from mind.offline import assert_phase_e_gate, evaluate_phase_e_gate
+from mind.offline import assert_offline_gate, evaluate_offline_gate
 
 
 def test_phase_e_gate_passes(tmp_path: Path) -> None:
-    result = evaluate_phase_e_gate(tmp_path / "phase_e_gate.sqlite3")
+    result = evaluate_offline_gate(tmp_path / "phase_e_gate.sqlite3")
 
-    assert_phase_e_gate(result)
+    assert_offline_gate(result)
     assert result.e1_pass
     assert result.e2_pass
     assert result.e3_pass

@@ -1,4 +1,4 @@
-"""PrimitiveGoldenCalls v1 fixtures for Phase C gate evaluation."""
+"""PrimitiveGoldenCalls v1 fixtures for primitive gate evaluation."""
 
 from __future__ import annotations
 
@@ -38,8 +38,8 @@ class PrimitiveGoldenCallCase:
     expectation: PrimitiveGoldenCallExpectation
 
 
-def build_phase_c_seed_objects() -> list[dict[str, Any]]:
-    """Return the base object set used by Phase C golden calls."""
+def build_primitive_seed_objects() -> list[dict[str, Any]]:
+    """Return the base object set used by primitive golden calls."""
 
     objects = build_core_object_showcase()
     for episode in build_golden_episode_set():
@@ -85,7 +85,7 @@ def build_phase_c_seed_objects() -> list[dict[str, Any]]:
 
 
 def build_primitive_golden_calls_v1() -> list[PrimitiveGoldenCallCase]:
-    """Return the fixed 200-call Phase C primitive evaluation set."""
+    """Return the fixed 200-call primitive evaluation set."""
 
     calls: list[PrimitiveGoldenCallCase] = []
     calls.extend(_build_success_calls())

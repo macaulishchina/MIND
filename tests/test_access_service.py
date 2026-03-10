@@ -14,7 +14,7 @@ from mind.access import (
     AccessSwitchKind,
     AccessTraceKind,
 )
-from mind.fixtures.retrieval_benchmark import build_phase_d_seed_objects
+from mind.fixtures.retrieval_benchmark import build_canonical_seed_objects
 from mind.kernel.store import SQLiteMemoryStore
 from mind.primitives.contracts import Capability, PrimitiveExecutionContext
 
@@ -392,4 +392,4 @@ def test_all_trace_events_carry_non_auto_mode(tmp_path: Path) -> None:
 
 
 def _seed_store(store: SQLiteMemoryStore) -> None:
-    store.insert_objects(build_phase_d_seed_objects())
+    store.insert_objects(build_canonical_seed_objects())

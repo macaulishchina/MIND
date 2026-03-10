@@ -1,36 +1,29 @@
-"""Shared evaluation primitives for Phase F and later benchmark work."""
+"""Shared evaluation primitives for benchmark and strategy work."""
 
 from .baselines import (
     FixedSummaryMemoryBaselineSystem,
     NoMemoryBaselineSystem,
     PlainRagBaselineSystem,
 )
+from .benchmark_gate import (
+    BenchmarkComparisonResult,
+    BenchmarkGateResult,
+    ComparisonInterval,
+    assert_benchmark_comparison,
+    assert_benchmark_gate,
+    evaluate_benchmark_comparison,
+    evaluate_benchmark_gate,
+    write_benchmark_comparison_report_json,
+    write_benchmark_gate_report_json,
+)
 from .costing import (
     CostBudgetProfile,
-    PhaseGCostReport,
+    StrategyCostReport,
     evaluate_fixed_rule_cost_report,
-    read_phase_g_cost_report_json,
-    write_phase_g_cost_report_json,
+    read_strategy_cost_report_json,
+    write_strategy_cost_report_json,
 )
 from .mind_system import MindLongHorizonSystem, MindRunCostSnapshot
-from .phase_f import (
-    ComparisonInterval,
-    PhaseFComparisonResult,
-    PhaseFGateResult,
-    assert_phase_f_comparison,
-    assert_phase_f_gate,
-    evaluate_phase_f_comparison,
-    evaluate_phase_f_gate,
-    write_phase_f_comparison_report_json,
-    write_phase_f_gate_report_json,
-)
-from .phase_g import (
-    PhaseGFamilyImprovement,
-    PhaseGGateResult,
-    assert_phase_g_gate,
-    evaluate_phase_g_gate,
-    write_phase_g_gate_report_json,
-)
 from .reporting import (
     BenchmarkSuiteReport,
     BenchmarkSystemReport,
@@ -53,6 +46,13 @@ from .strategy import (
     OptimizedMindStrategy,
     StrategyStepDecision,
 )
+from .strategy_gate import (
+    StrategyFamilyImprovement,
+    StrategyGateResult,
+    assert_strategy_gate,
+    evaluate_strategy_gate,
+    write_strategy_gate_report_json,
+)
 
 __all__ = [
     "BenchmarkSuiteReport",
@@ -72,27 +72,27 @@ __all__ = [
     "MindStrategy",
     "NoMemoryBaselineSystem",
     "OptimizedMindStrategy",
-    "PhaseFComparisonResult",
-    "PhaseFGateResult",
-    "PhaseGFamilyImprovement",
-    "PhaseGCostReport",
-    "PhaseGGateResult",
+    "BenchmarkComparisonResult",
+    "BenchmarkGateResult",
+    "StrategyFamilyImprovement",
+    "StrategyCostReport",
+    "StrategyGateResult",
     "PlainRagBaselineSystem",
     "StrategyStepDecision",
-    "assert_phase_f_comparison",
-    "assert_phase_f_gate",
-    "assert_phase_g_gate",
+    "assert_benchmark_comparison",
+    "assert_benchmark_gate",
+    "assert_strategy_gate",
     "build_benchmark_suite_report",
     "compute_pus",
     "evaluate_fixed_rule_cost_report",
-    "evaluate_phase_f_comparison",
-    "evaluate_phase_f_gate",
-    "evaluate_phase_g_gate",
+    "evaluate_benchmark_comparison",
+    "evaluate_benchmark_gate",
+    "evaluate_strategy_gate",
     "read_benchmark_suite_report_json",
-    "read_phase_g_cost_report_json",
+    "read_strategy_cost_report_json",
     "write_benchmark_suite_report_json",
-    "write_phase_f_comparison_report_json",
-    "write_phase_f_gate_report_json",
-    "write_phase_g_cost_report_json",
-    "write_phase_g_gate_report_json",
+    "write_benchmark_comparison_report_json",
+    "write_benchmark_gate_report_json",
+    "write_strategy_cost_report_json",
+    "write_strategy_gate_report_json",
 ]

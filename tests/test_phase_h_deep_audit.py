@@ -70,7 +70,7 @@ def test_pyproject_contains_phase_h_gate_entry() -> None:
     assert "mind-phase-h-gate" in scripts, (
         "pyproject.toml is missing mind-phase-h-gate script entry"
     )
-    assert scripts["mind-phase-h-gate"] == "mind.cli:phase_h_gate_main"
+    assert scripts["mind-phase-h-gate"] == "mind.cli:governance_gate_main"
 
 
 # ---------------------------------------------------------------------------

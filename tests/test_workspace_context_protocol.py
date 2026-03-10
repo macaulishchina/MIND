@@ -7,7 +7,7 @@ from mind.fixtures.golden_episode_set import build_core_object_showcase, build_g
 from mind.kernel.store import SQLiteMemoryStore
 from mind.workspace import WorkspaceBuilder
 from mind.workspace.context_protocol import (
-    PHASE_D_CONTEXT_PROTOCOL,
+    WORKSPACE_CONTEXT_PROTOCOL,
     build_raw_topk_context,
     build_workspace_context,
 )
@@ -28,7 +28,7 @@ def test_raw_topk_context_is_deterministic(tmp_path: Path) -> None:
         first = build_raw_topk_context(store, object_ids)
         second = build_raw_topk_context(store, object_ids)
 
-    assert first.protocol == PHASE_D_CONTEXT_PROTOCOL
+    assert first.protocol == WORKSPACE_CONTEXT_PROTOCOL
     assert first.kind == "raw_topk"
     assert first.object_ids == object_ids
     assert first.text == second.text
@@ -64,7 +64,7 @@ def test_workspace_context_is_more_compact_than_raw_topk(tmp_path: Path) -> None
             ),
         )
 
-    assert workspace_context.protocol == PHASE_D_CONTEXT_PROTOCOL
+    assert workspace_context.protocol == WORKSPACE_CONTEXT_PROTOCOL
     assert workspace_context.kind == "workspace"
     assert workspace_context.object_ids == workspace_result.selected_ids
     assert workspace_context.token_count < raw_context.token_count

@@ -1,4 +1,4 @@
-"""Phase H provenance foundation gate evaluation helpers."""
+"""Governance gate evaluation helpers."""
 
 from __future__ import annotations
 
@@ -38,12 +38,12 @@ from mind.workspace import WorkspaceBuilder
 
 from .service import GovernanceService
 
-_PHASE_H_GATE_SCHEMA_VERSION = "phase_h_gate_report_v1"
+_SCHEMA_VERSION = "governance_gate_report_v1"
 _FIXED_TIMESTAMP = datetime(2026, 3, 10, 14, 0, tzinfo=UTC)
 
 
 @dataclass(frozen=True)
-class PhaseHGateResult:
+class GovernanceGateResult:
     raw_object_count: int
     direct_provenance_count: int
     authoritative_binding_count: int
@@ -126,7 +126,7 @@ class PhaseHGateResult:
         )
 
     @property
-    def phase_h_pass(self) -> bool:
+    def governance_gate_pass(self) -> bool:
         return (
             self.h1_pass
             and self.h2_pass
@@ -139,16 +139,16 @@ class PhaseHGateResult:
         )
 
 
-def evaluate_phase_h_gate(
+def evaluate_governance_gate(
     db_path: str | Path | None = None,
     store_factory: MemoryStoreFactory | None = None,
-) -> PhaseHGateResult:
-    """Run the formal Phase H provenance foundation gate."""
+) -> GovernanceGateResult:
+    """Run the formal governance gate."""
 
     def default_store_factory(store_path: Path) -> SQLiteMemoryStore:
         return SQLiteMemoryStore(store_path)
 
-    def run(store_path: Path, active_store_factory: MemoryStoreFactory) -> PhaseHGateResult:
+    def run(store_path: Path, active_store_factory: MemoryStoreFactory) -> GovernanceGateResult:
         with active_store_factory(store_path) as store:
             primitive_service = PrimitiveService(store, clock=lambda: _FIXED_TIMESTAMP)
             governance_service = GovernanceService(store, clock=lambda: _FIXED_TIMESTAMP)
@@ -221,7 +221,7 @@ def evaluate_phase_h_gate(
             raw_ids: list[str] = []
             for result in write_results:
                 if result.outcome is not PrimitiveOutcome.SUCCESS or result.response is None:
-                    raise RuntimeError("Phase H gate setup failed: write_raw did not succeed")
+                    raise RuntimeError("governance gate setup failed: write_raw did not succeed")
                 raw_ids.append(str(result.response["object_id"]))
 
             hidden_raw_id = raw_ids[0]
@@ -231,7 +231,7 @@ def evaluate_phase_h_gate(
                     "id": "phase-h-episode",
                     "type": "TaskEpisode",
                     "content": {
-                        "title": "Phase H governance episode",
+                        "title": "governance gate episode",
                         "result_summary": "success",
                     },
                     "source_refs": list(raw_ids),
@@ -426,7 +426,7 @@ def evaluate_phase_h_gate(
             provenance_query_hit_count,
         ) = _ranking_isolation_regression()
 
-        return PhaseHGateResult(
+        return GovernanceGateResult(
             raw_object_count=raw_object_count,
             direct_provenance_count=len(provenance_rows),
             authoritative_binding_count=authoritative_binding_count,
@@ -455,10 +455,10 @@ def evaluate_phase_h_gate(
         return run(Path(db_path), active_factory)
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        return run(Path(tmpdir) / "phase_h_gate.sqlite3", active_factory)
+        return run(Path(tmpdir) / "governance_gate.sqlite3", active_factory)
 
 
-def assert_phase_h_gate(result: PhaseHGateResult) -> None:
+def assert_governance_gate(result: GovernanceGateResult) -> None:
     if not result.h1_pass:
         raise RuntimeError(
             "H-1 failed: direct provenance binding incomplete "
@@ -510,16 +510,16 @@ def assert_phase_h_gate(result: PhaseHGateResult) -> None:
         )
 
 
-def write_phase_h_gate_report_json(
+def write_governance_gate_report_json(
     path: str | Path,
-    result: PhaseHGateResult,
+    result: GovernanceGateResult,
 ) -> Path:
-    """Persist the full Phase H gate result as JSON."""
+    """Persist the full governance gate result as JSON."""
 
     output_path = Path(path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
-        "schema_version": _PHASE_H_GATE_SCHEMA_VERSION,
+        "schema_version": _SCHEMA_VERSION,
         "generated_at": datetime.now(UTC).isoformat(),
         **asdict(result),
         "h1_pass": result.h1_pass,
@@ -530,7 +530,7 @@ def write_phase_h_gate_report_json(
         "h6_pass": result.h6_pass,
         "h7_pass": result.h7_pass,
         "h8_pass": result.h8_pass,
-        "phase_h_pass": result.phase_h_pass,
+        "governance_gate_pass": result.governance_gate_pass,
     }
     output_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return output_path
@@ -543,7 +543,7 @@ def _context(
 ) -> PrimitiveExecutionContext:
     return PrimitiveExecutionContext(
         actor=actor,
-        budget_scope_id=f"phase_h::{actor}",
+        budget_scope_id=f"governance::{actor}",
         budget_limit=100.0,
         capabilities=capabilities,
     )

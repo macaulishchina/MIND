@@ -1,4 +1,4 @@
-"""AccessDepthBench v1 evaluation helpers for Phase I."""
+"""AccessDepthBench v1 evaluation helpers."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from mind.fixtures.access_depth_bench import AccessDepthBenchCase, build_access_depth_bench_v1
-from mind.fixtures.retrieval_benchmark import build_phase_d_seed_objects
+from mind.fixtures.retrieval_benchmark import build_canonical_seed_objects
 from mind.kernel.store import MemoryStore, MemoryStoreFactory, SQLiteMemoryStore
 from mind.primitives.contracts import PrimitiveExecutionContext, PrimitiveOutcome, RetrieveResponse
 from mind.primitives.service import PrimitiveService
@@ -113,7 +113,7 @@ def evaluate_access_benchmark(
     """Run AccessDepthBench v1 across fixed modes and auto."""
 
     cases = build_access_depth_bench_v1()
-    seed_objects = build_phase_d_seed_objects()
+    seed_objects = build_canonical_seed_objects()
 
     def default_store_factory(store_path: Path) -> SQLiteMemoryStore:
         return SQLiteMemoryStore(store_path)
@@ -156,7 +156,7 @@ def evaluate_access_benchmark(
         return run(Path(db_path), active_factory)
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        return run(Path(tmpdir) / "phase_i_access.sqlite3", active_factory)
+        return run(Path(tmpdir) / "access_benchmark.sqlite3", active_factory)
 
 
 def _evaluate_case(
@@ -180,7 +180,7 @@ def _evaluate_case(
         _access_context(case, requested_mode),
     )
     context = SerializedContext(
-        protocol="mind.phase_i_context.v1",
+        protocol="mind.gate_context.v1",
         kind=response.context_kind.value,
         object_ids=tuple(response.context_object_ids),
         text=response.context_text,

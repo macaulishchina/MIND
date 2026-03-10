@@ -1,4 +1,4 @@
-"""Minimal governance control-plane service for Phase H conceal workflows."""
+"""Minimal governance control-plane service for conceal workflows."""
 
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ class GovernanceServiceError(RuntimeError):
 
 
 class GovernanceService:
-    """Library-first Phase H governance surface for minimal conceal workflows."""
+    """Library-first governance surface for minimal conceal workflows."""
 
     def __init__(
         self,

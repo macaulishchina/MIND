@@ -5,8 +5,8 @@ import unittest
 from pathlib import Path
 
 from mind.fixtures.golden_episode_set import build_core_object_showcase, build_golden_episode_set
+from mind.kernel.gate import assert_kernel_gate, evaluate_kernel_gate
 from mind.kernel.integrity import build_integrity_report
-from mind.kernel.phase_b import assert_phase_b_gate, evaluate_phase_b_gate
 from mind.kernel.replay import episode_record_hash, replay_episode
 from mind.kernel.schema import SchemaValidationError
 from mind.kernel.store import MemoryStoreFactory, SQLiteMemoryStore, StoreError
@@ -14,7 +14,7 @@ from mind.kernel.store import MemoryStoreFactory, SQLiteMemoryStore, StoreError
 
 class PhaseBGateTests(unittest.TestCase):
     def test_phase_b_gate_metrics(self) -> None:
-        result = evaluate_phase_b_gate()
+        result = evaluate_kernel_gate()
 
         self.assertEqual(result.golden_episode_count, 20)
         self.assertEqual(result.core_object_type_count, 8)
@@ -25,17 +25,17 @@ class PhaseBGateTests(unittest.TestCase):
         self.assertTrue(result.b3_pass)
         self.assertTrue(result.b4_pass)
         self.assertTrue(result.b5_pass)
-        self.assertTrue(result.phase_b_pass)
-        assert_phase_b_gate(result)
+        self.assertTrue(result.kernel_gate_pass)
+        assert_kernel_gate(result)
 
     def test_phase_b_gate_accepts_store_factory(self) -> None:
         def store_factory(path: Path) -> SQLiteMemoryStore:
             return SQLiteMemoryStore(path)
 
         typed_factory: MemoryStoreFactory = store_factory
-        result = evaluate_phase_b_gate(store_factory=typed_factory)
+        result = evaluate_kernel_gate(store_factory=typed_factory)
 
-        self.assertTrue(result.phase_b_pass)
+        self.assertTrue(result.kernel_gate_pass)
         self.assertEqual(result.golden_episode_count, 20)
 
     def test_golden_episode_round_trip_and_replay(self) -> None:

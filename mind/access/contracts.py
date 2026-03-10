@@ -1,4 +1,4 @@
-"""Typed contracts for Phase I runtime access modes and trace output."""
+"""Typed contracts for runtime access modes and trace output."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from mind.primitives.contracts import RetrieveFilters, RetrieveQueryMode
 
 
 class AccessModel(BaseModel):
-    """Strict base model shared by Phase I access-mode contracts."""
+    """Strict base model shared by access-mode contracts."""
 
     model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
 

@@ -50,7 +50,7 @@ class PrimitiveRejectedError(RuntimeError):
 
 
 class PrimitiveRuntime:
-    """Common execution wrapper for Phase C primitive service methods."""
+    """Common execution wrapper for primitive service methods."""
 
     def __init__(
         self,
