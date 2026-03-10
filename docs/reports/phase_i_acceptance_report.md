@@ -229,4 +229,4 @@ Phase I 本次验收结论：`PASS`
 当前状态：
 
 - Phase I 已具备本地 formal gate，默认工件输出为 [artifacts/phase_i/gate_report.json](../../artifacts/phase_i/gate_report.json)
-- 下一阶段可进入 `Phase J: Governance / Reshape`
+- 下一阶段可进入 `Phase J: Unified CLI Experience`

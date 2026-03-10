@@ -168,7 +168,7 @@ Phase I 本次审计结论：**无阻断缺陷，PASS**
 
 ## 10. Phase J 就绪性评估
 
-Phase I 成功建立了"可执行、可评测、可 trace 的运行时 access depth 层"。以下是进入 Phase J 的前提确认：
+Phase I 成功建立了"可执行、可评测、可 trace 的运行时 access depth 层"。以下是进入 `Phase J / Unified CLI Experience` 的前提确认：
 
 | 前提 | 状态 |
 | --- | --- |
@@ -179,8 +179,10 @@ Phase I 成功建立了"可执行、可评测、可 trace 的运行时 access de
 | 前序 gate（C / G / H）未回归 | ✓ |
 | 无新增存储 schema（不需要新 migration） | ✓ |
 
-Phase J 的核心任务：`plan / preview / approve / execute` 治理链、mixed-source rewrite、`erase_scope` 清理和泄露回归。Phase I 提供的稳定 runtime access 底盘是 Phase J 的必要前提。
+Phase J 的核心任务：把现有 primitive、access、offline、governance、gate 和 report 收敛到统一的 `mind` CLI 入口，并冻结统一 help、profile/backend 切换、输出 contract 和 demo 路径。Phase I 提供的稳定 runtime access 底盘，是这个统一体验层成立的必要前提。
+
+原先更重的治理执行工作已顺延到 `Phase N / Governance / Reshape`；Phase J 不再承担 mixed-source rewrite、`erase_scope` 或 artifact cleanup 的正式实现责任。
 
 ## 11. 最终结论
 
-**Phase I 审计结论：PASS — 无缺陷，18 条补充测试已通过，可安全进入 Phase J。**
+**Phase I 审计结论：PASS — 无缺陷，18 条补充测试已通过，可安全进入 `Phase J / Unified CLI Experience`。**

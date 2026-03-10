@@ -16,8 +16,12 @@
   - [phase_g_startup_checklist.md](./design/phase_g_startup_checklist.md)：Phase G 启动清单、任务拆分与策略优化前置工件
   - [phase_h_startup_checklist.md](./design/phase_h_startup_checklist.md)：Phase H 启动清单、provenance foundation 范围控制与任务拆分
   - [phase_i_startup_checklist.md](./design/phase_i_startup_checklist.md)：Phase I 启动清单、runtime access modes 范围控制与任务拆分
-  - [phase_j_startup_checklist.md](./design/phase_j_startup_checklist.md)：Phase J 启动清单、governance reshape 范围控制与任务拆分
-  - [phase_k_startup_checklist.md](./design/phase_k_startup_checklist.md)：Phase K 启动清单、persona projection 范围控制与任务拆分
+  - [phase_j_startup_checklist.md](./design/phase_j_startup_checklist.md)：Phase J 启动清单、统一 CLI 体验层范围控制与任务拆分
+  - [phase_k_startup_checklist.md](./design/phase_k_startup_checklist.md)：Phase K 启动清单、统一模型能力层范围控制与任务拆分
+  - [phase_l_startup_checklist.md](./design/phase_l_startup_checklist.md)：Phase L 启动清单、开发态内部观测与 telemetry 范围控制
+  - [phase_m_startup_checklist.md](./design/phase_m_startup_checklist.md)：Phase M 启动清单、前端体验层范围控制与任务拆分
+  - [phase_n_startup_checklist.md](./design/phase_n_startup_checklist.md)：Phase N 启动清单、governance reshape 范围控制与任务拆分
+  - [phase_o_startup_checklist.md](./design/phase_o_startup_checklist.md)：Phase O 启动清单、persona projection 范围控制与任务拆分
 - `research/`
   - [research_notes.md](./research/research_notes.md)：早期研究思路、开放问题与探索性笔记
 - `reports/`
@@ -61,8 +65,12 @@
 - 想看“Phase H 现在是否已经通过本地 formal gate”：先看 [reports/phase_h_acceptance_report.md](./reports/phase_h_acceptance_report.md)
 - 想看“Phase I 应该怎么把固定档位和 `auto` 做成正式能力”：先看 [design/phase_i_startup_checklist.md](./design/phase_i_startup_checklist.md)
 - 想看“Phase I 现在是否已经通过本地 formal gate”：先看 [reports/phase_i_acceptance_report.md](./reports/phase_i_acceptance_report.md)
-- 想看“Phase J 应该怎么做 mixed-source rewrite 和 `erase_scope`”：先看 [design/phase_j_startup_checklist.md](./design/phase_j_startup_checklist.md)
-- 想看“Phase K 应该怎么把人格层限制在可追溯 projection”：先看 [design/phase_k_startup_checklist.md](./design/phase_k_startup_checklist.md)
+- 想看“Phase J 应该怎么把现有能力收敛成统一 `mind` CLI”：先看 [design/phase_j_startup_checklist.md](./design/phase_j_startup_checklist.md)
+- 想看“Phase K 应该怎么把摘要 / 反思 / 回答 / 离线重构统一成可切换模型能力层”：先看 [design/phase_k_startup_checklist.md](./design/phase_k_startup_checklist.md)
+- 想看“Phase L 应该怎么完整采集内部结构和状态变化”：先看 [design/phase_l_startup_checklist.md](./design/phase_l_startup_checklist.md)
+- 想看“Phase M 应该怎么做前端体验入口、配置入口和 debug 可视化”：先看 [design/phase_m_startup_checklist.md](./design/phase_m_startup_checklist.md)
+- 想看“Phase N 应该怎么做 mixed-source rewrite 和 `erase_scope`”：先看 [design/phase_n_startup_checklist.md](./design/phase_n_startup_checklist.md)
+- 想看“Phase O 应该怎么把人格层限制在可追溯 projection”：先看 [design/phase_o_startup_checklist.md](./design/phase_o_startup_checklist.md)
 - 想看“还在探索中的想法和背景笔记”：先看 [research/research_notes.md](./research/research_notes.md)
 - 想看“Phase D 启动期是怎么收敛的、D-5 最初如何建立”：先看 [reports/phase_d_smoke_report.md](./reports/phase_d_smoke_report.md)
 - 想看“最新的正式结果”：先看 [reports/phase_i_acceptance_report.md](./reports/phase_i_acceptance_report.md)，再看 [reports/phase_h_acceptance_report.md](./reports/phase_h_acceptance_report.md)、[reports/phase_g_acceptance_report.md](./reports/phase_g_acceptance_report.md)、[reports/phase_f_acceptance_report.md](./reports/phase_f_acceptance_report.md)、[reports/phase_e_acceptance_report.md](./reports/phase_e_acceptance_report.md)、[reports/phase_d_acceptance_report.md](./reports/phase_d_acceptance_report.md) 和 [reports/phase_c_acceptance_report.md](./reports/phase_c_acceptance_report.md)

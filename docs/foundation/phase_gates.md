@@ -80,9 +80,13 @@
 | `EpisodeAnswerBench v1` | 至少 `100` 个单回答评测样例；每个样例含任务 rubric、gold facts、hard constraints、gold memory refs、baseline 成本 | 验证单次回答质量与 memory contribution |
 | `LongHorizonDev v1` | 至少 `30` 条任务序列；每条序列 `5~10` 步 | 验证 replay / promotion / archive |
 | `LongHorizonEval v1` | 至少 `50` 条任务序列；与 dev 集分离 | 最终比较 MIND 与 baseline |
-| `ProvenanceGovernanceBench v1` | 至少 `40` 个治理样例；覆盖 `conceal`、`erase_scope`、approval、mixed-source rewrite、artifact cleanup | 验证 Phase H / J 的 provenance 与治理执行 |
+| `MindCliScenarioSet v1` | 至少 `25` 个 CLI 场景；覆盖 `help / primitive / access / offline / governance / gate / report / demo` | 验证 Phase J 的统一命令行入口 |
+| `CapabilityAdapterBench v1` | 至少 `40` 个能力调用样例；覆盖 `summarize / reflect / answer / offline_reconstruct` 与 `openai / claude / gemini` 兼容接口 | 验证 Phase K 的统一模型能力调用层 |
+| `InternalTelemetryBench v1` | 至少 `30` 条内部流程样例；覆盖 `primitive / retrieval / workspace / access / offline / governance` 与状态变更链 | 验证 Phase L 的开发态完备观测 |
+| `FrontendExperienceBench v1` | 至少 `20` 条前端体验流；覆盖功能体验、配置、debug 可视化三类入口 | 验证 Phase M 的前端体验层 |
+| `ProvenanceGovernanceBench v1` | 至少 `40` 个治理样例；覆盖 `conceal`、`erase_scope`、approval、mixed-source rewrite、artifact cleanup | 验证 Phase H / N 的 provenance 与治理执行 |
 | `AccessDepthBench v1` | 至少 `60` 个运行时任务；覆盖 `speed-sensitive / balanced / high-correctness` 三类任务族 | 验证 Phase I 的固定档位与 `auto` 调度 |
-| `PersonaProjectionBench v1` | 至少 `40` 组多轮 identity bundle；覆盖自传连续性、偏好 / 价值一致性、治理后更新 | 验证 Phase K 的 persona projection |
+| `PersonaProjectionBench v1` | 至少 `40` 组多轮 identity bundle；覆盖自传连续性、偏好 / 价值一致性、治理后更新 | 验证 Phase O 的 persona projection |
 
 ## 3.2 共享指标
 
@@ -541,8 +545,12 @@ flowchart LR
     F --> G[阶段 G\n策略优化]
     G --> H[阶段 H\nProvenance Foundation]
     H --> I[阶段 I\nRuntime Access Modes]
-    I --> J[阶段 J\nGovernance / Reshape]
-    J --> K[阶段 K\nPersona / Projection]
+    I --> J[阶段 J\nUnified CLI Experience]
+    J --> K[阶段 K\nLLM Capability Layer]
+    K --> L[阶段 L\nDevelopment Telemetry]
+    L --> M[阶段 M\nFrontend Experience]
+    M --> N[阶段 N\nGovernance / Reshape]
+    N --> O[阶段 O\nPersona / Projection]
 ```
 
 依赖关系说明：
@@ -555,8 +563,12 @@ flowchart LR
 - G 依赖 F 已经证明系统“值得优化”
 - H 依赖 G 之后冻结的 provenance / governance addendum，但不回滚 A ~ G
 - I 依赖 H 的 control plane 基础，并把 access depth 做成可评测 runtime policy
-- J 依赖 H 的 provenance 绑定与 I 之外的治理执行边界
-- K 依赖 H / J 稳定后，才能把人格层从设计问题推进为工程问题
+- J 依赖 H / I 已有能力稳定，才能把分散入口收敛成统一命令行体验层
+- K 依赖 J 已提供统一入口，再把摘要 / 反思 / 回答 / 离线重构统一成可切换模型能力层
+- L 依赖 J / K 的统一调用面，才能在不改现有语义的前提下完整采集内部结构变化
+- M 依赖 J / K / L 三层稳定，才能把功能体验、配置与 debug 可视化做成前端入口
+- N 依赖 H 的 provenance foundation，并在 M 之后再推进更重的治理执行与记忆网络重塑
+- O 依赖 H / N 稳定后，才能把人格层从设计问题推进为工程问题
 
 ### 4.1 Post-G 扩展阶段建议
 
@@ -564,8 +576,12 @@ flowchart LR
 
 - `H / Provenance Foundation`：补齐 direct provenance、provenance ledger、可见性隔离与审计基础
 - `I / Runtime Access Modes`：补齐 `Flash / Recall / Reconstruct / Reflective` 与 `auto` 调度 benchmark
-- `J / Governance / Reshape`：实现 `plan / preview / approve / execute`、mixed-source rewrite 与 artifact cleanup
-- `K / Persona / Projection`：在治理链稳定后，推进 autobiographical grouping、value schema 与 runtime persona projection
+- `J / Unified CLI Experience`：设计统一的 `mind` 命令行入口，让所有记忆模块都能通过一套 CLI 体验、测试和调试
+- `K / LLM Capability Layer`：统一摘要 / 反思 / 回答 / 离线重构的能力调用接口，并兼容主流模型提供方
+- `L / Development Telemetry`：在开发模式下完备采集内部结构和状态变化，为后续可视化提供数据底座
+- `M / Frontend Experience`：基于 CLI、能力层和 telemetry 提供前端体验入口、配置入口和 debug 可视化入口
+- `N / Governance / Reshape`：实现 `plan / preview / approve / execute`、mixed-source rewrite 与 artifact cleanup
+- `O / Persona / Projection`：在治理链稳定后，推进 autobiographical grouping、value schema 与 runtime persona projection
 
 ---
 
@@ -768,7 +784,7 @@ flowchart LR
 ### 通过结论
 
 当 `H-1 ~ H-8` 全部通过时，阶段 H `PASS`。  
-此时阶段 I 才能在稳定的 provenance / visibility 基础上推进 runtime access depth，而阶段 J 也才有资格进入更重的 governance / reshape 执行层。
+此时阶段 I 才能在稳定的 provenance / visibility 基础上推进 runtime access depth，而阶段 J 也才有资格在这个稳定底盘之上收敛统一 CLI 体验入口。
 
 ---
 
@@ -805,11 +821,151 @@ flowchart LR
 ### 通过结论
 
 当 `I-1 ~ I-8` 全部通过时，阶段 I `PASS`。  
-此时 runtime access depth 不再只是设计口号，而成为可比较、可调优、可解释的运行时能力；阶段 J 才有必要在这个稳定 runtime 底盘之上推进更重的治理执行。
+此时 runtime access depth 不再只是设计口号，而成为可比较、可调优、可解释的运行时能力；阶段 J 才有必要在这个稳定 runtime 底盘之上收敛统一体验入口。
 
 ---
 
-## 阶段 J Gate：Governance / Reshape 完成
+## 阶段 J Gate：Unified CLI Experience 完成
+
+### 阶段目标
+
+证明系统已经具备一个强大、完整、可发现的统一命令行入口：
+
+- `mind -h` 可以完整呈现帮助
+- 现有 primitive / access / offline / governance / gate / report 都能通过统一 CLI 触达
+- 用户可以仅通过 `mind` 体验和测试现有记忆模块能力
+- 后端、profile、输出格式和 demo 场景都有统一命令语义
+
+阶段 J 明确**不要求**：
+
+- 前端图形界面
+- 真实 LLM provider 适配层
+- 开发态内部结构可视化
+
+### MUST-PASS 指标
+
+| Gate ID | 指标 | 阈值 | 验证方式 |
+| --- | --- | --- | --- |
+| `J-1` | CLI help 完整度 | `mind -h` 与全部一级命令 help coverage `= 100%` | CLI help audit |
+| `J-2` | 命令族覆盖 | `primitive / access / offline / governance / gate / report / demo / config = 8/8` 全部可达 | CLI smoke |
+| `J-3` | 体验流覆盖 | 在 `MindCliScenarioSet v1` 上，`ingest-read / retrieve / access-run / offline-job / gate-report = 5/5` 主流程通过 | scenario tests |
+| `J-4` | profile / backend 切换正确性 | `SQLite / PostgreSQL` profile 切换、配置优先级与参数解析样例 `20/20` 通过 | CLI config audit |
+| `J-5` | 输出与退出码稳定性 | `text / json` 输出 schema 校验通过率 `= 100%`；非法输入的非零退出码覆盖率 `= 100%` | contract tests |
+| `J-6` | 旧能力包装无回归 | 现有阶段 gate 与关键能力通过统一 CLI 包装后成功率 `= 100%` | regression run |
+
+### 通过结论
+
+当 `J-1 ~ J-6` 全部通过时，阶段 J `PASS`。
+此时系统才真正具备一个可体验、可测试、可演示的统一命令行入口；阶段 K 才适合继续把能力层抽象成可切换模型接口。
+
+---
+
+## 阶段 K Gate：LLM Capability Layer 完成
+
+### 阶段目标
+
+证明现有能力已经被收敛为统一调用层，并且可以平滑切换不同模型能力支持：
+
+- `summarize / reflect / answer / offline_reconstruct` 具备统一 capability 接口
+- 模型调用可以通过配置切换
+- 兼容主流 `openai / claude / gemini` 风格接口
+- 不配置外部模型时，现有 deterministic baseline 仍能继续工作
+
+阶段 K 明确**不要求**：
+
+- 前端可视化入口
+- 把全部能力强制绑定到外部模型
+- provider 私有特性主导系统主语义
+
+### MUST-PASS 指标
+
+| Gate ID | 指标 | 阈值 | 验证方式 |
+| --- | --- | --- | --- |
+| `K-1` | capability 合约完整度 | `summarize / reflect / answer / offline_reconstruct = 4/4` 全部使用统一请求 / 响应 contract | contract audit |
+| `K-2` | provider 兼容覆盖 | `openai / claude / gemini = 3/3` 兼容接口样例全部通过 | adapter bench |
+| `K-3` | 模型切换透明性 | 同一 capability 调用方在不改业务调用代码的前提下切换 provider / model 成功率 `= 100%` | integration tests |
+| `K-4` | fallback / 失败收敛 | provider 不可用样例中，`fallback_success + structured_failure = 100%`；silent drift `= 0` | failure audit |
+| `K-5` | 现有本地能力无回归 | 不配置外部模型时，既有本地 gate 与 deterministic baseline 成功率 `= 100%` | regression run |
+| `K-6` | 模型调用 trace 完整率 | 外部 capability 调用的 `provider / model / endpoint / version / timing` 记录覆盖率 `= 100%` | trace audit |
+| `K-7` | 适配器场景通过率 | `CapabilityAdapterBench v1` 上总体场景通过率 `>= 0.95` | adapter benchmark |
+
+### 通过结论
+
+当 `K-1 ~ K-7` 全部通过时，阶段 K `PASS`。
+此时模型能力层不再是零散调用点，而成为可配置、可切换、可回退的统一能力面；阶段 L 才适合深入内部做完备观测。
+
+---
+
+## 阶段 L Gate：Development Telemetry 完成
+
+### 阶段目标
+
+证明系统已经能在不改变现有功能语义的前提下，完备采集内部结构、状态变化和关键决策过程：
+
+- 开发模式下能收集足够完整的内部执行数据
+- 采集结果能够还原对象变化、上下文选择和离线动作链
+- telemetry 机制有显式开关，不污染普通模式
+
+阶段 L 明确**不要求**：
+
+- 性能优化
+- 正式生产态 telemetry 成本控制
+- 面向终端用户的图形化展示
+
+### MUST-PASS 指标
+
+| Gate ID | 指标 | 阈值 | 验证方式 |
+| --- | --- | --- | --- |
+| `L-1` | 观测面覆盖 | `primitive / retrieval / workspace / access / offline / governance / object_delta = 7/7` 全部接入 | instrumentation audit |
+| `L-2` | 状态变化完整率 | 在 `InternalTelemetryBench v1` 上，before / after / delta 采集覆盖率 `>= 0.95` | state-delta audit |
+| `L-3` | 因果关联完整率 | `run_id / operation_id / job_id / workspace_id / object_version` 关联链覆盖率 `= 100%` | trace audit |
+| `L-4` | 开关隔离 | 开发模式关闭时持久 telemetry 记录数 `= 0`，功能结果无行为漂移 | toggle regression |
+| `L-5` | 可回放时间线完整率 | 在 `InternalTelemetryBench v1` 上，可重建有序内部执行时间线的样例比例 `>= 0.95` | replay audit |
+| `L-6` | debug 数据完备度 | mode switch、candidate 排序、workspace 选择、budget、governance selection 等关键内部字段覆盖率 `>= 0.95` | debug-field audit |
+
+### 通过结论
+
+当 `L-1 ~ L-6` 全部通过时，阶段 L `PASS`。
+此时系统已经为后续内部操作可视化准备好数据底座；阶段 M 才有必要把这些能力转成前端入口。
+
+---
+
+## 阶段 M Gate：Frontend Experience 完成
+
+### 阶段目标
+
+证明系统已经具备面向体验的前端入口：
+
+- 有统一功能体验入口
+- 有后端 / 模型 / 开发模式配置入口
+- 有内部操作可视化和 debug 入口
+- 前端不会破坏现有 CLI 与后端语义
+
+阶段 M 明确**不要求**：
+
+- 原生移动端应用
+- 完整产品级运营后台
+- 提前实现治理重塑或人格层新能力
+
+### MUST-PASS 指标
+
+| Gate ID | 指标 | 阈值 | 验证方式 |
+| --- | --- | --- | --- |
+| `M-1` | 功能体验流覆盖 | 在 `FrontendExperienceBench v1` 上，`ingest / retrieve / access / offline / gate-demo = 5/5` 主流程通过 | frontend E2E |
+| `M-2` | 配置入口完整度 | backend / profile / provider / model / dev-mode 配置项覆盖率 `= 100%` | config audit |
+| `M-3` | debug 可视化完备度 | 内部事件时间线、对象变化、context 选择和 evidence 支撑可视化覆盖率 `>= 0.95` | debug UI audit |
+| `M-4` | 前后端 contract 稳定性 | 前后端 JSON contract 校验通过率 `= 100%` | API contract tests |
+| `M-5` | 多端可用性 | 关键页面在 desktop / mobile viewport 的渲染与基本交互通过率 `= 100%` | responsive audit |
+| `M-6` | debug 隔离 | debug 入口仅在开发模式下可用；普通体验流无额外泄露与权限漂移 | dev-mode regression |
+
+### 通过结论
+
+当 `M-1 ~ M-6` 全部通过时，阶段 M `PASS`。
+此时系统已经具备完整的体验入口、配置入口和可视化 debug 入口；原本更重的治理执行与人格层工作顺延到后续阶段。
+
+---
+
+## 阶段 N Gate：Governance / Reshape 完成
 
 ### 阶段目标
 
@@ -820,7 +976,7 @@ flowchart LR
 - `erase_scope` 可以按声明范围完成清理
 - 治理执行不会在普通路径、日志、缓存或工件里留下泄露
 
-阶段 J 明确**不要求**：
+阶段 N 明确**不要求**：
 
 - persona / projection 实现
 - 完整产品级合规工作流、工单系统或多租户策略编排
@@ -830,23 +986,23 @@ flowchart LR
 
 | Gate ID | 指标 | 阈值 | 验证方式 |
 | --- | --- | --- | --- |
-| `J-1` | raw-object preview 正确率 | 在 `ProvenanceGovernanceBench v1` 上，受影响原始对象 preview 的 `precision >= 0.95` 且 `recall >= 0.95` | governance fixture audit |
-| `J-2` | support-unit preview 正确率 | 在 `ProvenanceGovernanceBench v1` 上，受影响 `support unit` preview 的 `precision >= 0.95` 且 `recall >= 0.95` | governance fixture audit |
-| `J-3` | mixed-source rewrite 判定正确率 | `retained / rewritten / dropped` 判定准确率 `>= 0.95` | rewrite audit |
-| `J-4` | 重写后结构完整性 | 重写后对象 dangling support refs `= 0`；new-version lineage 完整率 `= 100%`；受影响对象的 provenance footprint 更新率 `= 100%` | structural integrity audit |
-| `J-5` | 默认 `erase_scope` 清理完成率 | `memory_world_plus_artifacts` scope 内的清理完成率 `= 100%` | scope cleanup audit |
-| `J-6` | `full` scope 审批与清理完整率 | `erase(full)` 样例全部存在 `approve`；声明 `full` scope 内的清理完成率 `= 100%` | full-scope audit |
-| `J-7` | 治理后泄露率 | 被 `conceal` 或 `erase` 的内容经 `read / retrieve / workspace / index / cache / report / log` 旁路泄露的比例 `= 0` | leak regression |
-| `J-8` | 治理执行恢复与幂等性 | `plan / preview / approve / execute / artifact_cleanup` 审计链覆盖率 `= 100%`；中断恢复 / 重试 / 幂等回归全部通过 | fault-injection audit |
+| `N-1` | raw-object preview 正确率 | 在 `ProvenanceGovernanceBench v1` 上，受影响原始对象 preview 的 `precision >= 0.95` 且 `recall >= 0.95` | governance fixture audit |
+| `N-2` | support-unit preview 正确率 | 在 `ProvenanceGovernanceBench v1` 上，受影响 `support unit` preview 的 `precision >= 0.95` 且 `recall >= 0.95` | governance fixture audit |
+| `N-3` | mixed-source rewrite 判定正确率 | `retained / rewritten / dropped` 判定准确率 `>= 0.95` | rewrite audit |
+| `N-4` | 重写后结构完整性 | 重写后对象 dangling support refs `= 0`；new-version lineage 完整率 `= 100%`；受影响对象的 provenance footprint 更新率 `= 100%` | structural integrity audit |
+| `N-5` | 默认 `erase_scope` 清理完成率 | `memory_world_plus_artifacts` scope 内的清理完成率 `= 100%` | scope cleanup audit |
+| `N-6` | `full` scope 审批与清理完整率 | `erase(full)` 样例全部存在 `approve`；声明 `full` scope 内的清理完成率 `= 100%` | full-scope audit |
+| `N-7` | 治理后泄露率 | 被 `conceal` 或 `erase` 的内容经 `read / retrieve / workspace / index / cache / report / log` 旁路泄露的比例 `= 0` | leak regression |
+| `N-8` | 治理执行恢复与幂等性 | `plan / preview / approve / execute / artifact_cleanup` 审计链覆盖率 `= 100%`；中断恢复 / 重试 / 幂等回归全部通过 | fault-injection audit |
 
 ### 通过结论
 
-当 `J-1 ~ J-8` 全部通过时，阶段 J `PASS`。  
+当 `N-1 ~ N-8` 全部通过时，阶段 N `PASS`。
 此时系统才真正具备“按来源主动重塑记忆网络”的工程能力，而不是只有 provenance 标注和基础隔离。
 
 ---
 
-## 阶段 K Gate：Persona / Projection 完成
+## 阶段 O Gate：Persona / Projection 完成
 
 ### 阶段目标
 
@@ -857,7 +1013,7 @@ flowchart LR
 - persona layer 不会变成绕开记忆系统的新真相源
 - 引入人格投影后，不会明显破坏非人格任务的完成质量
 
-阶段 K 明确**不要求**：
+阶段 O 明确**不要求**：
 
 - 完整情绪模拟系统
 - 独立、权威、不可追溯的 `PersonaObject`
@@ -867,16 +1023,16 @@ flowchart LR
 
 | Gate ID | 指标 | 阈值 | 验证方式 |
 | --- | --- | --- | --- |
-| `K-1` | autobiographical grounding | 在 `PersonaProjectionBench v1` 上，自传性 persona 输出中可追溯到 autobiographical supports 或 prompt 已知信息的比例 `>= 0.95` | evidence audit |
-| `K-2` | preference / value grounding | 偏好与价值相关 persona 输出中可追溯到 preference / value supports 的比例 `>= 0.95` | evidence audit |
-| `K-3` | persona 一致性 | 同一 identity bundle 内的自我表述、偏好表达和价值判断一致性 `>= 0.90`，同时 `ConstraintSatisfaction >= 0.95` | projection benchmark |
-| `K-4` | 治理后的 persona 适配 | 对 persona 相关记忆执行治理后，陈旧 persona 表达泄露率 `= 0`；更新后投影命中率 `>= 0.95` | governance-coupled regression |
-| `K-5` | unsupported persona 幻觉率 | 无记忆 / prompt 支撑的自传性或价值性断言比例 `<= 0.05` | unsupported-claim audit |
-| `K-6` | 非 persona 任务回归控制 | 在 `EpisodeAnswerBench v1` 的中性任务子集上，启用 persona projection 后 `AQS` 平均降幅 `<= 0.02`，`ConstraintSatisfaction` 平均降幅 `<= 0.01` | A/B regression |
+| `O-1` | autobiographical grounding | 在 `PersonaProjectionBench v1` 上，自传性 persona 输出中可追溯到 autobiographical supports 或 prompt 已知信息的比例 `>= 0.95` | evidence audit |
+| `O-2` | preference / value grounding | 偏好与价值相关 persona 输出中可追溯到 preference / value supports 的比例 `>= 0.95` | evidence audit |
+| `O-3` | persona 一致性 | 同一 identity bundle 内的自我表述、偏好表达和价值判断一致性 `>= 0.90`，同时 `ConstraintSatisfaction >= 0.95` | projection benchmark |
+| `O-4` | 治理后的 persona 适配 | 对 persona 相关记忆执行治理后，陈旧 persona 表达泄露率 `= 0`；更新后投影命中率 `>= 0.95` | governance-coupled regression |
+| `O-5` | unsupported persona 幻觉率 | 无记忆 / prompt 支撑的自传性或价值性断言比例 `<= 0.05` | unsupported-claim audit |
+| `O-6` | 非 persona 任务回归控制 | 在 `EpisodeAnswerBench v1` 的中性任务子集上，启用 persona projection 后 `AQS` 平均降幅 `<= 0.02`，`ConstraintSatisfaction` 平均降幅 `<= 0.01` | A/B regression |
 
 ### 通过结论
 
-当 `K-1 ~ K-6` 全部通过时，阶段 K `PASS`。  
+当 `O-1 ~ O-6` 全部通过时，阶段 O `PASS`。
 此时人格层可以被视为建立在记忆世界之上的可投影能力，而不是额外造出的一个黑箱人格模块。
 
 ---

@@ -1,120 +1,121 @@
 # Phase J 启动清单
 
-时点说明：这份文档记录的是 Phase I 通过后，MIND 进入 `Phase J / Governance / Reshape` 前的启动约束、任务拆分和范围控制。正式通过口径以后续 Phase J 验收报告为准；这里先冻结启动顺序，避免把治理执行、persona 和更大范围的产品合规流程揉成一个失控阶段。
+时点说明：这份文档记录的是 Phase I 通过后，MIND 进入 `Phase J / Unified CLI Experience` 前的启动约束、任务拆分和范围控制。正式通过口径以后续 Phase J 验收报告为准；这里先冻结统一命令行入口的边界，避免把 CLI、前端和模型接入一次性揉成一个失控阶段。
 
 ## 目标
 
-Phase J 做治理执行层，不做 persona。
+Phase J 只做统一命令行体验层，不做前端和模型接入。
 
 本阶段的目标是：
 
-1. 打通 `plan / preview / approve / execute` 的完整治理链
-2. 落地 `support unit` 级 mixed-source rewrite
-3. 落地默认 `erase_scope=memory_world_plus_artifacts`
-4. 建立 artifact cleanup、泄露回归和中断恢复能力
-5. 冻结 `ProvenanceGovernanceBench v1`
+1. 设计并落地强大、完整的 `mind` 命令行入口
+2. 让 `mind -h` 与一级命令帮助完整可用
+3. 让所有现有记忆模块都能通过 `mind` 被体验、测试和调试
+4. 统一 profile / backend / 输出格式 / demo 场景的命令语义
+5. 冻结 `MindCliScenarioSet v1`
 
 ## 非目标
 
 Phase J 明确不做：
 
-1. persona / projection 实现
-2. 完整产品级工单、审批后台或多租户合规系统
-3. 绕开 preview / audit 的快捷治理接口
-4. 把 governance 扩展成普通 offline maintenance 的替代品
-5. 通过人工规则先验写死所有 mixed-source rewrite 结果
+1. 前端图形界面
+2. 真实 LLM provider 适配层
+3. 内部结构可视化 debug 页面
+4. 改写现有模块内部语义，只允许包装与统一入口
+5. 把 CLI 变成临时脚本集合的别名层
 
 ## 任务拆分
 
-1. `J1`：冻结 `ProvenanceGovernanceBench v1` 与 preview gold fixture
-2. `J2`：实现 preview / plan 准确性与 `support unit` 投影
-3. `J3`：实现 mixed-source rewrite 与版本更新
-4. `J4`：实现 `erase_scope`、artifact cleanup 与中断恢复
-5. `J5`：补 Phase J gate、验收报告和故障注入审计
+1. `J1`：冻结 `mind` 顶层命令树、帮助口径和 `MindCliScenarioSet v1`
+2. `J2`：统一 `primitive / access / offline / governance / gate / report / demo / config` 一级命令
+3. `J3`：打通核心体验流与 profile / backend 切换
+4. `J4`：统一输出格式、错误码和退出码
+5. `J5`：补 Phase J gate、CLI 场景回归和可用性审计
 
 ## 推荐推进顺序
 
-### `J1` 治理 fixture 冻结
+### `J1` 命令树冻结
 
-- 把 [../foundation/phase_gates.md](../foundation/phase_gates.md) 中的 `J-1 ~ J-8` 作为唯一 formal gate
-- 冻结 `ProvenanceGovernanceBench v1`：
-  - `conceal`
-  - `erase(memory_world)`
-  - `erase(memory_world_plus_artifacts)`
-  - `erase(full)`
-  - mixed-source rewrite
-- 为每个样例补充 gold preview、gold rewrite 和 expected cleanup scope
+- 把 [../foundation/phase_gates.md](../foundation/phase_gates.md) 中的 `J-1 ~ J-6` 作为唯一 formal gate
+- 冻结一级命令族：
+  - `primitive`
+  - `access`
+  - `offline`
+  - `governance`
+  - `gate`
+  - `report`
+  - `demo`
+  - `config`
+- 为每个命令族补齐：
+  - help
+  - 最小示例
+  - 统一输出模式
 
-### `J2` Preview 与投影
+### `J2` 入口统一
 
-- 把对象稳定投影到最小治理粒度：
-  - `claim`
-  - `facet`
-  - `rule`
-  - `slot`
-- `plan / preview` 必须输出：
-  - 受影响原始对象
-  - 受影响 `support unit`
-  - 预计 `retained / rewritten / dropped`
-  - 需要的 approval 等级
+- 保持现有能力不变，只统一入口
+- 重点打通：
+  - `write_raw / read / retrieve`
+  - access modes
+  - offline worker / job
+  - governance control plane
+  - phase gates / reports
 
-### `J3` Rewrite 与版本更新
+### `J3` profile 与体验流
 
-- mixed-source 派生对象按 `support unit` 执行：
-  - `retained`
-  - `rewritten`
-  - `dropped`
-- 保证：
-  - 新版本可追溯
-  - dangling support refs `= 0`
-  - provenance footprint 已更新
+- 至少支持：
+  - `SQLite` 本地 profile
+  - `PostgreSQL` profile
+- 至少提供：
+  - ingest-read demo
+  - retrieve demo
+  - access run demo
+  - offline job demo
+  - gate / report demo
 
-### `J4` Scope 清理与恢复
+### `J4` 输出和错误语义
 
-- 默认实现：
-  - `memory_world_plus_artifacts`
-- 高风险扩展：
-  - `full`
-- 补：
-  - artifact cleanup
-  - fault injection
-  - interrupted resume
-  - idempotent retry
+- 统一：
+  - text 输出
+  - json 输出
+  - 非零退出码
+  - 参数错误提示
+- 不能让调用方依赖隐式 stderr 文本猜状态
 
-### `J5` Gate 与报告
+### `J5` Gate 与审计
 
 - 产出：
-  - governance preview audit
-  - rewrite correctness report
-  - erase scope cleanup report
+  - CLI help audit
+  - `MindCliScenarioSet v1` report
+  - config / backend switching audit
   - Phase J gate report
 
 ## 当前关键设计约束
 
-1. governance 是独立主动阶段，不是 runtime 热路径
-2. mixed-source 对象不允许只删依赖不改内容
-3. `full` scope 一定属于高风险治理路径
-4. `conceal` 和 `erase` 的结果都不能在普通路径旁路漏出
-5. Phase J 必须把失败恢复和审计链一起做完，而不是只做 happy path
+1. CLI 是统一体验层，不是新的业务逻辑层
+2. CLI 不得偷偷改变原有 primitive / access / offline / governance 语义
+3. 帮助、参数和输出口径必须统一
+4. `mind` 必须能成为主要体验入口，而不是只包一部分功能
+5. 旧脚本可以保留，但新口径以 `mind` 为主
 
 ## 依赖关系
 
-- 依赖 Phase H 的 provenance foundation 与 capability 边界
-- 依赖 Phase I 已经稳定的 runtime access policy，但不把 access mode 混进治理执行语义
-- 依赖现有对象 schema、version chain 与 artifact 目录结构
+- 依赖 Phase H 的 provenance foundation
+- 依赖 Phase I 的 runtime access modes 已稳定
+- 依赖现有 CLI / 脚本 / gate 已经可运行，Phase J 只做入口收敛
 
 ## 风险提醒
 
-1. 最大风险是 preview 不准，后续 rewrite 只能在错误范围上执行
-2. 第二个风险是 `erase_scope` 漏掉缓存、日志、报表或外部副本
-3. 第三个风险是 mixed-source rewrite 造成过删、漏删或 dangling refs
-4. 第四个风险是治理执行失败后留下半完成状态，且无法恢复
+1. 最大风险是 CLI 只是脚本别名层，体验仍然碎片化
+2. 第二个风险是 profile / backend 规则不统一，导致命令难用
+3. 第三个风险是输出 contract 不稳定，后续前端和自动化都没法依赖
+4. 第四个风险是统一入口过程中引入旧能力回归
 
 ## 完成标志
 
 当以下条件同时满足时，Phase J 可以进入正式验收：
 
-- `J-1 ~ J-8` 都有可运行验证路径
-- `ProvenanceGovernanceBench v1`、preview audit、rewrite audit 和 cleanup report 都可生成
-- `support unit` 投影、重写语义、scope 边界与恢复策略已经冻结
+- `J-1 ~ J-6` 都有可运行验证路径
+- `mind -h` 与一级命令 help 已冻结
+- `MindCliScenarioSet v1`、config audit 和 Phase J gate report 都可生成
 - 文档、实现和测试对 Phase J 的范围表述一致

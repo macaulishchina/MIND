@@ -1448,6 +1448,83 @@ MIND 仍然不定义业务系统完整的 RBAC / ABAC 模型，但为了让 prov
 - 不允许 silent governance execution
 - `scope=full` 必须显式审批
 
+## 8.7 Post-Phase-G Addendum: 后续阶段分配与非语义层约束
+
+Post-Phase-G addendum 在不改变现有 data plane、control plane 与 governance loop 语义的前提下，继续冻结后续阶段的最小边界。
+
+### 8.7.1 Unified CLI Experience
+
+后续 `Phase J / Unified CLI Experience` 的职责是把现有能力收敛为统一的 `mind` 命令行入口。
+
+它至少应覆盖：
+
+- `primitive`
+- `access`
+- `offline`
+- `governance`
+- `gate`
+- `report`
+- `demo`
+- `config`
+
+边界约束：
+
+- CLI 是统一体验层，不是新的 memory semantics 层
+- CLI 不得偷偷改写 primitive、access、offline 或 governance 的既有语义
+- CLI 必须继续服从 capability、visibility、budget 与 provenance 边界
+- CLI 输出必须有稳定 contract，至少支持可读文本与结构化输出两类形态
+
+### 8.7.2 LLM Capability Layer
+
+后续 `Phase K / LLM Capability Layer` 的职责是把已有处理能力收敛到统一模型能力层，而不是在不同模块里散落 provider 调用点。
+
+该层至少应统一以下 capability：
+
+- `summarize`
+- `reflect`
+- `answer`
+- `offline_reconstruct`
+
+边界约束：
+
+- 必须支持通过配置切换 provider、model、endpoint 与认证信息
+- 必须兼容主流 `openai`、`claude`、`gemini` 风格接口，但不把任一 provider 私有特性提升为系统主语义
+- 不配置外部模型时，现有 deterministic baseline 必须继续可用
+- provider / model / endpoint / version / timing 必须进入 trace
+- 上层调用方不应因 provider 切换而重写业务调用 contract
+
+### 8.7.3 Development Telemetry
+
+后续 `Phase L / Development Telemetry` 的职责是在开发模式下完备采集内部状态变化与执行过程，为未来可视化和 debug 提供数据底座。
+
+边界约束：
+
+- telemetry 可以高开销，但必须有显式开关
+- 开关关闭时，不得留下持久 telemetry 副作用，也不得改变既有功能语义
+- telemetry 至少应覆盖 before / after / delta 与关键关联 id
+- telemetry 只是观测层，不是新的业务真相源
+- telemetry 数据必须足以重建内部执行时间线与对象变化链
+
+### 8.7.4 Frontend Experience
+
+后续 `Phase M / Frontend Experience` 的职责是基于统一 CLI、统一 capability 层与 telemetry 底座，提供功能体验入口、配置入口与 debug 可视化入口。
+
+边界约束：
+
+- 前端不得绕开后端 contract、capability 边界与治理可见性规则
+- 配置入口必须覆盖 backend、profile、provider、model 与 dev-mode 等关键项
+- debug 入口默认只能在开发模式下开放
+- 前端体验层不应提前引入新的治理或 persona 主语义
+
+### 8.7.5 顺延后的治理与人格阶段
+
+Post-Phase-G addendum 进一步明确：
+
+- 更重的 `governance / reshape` 正式执行层顺延到 `Phase N`
+- `persona / projection` 顺延到 `Phase O`
+
+这意味着 `Phase J ~ M` 属于体验层、能力层与观测层扩展；它们可以增强系统可用性、模型接入能力和调试能力，但不改写本节已经冻结的治理主语义。
+
 ---
 
 ## 9. 三个端到端 Episode 示例
@@ -1573,5 +1650,9 @@ Post-Phase-G addendum 则为后续阶段继续补充了：
 - governance / reshape loop
 - runtime access policy
 - governance-ready object projection 与最小 capability 边界
+- unified CLI experience 的最小边界
+- unified LLM capability layer 的最小边界
+- development telemetry 与 frontend experience 的非语义层约束
+- 顺延后的 `Phase N / Governance / Reshape` 与 `Phase O / Persona / Projection` 阶段落点
 
 这些内容约束 G 之后的新阶段，但不追溯推翻 A ~ G 的历史验收结论。
