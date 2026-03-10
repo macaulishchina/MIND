@@ -37,6 +37,7 @@
   - [phase_f_independent_audit.md](./reports/phase_f_independent_audit.md)：Phase F 独立审核报告
   - [phase_g_acceptance_report.md](./reports/phase_g_acceptance_report.md)：Phase G 正式验收记录
   - [phase_g_independent_audit.md](./reports/phase_g_independent_audit.md)：Phase G 独立审计报告
+  - [phase_h_acceptance_report.md](./reports/phase_h_acceptance_report.md)：Phase H 正式验收记录
 
 ## 查询入口
 
@@ -56,6 +57,7 @@
 - 想看“Phase F 启动期是怎么收敛到本地验收的”：先看 [design/phase_f_startup_checklist.md](./design/phase_f_startup_checklist.md)
 - 想看“Phase G 会按什么顺序推进”：先看 [design/phase_g_startup_checklist.md](./design/phase_g_startup_checklist.md)
 - 想看“Phase H 应该先做什么、不该做什么”：先看 [design/phase_h_startup_checklist.md](./design/phase_h_startup_checklist.md)
+- 想看“Phase H 现在是否已经通过本地 formal gate”：先看 [reports/phase_h_acceptance_report.md](./reports/phase_h_acceptance_report.md)
 - 想看“Phase I 应该怎么把固定档位和 `auto` 做成正式能力”：先看 [design/phase_i_startup_checklist.md](./design/phase_i_startup_checklist.md)
 - 想看“Phase J 应该怎么做 mixed-source rewrite 和 `erase_scope`”：先看 [design/phase_j_startup_checklist.md](./design/phase_j_startup_checklist.md)
 - 想看“Phase K 应该怎么把人格层限制在可追溯 projection”：先看 [design/phase_k_startup_checklist.md](./design/phase_k_startup_checklist.md)

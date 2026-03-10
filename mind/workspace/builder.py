@@ -67,6 +67,9 @@ class WorkspaceBuilder:
             except StoreError as exc:
                 raise WorkspaceBuildError(f"candidate '{object_id}' not found") from exc
 
+            if self._is_object_concealed(object_id):
+                skipped_ids.append(object_id)
+                continue
             if obj["status"] in InaccessibleWorkspaceStatuses:
                 skipped_ids.append(object_id)
                 continue
@@ -208,3 +211,9 @@ class WorkspaceBuilder:
             if isinstance(value, list) and value:
                 return [str(item) for item in value]
         return [obj["id"]]
+
+    def _is_object_concealed(self, object_id: str) -> bool:
+        check = getattr(self.store, "is_object_concealed", None)
+        if check is None:
+            return False
+        return bool(check(object_id))

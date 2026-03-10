@@ -17,6 +17,8 @@ from sqlalchemy.engine.url import URL, make_url
 
 from alembic import command
 from alembic.config import Config
+from mind.kernel.governance import ConcealmentRecord, GovernanceAuditRecord
+from mind.kernel.provenance import DirectProvenanceRecord
 from mind.offline.jobs import OfflineJob, OfflineJobKind, OfflineJobStatus
 from mind.primitives.contracts import BudgetEvent, PrimitiveCallLog, RetrieveQueryMode
 
@@ -25,10 +27,13 @@ from .retrieval import EMBEDDING_DIM, RetrievalMatch, build_object_embedding, bu
 from .schema import ensure_valid_object
 from .sql_tables import (
     budget_events_table,
+    concealed_objects_table,
+    governance_audit_table,
     object_embeddings_table,
     object_versions_table,
     offline_jobs_table,
     primitive_call_logs_table,
+    provenance_ledger_table,
 )
 from .store import MemoryStoreFactory, PrimitiveTransactionContextManager, StoreError
 
@@ -142,8 +147,13 @@ class PostgresMemoryStore:
         with self.engine.connect() as connection:
             rows = connection.execute(
                 sa.select(object_versions_table)
+                .outerjoin(
+                    concealed_objects_table,
+                    concealed_objects_table.c.object_id == object_versions_table.c.object_id,
+                )
                 .where(object_versions_table.c.type == "RawRecord")
                 .where(episode_expr == episode_id)
+                .where(concealed_objects_table.c.object_id.is_(None))
                 .order_by(timestamp_order_expr.asc(), object_versions_table.c.object_id.asc())
             ).mappings()
             return [self._decode_object_row(row) for row in rows]
@@ -175,6 +185,98 @@ class PostgresMemoryStore:
                 )
             ).mappings()
             return [self._decode_budget_event(row) for row in rows]
+
+    def insert_direct_provenance(
+        self,
+        record: DirectProvenanceRecord | dict[str, Any],
+    ) -> None:
+        with self.transaction() as transaction:
+            transaction.insert_direct_provenance(record)
+
+    def read_direct_provenance(self, provenance_id: str) -> DirectProvenanceRecord:
+        with self.engine.connect() as connection:
+            return self._read_direct_provenance(connection, provenance_id)
+
+    def direct_provenance_for_object(self, object_id: str) -> DirectProvenanceRecord:
+        with self.engine.connect() as connection:
+            return self._direct_provenance_for_object(connection, object_id)
+
+    def iter_direct_provenance(self) -> list[DirectProvenanceRecord]:
+        with self.engine.connect() as connection:
+            rows = connection.execute(
+                sa.select(provenance_ledger_table).order_by(
+                    provenance_ledger_table.c.ingested_at.asc(),
+                    provenance_ledger_table.c.provenance_id.asc(),
+                )
+            ).mappings()
+            return [self._decode_direct_provenance_row(row) for row in rows]
+
+    def record_governance_audit(
+        self,
+        record: GovernanceAuditRecord | dict[str, Any],
+    ) -> None:
+        with self.transaction() as transaction:
+            transaction.record_governance_audit(record)
+
+    def read_governance_audit(self, audit_id: str) -> GovernanceAuditRecord:
+        with self.engine.connect() as connection:
+            return self._read_governance_audit(connection, audit_id)
+
+    def iter_governance_audit(self) -> list[GovernanceAuditRecord]:
+        with self.engine.connect() as connection:
+            rows = connection.execute(
+                sa.select(governance_audit_table).order_by(
+                    governance_audit_table.c.timestamp.asc(),
+                    governance_audit_table.c.audit_id.asc(),
+                )
+            ).mappings()
+            return [self._decode_governance_audit_row(row) for row in rows]
+
+    def iter_governance_audit_for_operation(
+        self,
+        operation_id: str,
+    ) -> list[GovernanceAuditRecord]:
+        with self.engine.connect() as connection:
+            rows = connection.execute(
+                sa.select(governance_audit_table)
+                .where(governance_audit_table.c.operation_id == operation_id)
+                .order_by(
+                    governance_audit_table.c.timestamp.asc(),
+                    governance_audit_table.c.audit_id.asc(),
+                )
+            ).mappings()
+            return [self._decode_governance_audit_row(row) for row in rows]
+
+    def record_concealment(self, record: ConcealmentRecord | dict[str, Any]) -> None:
+        with self.transaction() as transaction:
+            transaction.record_concealment(record)
+
+    def read_concealment(self, concealment_id: str) -> ConcealmentRecord:
+        with self.engine.connect() as connection:
+            return self._read_concealment(connection, concealment_id)
+
+    def concealment_for_object(self, object_id: str) -> ConcealmentRecord:
+        with self.engine.connect() as connection:
+            return self._concealment_for_object(connection, object_id)
+
+    def is_object_concealed(self, object_id: str) -> bool:
+        with self.engine.connect() as connection:
+            row = connection.execute(
+                sa.select(concealed_objects_table.c.concealment_id)
+                .where(concealed_objects_table.c.object_id == object_id)
+                .limit(1)
+            ).first()
+        return row is not None
+
+    def iter_concealments(self) -> list[ConcealmentRecord]:
+        with self.engine.connect() as connection:
+            rows = connection.execute(
+                sa.select(concealed_objects_table).order_by(
+                    concealed_objects_table.c.concealed_at.asc(),
+                    concealed_objects_table.c.concealment_id.asc(),
+                )
+            ).mappings()
+            return [self._decode_concealment_row(row) for row in rows]
 
     def enqueue_offline_job(self, job: OfflineJob | dict[str, Any]) -> None:
         validated = OfflineJob.model_validate(job)
@@ -487,6 +589,152 @@ class PostgresMemoryStore:
             )
         )
 
+    def _write_direct_provenance(
+        self,
+        connection: Connection,
+        record: DirectProvenanceRecord | dict[str, Any],
+    ) -> None:
+        validated = DirectProvenanceRecord.model_validate(record)
+        existing_row = connection.execute(
+            sa.select(provenance_ledger_table.c.provenance_id)
+            .where(provenance_ledger_table.c.bound_object_id == validated.bound_object_id)
+            .limit(1)
+        ).first()
+        if existing_row is not None:
+            raise StoreError(
+                f"direct provenance already exists for object '{validated.bound_object_id}'"
+            )
+
+        try:
+            bound_object = self._read_object(connection, validated.bound_object_id)
+        except StoreError as exc:
+            raise StoreError(
+                f"cannot bind direct provenance to missing object '{validated.bound_object_id}'"
+            ) from exc
+        if bound_object["type"] != validated.bound_object_type:
+            raise StoreError(
+                "direct provenance bound_object_type mismatch: "
+                f"expected '{bound_object['type']}', got '{validated.bound_object_type}'"
+            )
+
+        payload = validated.model_dump(mode="json")
+        connection.execute(sa.insert(provenance_ledger_table).values(**payload))
+
+    def _write_governance_audit(
+        self,
+        connection: Connection,
+        record: GovernanceAuditRecord | dict[str, Any],
+    ) -> None:
+        validated = GovernanceAuditRecord.model_validate(record)
+        payload = validated.model_dump(mode="json")
+        connection.execute(
+            sa.insert(governance_audit_table).values(
+                audit_id=payload["audit_id"],
+                operation_id=payload["operation_id"],
+                action=payload["action"],
+                stage=payload["stage"],
+                actor=payload["actor"],
+                capability=payload["capability"],
+                timestamp=payload["timestamp"],
+                outcome=payload["outcome"],
+                scope=payload.get("scope"),
+                reason=payload.get("reason"),
+                target_object_ids_json=payload["target_object_ids"],
+                target_provenance_ids_json=payload["target_provenance_ids"],
+                selection_json=payload["selection"],
+                summary_json=payload["summary"],
+            )
+        )
+
+    def _write_concealment(
+        self,
+        connection: Connection,
+        record: ConcealmentRecord | dict[str, Any],
+    ) -> None:
+        validated = ConcealmentRecord.model_validate(record)
+        if not self._has_object(connection, validated.object_id):
+            raise StoreError(f"cannot conceal missing object '{validated.object_id}'")
+        connection.execute(
+            sa.insert(concealed_objects_table).values(
+                concealment_id=validated.concealment_id,
+                operation_id=validated.operation_id,
+                object_id=validated.object_id,
+                actor=validated.actor,
+                concealed_at=validated.concealed_at.isoformat(),
+                reason=validated.reason,
+            )
+        )
+
+    def _read_direct_provenance(
+        self,
+        connection: Connection,
+        provenance_id: str,
+    ) -> DirectProvenanceRecord:
+        row = connection.execute(
+            sa.select(provenance_ledger_table)
+            .where(provenance_ledger_table.c.provenance_id == provenance_id)
+            .limit(1)
+        ).mappings().first()
+        if row is None:
+            raise StoreError(f"direct provenance '{provenance_id}' not found")
+        return self._decode_direct_provenance_row(row)
+
+    def _read_governance_audit(
+        self,
+        connection: Connection,
+        audit_id: str,
+    ) -> GovernanceAuditRecord:
+        row = connection.execute(
+            sa.select(governance_audit_table)
+            .where(governance_audit_table.c.audit_id == audit_id)
+            .limit(1)
+        ).mappings().first()
+        if row is None:
+            raise StoreError(f"governance audit '{audit_id}' not found")
+        return self._decode_governance_audit_row(row)
+
+    def _read_concealment(
+        self,
+        connection: Connection,
+        concealment_id: str,
+    ) -> ConcealmentRecord:
+        row = connection.execute(
+            sa.select(concealed_objects_table)
+            .where(concealed_objects_table.c.concealment_id == concealment_id)
+            .limit(1)
+        ).mappings().first()
+        if row is None:
+            raise StoreError(f"concealment '{concealment_id}' not found")
+        return self._decode_concealment_row(row)
+
+    def _direct_provenance_for_object(
+        self,
+        connection: Connection,
+        object_id: str,
+    ) -> DirectProvenanceRecord:
+        row = connection.execute(
+            sa.select(provenance_ledger_table)
+            .where(provenance_ledger_table.c.bound_object_id == object_id)
+            .limit(1)
+        ).mappings().first()
+        if row is None:
+            raise StoreError(f"direct provenance for object '{object_id}' not found")
+        return self._decode_direct_provenance_row(row)
+
+    def _concealment_for_object(
+        self,
+        connection: Connection,
+        object_id: str,
+    ) -> ConcealmentRecord:
+        row = connection.execute(
+            sa.select(concealed_objects_table)
+            .where(concealed_objects_table.c.object_id == object_id)
+            .limit(1)
+        ).mappings().first()
+        if row is None:
+            raise StoreError(f"concealment for object '{object_id}' not found")
+        return self._decode_concealment_row(row)
+
     @staticmethod
     def _decode_object_row(row: RowMapping) -> dict[str, Any]:
         return {
@@ -532,6 +780,65 @@ class PostgresMemoryStore:
             "metadata": row["metadata_json"],
         }
         return BudgetEvent.model_validate(payload)
+
+    @staticmethod
+    def _decode_direct_provenance_row(row: RowMapping) -> DirectProvenanceRecord:
+        payload: dict[str, Any] = {
+            "provenance_id": row["provenance_id"],
+            "bound_object_id": row["bound_object_id"],
+            "bound_object_type": row["bound_object_type"],
+            "producer_kind": row["producer_kind"],
+            "producer_id": row["producer_id"],
+            "captured_at": row["captured_at"],
+            "ingested_at": row["ingested_at"],
+            "source_channel": row["source_channel"],
+            "tenant_id": row["tenant_id"],
+            "retention_class": row["retention_class"],
+            "user_id": row["user_id"],
+            "model_id": row["model_id"],
+            "model_provider": row["model_provider"],
+            "model_version": row["model_version"],
+            "ip_addr": row["ip_addr"],
+            "device_id": row["device_id"],
+            "machine_fingerprint": row["machine_fingerprint"],
+            "session_id": row["session_id"],
+            "request_id": row["request_id"],
+            "conversation_id": row["conversation_id"],
+            "episode_id": row["episode_id"],
+        }
+        return DirectProvenanceRecord.model_validate(payload)
+
+    @staticmethod
+    def _decode_governance_audit_row(row: RowMapping) -> GovernanceAuditRecord:
+        payload: dict[str, Any] = {
+            "audit_id": row["audit_id"],
+            "operation_id": row["operation_id"],
+            "action": row["action"],
+            "stage": row["stage"],
+            "actor": row["actor"],
+            "capability": row["capability"],
+            "timestamp": row["timestamp"],
+            "outcome": row["outcome"],
+            "scope": row["scope"],
+            "reason": row["reason"],
+            "target_object_ids": row["target_object_ids_json"],
+            "target_provenance_ids": row["target_provenance_ids_json"],
+            "selection": row["selection_json"],
+            "summary": row["summary_json"],
+        }
+        return GovernanceAuditRecord.model_validate(payload)
+
+    @staticmethod
+    def _decode_concealment_row(row: RowMapping) -> ConcealmentRecord:
+        payload: dict[str, Any] = {
+            "concealment_id": row["concealment_id"],
+            "operation_id": row["operation_id"],
+            "object_id": row["object_id"],
+            "actor": row["actor"],
+            "concealed_at": row["concealed_at"],
+            "reason": row["reason"],
+        }
+        return ConcealmentRecord.model_validate(payload)
 
     @staticmethod
     def _decode_offline_job(row: RowMapping) -> OfflineJob:
@@ -600,6 +907,10 @@ class PostgresMemoryStore:
                 ),
             )
         )
+        statement = statement.outerjoin(
+            concealed_objects_table,
+            concealed_objects_table.c.object_id == object_versions_table.c.object_id,
+        ).where(concealed_objects_table.c.object_id.is_(None))
 
         status_list = list(statuses)
         if status_list:
@@ -818,6 +1129,85 @@ class _PostgresStoreTransaction:
             )
         ).mappings()
         return [self._store._decode_object_row(row) for row in rows]
+
+    def insert_direct_provenance(
+        self,
+        record: DirectProvenanceRecord | dict[str, Any],
+    ) -> None:
+        self._store._write_direct_provenance(self._require_connection(), record)
+
+    def read_direct_provenance(self, provenance_id: str) -> DirectProvenanceRecord:
+        return self._store._read_direct_provenance(self._require_connection(), provenance_id)
+
+    def direct_provenance_for_object(self, object_id: str) -> DirectProvenanceRecord:
+        return self._store._direct_provenance_for_object(self._require_connection(), object_id)
+
+    def iter_direct_provenance(self) -> list[DirectProvenanceRecord]:
+        rows = self._require_connection().execute(
+            sa.select(provenance_ledger_table).order_by(
+                provenance_ledger_table.c.ingested_at.asc(),
+                provenance_ledger_table.c.provenance_id.asc(),
+            )
+        ).mappings()
+        return [self._store._decode_direct_provenance_row(row) for row in rows]
+
+    def record_governance_audit(
+        self,
+        record: GovernanceAuditRecord | dict[str, Any],
+    ) -> None:
+        self._store._write_governance_audit(self._require_connection(), record)
+
+    def read_governance_audit(self, audit_id: str) -> GovernanceAuditRecord:
+        return self._store._read_governance_audit(self._require_connection(), audit_id)
+
+    def iter_governance_audit(self) -> list[GovernanceAuditRecord]:
+        rows = self._require_connection().execute(
+            sa.select(governance_audit_table).order_by(
+                governance_audit_table.c.timestamp.asc(),
+                governance_audit_table.c.audit_id.asc(),
+            )
+        ).mappings()
+        return [self._store._decode_governance_audit_row(row) for row in rows]
+
+    def iter_governance_audit_for_operation(
+        self,
+        operation_id: str,
+    ) -> list[GovernanceAuditRecord]:
+        rows = self._require_connection().execute(
+            sa.select(governance_audit_table)
+            .where(governance_audit_table.c.operation_id == operation_id)
+            .order_by(
+                governance_audit_table.c.timestamp.asc(),
+                governance_audit_table.c.audit_id.asc(),
+            )
+        ).mappings()
+        return [self._store._decode_governance_audit_row(row) for row in rows]
+
+    def record_concealment(self, record: ConcealmentRecord | dict[str, Any]) -> None:
+        self._store._write_concealment(self._require_connection(), record)
+
+    def read_concealment(self, concealment_id: str) -> ConcealmentRecord:
+        return self._store._read_concealment(self._require_connection(), concealment_id)
+
+    def concealment_for_object(self, object_id: str) -> ConcealmentRecord:
+        return self._store._concealment_for_object(self._require_connection(), object_id)
+
+    def is_object_concealed(self, object_id: str) -> bool:
+        row = self._require_connection().execute(
+            sa.select(concealed_objects_table.c.concealment_id)
+            .where(concealed_objects_table.c.object_id == object_id)
+            .limit(1)
+        ).first()
+        return row is not None
+
+    def iter_concealments(self) -> list[ConcealmentRecord]:
+        rows = self._require_connection().execute(
+            sa.select(concealed_objects_table).order_by(
+                concealed_objects_table.c.concealed_at.asc(),
+                concealed_objects_table.c.concealment_id.asc(),
+            )
+        ).mappings()
+        return [self._store._decode_concealment_row(row) for row in rows]
 
     def raw_records_for_episode(self, episode_id: str) -> list[dict[str, Any]]:
         episode_expr = object_versions_table.c.metadata_json.op("->>")("episode_id")

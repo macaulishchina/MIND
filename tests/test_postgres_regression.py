@@ -11,6 +11,14 @@ import pytest
 import sqlalchemy as sa
 
 from mind.fixtures.golden_episode_set import build_core_object_showcase, build_golden_episode_set
+from mind.kernel.governance import (
+    ConcealmentRecord,
+    GovernanceAction,
+    GovernanceAuditRecord,
+    GovernanceCapability,
+    GovernanceOutcome,
+    GovernanceStage,
+)
 from mind.kernel.phase_b import evaluate_phase_b_gate
 from mind.kernel.postgres_store import (
     PostgresMemoryStore,
@@ -18,6 +26,7 @@ from mind.kernel.postgres_store import (
     run_postgres_migrations,
     temporary_postgres_database,
 )
+from mind.kernel.replay import replay_episode
 from mind.kernel.retrieval import build_query_embedding
 from mind.kernel.sql_tables import object_embeddings_table, object_versions_table
 from mind.offline import (
@@ -27,8 +36,9 @@ from mind.offline import (
     evaluate_phase_e_gate,
     new_offline_job,
 )
-from mind.primitives.contracts import RetrieveQueryMode
+from mind.primitives.contracts import PrimitiveExecutionContext, PrimitiveOutcome, RetrieveQueryMode
 from mind.primitives.phase_c import evaluate_phase_c_gate
+from mind.primitives.service import PrimitiveService
 from mind.workspace import WorkspaceBuilder, evaluate_phase_d_smoke
 
 POSTGRES_DSN = os.environ.get("MIND_TEST_POSTGRES_DSN")
@@ -163,6 +173,136 @@ def test_postgres_vector_search_persists_embeddings() -> None:
     assert embedding_count == len(showcase) + len(episode.objects)
     assert isinstance(search_text, str)
     assert target_summary_id in search_text
+
+
+def test_postgres_write_raw_persists_direct_provenance() -> None:
+    assert POSTGRES_DSN is not None
+
+    with temporary_postgres_database(POSTGRES_DSN, prefix="mind_phase_h_pg") as database_dsn:
+        run_postgres_migrations(database_dsn)
+        with PostgresMemoryStore(database_dsn) as store:
+            service = PrimitiveService(store, clock=lambda: FIXED_TIMESTAMP)
+            result = service.write_raw(
+                {
+                    "record_kind": "user_message",
+                    "content": {"text": "postgres provenance"},
+                    "episode_id": "episode-postgres",
+                    "timestamp_order": 1,
+                    "direct_provenance": {
+                        "producer_kind": "user",
+                        "producer_id": "pg-user",
+                        "captured_at": "2026-03-08T12:00:00+00:00",
+                        "source_channel": "api",
+                        "tenant_id": "tenant-pg",
+                        "episode_id": "episode-postgres",
+                    },
+                },
+                PrimitiveExecutionContext(
+                    actor="phase-h-postgres",
+                    budget_scope_id="phase-h-postgres",
+                    budget_limit=10.0,
+                ),
+            )
+
+            assert result.outcome is PrimitiveOutcome.SUCCESS
+            assert result.response is not None
+            provenance = store.direct_provenance_for_object(result.response["object_id"])
+
+    assert provenance.producer_id == "pg-user"
+    assert provenance.source_channel.value == "api"
+    assert provenance.tenant_id == "tenant-pg"
+    assert provenance.episode_id == "episode-postgres"
+
+
+def test_postgres_governance_audit_round_trip() -> None:
+    assert POSTGRES_DSN is not None
+
+    with temporary_postgres_database(POSTGRES_DSN, prefix="mind_phase_h_audit_pg") as database_dsn:
+        run_postgres_migrations(database_dsn)
+        with PostgresMemoryStore(database_dsn) as store:
+            store.record_governance_audit(
+                GovernanceAuditRecord(
+                    audit_id="audit-pg-plan-001",
+                    operation_id="op-pg-001",
+                    action=GovernanceAction.CONCEAL,
+                    stage=GovernanceStage.PLAN,
+                    actor="pg-governance-operator",
+                    capability=GovernanceCapability.GOVERNANCE_PLAN,
+                    timestamp=FIXED_TIMESTAMP,
+                    outcome=GovernanceOutcome.SUCCEEDED,
+                    target_object_ids=["raw-pg-001"],
+                    target_provenance_ids=["prov-pg-001"],
+                    selection={"producer_id": "user-pg"},
+                    summary={"candidate_object_count": 1},
+                )
+            )
+
+            fetched = store.read_governance_audit("audit-pg-plan-001")
+            operation_rows = store.iter_governance_audit_for_operation("op-pg-001")
+
+    assert fetched.actor == "pg-governance-operator"
+    assert fetched.capability.value == "governance_plan"
+    assert fetched.summary["candidate_object_count"] == 1
+    assert [row.audit_id for row in operation_rows] == ["audit-pg-plan-001"]
+
+
+def test_postgres_concealment_hides_latest_objects() -> None:
+    assert POSTGRES_DSN is not None
+
+    showcase = build_core_object_showcase()
+
+    with temporary_postgres_database(
+        POSTGRES_DSN,
+        prefix="mind_phase_h_conceal_pg",
+    ) as database_dsn:
+        run_postgres_migrations(database_dsn)
+        with PostgresMemoryStore(database_dsn) as store:
+            store.insert_objects(showcase)
+            store.record_concealment(
+                ConcealmentRecord(
+                    concealment_id="conceal-pg-001",
+                    operation_id="op-pg-conceal-001",
+                    object_id="showcase-summary",
+                    actor="pg-governance-operator",
+                    concealed_at=FIXED_TIMESTAMP,
+                    reason="postgres conceal regression",
+                )
+            )
+
+            visible_summaries = store.iter_latest_objects(object_types=["SummaryNote"])
+
+    assert all(obj["id"] != "showcase-summary" for obj in visible_summaries)
+
+
+def test_postgres_concealed_episode_replay_excludes_raw_records() -> None:
+    assert POSTGRES_DSN is not None
+
+    episode = build_golden_episode_set()[1]
+    raw_records = [obj for obj in episode.objects if obj["type"] == "RawRecord"]
+    concealed_raw_id = raw_records[-1]["id"]
+    visible_raw_ids = [record["id"] for record in raw_records[:-1]]
+
+    with temporary_postgres_database(
+        POSTGRES_DSN,
+        prefix="mind_phase_h_conceal_replay_pg",
+    ) as database_dsn:
+        run_postgres_migrations(database_dsn)
+        with PostgresMemoryStore(database_dsn) as store:
+            store.insert_objects(episode.objects)
+            store.record_concealment(
+                ConcealmentRecord(
+                    concealment_id="conceal-pg-replay-001",
+                    operation_id="op-pg-conceal-replay-001",
+                    object_id=concealed_raw_id,
+                    actor="pg-governance-operator",
+                    concealed_at=FIXED_TIMESTAMP,
+                    reason="postgres conceal replay regression",
+                )
+            )
+
+            replayed = replay_episode(store, episode.episode_id)
+
+    assert [record["id"] for record in replayed] == visible_raw_ids
 
 
 def test_postgres_phase_d_smoke() -> None:

@@ -45,11 +45,16 @@ Phase H 明确不做：
   - provenance audit report
   - conceal regression report
   - Phase H gate report
+- 当前本地入口：
+  - `scripts/run_phase_h_gate.py`
+  - `artifacts/phase_h/gate_report.json`
 
 ### `H2` Control Plane 建模
 
 - 设计 `provenance_ledger` 最小字段集
 - 设计 `governance_audit` 最小字段集
+  - 至少冻结 `audit_id / operation_id / action / stage / actor / capability / timestamp / outcome / scope / selection / summary`
+  - 冻结 `plan / preview / approve / execute` 与 capability 的最小对应关系
 - 冻结 capability 边界：
   - `memory_read`
   - `memory_read_with_provenance`
@@ -72,6 +77,7 @@ Phase H 明确不做：
   - `preview`
   - `execute(conceal)`
   - `audit`
+- `conceal` 的最小数据面应表现为 control-plane 可见性标记，而不是新增 data-plane `status`
 - `conceal` 后的默认要求：
   - 普通 retrieval 不可见
   - 普通 read 不可见
@@ -86,6 +92,7 @@ Phase H 明确不做：
 - conceal visibility regression
 - retrieval / ranking isolation regression
 - 形成 Phase H gate report
+- 当前 formal gate 已落地为 `scripts/run_phase_h_gate.py`
 
 ## 当前关键设计约束
 

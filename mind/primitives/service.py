@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
+from mind.kernel.provenance import build_direct_provenance_record, build_provenance_summary
 from mind.kernel.retrieval import build_query_embedding
 from mind.kernel.schema import public_object_view, strip_control_plane_metadata
 from mind.kernel.store import MemoryStore, PrimitiveTransaction, StoreError
@@ -17,6 +18,7 @@ from mind.kernel.store import MemoryStore, PrimitiveTransaction, StoreError
 from .contracts import (
     BudgetCost,
     BudgetEvent,
+    Capability,
     LinkRequest,
     LinkResponse,
     MemoryObject,
@@ -111,6 +113,17 @@ class PrimitiveService:
             request_payload=request,
             handler=handler,
         )
+
+    def read_with_provenance(
+        self,
+        request: ReadRequest | dict[str, Any],
+        context: PrimitiveExecutionContext | dict[str, Any],
+    ) -> PrimitiveExecutionResult:
+        payload = (
+            request.model_dump(mode="json") if isinstance(request, ReadRequest) else dict(request)
+        )
+        payload["include_provenance"] = True
+        return self.read(payload, context)
 
     def retrieve(
         self,
@@ -234,8 +247,10 @@ class PrimitiveService:
         ]
         self._enforce_budget(context, costs)
 
-        created_at = self._clock().isoformat()
+        now = self._clock()
+        created_at = now.isoformat()
         object_id = self._new_object_id(f"raw-{request.episode_id}")
+        provenance_id = self._new_object_id(f"prov-{request.episode_id}")
         raw_object: dict[str, Any] = {
             "id": object_id,
             "type": "RawRecord",
@@ -252,10 +267,33 @@ class PrimitiveService:
                 "timestamp_order": request.timestamp_order,
             },
         }
+
+        try:
+            direct_provenance = build_direct_provenance_record(
+                provenance_id=provenance_id,
+                bound_object_id=object_id,
+                bound_object_type="RawRecord",
+                direct_provenance=request.direct_provenance,
+                actor=context.actor,
+                ingested_at=now,
+                episode_id=request.episode_id,
+            )
+        except ValueError as exc:
+            raise self._reject(
+                PrimitiveErrorCode.SCHEMA_INVALID,
+                str(exc),
+                details={"episode_id": request.episode_id},
+            ) from exc
+
         transaction.insert_object(raw_object)
+        transaction.insert_direct_provenance(direct_provenance)
         self._after_write_operation(PrimitiveName.WRITE_RAW)
         return PrimitiveHandlerResult(
-            response=WriteRawResponse(object_id=object_id, version=1),
+            response=WriteRawResponse(
+                object_id=object_id,
+                version=1,
+                provenance_id=provenance_id,
+            ),
             target_ids=(object_id,),
             budget_events=(
                 self._budget_event(
@@ -273,6 +311,18 @@ class PrimitiveService:
         context: PrimitiveExecutionContext,
         store: MemoryStore,
     ) -> PrimitiveHandlerResult[ReadResponse]:
+        self._require_capability(
+            context,
+            Capability.MEMORY_READ,
+            action="read memory objects",
+        )
+        if request.include_provenance:
+            self._require_capability(
+                context,
+                Capability.MEMORY_READ_WITH_PROVENANCE,
+                action="read provenance summaries",
+            )
+
         costs = [
             BudgetCost(
                 category=PrimitiveCostCategory.READ,
@@ -282,6 +332,7 @@ class PrimitiveService:
         self._enforce_budget(context, costs)
 
         objects: list[MemoryObject] = []
+        provenance_summaries: dict[str, Any] = {}
         for object_id in request.object_ids:
             try:
                 obj = store.read_object(object_id)
@@ -292,6 +343,12 @@ class PrimitiveService:
                     details={"object_id": object_id},
                 ) from exc
 
+            if self._is_object_concealed(store, object_id):
+                raise self._reject(
+                    PrimitiveErrorCode.OBJECT_INACCESSIBLE,
+                    f"object '{object_id}' is concealed",
+                    details={"object_id": object_id, "visibility": "concealed"},
+                )
             if obj["status"] in InaccessibleStatuses:
                 raise self._reject(
                     PrimitiveErrorCode.OBJECT_INACCESSIBLE,
@@ -299,16 +356,30 @@ class PrimitiveService:
                     details={"object_id": object_id, "status": obj["status"]},
                 )
             objects.append(MemoryObject.model_validate(public_object_view(obj)))
+            if request.include_provenance and obj["type"] in {"RawRecord", "ImportedRawRecord"}:
+                try:
+                    provenance_record = store.direct_provenance_for_object(object_id)
+                except StoreError:
+                    continue
+                provenance_summaries[object_id] = build_provenance_summary(
+                    provenance_record
+                ).model_dump(mode="json")
 
         return PrimitiveHandlerResult(
-            response=ReadResponse(objects=objects),
+            response=ReadResponse(
+                objects=objects,
+                provenance_summaries=provenance_summaries,
+            ),
             target_ids=tuple(request.object_ids),
             budget_events=(
                 self._budget_event(
                     context=context,
                     primitive=PrimitiveName.READ,
                     costs=costs,
-                    metadata={"object_count": len(request.object_ids)},
+                    metadata={
+                        "object_count": len(request.object_ids),
+                        "include_provenance": request.include_provenance,
+                    },
                 ),
             ),
         )
@@ -319,6 +390,11 @@ class PrimitiveService:
         context: PrimitiveExecutionContext,
         store: MemoryStore,
     ) -> PrimitiveHandlerResult[RetrieveResponse]:
+        self._require_capability(
+            context,
+            Capability.MEMORY_READ,
+            action="retrieve memory objects",
+        )
         filtered_objects = store.iter_latest_objects(
             object_types=request.filters.object_types,
             statuses=request.filters.statuses,
@@ -937,6 +1013,28 @@ class PrimitiveService:
     @staticmethod
     def _new_object_id(prefix: str) -> str:
         return f"{prefix}-{uuid4().hex[:12]}"
+
+    @staticmethod
+    def _require_capability(
+        context: PrimitiveExecutionContext,
+        capability: Capability,
+        *,
+        action: str,
+    ) -> None:
+        if capability in context.capabilities:
+            return
+        raise PrimitiveService._reject(
+            PrimitiveErrorCode.CAPABILITY_REQUIRED,
+            f"capability '{capability.value}' required to {action}",
+            details={"required_capability": capability.value},
+        )
+
+    @staticmethod
+    def _is_object_concealed(store: MemoryStore, object_id: str) -> bool:
+        check = getattr(store, "is_object_concealed", None)
+        if check is None:
+            return False
+        return bool(check(object_id))
 
     def _after_write_operation(self, primitive: PrimitiveName) -> None:
         """Optional hook for tests and gate fault injection."""

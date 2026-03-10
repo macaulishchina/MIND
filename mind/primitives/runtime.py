@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, TypeAdapter, ValidationError
 
 from mind.kernel.store import MemoryStore, PrimitiveTransaction
 
@@ -118,7 +118,7 @@ class PrimitiveRuntime:
         execution_result = PrimitiveExecutionResult(
             primitive=primitive,
             outcome=PrimitiveOutcome.SUCCESS,
-            response=response.model_dump(),
+            response=response.model_dump(mode="json"),
             target_ids=list(result.target_ids),
             cost=[cost for event in result.budget_events for cost in event.cost],
         )
@@ -130,8 +130,8 @@ class PrimitiveRuntime:
             target_ids=list(result.target_ids),
             cost=[cost for event in result.budget_events for cost in event.cost],
             outcome=PrimitiveOutcome.SUCCESS,
-            request=request.model_dump(),
-            response=response.model_dump(),
+            request=request.model_dump(mode="json"),
+            response=response.model_dump(mode="json"),
         )
         self.store.record_primitive_call(call_log)
         for event in result.budget_events:
@@ -172,7 +172,7 @@ class PrimitiveRuntime:
                 execution_result = PrimitiveExecutionResult(
                     primitive=primitive,
                     outcome=PrimitiveOutcome.SUCCESS,
-                    response=response.model_dump(),
+                    response=response.model_dump(mode="json"),
                     target_ids=list(result.target_ids),
                     cost=[cost for event in result.budget_events for cost in event.cost],
                 )
@@ -185,8 +185,8 @@ class PrimitiveRuntime:
                         target_ids=list(result.target_ids),
                         cost=[cost for event in result.budget_events for cost in event.cost],
                         outcome=PrimitiveOutcome.SUCCESS,
-                        request=request.model_dump(),
-                        response=response.model_dump(),
+                        request=request.model_dump(mode="json"),
+                        response=response.model_dump(mode="json"),
                     )
                 )
                 for event in result.budget_events:
@@ -228,11 +228,7 @@ class PrimitiveRuntime:
         error: PrimitiveError,
         outcome: PrimitiveOutcome,
     ) -> tuple[PrimitiveExecutionResult, PrimitiveCallLog]:
-        request_data = (
-            request_payload.model_dump()
-            if isinstance(request_payload, BaseModel)
-            else dict(request_payload)
-        )
+        request_data = _json_compatible_payload(request_payload)
         result = PrimitiveExecutionResult(
             primitive=primitive,
             outcome=outcome,
@@ -272,3 +268,9 @@ def _schema_error(exc: ValidationError) -> PrimitiveError:
         message="request schema validation failed",
         details={"errors": exc.errors(include_url=False)},
     )
+
+
+def _json_compatible_payload(payload: BaseModel | dict[str, Any]) -> dict[str, Any]:
+    if isinstance(payload, BaseModel):
+        return payload.model_dump(mode="json")
+    return TypeAdapter(dict[str, Any]).dump_python(payload, mode="json")

@@ -5,8 +5,10 @@ from pathlib import Path
 from typing import Any, cast
 
 from mind.fixtures.golden_episode_set import build_core_object_showcase, build_golden_episode_set
+from mind.kernel.provenance import HIGH_SENSITIVITY_PROVENANCE_FIELDS
 from mind.kernel.store import MemoryStore, SQLiteMemoryStore
 from mind.primitives.contracts import (
+    Capability,
     PrimitiveErrorCode,
     PrimitiveExecutionContext,
     PrimitiveName,
@@ -23,11 +25,13 @@ def _context(
     actor: str = "phase-c-tester",
     budget_scope_id: str = "phase-c-smoke",
     budget_limit: float | None = 100.0,
+    capabilities: list[Capability] | None = None,
 ) -> PrimitiveExecutionContext:
     return PrimitiveExecutionContext(
         actor=actor,
         budget_scope_id=budget_scope_id,
         budget_limit=budget_limit,
+        capabilities=[Capability.MEMORY_READ] if capabilities is None else capabilities,
     )
 
 
@@ -131,6 +135,232 @@ def test_all_seven_primitives_are_callable_and_logged(tmp_path: Path) -> None:
         budget_events = store.iter_budget_events()
         assert len(budget_events) == 7
         assert all(event.scope_id == "phase-c-smoke" for event in budget_events)
+
+
+def test_write_raw_binds_fallback_direct_provenance(tmp_path: Path) -> None:
+    db_path = tmp_path / "phase_h_write_raw_fallback.sqlite3"
+
+    with SQLiteMemoryStore(db_path) as store:
+        service = PrimitiveService(store, clock=lambda: FIXED_TIMESTAMP)
+
+        result = service.write_raw(
+            {
+                "record_kind": "user_message",
+                "content": {"text": "phase h fallback provenance"},
+                "episode_id": "episode-fallback",
+                "timestamp_order": 1,
+            },
+            _context(actor="phase-h-writer"),
+        )
+
+        assert result.outcome is PrimitiveOutcome.SUCCESS
+        assert result.response is not None
+        assert result.response["provenance_id"] is not None
+
+        provenance = store.direct_provenance_for_object(result.response["object_id"])
+        assert provenance.provenance_id == result.response["provenance_id"]
+        assert provenance.bound_object_id == result.response["object_id"]
+        assert provenance.bound_object_type == "RawRecord"
+        assert provenance.producer_kind.value == "system"
+        assert provenance.producer_id == "phase-h-writer"
+        assert provenance.source_channel.value == "system_internal"
+        assert provenance.tenant_id == "default"
+        assert provenance.retention_class.value == "default"
+        assert provenance.episode_id == "episode-fallback"
+        assert provenance.ingested_at == FIXED_TIMESTAMP
+        assert provenance.captured_at == FIXED_TIMESTAMP
+
+
+def test_write_raw_persists_explicit_direct_provenance(tmp_path: Path) -> None:
+    db_path = tmp_path / "phase_h_write_raw_explicit.sqlite3"
+
+    with SQLiteMemoryStore(db_path) as store:
+        service = PrimitiveService(store, clock=lambda: FIXED_TIMESTAMP)
+
+        result = service.write_raw(
+            {
+                "record_kind": "assistant_message",
+                "content": {"text": "phase h explicit provenance"},
+                "episode_id": "episode-explicit",
+                "timestamp_order": 2,
+                "direct_provenance": {
+                    "producer_kind": "user",
+                    "producer_id": "user-a",
+                    "captured_at": "2026-03-08T10:30:00+00:00",
+                    "source_channel": "chat",
+                    "tenant_id": "tenant-a",
+                    "retention_class": "sensitive",
+                    "user_id": "user-a",
+                    "ip_addr": "203.0.113.8",
+                    "device_id": "device-001",
+                    "session_id": "session-001",
+                    "request_id": "request-001",
+                    "conversation_id": "conversation-001",
+                    "episode_id": "episode-explicit",
+                },
+            },
+            _context(actor="phase-h-writer"),
+        )
+
+        assert result.outcome is PrimitiveOutcome.SUCCESS
+        assert result.response is not None
+        provenance = store.read_direct_provenance(result.response["provenance_id"])
+        assert provenance.bound_object_id == result.response["object_id"]
+        assert provenance.producer_kind.value == "user"
+        assert provenance.producer_id == "user-a"
+        assert provenance.source_channel.value == "chat"
+        assert provenance.tenant_id == "tenant-a"
+        assert provenance.retention_class.value == "sensitive"
+        assert provenance.user_id == "user-a"
+        assert provenance.ip_addr == "203.0.113.8"
+        assert provenance.device_id == "device-001"
+        assert provenance.session_id == "session-001"
+        assert provenance.request_id == "request-001"
+        assert provenance.conversation_id == "conversation-001"
+        assert provenance.episode_id == "episode-explicit"
+        assert provenance.captured_at == datetime.fromisoformat("2026-03-08T10:30:00+00:00")
+        assert provenance.ingested_at == FIXED_TIMESTAMP
+
+
+def test_write_raw_rejects_mismatched_direct_provenance_episode(tmp_path: Path) -> None:
+    db_path = tmp_path / "phase_h_write_raw_episode_mismatch.sqlite3"
+
+    with SQLiteMemoryStore(db_path) as store:
+        service = PrimitiveService(store, clock=lambda: FIXED_TIMESTAMP)
+
+        result = service.write_raw(
+            {
+                "record_kind": "user_message",
+                "content": {"text": "phase h mismatch"},
+                "episode_id": "episode-a",
+                "timestamp_order": 1,
+                "direct_provenance": {
+                    "producer_kind": "user",
+                    "producer_id": "user-a",
+                    "captured_at": "2026-03-08T10:30:00+00:00",
+                    "source_channel": "chat",
+                    "tenant_id": "tenant-a",
+                    "episode_id": "episode-b",
+                },
+            },
+            _context(actor="phase-h-writer"),
+        )
+
+        assert result.outcome is PrimitiveOutcome.REJECTED
+        assert result.error is not None
+        assert result.error.code is PrimitiveErrorCode.SCHEMA_INVALID
+        assert store.iter_objects() == []
+        assert store.iter_direct_provenance() == []
+
+
+def test_read_with_provenance_requires_capability(tmp_path: Path) -> None:
+    db_path = tmp_path / "phase_h_read_capability.sqlite3"
+
+    with SQLiteMemoryStore(db_path) as store:
+        service = PrimitiveService(store, clock=lambda: FIXED_TIMESTAMP)
+        write_result = service.write_raw(
+            {
+                "record_kind": "user_message",
+                "content": {"text": "phase h privileged read"},
+                "episode_id": "episode-read-cap",
+                "timestamp_order": 1,
+            },
+            _context(actor="phase-h-writer"),
+        )
+
+        assert write_result.response is not None
+        result = service.read_with_provenance(
+            {"object_ids": [write_result.response["object_id"]]},
+            _context(actor="phase-h-reader"),
+        )
+
+        assert result.outcome is PrimitiveOutcome.REJECTED
+        assert result.error is not None
+        assert result.error.code is PrimitiveErrorCode.CAPABILITY_REQUIRED
+
+
+def test_read_with_provenance_returns_frozen_summary(tmp_path: Path) -> None:
+    db_path = tmp_path / "phase_h_read_with_provenance.sqlite3"
+
+    with SQLiteMemoryStore(db_path) as store:
+        service = PrimitiveService(store, clock=lambda: FIXED_TIMESTAMP)
+        write_result = service.write_raw(
+            {
+                "record_kind": "assistant_message",
+                "content": {"text": "phase h provenance summary"},
+                "episode_id": "episode-read-summary",
+                "timestamp_order": 1,
+                "direct_provenance": {
+                    "producer_kind": "model",
+                    "producer_id": "model-a",
+                    "captured_at": "2026-03-08T18:00:00+00:00",
+                    "source_channel": "api",
+                    "tenant_id": "tenant-a",
+                    "retention_class": "regulated",
+                    "model_id": "model-a",
+                    "model_provider": "provider-a",
+                    "model_version": "v1",
+                    "ip_addr": "203.0.113.10",
+                    "device_id": "device-010",
+                    "machine_fingerprint": "machine-010",
+                    "session_id": "session-010",
+                    "request_id": "request-010",
+                    "conversation_id": "conversation-010",
+                    "episode_id": "episode-read-summary",
+                },
+            },
+            _context(actor="phase-h-writer"),
+        )
+
+        assert write_result.response is not None
+        result = service.read_with_provenance(
+            {"object_ids": [write_result.response["object_id"]]},
+            _context(
+                actor="phase-h-reader",
+                capabilities=[
+                    Capability.MEMORY_READ,
+                    Capability.MEMORY_READ_WITH_PROVENANCE,
+                ],
+            ),
+        )
+
+        assert result.outcome is PrimitiveOutcome.SUCCESS
+        assert result.response is not None
+        assert result.response["objects"][0]["id"] == write_result.response["object_id"]
+        summary = result.response["provenance_summaries"][write_result.response["object_id"]]
+        assert summary["provenance_id"] == write_result.response["provenance_id"]
+        assert summary["producer_kind"] == "model"
+        assert summary["producer_id"] == "model-a"
+        assert summary["source_channel"] == "api"
+        assert summary["tenant_id"] == "tenant-a"
+        assert summary["retention_class"] == "regulated"
+        assert summary["model_id"] == "model-a"
+        assert summary["model_provider"] == "provider-a"
+        assert summary["model_version"] == "v1"
+        assert summary["episode_id"] == "episode-read-summary"
+        assert not (HIGH_SENSITIVITY_PROVENANCE_FIELDS & set(summary))
+
+
+def test_retrieve_requires_memory_read_capability(tmp_path: Path) -> None:
+    db_path = tmp_path / "phase_h_retrieve_capability.sqlite3"
+    showcase = build_core_object_showcase()
+
+    with SQLiteMemoryStore(db_path) as store:
+        store.insert_objects(showcase)
+        service = PrimitiveService(store, clock=lambda: FIXED_TIMESTAMP)
+        result = service.retrieve(
+            {
+                "query": "showcase summary",
+                "query_modes": ["keyword"],
+                "budget": {"max_cost": 5.0, "max_candidates": 5},
+                "filters": {"object_types": ["SummaryNote"]},
+            },
+            _context(actor="phase-h-reader", capabilities=[]),
+        )
+
+        assert result.outcome is PrimitiveOutcome.REJECTED
+        assert result.error is not None
+        assert result.error.code is PrimitiveErrorCode.CAPABILITY_REQUIRED
 
 
 def test_budget_rejection_returns_explicit_error_code(tmp_path: Path) -> None:

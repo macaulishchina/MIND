@@ -33,6 +33,11 @@ from .fixtures.long_horizon_eval import (
     build_long_horizon_eval_manifest_v1,
     build_long_horizon_eval_v1,
 )
+from .governance import (
+    assert_phase_h_gate,
+    evaluate_phase_h_gate,
+    write_phase_h_gate_report_json,
+)
 from .kernel.phase_b import assert_phase_b_gate, evaluate_phase_b_gate
 from .kernel.postgres_store import (
     PostgresMemoryStore,
@@ -387,6 +392,69 @@ def phase_e_gate_main() -> int:
     print(f"E-4={'PASS' if result.e4_pass else 'FAIL'}")
     print(f"E-5={'PASS' if result.e5_pass else 'FAIL'}")
     print(f"phase_e_gate={'PASS' if result.phase_e_pass else 'FAIL'}")
+    return 0
+
+
+def phase_h_gate_main(argv: Sequence[str] | None = None) -> int:
+    """Run the local Phase H provenance foundation gate."""
+
+    parser = argparse.ArgumentParser(
+        prog="mind-phase-h-gate",
+        description="Run the full local Phase H provenance foundation gate.",
+    )
+    parser.add_argument(
+        "--output",
+        default="artifacts/phase_h/gate_report.json",
+        help="Output path for the persisted Phase H gate JSON report.",
+    )
+    args = parser.parse_args(list(argv) if argv is not None else None)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        result = evaluate_phase_h_gate(Path(tmpdir) / "phase_h_gate.sqlite3")
+
+    try:
+        assert_phase_h_gate(result)
+    except RuntimeError as exc:
+        raise SystemExit(str(exc)) from exc
+
+    output_path = write_phase_h_gate_report_json(args.output, result)
+    print("Phase H gate report")
+    print(f"report_path={output_path}")
+    print(
+        "direct_provenance_bindings="
+        f"{result.authoritative_binding_count}/{result.raw_object_count}"
+    )
+    print(f"orphan_provenance_rows={result.orphan_provenance_count}")
+    print(
+        "low_privilege_blocks="
+        f"{result.low_privilege_block_count}/{result.low_privilege_total}"
+    )
+    print(
+        "privileged_summaries="
+        f"{result.privileged_summary_count}/{result.privileged_total}"
+    )
+    print(
+        "online_conceal_blocks="
+        f"{result.online_conceal_block_count}/{result.online_conceal_total}"
+    )
+    print(
+        "offline_conceal_blocks="
+        f"{result.offline_conceal_block_count}/{result.offline_conceal_total}"
+    )
+    print(
+        "governance_stage_sequence="
+        f"{','.join(result.governance_audit_stage_sequence)}"
+    )
+    print(f"provenance_query_hit_count={result.provenance_query_hit_count}")
+    print(f"H-1={'PASS' if result.h1_pass else 'FAIL'}")
+    print(f"H-2={'PASS' if result.h2_pass else 'FAIL'}")
+    print(f"H-3={'PASS' if result.h3_pass else 'FAIL'}")
+    print(f"H-4={'PASS' if result.h4_pass else 'FAIL'}")
+    print(f"H-5={'PASS' if result.h5_pass else 'FAIL'}")
+    print(f"H-6={'PASS' if result.h6_pass else 'FAIL'}")
+    print(f"H-7={'PASS' if result.h7_pass else 'FAIL'}")
+    print(f"H-8={'PASS' if result.h8_pass else 'FAIL'}")
+    print(f"phase_h_gate={'PASS' if result.phase_h_pass else 'FAIL'}")
     return 0
 
 

@@ -114,6 +114,67 @@ budget_events_table = sa.Table(
 sa.Index("idx_budget_events_call_id", budget_events_table.c.call_id)
 sa.Index("idx_budget_events_scope_id", budget_events_table.c.scope_id)
 
+provenance_ledger_table = sa.Table(
+    "provenance_ledger",
+    postgres_metadata,
+    sa.Column("provenance_id", sa.Text(), primary_key=True),
+    sa.Column("bound_object_id", sa.Text(), nullable=False, unique=True),
+    sa.Column("bound_object_type", sa.Text(), nullable=False),
+    sa.Column("producer_kind", sa.Text(), nullable=False),
+    sa.Column("producer_id", sa.Text(), nullable=False),
+    sa.Column("captured_at", sa.Text(), nullable=False),
+    sa.Column("ingested_at", sa.Text(), nullable=False),
+    sa.Column("source_channel", sa.Text(), nullable=False),
+    sa.Column("tenant_id", sa.Text(), nullable=False),
+    sa.Column("retention_class", sa.Text(), nullable=False),
+    sa.Column("user_id", sa.Text(), nullable=True),
+    sa.Column("model_id", sa.Text(), nullable=True),
+    sa.Column("model_provider", sa.Text(), nullable=True),
+    sa.Column("model_version", sa.Text(), nullable=True),
+    sa.Column("ip_addr", sa.Text(), nullable=True),
+    sa.Column("device_id", sa.Text(), nullable=True),
+    sa.Column("machine_fingerprint", sa.Text(), nullable=True),
+    sa.Column("session_id", sa.Text(), nullable=True),
+    sa.Column("request_id", sa.Text(), nullable=True),
+    sa.Column("conversation_id", sa.Text(), nullable=True),
+    sa.Column("episode_id", sa.Text(), nullable=True),
+)
+
+governance_audit_table = sa.Table(
+    "governance_audit",
+    postgres_metadata,
+    sa.Column("audit_id", sa.Text(), primary_key=True),
+    sa.Column("operation_id", sa.Text(), nullable=False),
+    sa.Column("action", sa.Text(), nullable=False),
+    sa.Column("stage", sa.Text(), nullable=False),
+    sa.Column("actor", sa.Text(), nullable=False),
+    sa.Column("capability", sa.Text(), nullable=False),
+    sa.Column("timestamp", sa.Text(), nullable=False),
+    sa.Column("outcome", sa.Text(), nullable=False),
+    sa.Column("scope", sa.Text(), nullable=True),
+    sa.Column("reason", sa.Text(), nullable=True),
+    sa.Column("target_object_ids_json", JSONB(astext_type=sa.Text()), nullable=False),
+    sa.Column("target_provenance_ids_json", JSONB(astext_type=sa.Text()), nullable=False),
+    sa.Column("selection_json", JSONB(astext_type=sa.Text()), nullable=False),
+    sa.Column("summary_json", JSONB(astext_type=sa.Text()), nullable=False),
+)
+
+sa.Index("idx_governance_audit_operation_id", governance_audit_table.c.operation_id)
+sa.Index("idx_governance_audit_timestamp", governance_audit_table.c.timestamp)
+
+concealed_objects_table = sa.Table(
+    "concealed_objects",
+    postgres_metadata,
+    sa.Column("concealment_id", sa.Text(), primary_key=True),
+    sa.Column("operation_id", sa.Text(), nullable=False),
+    sa.Column("object_id", sa.Text(), nullable=False, unique=True),
+    sa.Column("actor", sa.Text(), nullable=False),
+    sa.Column("concealed_at", sa.Text(), nullable=False),
+    sa.Column("reason", sa.Text(), nullable=True),
+)
+
+sa.Index("idx_concealed_objects_operation_id", concealed_objects_table.c.operation_id)
+
 offline_jobs_table = sa.Table(
     "offline_jobs",
     postgres_metadata,

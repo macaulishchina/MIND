@@ -151,6 +151,7 @@ MIND 当前聚焦于四个核心问题：
 - 完成本地 Phase E gate：`SchemaValidationPrecision`、`PromotionPrecision@10`、`PUS / PollutionRate` A/B dev eval
 - 完成本地 Phase F gate：`LongHorizonEval v1`、3 个 baseline、`95% CI` report、`F-4 ~ F-7`
 - 完成本地 Phase G gate：`fixed-rule budget baseline`、`optimized_v1`、`G-1 ~ G-5`
+- 完成本地 Phase H gate：direct provenance、最小 governance control plane、online / offline conceal isolation、`H-1 ~ H-8`
 
 当前实现包括：
 
@@ -167,10 +168,11 @@ MIND 当前聚焦于四个核心问题：
 - `mind/workspace/answer_benchmark.py`：answer-level `D-5` 评分与 A/B benchmark runner
 - `mind/offline/jobs.py` / `mind/offline/service.py` / `mind/offline/worker.py`：Phase E 离线 job contract、maintenance service 与单进程 worker
 - `mind/offline/replay.py` / `mind/offline/audit.py` / `mind/offline/phase_e.py`：Replay target ranking、evidence audit、`LongHorizonDev v1` 与 Phase E gate
+- `mind/governance/service.py` / `mind/governance/phase_h.py`：Phase H governance control plane 与 formal gate
 - `mind/fixtures/retrieval_benchmark.py`：固定的 RetrievalBenchmark v0 / v1
 - `mind/fixtures/episode_answer_bench.py`：固定的 `EpisodeAnswerBench v1`
 - `mind/fixtures/long_horizon_dev.py`：固定的 `LongHorizonDev v1`
-- `scripts/run_phase_b_gate.py` / `scripts/run_phase_c_gate.py` / `scripts/run_phase_d_smoke.py` / `scripts/run_phase_e_startup.py` / `scripts/run_phase_e_gate.py` / `scripts/run_phase_f_manifest.py` / `scripts/run_phase_f_baselines.py` / `scripts/run_phase_f_report.py` / `scripts/run_phase_f_comparison.py` / `scripts/run_phase_f_gate.py` / `scripts/run_offline_worker_once.py`：本地 gate / worker 入口
+- `scripts/run_phase_b_gate.py` / `scripts/run_phase_c_gate.py` / `scripts/run_phase_d_smoke.py` / `scripts/run_phase_e_startup.py` / `scripts/run_phase_e_gate.py` / `scripts/run_phase_f_manifest.py` / `scripts/run_phase_f_baselines.py` / `scripts/run_phase_f_report.py` / `scripts/run_phase_f_comparison.py` / `scripts/run_phase_f_gate.py` / `scripts/run_phase_h_gate.py` / `scripts/run_offline_worker_once.py`：本地 gate / worker 入口
 - `tests/test_phase_b_gate.py` / `tests/test_phase_c_gate.py` / `tests/test_phase_d_smoke.py`：阶段 gate 测试
 
 当前存储口径：
@@ -209,6 +211,7 @@ MIND 当前聚焦于四个核心问题：
 - [Phase F 验收报告](./docs/reports/phase_f_acceptance_report.md)
 - [Phase F 独立审计报告](./docs/reports/phase_f_independent_audit.md)
 - [Phase G 验收报告](./docs/reports/phase_g_acceptance_report.md)
+- [Phase H 验收报告](./docs/reports/phase_h_acceptance_report.md)
 - [Phase G 独立审计报告](./docs/reports/phase_g_independent_audit.md)
 - [Phase C 验收报告](./docs/reports/phase_c_acceptance_report.md)
 

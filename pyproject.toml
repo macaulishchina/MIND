@@ -36,6 +36,7 @@ mind-phase-f-gate = "mind.cli:phase_f_gate_main"
 mind-phase-g-cost-report = "mind.cli:phase_g_cost_report_main"
 mind-phase-g-strategy-dev = "mind.cli:phase_g_strategy_dev_main"
 mind-phase-g-gate = "mind.cli:phase_g_gate_main"
+mind-phase-h-gate = "mind.cli:phase_h_gate_main"
 mind-postgres-regression = "mind.cli:postgres_regression_main"
 mind-offline-worker-once = "mind.cli:offline_worker_main"
 

@@ -26,6 +26,8 @@ def select_replay_targets(
 
     scored_targets: list[ReplayTarget] = []
     for object_id in candidate_ids:
+        if store.is_object_concealed(object_id):
+            continue
         obj = store.read_object(object_id)
         scored_targets.append(
             ReplayTarget(

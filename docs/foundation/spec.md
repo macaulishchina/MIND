@@ -168,6 +168,34 @@ Post-Phase-G addendum 明确区分两类“可追溯性”：
 - 这些高敏字段默认不出现在普通运行时日志、评测输出和低权限报表中
 - provenance 过滤条件必须落在 control plane，而不是通过普通 memory object `metadata` 旁路实现
 
+### `governance_audit` 最小字段集
+
+该 addendum 对 `governance_audit` 冻结以下最小字段：
+
+| 字段 | 含义 |
+| --- | --- |
+| `audit_id` | 单条治理审计记录 ID |
+| `operation_id` | 同一次 `plan / preview / approve / execute` 链路的关联 ID |
+| `action` | `conceal | erase | reshape` |
+| `stage` | `plan | preview | approve | execute` |
+| `actor` | 发起该步治理动作的主体 |
+| `capability` | 执行该步动作时要求的最小 capability |
+| `timestamp` | 审计记录生成时间 |
+| `outcome` | `succeeded | rejected | failed` |
+| `scope` | `memory_world | memory_world_plus_artifacts | full`；对 `erase` 显式记录 |
+| `reason` | 人工说明或系统生成的治理原因 |
+| `target_object_ids` | 该步命中的原始对象或派生对象 ID 集合 |
+| `target_provenance_ids` | 该步命中的 direct provenance ID 集合 |
+| `selection` | 触发本次治理的筛选条件、过滤表达式或输入参数 |
+| `summary` | preview / execute 的汇总结果与影响摘要 |
+
+补充约束：
+
+- `plan / preview` 必须记录为 `capability=governance_plan`
+- `execute` 必须记录为 `capability=governance_execute`
+- `approve` 只能用于 `erase(scope=full)`，并记录为 `capability=governance_approve_full_erase`
+- `governance_audit` 是 append-only control plane，不得被普通对象 `metadata` 旁路替代
+
 ## 1.4 边界
 
 MIND 在阶段 A 基线中明确管理：
@@ -1380,6 +1408,7 @@ MIND 仍然不定义业务系统完整的 RBAC / ABAC 模型，但为了让 prov
 - 默认可恢复
 - 保留对象和 provenance，但普通 online / offline 路径不可见
 - 必须保留完整治理审计链
+- `conceal` 不应改写对象 frozen `status`；最小实现应落在 control-plane 可见性标记上
 
 ### `erase`
 

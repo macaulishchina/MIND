@@ -8,6 +8,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, NonNegativeFloat, model_validator
 
+from mind.kernel.provenance import DirectProvenanceInput, ProvenanceSummary
 from mind.kernel.schema import (
     CORE_OBJECT_TYPES,
     VALID_RECORD_KIND,
@@ -40,6 +41,7 @@ class PrimitiveOutcome(StrEnum):
 
 
 class PrimitiveErrorCode(StrEnum):
+    CAPABILITY_REQUIRED = "capability_required"
     BUDGET_EXHAUSTED = "budget_exhausted"
     EMPTY_INPUT_REFS = "empty_input_refs"
     EPISODE_MISSING = "episode_missing"
@@ -69,6 +71,14 @@ class PrimitiveCostCategory(StrEnum):
     RETRIEVAL = "retrieval"
     STORAGE = "storage"
     WRITE = "write"
+
+
+class Capability(StrEnum):
+    MEMORY_READ = "memory_read"
+    MEMORY_READ_WITH_PROVENANCE = "memory_read_with_provenance"
+    GOVERNANCE_PLAN = "governance_plan"
+    GOVERNANCE_EXECUTE = "governance_execute"
+    GOVERNANCE_APPROVE_FULL_ERASE = "governance_approve_full_erase"
 
 
 class RetrieveQueryMode(StrEnum):
@@ -112,6 +122,7 @@ class PrimitiveExecutionContext(ContractModel):
     actor: str = Field(min_length=1)
     budget_scope_id: str = Field(default="global", min_length=1)
     budget_limit: NonNegativeFloat | None = None
+    capabilities: list[Capability] = Field(default_factory=lambda: [Capability.MEMORY_READ])
 
 
 class MemoryObject(ContractModel):
@@ -141,6 +152,7 @@ class WriteRawRequest(ContractModel):
     content: str | dict[str, Any]
     episode_id: str = Field(min_length=1)
     timestamp_order: int = Field(ge=1)
+    direct_provenance: DirectProvenanceInput | None = None
 
     @model_validator(mode="after")
     def enforce_record_kind(self) -> WriteRawRequest:
@@ -152,14 +164,17 @@ class WriteRawRequest(ContractModel):
 class WriteRawResponse(ContractModel):
     object_id: str = Field(min_length=1)
     version: int = Field(ge=1)
+    provenance_id: str | None = None
 
 
 class ReadRequest(ContractModel):
     object_ids: list[str] = Field(min_length=1)
+    include_provenance: bool = False
 
 
 class ReadResponse(ContractModel):
     objects: list[MemoryObject] = Field(min_length=1)
+    provenance_summaries: dict[str, ProvenanceSummary] = Field(default_factory=dict)
 
 
 class RetrieveFilters(ContractModel):
