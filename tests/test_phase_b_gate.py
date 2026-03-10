@@ -8,6 +8,7 @@ from mind.fixtures.golden_episode_set import build_core_object_showcase, build_g
 from mind.kernel.integrity import build_integrity_report
 from mind.kernel.phase_b import assert_phase_b_gate, evaluate_phase_b_gate
 from mind.kernel.replay import episode_record_hash, replay_episode
+from mind.kernel.schema import SchemaValidationError
 from mind.kernel.store import MemoryStoreFactory, SQLiteMemoryStore, StoreError
 
 
@@ -108,6 +109,19 @@ class PhaseBGateTests(unittest.TestCase):
                 store.insert_object(showcase[0])
                 with self.assertRaises(StoreError):
                     store.insert_object(summary_v2)
+
+    def test_store_rejects_reserved_control_plane_metadata(self) -> None:
+        showcase = build_core_object_showcase()
+        polluted = dict(showcase[2])
+        polluted["metadata"] = dict(polluted["metadata"])
+        polluted["metadata"]["governance_projection"] = {"claims": []}
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "reserved-metadata.sqlite3"
+            with SQLiteMemoryStore(db_path) as store:
+                store.insert_object(showcase[0])
+                with self.assertRaises(SchemaValidationError):
+                    store.insert_object(polluted)
 
     # ------------------------------------------------------------------
     # Regression tests for audit findings I-1 and I-2

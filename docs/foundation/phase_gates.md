@@ -31,6 +31,12 @@
 - 所有指标都已经有明确的验证方法和记录
 - 该阶段产物已经被冻结为可引用版本
 
+补充约束：
+
+- 每个阶段的 gate 指标条数不设固定模板
+- 指标数量只服从阶段边界、风险面和下一阶段的前置依赖
+- 如果某阶段的阻断风险无法被当前指标完整覆盖，就必须继续补指标，而不是为了形式整齐停在固定条数
+
 ## 2.2 为什么这些指标可以视为“充分必要”
 
 这里的“充分必要”不是数学证明意义上的绝对真理，而是项目治理意义上的 gate 设计：
@@ -52,6 +58,12 @@
 - 每条指标结果
 - 结论：`PASS / FAIL`
 
+补充说明：
+
+- A ~ G 的通过记录按各自验收当时冻结的版本生效
+- 若项目在更后阶段新增控制面、治理接口或新的冻结约束，应以 addendum 形式补入，不自动推翻历史 `PASS`
+- 若 addendum 暴露出旧层需要补强的实现卫生问题，默认以 regression hardening 落地，而不是直接回写成 A ~ G 的新 formal gate，除非原阶段目标本身被证明定义错误
+
 ---
 
 ## 3. 共享定义
@@ -68,6 +80,9 @@
 | `EpisodeAnswerBench v1` | 至少 `100` 个单回答评测样例；每个样例含任务 rubric、gold facts、hard constraints、gold memory refs、baseline 成本 | 验证单次回答质量与 memory contribution |
 | `LongHorizonDev v1` | 至少 `30` 条任务序列；每条序列 `5~10` 步 | 验证 replay / promotion / archive |
 | `LongHorizonEval v1` | 至少 `50` 条任务序列；与 dev 集分离 | 最终比较 MIND 与 baseline |
+| `ProvenanceGovernanceBench v1` | 至少 `40` 个治理样例；覆盖 `conceal`、`erase_scope`、approval、mixed-source rewrite、artifact cleanup | 验证 Phase H / J 的 provenance 与治理执行 |
+| `AccessDepthBench v1` | 至少 `60` 个运行时任务；覆盖 `speed-sensitive / balanced / high-correctness` 三类任务族 | 验证 Phase I 的固定档位与 `auto` 调度 |
+| `PersonaProjectionBench v1` | 至少 `40` 组多轮 identity bundle；覆盖自传连续性、偏好 / 价值一致性、治理后更新 | 验证 Phase K 的 persona projection |
 
 ## 3.2 共享指标
 
@@ -391,6 +406,127 @@
 - `EUS`：服务开发期快速迭代、局部调参、组件归因
 - `PUS`：服务长程比较、阶段 gate、最终系统选择
 
+## 3.6 Governance / Reshape Addendum
+
+以下内容在 Phase G 之后被冻结，用作下一阶段的正式前置约束。
+
+它们不回滚 A ~ G 已经通过的历史 gate，但会约束后续设计和实现。
+
+### 3.6.1 冻结术语
+
+- `provenance`：原始来源主体、来源环境、采集时间和保留策略所在的 control-plane 记录
+- `direct provenance`：直接绑定到 `RawRecord` 或外部导入原始对象的 authoritative provenance
+- `provenance footprint`：派生或聚合对象对底层 provenance 的聚合摘要，只用于治理 preview / audit
+- `support unit`：对象内部最小可治理单元，例如 `claim / slot / facet / edge`
+- `conceal`：逻辑不可见、可恢复的治理性遗忘
+- `erase`：物理擦除或带 tombstone 的不可恢复删除
+
+### 3.6.2 冻结边界
+
+- provenance 属于 control plane，不属于 `source_refs`
+- provenance 不得参与 runtime retrieval / ranking / weighting
+- provenance 默认只用于高权限治理接口和审计查看
+- offline maintenance 不得替代 provenance-based governance
+- 后续实现至少要有最小 capability 边界，哪怕还没有完整产品权限系统
+
+### 3.6.3 冻结的治理流程
+
+普通治理：
+
+`plan -> preview -> execute`
+
+高风险治理：
+
+`plan -> preview -> approve -> execute`
+
+补充约束：
+
+- 任意 `erase` 至少要有 `preview`
+- `erase(scope=full)` 必须进入高风险治理流程
+- 所有治理动作都必须产出具名审计记录
+
+### 3.6.4 冻结的 mixed-source 重写语义
+
+- mixed-source 派生对象不允许只“删依赖不改内容”
+- mixed-source 派生对象也不要求一律整对象失效
+- 正式语义是：先移除受影响 evidence / provenance，再按 `support unit` 判定 `retained / rewritten / dropped`
+- `support_rule v1` 冻结为 `min_support_count >= 1`
+- 父对象必须生成新版本，或在无法保留任何有效单元时显式失效 / 删除
+
+### 3.6.5 冻结的 `erase_scope`
+
+| scope | 含义 |
+| --- | --- |
+| `memory_world` | 清理对象、版本、lineage、索引与 provenance 本体 |
+| `memory_world_plus_artifacts` | 在 `memory_world` 外，再清理缓存、trace、评测 JSON 和自动生成工件 |
+| `full` | 在 `memory_world_plus_artifacts` 外，再处理报表副本、人工导出物与外部可读副本 |
+
+默认 `erase_scope` 冻结为：
+
+- `memory_world_plus_artifacts`
+
+### 3.6.6 下一阶段至少要验证的方向
+
+后续正式 gate 至少应覆盖：
+
+- direct provenance 是否完整绑定到底层原始对象
+- `conceal` 是否真正把对象从普通 online / offline 路径隔离
+- `erase` 是否在声明的 scope 内清理完成
+- mixed-source 对象是否按最小治理粒度正确重写
+- 治理执行是否完整保留 `plan / preview / approve / execute` 审计链
+- 低权限 read / log / report 路径是否不会旁路泄露高敏 provenance
+
+## 3.7 Runtime Access Depth Addendum
+
+以下内容用于约束后续运行时记忆访问深度设计与评测。
+
+### 3.7.1 冻结术语
+
+- `Flash`：极低延迟、极低访问成本的浅层访问档
+- `Recall`：默认平衡档
+- `Reconstruct`：允许跨片段、跨 episode 重建的深层访问档
+- `Reflective`：对用户暴露的第四档名称；规范内部名为 `reflective_access`
+- `auto`：可在不同访问档之间升级、降级、跳级的自动调度模式
+
+### 3.7.2 冻结边界
+
+- 访问深度是 runtime policy，不是新 primitive
+- `Reflective` / `reflective_access` 不等同于 primitive `reflect`
+- 访问深度调节的是 retrieval / read / workspace / verification 的强度，而不是对象真值
+- `auto` 可以覆盖执行路径，但不得覆盖用户显式锁定的固定档位
+
+### 3.7.3 后续 benchmark 最少要回答的问题
+
+后续基准要求测试至少应同时回答：
+
+- 固定档位下，回答质量是否达到该场景要求
+- 固定档位下，性能和成本是否仍在可接受范围内
+- `auto` 是否能根据场景在不同档位之间合理切换
+- `auto` 的升级、降级和自由跳级是否都有 trace
+- `auto` 是否形成比“永远固定一个档位”更好的质量 / 性能折中
+
+### 3.7.4 后续 formal gate 至少要同时保留两类指标
+
+质量侧至少应保留：
+
+- `TaskCompletionScore`
+- `ConstraintSatisfaction`
+- `AnswerFaithfulness`
+- `GoldFactCoverage` 或等价证据覆盖指标
+
+性能侧至少应保留：
+
+- `WallClockLatency` 或 `LatencyRatio`
+- `ContextCostRatio`
+- `ReadCountRatio`
+- `GenerationTokenRatio` 或等价 token 成本指标
+
+补充约束：
+
+- 运行时访问深度 gate 不得只看质量，不看性能
+- 也不得只看性能，不看回答质量
+- `auto` 的判断质量不仅取决于最终分数，也取决于档位切换是否稳定、是否可解释
+
 ---
 
 ## 4. 阶段依赖链
@@ -403,6 +539,10 @@ flowchart LR
     D --> E[阶段 E\n反思 / Replay / Promotion]
     E --> F[阶段 F\n评测与 Baseline]
     F --> G[阶段 G\n策略优化]
+    G --> H[阶段 H\nProvenance Foundation]
+    H --> I[阶段 I\nRuntime Access Modes]
+    I --> J[阶段 J\nGovernance / Reshape]
+    J --> K[阶段 K\nPersona / Projection]
 ```
 
 依赖关系说明：
@@ -413,6 +553,19 @@ flowchart LR
 - E 依赖 D 的可用 workspace 和检索
 - F 依赖 E 的完整成长闭环
 - G 依赖 F 已经证明系统“值得优化”
+- H 依赖 G 之后冻结的 provenance / governance addendum，但不回滚 A ~ G
+- I 依赖 H 的 control plane 基础，并把 access depth 做成可评测 runtime policy
+- J 依赖 H 的 provenance 绑定与 I 之外的治理执行边界
+- K 依赖 H / J 稳定后，才能把人格层从设计问题推进为工程问题
+
+### 4.1 Post-G 扩展阶段建议
+
+为避免把 provenance、runtime access、governance、persona 混成一个超大阶段，后续建议按下面的顺序推进：
+
+- `H / Provenance Foundation`：补齐 direct provenance、provenance ledger、可见性隔离与审计基础
+- `I / Runtime Access Modes`：补齐 `Flash / Recall / Reconstruct / Reflective` 与 `auto` 调度 benchmark
+- `J / Governance / Reshape`：实现 `plan / preview / approve / execute`、mixed-source rewrite 与 artifact cleanup
+- `K / Persona / Projection`：在治理链稳定后，推进 autobiographical grouping、value schema 与 runtime persona projection
 
 ---
 
@@ -581,7 +734,154 @@ flowchart LR
 
 ---
 
-## 6. 实施建议
+## 阶段 H Gate：Provenance Foundation 完成
+
+### 阶段目标
+
+证明系统已经具备 provenance control plane 的最小可用基础：
+
+- direct provenance 能稳定绑定到底层原始对象
+- provenance 可以被高权限查看，但不会旁路泄露到普通路径
+- `conceal` 能把受影响记忆从普通 online / offline 路径隔离
+- 治理执行具备最小审计链
+
+阶段 H 明确**不要求**：
+
+- mixed-source 细粒度 rewrite
+- `erase(scope=full)` 的全外部副本清理
+- runtime `Flash / Recall / Reconstruct / Reflective` access policy 实现
+- persona / projection 实现
+
+### MUST-PASS 指标
+
+| Gate ID | 指标 | 阈值 | 验证方式 |
+| --- | --- | --- | --- |
+| `H-1` | direct provenance 绑定完整率 | `RawRecord / ImportedRawRecord` 的 authoritative direct provenance 绑定率 `= 100%` | provenance audit |
+| `H-2` | authoritative provenance 完整性 | 每个底层原始对象至多存在 `1` 条 authoritative direct provenance；orphan ledger rows `= 0`；高敏字段 schema 校验通过率 `= 100%` | provenance integrity audit |
+| `H-3` | 低权限 provenance 读取隔离 | 低权限 `read / retrieve / workspace / report` 路径读取高敏 provenance 的成功率 `= 0` | capability tests |
+| `H-4` | 高权限 provenance 摘要收敛 | 高权限 `read_with_provenance` / governance preview `100%` 可返回冻结摘要，同时超范围高敏字段泄露率 `= 0` | privileged-read audit |
+| `H-5` | `conceal` 在线隔离有效性 | 被 `conceal` 的对象在普通 online retrieval、read、workspace 构建路径中默认不可见 | online conceal regression |
+| `H-6` | `conceal` 离线隔离有效性 | 被 `conceal` 的对象在默认 offline maintenance / replay / promotion 路径中消费率 `= 0`；治理路径仍可 preview | offline conceal regression |
+| `H-7` | 治理审计链完整率 | `plan / preview / execute` 审计记录覆盖率 `= 100%`；若出现 `erase(scope=full)`，则必须有 `approve` | governance audit |
+| `H-8` | provenance 优化泄露防护 | provenance 字段 `100%` 不参与 retrieval / ranking / weighting；相关回归比较无行为漂移 | ranking isolation regression |
+
+### 通过结论
+
+当 `H-1 ~ H-8` 全部通过时，阶段 H `PASS`。  
+此时阶段 I 才能在稳定的 provenance / visibility 基础上推进 runtime access depth，而阶段 J 也才有资格进入更重的 governance / reshape 执行层。
+
+---
+
+## 阶段 I Gate：Runtime Access Modes 完成
+
+### 阶段目标
+
+证明运行时访问深度已经从“概念档位”变成稳定、可 trace、可评测的 runtime policy：
+
+- `Flash / Recall / Reconstruct / Reflective` 固定档位都能独立运行
+- `auto` 能在不同任务族之间做出可解释的档位选择
+- 档位切换能够在质量、性能、成本之间形成明确折中
+- 用户显式锁定档位时，不会被 `auto` 偷偷覆盖
+
+阶段 I 明确**不要求**：
+
+- provenance-based `erase` 扩展或 mixed-source rewrite
+- persona / projection 实现
+- 新增一套独立于现有 primitives 的“访问深度 primitive”
+
+### MUST-PASS 指标
+
+| Gate ID | 指标 | 阈值 | 验证方式 |
+| --- | --- | --- | --- |
+| `I-1` | access mode 合约完整度 | `Flash / Recall / Reconstruct / Reflective / auto = 5/5` 全部可调用；mode trace coverage `= 100%` | integration test |
+| `I-2` | `Flash` 场景下限 | 在 `AccessDepthBench v1` 的 `speed-sensitive` 任务上，`TimeBudgetHitRate >= 0.95`，且 `ConstraintSatisfaction >= 0.95` | access benchmark |
+| `I-3` | `Recall` 场景下限 | 在 `AccessDepthBench v1` 的 `balanced` 任务上，`AQS >= 0.75`，且 `MUS >= 0.65` | access benchmark |
+| `I-4` | `Reconstruct` 场景下限 | 在 `AccessDepthBench v1` 的 `high-correctness` 任务上，`AnswerFaithfulness >= 0.95`，且 `GoldFactCoverage >= 0.90` | access benchmark |
+| `I-5` | `Reflective` 场景下限 | 在 `AccessDepthBench v1` 的 `high-correctness` 任务上，`AnswerFaithfulness >= 0.97`，`GoldFactCoverage >= 0.92`，且 `ConstraintSatisfaction >= 0.98` | access benchmark |
+| `I-6` | `auto` 质量 / 成本前沿 | 在 `AccessDepthBench v1` 上，`auto` 相对各任务族中“先满足该任务族场景下限、再按 `CostEfficiencyScore` 选出的 family-best fixed mode”的 `AQS` 平均降幅 `<= 0.02`，且 `CostEfficiencyScore` 不低于该 family-best fixed mode | frontier comparison |
+| `I-7` | `auto` 切换稳定性与可解释性 | `upgrade / downgrade / jump` 三类切换都至少有具名 trace；无理由往返震荡率 `<= 5%`；无原因码切换比例 `= 0` | auto audit |
+| `I-8` | 用户锁定档位遵从率 | 用户显式固定 `Flash / Recall / Reconstruct / Reflective` 时，运行轨迹中被 `auto` 覆盖的比例 `= 0` | policy compliance tests |
+
+### 通过结论
+
+当 `I-1 ~ I-8` 全部通过时，阶段 I `PASS`。  
+此时 runtime access depth 不再只是设计口号，而成为可比较、可调优、可解释的运行时能力；阶段 J 才有必要在这个稳定 runtime 底盘之上推进更重的治理执行。
+
+---
+
+## 阶段 J Gate：Governance / Reshape 完成
+
+### 阶段目标
+
+证明系统已经具备重治理、重塑和清理能力：
+
+- `plan / preview / approve / execute` 治理链可以稳定执行
+- mixed-source 派生对象可以按 `support unit` 正确重写
+- `erase_scope` 可以按声明范围完成清理
+- 治理执行不会在普通路径、日志、缓存或工件里留下泄露
+
+阶段 J 明确**不要求**：
+
+- persona / projection 实现
+- 完整产品级合规工作流、工单系统或多租户策略编排
+- 任何绕开 provenance / governance audit 的“快捷删除”
+
+### MUST-PASS 指标
+
+| Gate ID | 指标 | 阈值 | 验证方式 |
+| --- | --- | --- | --- |
+| `J-1` | raw-object preview 正确率 | 在 `ProvenanceGovernanceBench v1` 上，受影响原始对象 preview 的 `precision >= 0.95` 且 `recall >= 0.95` | governance fixture audit |
+| `J-2` | support-unit preview 正确率 | 在 `ProvenanceGovernanceBench v1` 上，受影响 `support unit` preview 的 `precision >= 0.95` 且 `recall >= 0.95` | governance fixture audit |
+| `J-3` | mixed-source rewrite 判定正确率 | `retained / rewritten / dropped` 判定准确率 `>= 0.95` | rewrite audit |
+| `J-4` | 重写后结构完整性 | 重写后对象 dangling support refs `= 0`；new-version lineage 完整率 `= 100%`；受影响对象的 provenance footprint 更新率 `= 100%` | structural integrity audit |
+| `J-5` | 默认 `erase_scope` 清理完成率 | `memory_world_plus_artifacts` scope 内的清理完成率 `= 100%` | scope cleanup audit |
+| `J-6` | `full` scope 审批与清理完整率 | `erase(full)` 样例全部存在 `approve`；声明 `full` scope 内的清理完成率 `= 100%` | full-scope audit |
+| `J-7` | 治理后泄露率 | 被 `conceal` 或 `erase` 的内容经 `read / retrieve / workspace / index / cache / report / log` 旁路泄露的比例 `= 0` | leak regression |
+| `J-8` | 治理执行恢复与幂等性 | `plan / preview / approve / execute / artifact_cleanup` 审计链覆盖率 `= 100%`；中断恢复 / 重试 / 幂等回归全部通过 | fault-injection audit |
+
+### 通过结论
+
+当 `J-1 ~ J-8` 全部通过时，阶段 J `PASS`。  
+此时系统才真正具备“按来源主动重塑记忆网络”的工程能力，而不是只有 provenance 标注和基础隔离。
+
+---
+
+## 阶段 K Gate：Persona / Projection 完成
+
+### 阶段目标
+
+证明“组织好的记忆可以长成人格层”已经从研究问题推进为可约束的工程能力：
+
+- persona projection 能稳定利用自传性、偏好和价值相关记忆
+- 人格表达是有证据支撑、可治理、可更新的
+- persona layer 不会变成绕开记忆系统的新真相源
+- 引入人格投影后，不会明显破坏非人格任务的完成质量
+
+阶段 K 明确**不要求**：
+
+- 完整情绪模拟系统
+- 独立、权威、不可追溯的 `PersonaObject`
+- 通过参数更新而不是记忆对象来固化人格
+
+### MUST-PASS 指标
+
+| Gate ID | 指标 | 阈值 | 验证方式 |
+| --- | --- | --- | --- |
+| `K-1` | autobiographical grounding | 在 `PersonaProjectionBench v1` 上，自传性 persona 输出中可追溯到 autobiographical supports 或 prompt 已知信息的比例 `>= 0.95` | evidence audit |
+| `K-2` | preference / value grounding | 偏好与价值相关 persona 输出中可追溯到 preference / value supports 的比例 `>= 0.95` | evidence audit |
+| `K-3` | persona 一致性 | 同一 identity bundle 内的自我表述、偏好表达和价值判断一致性 `>= 0.90`，同时 `ConstraintSatisfaction >= 0.95` | projection benchmark |
+| `K-4` | 治理后的 persona 适配 | 对 persona 相关记忆执行治理后，陈旧 persona 表达泄露率 `= 0`；更新后投影命中率 `>= 0.95` | governance-coupled regression |
+| `K-5` | unsupported persona 幻觉率 | 无记忆 / prompt 支撑的自传性或价值性断言比例 `<= 0.05` | unsupported-claim audit |
+| `K-6` | 非 persona 任务回归控制 | 在 `EpisodeAnswerBench v1` 的中性任务子集上，启用 persona projection 后 `AQS` 平均降幅 `<= 0.02`，`ConstraintSatisfaction` 平均降幅 `<= 0.01` | A/B regression |
+
+### 通过结论
+
+当 `K-1 ~ K-6` 全部通过时，阶段 K `PASS`。  
+此时人格层可以被视为建立在记忆世界之上的可投影能力，而不是额外造出的一个黑箱人格模块。
+
+---
+
+## 7. 实施建议
 
 为了让这份 gate 文档真正可用，建议后续按下面的顺序补齐：
 

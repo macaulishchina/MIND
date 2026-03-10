@@ -11,6 +11,7 @@ from typing import Any
 from uuid import uuid4
 
 from mind.kernel.retrieval import build_query_embedding
+from mind.kernel.schema import public_object_view, strip_control_plane_metadata
 from mind.kernel.store import MemoryStore, PrimitiveTransaction, StoreError
 
 from .contracts import (
@@ -297,7 +298,7 @@ class PrimitiveService:
                     f"object '{object_id}' is inaccessible",
                     details={"object_id": object_id, "status": obj["status"]},
                 )
-            objects.append(MemoryObject.model_validate(obj))
+            objects.append(MemoryObject.model_validate(public_object_view(obj)))
 
         return PrimitiveHandlerResult(
             response=ReadResponse(objects=objects),
@@ -853,7 +854,7 @@ class PrimitiveService:
                 "id": obj["id"],
                 "type": obj["type"],
                 "content": obj["content"],
-                "metadata": obj["metadata"],
+                "metadata": strip_control_plane_metadata(obj["metadata"]),
             },
             ensure_ascii=True,
             sort_keys=True,

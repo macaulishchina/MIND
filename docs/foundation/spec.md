@@ -1,13 +1,19 @@
-# MIND SPEC v0.1
+# MIND SPEC v0.3
 
 ## 0. 文档目的
 
-这份文档是 MIND 的阶段 A 正式规范。
+这份文档以 MIND 的阶段 A 正式规范为基线，并纳入 Phase G 之后冻结的 addendum。
 
 它的职责不是解释愿景，而是冻结后续实现必须遵守的语义边界。
 
-阶段 A 完成后，阶段 B / C / D 的开发都应该以本文为准，而不是继续在实现过程中临时重新定义：
+文档约定：
 
+- 未显式标注 `Post-Phase-G Addendum` 的段落，对应阶段 A 基线
+- 显式标注 `Post-Phase-G Addendum` 的段落，只约束后续阶段，不追溯推翻 A ~ G 的既有通过记录
+
+阶段 A 基线完成后，阶段 B / C / D 的开发都应该以本文的基线部分为准；后续阶段则继续受 addendum 约束，而不是在实现过程中临时重新定义：
+
+基线部分：
 - 什么是 memory world
 - 什么是 memory object
 - 什么是 primitive
@@ -16,13 +22,18 @@
 - 什么属于 online loop
 - 什么属于 offline loop
 
-本文对应 [phase_gates.md](./phase_gates.md) 中的阶段 A gate。
+addendum 部分：
+- 什么是 runtime memory access policy
+- 什么是 provenance control plane
+- 什么属于 governance / reshape loop
+
+本文的阶段 A 基线部分对应 [phase_gates.md](./phase_gates.md) 中的阶段 A gate；addendum 部分对应其中的 post-G 扩展约束。
 
 ---
 
 ## 0.1 规范范围
 
-本文只定义阶段 A 所需的正式规范，不定义：
+本文以阶段 A 基线为主，并记录 Phase G 之后补入的 addendum；它不定义：
 
 - 存储实现细节
 - 向量索引实现细节
@@ -42,9 +53,16 @@
 | `memory object` | 记忆世界中的基本对象单位 |
 | `primitive` | Agent 可对记忆世界执行的最小操作 |
 | `workspace view` | 当前任务的有限工作记忆索引视图 |
+| `runtime access mode` | 运行时为任务选择的记忆访问深度档位 |
 | `episode` | 一次完整任务过程的结构化记录 |
 | `promotion` | 将更局部、更临时的经验提升为更稳定对象 |
 | `reconsolidation` | 被取回并修订的对象生成新版本的过程 |
+| `provenance` | 与原始来源主体绑定的控制面来源记录，不等同于对象 lineage |
+| `provenance footprint` | 派生或聚合对象基于底层 provenance 汇总出的治理摘要 |
+| `support unit` | 对象内部最小可治理、可重写、可审计的支撑单元 |
+| `governance / reshape loop` | 独立于 online / offline 的高权限主动治理流程 |
+| `conceal` | 逻辑不可见、可恢复的治理性遗忘 |
+| `erase` | 物理擦除或带 tombstone 的不可恢复治理性删除 |
 
 ---
 
@@ -56,39 +74,114 @@
 
 MIND 的 Agent 不直接修改自身参数，而是通过 primitive 对 `memory world` 进行操作，从而改变未来任务中的记忆可用性。
 
-## 1.2 最小状态结构
+## 1.2 Post-Phase-G Addendum: 扩展后的最小状态结构
 
-阶段 A 规定，`memory world` 的最小状态由 5 类成分组成：
+在不回滚阶段 A data plane 定义的前提下，Post-Phase-G addendum 将 `memory world` 扩展为 data plane 与 control plane 的组合：
+
+### data plane
 
 | 状态成分 | 含义 |
 | --- | --- |
 | `objects` | 当前存在的全部 memory objects |
 | `relations` | 对象之间的结构关系 |
-| `versions` | 对象版本链与溯源信息 |
+| `versions` | 对象版本链与对象 lineage |
 | `priority_state` | 对象优先级、可见性、保留状态 |
 | `budget_state` | 当前任务或维护周期的成本约束状态 |
 
+### control plane
+
+| 状态成分 | 含义 |
+| --- | --- |
+| `provenance_ledger` | 原始来源主体、来源环境、采集时间与保留策略 |
+| `governance_audit` | `conceal / erase / reshape` 的计划、预览、审批与执行记录 |
+
 形式化记作：
 
-`M = (O, R, V, P, B)`
+`M = (D, C)`
 
 其中：
 
+- `D = (O, R, V, P, B)`
+- `C = (Q, G)`
 - `O` = objects
 - `R` = relations
-- `V` = versions
+- `V` = versions / lineage
 - `P` = priority state
 - `B` = budget state
+- `Q` = provenance ledger
+- `G` = governance audit
 
-## 1.3 边界
+补充约束：
 
-MIND 在阶段 A 明确管理：
+- `control plane` 支持治理、审计和主动重塑，但不直接参与运行时记忆优化
+- provenance 可以被查看、筛选和治理，但不进入 online / offline 的 ranking 或 weighting
+
+## 1.3 Post-Phase-G Addendum: `source_refs` 与 `provenance` 的区分
+
+Post-Phase-G addendum 明确区分两类“可追溯性”：
+
+- `source_refs`：memory world 内部的对象 lineage，回答“这个对象从哪些对象派生而来”
+- `provenance`：控制面来源记录，回答“这条原始数据来自谁、何时、什么环境”
+
+冻结规则：
+
+- `source_refs` 属于对象 schema 的一部分，是记忆演化语义
+- `provenance` 属于 control plane，不进入对象统一 `10` 个必填字段
+- `RawRecord` 与外部导入的原始对象应绑定 authoritative direct provenance
+- `TaskEpisode` 与其他派生对象默认不持有新的 authoritative direct provenance，只允许持有 `provenance footprint`
+- `provenance footprint` 只服务治理 preview、审计和说明，不得作为 runtime 优化信号
+
+### direct provenance 最小字段集
+
+该 addendum 对 direct provenance 冻结以下最小必填字段：
+
+| 字段 | 含义 |
+| --- | --- |
+| `provenance_id` | provenance 记录稳定 ID |
+| `bound_object_id` | 直接绑定的原始对象 ID |
+| `bound_object_type` | `RawRecord | ImportedRawRecord` |
+| `producer_kind` | `user | model | tool | system | operator | dataset` |
+| `producer_id` | 来源主体稳定 ID |
+| `captured_at` | 原始事件发生时间 |
+| `ingested_at` | 写入 MIND 的时间 |
+| `source_channel` | `chat | api | batch_import | tool_runtime | system_internal` |
+| `tenant_id` | 租户或命名空间 |
+| `retention_class` | `default | sensitive | ephemeral | regulated` |
+
+该 addendum 允许以下治理筛选字段按场景选填：
+
+- `user_id`
+- `model_id`
+- `model_provider`
+- `model_version`
+- `ip_addr`
+- `device_id`
+- `machine_fingerprint`
+- `session_id`
+- `request_id`
+- `conversation_id`
+- `episode_id`
+
+补充约束：
+
+- `ip_addr / device_id / machine_fingerprint` 允许以明文进入 provenance，但必须视为高敏控制面字段
+- 这些高敏字段默认不出现在普通运行时日志、评测输出和低权限报表中
+- provenance 过滤条件必须落在 control plane，而不是通过普通 memory object `metadata` 旁路实现
+
+## 1.4 边界
+
+MIND 在阶段 A 基线中明确管理：
 
 - 记忆对象
 - 关系结构
 - 版本与追溯
 - priority / visibility / archive 状态
 - 在线和离线记忆操作
+
+Post-Phase-G addendum 继续补入：
+
+- provenance control plane
+- governance / reshape 操作
 
 MIND 在阶段 A 不管理：
 
@@ -97,12 +190,14 @@ MIND 在阶段 A 不管理：
 - 业务系统权限模型
 - 用户产品层 UI
 
-## 1.4 设计约束
+## 1.5 设计约束
 
 - 所有派生对象都必须可追溯到源对象
 - 所有更新都必须可版本化，不允许 silent overwrite
 - 所有对象都必须能参与 priority 调整
-- 所有 online / offline 操作都必须落到 world state 变化上
+- provenance 不得被偷偷并入普通检索特征或摘要内容生成特征
+- 所有治理动作都必须可审计，且不得绕过权限与范围约束
+- Post-Phase-G addendum 中的 online / offline / governance 扩展都必须落到 world state 或 governance audit 变化上
 
 ---
 
@@ -173,6 +268,10 @@ MIND 在阶段 A 不管理：
 - `episode_id`
 - `timestamp_order`
 
+补充约束：
+
+- `RawRecord` 的 authoritative direct provenance 记录在 control plane 中，而不是对象 `metadata` 中
+
 ### `TaskEpisode`
 
 `metadata` 必须包含：
@@ -182,6 +281,10 @@ MIND 在阶段 A 不管理：
 - `result`
 - `success`
 - `record_refs`
+
+补充约束：
+
+- `TaskEpisode` 的来源语义默认由 `record_refs` 继承，不单列新的 authoritative direct provenance
 
 ### `SummaryNote`
 
@@ -417,6 +520,86 @@ deprecated -> active
 - `archived` 表示弱可见，不等于删除
 - 阶段 A 不允许物理删除作为常规操作
 
+## 2.10 Post-Phase-G Addendum: Provenance 绑定规则
+
+Post-Phase-G addendum 对 provenance 绑定方式冻结如下：
+
+- direct provenance 默认只绑定到 `RawRecord` 或外部导入的原始对象
+- `TaskEpisode`、`SummaryNote`、`ReflectionNote`、`SchemaNote`、`WorkspaceView`、`EntityNode`、`LinkEdge` 都属于派生或聚合对象
+- 派生或聚合对象应通过 `source_refs + provenance ledger` 回溯到底层 direct provenance
+- 如需加速治理 preview，可为派生对象维护 `provenance footprint`
+- `provenance footprint` 不是新的事实来源，不得替代 direct provenance
+
+## 2.11 Post-Phase-G Addendum: Support Unit 与可重写性
+
+`support unit` 是治理系统中的最小作用单元。
+
+它不是 memory object，也不是新的核心对象类型，而是对“对象内部哪些部分可以被保留、重写或删除”的冻结语义。
+
+Post-Phase-G addendum 对 `support unit` 冻结以下最小控制字段：
+
+| 字段 | 含义 |
+| --- | --- |
+| `unit_id` | 对象内稳定单元 ID |
+| `unit_kind` | 单元类型，例如 `claim / slot / facet / edge` |
+| `payload` | 当前单元表达的内容或结构 |
+| `evidence_refs` | 直接支撑该单元的对象引用 |
+| `direct_provenance_ids` | 该单元直接依赖的 provenance 记录 |
+| `support_rule` | 单元有效性的判定规则 |
+| `rewrite_policy` | `none | deterministic | model_assisted` |
+| `status` | `active | retained | rewritten | dropped` |
+
+该 addendum 冻结的 `support_rule v1`：
+
+- `min_support_count >= 1`
+
+也就是：
+
+- 剩余有效 `evidence_refs = 0` 时，该单元必须 `dropped`
+- 剩余有效 `evidence_refs >= 1` 且 payload 无需变化时，该单元可以 `retained`
+- 剩余有效 `evidence_refs >= 1` 但 payload 已受影响时，该单元必须 `rewritten`
+
+各对象的最小治理粒度冻结如下：
+
+| 对象类型 | 最小治理粒度 | 说明 |
+| --- | --- | --- |
+| `RawRecord` | 整条记录 | 不允许局部重写 |
+| `TaskEpisode` | 整个 episode 聚合 | 基于剩余 `record_refs` 整体重建新版本 |
+| `SummaryNote` | `claim` | 治理能力要求 claim 级保留 / 重写 / 删除 |
+| `ReflectionNote` | `claim` | 与 `SummaryNote` 一样按 claim 管理 |
+| `EntityNode` | `facet` | 例如 `name / alias / description / attribute` |
+| `LinkEdge` | 整条 `edge` | 只允许整条保留或删除 |
+| `WorkspaceView` | `slot` | slot 变化后整体重渲染新对象版本 |
+| `SchemaNote` | `rule / claim` | 跨 episode 规则需可局部重写 |
+
+补充约束：
+
+- `support unit` 是治理扩展 contract，不属于当前统一 `10` 个对象必填字段
+- 但任何宣称支持 governance / reshape 的实现，都必须能物化或可确定性导出上述单元映射
+- mixed-source 派生对象的治理结果不允许只“删掉一个依赖”却保持错误 payload 不变
+- mixed-source 派生对象也不要求一律整对象失效；首选策略是按最小治理粒度重写
+
+### 2.11.1 Governance Projection Contract
+
+由于 `support unit` 不进入统一 `10` 个对象必填字段，任何声称支持 governance / reshape 的实现，都必须为下列对象提供确定性的治理投影。
+
+这个投影可以落在对象的结构化字段中，也可以落在 control plane sidecar 中，但必须稳定、可审计、可重放。
+
+| 对象类型 | 最小治理投影要求 |
+| --- | --- |
+| `SummaryNote` | 必须能导出有序 `claim` 列表；每个 claim 至少有 `unit_id / payload / evidence_refs` |
+| `ReflectionNote` | 必须把 `metadata.claims` 或等价结构稳定映射为 claim 级单元 |
+| `EntityNode` | 必须能导出 `facet` 级单元，至少覆盖 `entity_name`、每个 `alias` 及已持久化属性 |
+| `LinkEdge` | 必须能导出单一 `edge` 单元，绑定 `src_id / dst_id / relation_type / evidence_refs` |
+| `WorkspaceView` | 必须把每个 `metadata.slots` 项映射为 `slot` 单元，并保留其证据与展开入口 |
+| `SchemaNote` | 必须能导出有序 `rule` 或 `claim` 列表；纯不可分 prose 不足以支撑细粒度治理 |
+
+补充约束：
+
+- `governance_projection` 是治理能力 contract，不等同于新增核心对象字段
+- 纯文本对象若无法稳定导出 `claim / rule / facet / slot` 单元，就不能宣称支持对应粒度的重写
+- 若某实现暂时只支持 `retain / drop`，必须显式声明该对象类型尚不支持细粒度 rewrite，而不是默认 claim 级可改
+
 ---
 
 ## 3. Primitive Catalog
@@ -554,6 +737,21 @@ deprecated -> active
 - `replay`：它是 offline loop 的调度步骤，不是最小原子动作
 - `promote`：它更接近“准入决策 + 维护执行”的组合，应由 policy 决策加 `reorganize_simple` 落地
 - `canonicalize_entity`：它是未来可能出现的 specialized primitive，但阶段 A 尚未证明实体归一是主路径瓶颈
+- `governance plan / preview / approve / execute`：它们属于高权限 control-plane workflow，不是 Agent primitive
+
+### 3.2.3 Post-Phase-G Addendum: Governance 为什么不并入 primitive
+
+Post-Phase-G addendum 明确不把 `governance / reshape` 做成 Agent primitive，原因是：
+
+- 它需要高权限与显式审批，不适合暴露给普通 Agent
+- 它会跨对象、跨索引、跨工件地做大范围扫描与重写
+- 它既包含计划、预览、审批，也包含执行，不是单一世界动作
+- 它的正确性依赖 control plane，而不是只依赖 memory object contract
+
+因此：
+
+- `primitive` 继续服务 online / offline 记忆演化
+- `governance / reshape` 单列为独立接口与独立执行阶段
 
 ## 3.3 Primitive 合约模板
 
@@ -868,6 +1066,83 @@ deprecated -> active
 - `WorkspaceView` 可以引用任意对象类型，但不应替代这些对象自身的长期语义职责
 - 如果未来需要拆分 workspace builder，优先拆的是 selection / composition / expansion 策略，而不是先增加新的 workspace 对象类型
 
+## 4.9 Post-Phase-G Addendum: Runtime Memory Access Policy
+
+Post-Phase-G addendum 对运行时记忆访问档位冻结如下。
+
+它们不是新的 primitive，也不是新的对象类型，而是 `online loop` 对 retrieval、read、workspace、验证深度的调度策略。
+
+### 4.9.1 四档访问模式
+
+对用户暴露的四档概念：
+
+- `Flash`
+- `Recall`
+- `Reconstruct`
+- `Reflective`
+
+为避免与 primitive `reflect` 冲突，规范内部对第四档统一记作：
+
+- `reflective_access`
+
+### 4.9.2 各档语义
+
+| 用户侧名称 | 规范内部名称 | 目标 | 典型行为 |
+| --- | --- | --- | --- |
+| `Flash` | `flash` | 极低延迟、最低访问成本 | 优先近期上下文与少量直接命中对象，不做跨 episode 重构 |
+| `Recall` | `recall` | 默认平衡档 | 执行标准 `retrieve -> read -> workspace -> solve` |
+| `Reconstruct` | `reconstruct` | 提高复杂问题的记忆覆盖和组织质量 | 允许多对象展开、跨 episode 组合、schema + episodic 联合重建 |
+| `Reflective` | `reflective_access` | 在高正确性场景中优先证据完整性和回答校验 | 在 `reconstruct` 基础上增加一致性检查、证据核查和回答前自审 |
+
+### 4.9.3 冻结边界
+
+- 访问档位调节的是“访问深度、展开深度、校验深度”，不是对象真值
+- 访问档位默认不要求新增长期对象
+- 访问档位可以调用现有 primitive，但不等同于“必须调用 primitive `reflect` 生成 `ReflectionNote`”
+- 访问档位不得绕开 budget state
+
+### 4.9.4 `auto` 档
+
+该 addendum 同时冻结一个默认推荐调度模式：
+
+- `auto`
+
+`auto` 的职责是根据任务风险、时延预算、约束强度、历史失败信号和当前覆盖不足情况，动态选择访问档位。
+
+`auto` 必须支持：
+
+- 逐级升级：`flash -> recall -> reconstruct -> reflective_access`
+- 逐级降级：在预算紧张、问题简单或已经满足质量要求时退回较浅档位
+- 自由跳级：例如 `flash -> reconstruct`、`reflective_access -> recall`
+- 用户锁定优先：若用户显式指定档位，则 `auto` 不得覆盖该锁定
+
+### 4.9.5 `auto` 的最小调度规则
+
+该 addendum 只冻结调度方向，不冻结唯一算法：
+
+- 普通对话场景优先 `flash / recall`
+- 明显依赖历史多片段组合的任务优先 `recall / reconstruct`
+- 高正确性、高约束、高风险任务优先 `reflective_access`
+- 若当前档位已满足覆盖与约束要求，应允许降级或提前停止深入访问
+- 若当前档位覆盖不足、证据冲突或约束风险升高，应允许升级或跳级
+
+### 4.9.6 评测要求
+
+运行时访问档位后续必须进入独立 benchmark。
+
+至少验证：
+
+- 固定档位下的质量下限
+- 固定档位下的性能与成本上限
+- `auto` 档在不同任务族上的档位选择是否稳定
+- `auto` 档是否能在质量 / 成本之间形成合理 frontier
+- 升级、降级和自由跳级是否都可被 trace 和审计
+
+补充约束：
+
+- 访问档位 benchmark 的目标是验证“深度调节是否值得”，而不是只比较谁更慢谁更准
+- 后续 formal gate 应同时保留质量指标和性能指标，不能只看其中一侧
+
 ---
 
 ## 5. Utility Objective
@@ -913,10 +1188,25 @@ MIND 的统一目标定义为：
 
 `online loop` 指一次任务处理中必须在主路径上完成的记忆操作。
 
-## 6.2 阶段 A 冻结的 online loop
+## 6.2 阶段 A 基线 online loop 与 access-mode 扩展
+
+阶段 A 基线 online loop：
 
 ```text
 observe_task
+-> retrieve
+-> read
+-> build_workspace
+-> solve_task
+-> write_raw
+-> optional_reflect_stub
+```
+
+Post-Phase-G addendum 在不改变基础职责边界的前提下，引入 access mode 调度：
+
+```text
+observe_task
+-> select_access_mode
 -> retrieve
 -> read
 -> build_workspace
@@ -938,14 +1228,22 @@ observe_task
 - 批量 schema synthesis
 - 广泛 promotion
 - 大规模 archive / reprioritize
+- 任何 `conceal / erase / reshape` 治理动作
 
-这些属于 offline loop。
+前四项属于 offline loop；治理动作属于 `governance / reshape loop`。
 
 ## 6.5 online loop 的约束
 
 - 必须预算受控
 - 不得依赖离线维护存在才能正确完成当前任务
 - 所有在线新增对象必须立即可追溯
+
+Post-Phase-G addendum 补充约束：
+
+- online loop 不得读取 provenance 作为检索过滤、排序或权重调整信号
+- `read` 仅在调用方具备 `memory_read_with_provenance` capability 时，才允许附带 provenance 摘要作为观测信息返回
+- access mode 可以被用户锁定，也可以由 `auto` 调度
+- `auto` 必须保留升级、降级和跳级 trace
 
 ---
 
@@ -1007,9 +1305,123 @@ promotion 目标：
 
 阶段 A 禁止将这些状态变更实现成物理删除。
 
+## 7.7 Post-Phase-G Addendum: Offline Loop 与治理边界
+
+Post-Phase-G addendum 明确：
+
+- offline maintenance 可以做 replay、反思、promotion、archive、reprioritize
+- offline maintenance 不得偷渡 provenance 作为 promotion / ranking / retrieval 的优化信号
+- offline maintenance 不得替代高权限治理接口执行 `conceal / erase`
+- provenance-based 遗忘、重塑和工件清理属于独立的 `governance / reshape loop`
+
 ---
 
-## 8. 三个端到端 Episode 示例
+## 8. Post-Phase-G Addendum: Governance / Reshape Loop
+
+## 8.1 定义
+
+`governance / reshape loop` 指独立于 online / offline 的高权限主动治理流程。
+
+它的目标不是提升即时 `PUS`，而是：
+
+- 按来源主体、时间窗、环境或保留策略管理记忆
+- 执行可恢复或不可恢复的遗忘
+- 对 mixed-source 派生对象做细粒度重写
+- 清理索引、缓存、评测工件与治理相关副本
+
+### 8.1.1 最小 Capability 边界
+
+MIND 仍然不定义业务系统完整的 RBAC / ABAC 模型，但为了让 provenance 与 governance 接口具备可执行边界，Post-Phase-G addendum 冻结以下最小 capability 切分：
+
+| capability | 允许的动作 |
+| --- | --- |
+| `memory_read` | 普通 `read / retrieve` |
+| `memory_read_with_provenance` | 在 `read` 结果中查看 provenance 摘要 |
+| `governance_plan` | 查看 provenance、生成 `plan / preview` |
+| `governance_execute` | 执行 `conceal`、执行非 `full` scope 的 `erase`、触发 reshape rewrite |
+| `governance_approve_full_erase` | 对 `erase(scope=full)` 执行审批 |
+
+补充约束：
+
+- 这是 MIND 内部执行边界，不等于完整产品权限系统
+- 低权限调用方不得通过普通 `read`、日志、报表或评测输出旁路读取高敏 provenance
+- `approve` 与 `execute` 默认不应被同一自动化流程静默合并
+
+## 8.2 冻结的执行流程
+
+普通治理流程：
+
+`plan -> preview -> execute`
+
+高风险治理流程：
+
+`plan -> preview -> approve -> execute`
+
+该 addendum 冻结以下规则：
+
+- `erase(scope=full)` 必须进入高风险流程
+- 任何 `erase` 至少要有 `preview`
+- 所有执行结果都必须落入 `governance_audit`
+
+## 8.3 允许的操作
+
+- 查看 provenance 与 provenance footprint
+- `conceal`
+- `erase`
+- 基于剩余证据重写受影响对象
+- 清理索引、副本、缓存与自动生成工件
+- 输出治理审计记录
+
+## 8.4 `conceal` 与 `erase` 语义
+
+### `conceal`
+
+- 逻辑不可见
+- 默认可恢复
+- 保留对象和 provenance，但普通 online / offline 路径不可见
+- 必须保留完整治理审计链
+
+### `erase`
+
+- 物理擦除或带 tombstone 的不可恢复删除
+- 默认 scope 为 `memory_world_plus_artifacts`
+- 必须处理 provenance、索引、副本与自动生成工件
+- 若 scope 为 `full`，必须审批
+
+### `erase_scope`
+
+| scope | 含义 |
+| --- | --- |
+| `memory_world` | 只处理对象、版本、lineage、索引和 provenance 本体 |
+| `memory_world_plus_artifacts` | 在 `memory_world` 之外，再处理缓存、trace、评测 JSON、自动生成工件 |
+| `full` | 在 `memory_world_plus_artifacts` 之外，再处理报表副本、人工导出物与外部可读副本 |
+
+## 8.5 Mixed-source 对象的重写规则
+
+该 addendum 对 mixed-source 派生对象冻结如下治理语义：
+
+1. 先移除被 `conceal / erase` 命中的 `evidence_refs` 与 `direct_provenance_ids`
+2. 再按 `support_rule` 判定每个 `support unit` 的状态
+3. `retained / rewritten / dropped` 的结果必须显式记录
+4. 父对象必须生成新版本，或在无法保留任何有效单元时被标记为 `invalid` / 删除
+
+补充约束：
+
+- `WorkspaceView` 在 slot 级治理后必须整体重渲染
+- `TaskEpisode` 不做局部编辑，只基于剩余 `record_refs` 整体重建
+- `RawRecord` 不做局部编辑，只允许整条 `conceal / erase`
+
+## 8.6 Governance 约束
+
+- provenance 默认可以存明文高敏字段，但只允许高权限读取
+- provenance 不得进入 runtime retrieval / ranking / weighting
+- 所有治理修改都必须版本化或以具名审计记录显式表示
+- 不允许 silent governance execution
+- `scope=full` 必须显式审批
+
+---
+
+## 9. 三个端到端 Episode 示例
 
 这一节用于满足阶段 A gate 的 `A-5`。
 
@@ -1105,9 +1517,9 @@ Agent 因引用过期信息导致任务失败。
 
 ---
 
-## 9. 阶段 A 冻结结论
+## 10. 阶段 A 基线与 Post-Phase-G Addendum 结论
 
-当本文完成并冻结后，阶段 A 应被视为已经明确了以下前置条件：
+当本文的阶段 A 基线部分完成并冻结后，阶段 A 应被视为已经明确了以下前置条件：
 
 - world state 的最小结构
 - object schema
@@ -1125,3 +1537,12 @@ Agent 因引用过期信息导致任务失败。
 - object validator
 
 而不需要继续争论“这个对象到底是什么”“这个 primitive 到底会不会改状态”。
+
+Post-Phase-G addendum 则为后续阶段继续补充了：
+
+- provenance control plane
+- governance / reshape loop
+- runtime access policy
+- governance-ready object projection 与最小 capability 边界
+
+这些内容约束 G 之后的新阶段，但不追溯推翻 A ~ G 的历史验收结论。

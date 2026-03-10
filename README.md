@@ -66,6 +66,24 @@ MIND 不希望把高层记忆功能全部手工写死，而是提供一组基础
 ### 4. 记忆应由“未来 usefulness”来衡量
 好的记忆系统，不是存得最多的系统，而是在真实成本约束下，最能提升未来任务表现的系统。
 
+### 5. 来源治理应独立于记忆优化
+MIND 将对象 lineage 和来源 provenance 明确分开。
+
+- `source_refs` 用于表达记忆对象之间的派生关系
+- provenance 用于表达原始数据来自谁、何时、什么环境
+- provenance 进入独立的治理通道，而不参与日常记忆优化
+
+这使系统既能持续成长，也能在需要时执行高权限、可审计的主动遗忘与重塑。
+
+### 6. 运行时记忆深度应可调
+MIND 不假设所有场景都应该使用同样深的记忆访问流程。
+
+- 简单对话可以走更浅、更快的回忆路径
+- 高正确性任务可以走更深、更重的重建与校验路径
+- 系统应支持固定档位和 `auto` 调度两种模式
+
+这样才能在速度、成本和质量之间做场景化折中。
+
 ---
 
 ## MIND 想构建什么
@@ -107,6 +125,14 @@ MIND 当前聚焦于四个核心问题：
 ## 当前状态
 
 这个项目目前已有一套 **通过 Phase G 本地验收的实现基线**。
+
+同时，文档层已经补充冻结了 provenance control plane、`support_unit` 和独立 `governance / reshape loop` 的语义。
+
+文档层也已经补充冻结了运行时 `Flash / Recall / Reconstruct / Reflective`（内部名 `reflective_access`）访问档位与 `auto` 调度语义，并把“记忆如何长成人格层”纳入设计主线与研究问题。
+
+当前文档已经把 `Phase H ~ K` 的 formal gate、阶段边界和启动清单补齐，用来约束 provenance foundation、runtime access、governance reshape 和 persona projection 的后续实现顺序。
+
+这些内容是**下一阶段之前的正式设计前置约束**；其中运行时访问档位已进入规范层，来源治理与人格层设计也已进入规范/设计层，但它们都不代表已经进入当前 Phase G 的实现基线。
 
 当前落地包括：
 
@@ -164,6 +190,10 @@ MIND 当前聚焦于四个核心问题：
 - [Phase E 启动清单](./docs/design/phase_e_startup_checklist.md)
 - [Phase F 启动清单](./docs/design/phase_f_startup_checklist.md)
 - [Phase G 启动清单](./docs/design/phase_g_startup_checklist.md)
+- [Phase H 启动清单](./docs/design/phase_h_startup_checklist.md)
+- [Phase I 启动清单](./docs/design/phase_i_startup_checklist.md)
+- [Phase J 启动清单](./docs/design/phase_j_startup_checklist.md)
+- [Phase K 启动清单](./docs/design/phase_k_startup_checklist.md)
 - [阶段验收与 phase gates](./docs/foundation/phase_gates.md)
 - [实现技术栈冻结文档](./docs/foundation/implementation_stack.md)
 - [初始讨论文档](./docs/research/research_notes.md)

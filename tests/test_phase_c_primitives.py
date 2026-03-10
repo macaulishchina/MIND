@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from mind.fixtures.golden_episode_set import build_core_object_showcase, build_golden_episode_set
-from mind.kernel.store import SQLiteMemoryStore
+from mind.kernel.store import MemoryStore, SQLiteMemoryStore
 from mind.primitives.contracts import (
     PrimitiveErrorCode,
     PrimitiveExecutionContext,
@@ -156,6 +156,58 @@ def test_budget_rejection_returns_explicit_error_code(tmp_path: Path) -> None:
         assert logs[0].outcome is PrimitiveOutcome.REJECTED
         assert logs[0].error is not None
         assert logs[0].error.code is PrimitiveErrorCode.BUDGET_EXHAUSTED
+
+
+def test_read_strips_reserved_control_plane_metadata_from_response() -> None:
+    polluted_object: dict[str, Any] = {
+        "id": "polluted-raw",
+        "type": "RawRecord",
+        "content": {"text": "safe content"},
+        "source_refs": [],
+        "created_at": FIXED_TIMESTAMP.isoformat(),
+        "updated_at": FIXED_TIMESTAMP.isoformat(),
+        "version": 1,
+        "status": "active",
+        "priority": 0.5,
+        "metadata": {
+            "episode_id": "episode-1",
+            "record_kind": "user_message",
+            "timestamp_order": 1,
+            "provenance_id": "prov-001",
+        },
+    }
+
+    class FakeReadStore:
+        def __init__(self, obj: dict[str, Any]) -> None:
+            self.obj = obj
+            self.logs: list[Any] = []
+            self.events: list[Any] = []
+
+        def read_object(self, object_id: str, version: int | None = None) -> dict[str, Any]:
+            assert object_id == self.obj["id"]
+            return dict(self.obj)
+
+        def record_primitive_call(self, log: Any) -> None:
+            self.logs.append(log)
+
+        def record_budget_event(self, event: Any) -> None:
+            self.events.append(event)
+
+        def iter_budget_events(self) -> list[Any]:
+            return []
+
+    store = FakeReadStore(polluted_object)
+    service = PrimitiveService(cast(MemoryStore, store), clock=lambda: FIXED_TIMESTAMP)
+
+    result = service.read({"object_ids": ["polluted-raw"]}, _context())
+
+    assert result.outcome is PrimitiveOutcome.SUCCESS
+    assert result.response is not None
+    returned = result.response["objects"][0]
+    assert returned["metadata"]["episode_id"] == "episode-1"
+    assert "provenance_id" not in returned["metadata"]
+    assert len(store.logs) == 1
+    assert len(store.events) == 1
 
 
 def test_retrieve_uses_latest_versions_and_store_filters(tmp_path: Path) -> None:

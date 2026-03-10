@@ -27,7 +27,7 @@
 | 这是什么 | 一个可演化的外部记忆环境，不只是记忆库 |
 | 核心目标 | 在不改模型权重的前提下，让记忆随着任务持续变得更有用 |
 | 和普通 RAG 的区别 | 不只检索，还允许写回、反思、重组、归档、离线整理 |
-| 最关键结构 | `Working Memory Index + Episodic Store + Semantic Store + Procedural Store + Offline Maintenance Loop` |
+| 最关键结构 | `Working Memory Index + Episodic Store + Semantic Store + Procedural Store + Offline Maintenance Loop + Provenance / Governance Control Plane` |
 | 前期最重要的事 | 先跑通“记录 -> 检索 -> 工作视图 -> 反思 -> 离线整理 -> 再利用”的闭环 |
 | 第一版最容易做错的地方 | 一开始就做成复杂知识库，或者退化成复杂版 RAG |
 | 最小验证目标 | 连续任务中，后续任务的成本或效果因记忆整理而改善 |
@@ -101,6 +101,12 @@ MIND 可以被理解为下面这个闭环：
 这条闭环比任何单个模块都重要。
 
 因为 MIND 的重点从来不是“某次召回做得多漂亮”，而是“系统有没有随着任务序列变得更会记、更会用、成本更低”。
+
+补充约束：
+
+- 上面这条闭环描述的是“成长路径”，不是“治理路径”
+- 一旦系统需要按来源主体、时间窗或保留策略主动忘记和重塑，就必须引入独立的 `governance / reshape loop`
+- provenance 应该作为 control plane 存在，而不是偷偷混进摘要、检索特征或普通 metadata
 
 ## 4.2 系统里真正要设计的对象
 
@@ -248,9 +254,29 @@ MIND 不是要“模拟大脑”，但它非常适合借鉴生物记忆系统里
 - 把杂乱记忆压缩成当前任务可用的上下文
 - 让系统有能力面向任务组织记忆，而不只是被动召回
 
+### 来源与治理控制面
+
+除 data plane 之外，还需要一条独立 control plane，至少保存：
+
+- provenance ledger
+- governance audit
+- reshape plan / preview / approval / execution 记录
+
+这一层的作用不是让模型“更会想”，而是让系统：
+
+- 知道每条原始数据来自谁、什么环境、什么时间
+- 支持高权限按来源规则主动忘记
+- 支持对 mixed-source 派生对象做细粒度重写
+- 把治理能力与记忆优化能力严格分开
+
+实现注意点：
+
+- `ip_addr / device_id / machine_fingerprint` 可以按治理要求明文存放
+- 但它们必须被视为高敏控制面字段，而不是普通业务 metadata
+
 ## 5.2 控制层：谁在驱动记忆演化
 
-控制层至少需要 7 个模块：
+控制层至少需要 8 个模块：
 
 ### 1. Ingestion / Logging
 
@@ -290,6 +316,84 @@ MIND 不是要“模拟大脑”，但它非常适合借鉴生物记忆系统里
 
 它的价值在于防止系统无限堆积，并让“记忆可用性”随着时间和反馈动态变化。
 
+### 8. Governance / Reshape Controller
+
+负责执行高权限、主动触发、可能较重的治理流程。
+
+它的职责不是优化当前回答，也不是替代离线维护，而是：
+
+- 按 provenance 条件筛选受影响原始记录
+- 预览和审计治理影响范围
+- 执行 `conceal / erase`
+- 对 mixed-source 派生对象按最小治理粒度重写
+- 清理索引、缓存、评测工件和外部副本
+
+## 5.2.1 运行时访问深度不应只有一个固定档
+
+如果 MIND 只有一种固定 retrieval / workspace 深度，它很快就会在两个方向上同时吃亏：
+
+- 对简单对话太重，成本和时延不必要地升高
+- 对高正确性任务太浅，覆盖和证据校验不足
+
+因此，运行时访问策略应显式支持多档深度。
+
+建议采用 4 档：
+
+- `Flash`
+- `Recall`
+- `Reconstruct`
+- `Reflective`
+
+其中：
+
+- `Flash` 解决“先快速想起最可能相关的少量记忆”
+- `Recall` 解决“以标准成本拿到足够可用的记忆视图”
+- `Reconstruct` 解决“需要把多条历史重新组织起来才能答好”
+- `Reflective` 解决“答之前还要检查证据、一致性和约束风险”
+
+这里的 `Reflective` 指运行时访问深度，不等于 primitive `reflect`。
+
+## 5.2.2 `auto` 档应负责升级、降级和跳级
+
+更稳的设计不是让系统一次把档位选死，而是引入一个 `auto` 调度器。
+
+它至少应支持：
+
+- 逐级升级：`Flash -> Recall -> Reconstruct -> Reflective`
+- 逐级降级：问题比预期简单、预算更紧或已满足质量要求时回退
+- 自由跳级：例如从 `Flash` 直接跳到 `Reconstruct`
+- 用户锁定：用户显式指定档位时，`auto` 只负责执行，不负责覆盖
+
+一个合理的 `auto` 判断信号包括：
+
+- 当前任务是否明显依赖历史记忆
+- 任务 hard constraints 的强度
+- 用户对正确性还是速度更敏感
+- 当前覆盖是否不足
+- 当前证据是否冲突
+- 当前 budget 是否还有余量
+
+工程上更重要的是：
+
+- 档位变化必须可 trace
+- 升级、降级和跳级都必须可解释
+- `auto` 不应只是永远往更深档位走
+
+## 5.2.3 后续 benchmark 不能只测平均值
+
+如果引入多档运行时访问策略，后续 benchmark 至少要回答两类问题：
+
+- 每个固定档位在各自目标场景里是否满足质量下限和性能上限
+- `auto` 是否真的在质量 / 成本 frontier 上优于“永远固定一个档位”
+
+因此，后续评测不能只保留一个总体平均分，还应同时看：
+
+- 回答质量
+- 证据完整性
+- 时延
+- token / read / expand 成本
+- `auto` 的档位切换稳定性
+
 ## 5.3 一条建议的最小运行流程
 
 MIND v0 建议按下面这条路径跑起来：
@@ -306,6 +410,11 @@ MIND v0 建议按下面这条路径跑起来：
 10. 将更新后的结构服务给后续任务
 
 只要这条链能稳定跑起来，MIND 的核心命题就已经进入可实验状态。
+
+但要注意：
+
+- provenance-based 忘记和重塑不应混入这条最小运行链
+- 它应该走独立的 `plan -> preview -> execute` 或 `plan -> preview -> approve -> execute` 流程
 
 ## 5.4 认知启发：只保留能落地的 5 条
 
@@ -324,7 +433,7 @@ MIND v0 建议按下面这条路径跑起来：
 | --- | --- | --- |
 | 有限工作集 | 当前任务真正能直接操作的只是少量句柄 | `workspace view` 必须限槽位、句柄化 |
 | 快速情景 + 慢速沉淀 | 新经验和稳定知识不该混在一个池子里 | 区分 episodic / semantic / procedural |
-| 在线执行 + 离线维护 | 不是所有记忆处理都应发生在任务内 | 必须有 `offline maintenance loop` |
+| 在线执行 + 离线维护 + 主动治理 | 不是所有记忆处理都应发生在任务内，治理还要求高权限和重写能力 | 必须区分 `online loop / offline maintenance loop / governance loop` |
 | 取回后可再固化 | 记忆被使用后应允许修订和晋升 | 引入 `reconsolidation + promotion policy` |
 | 遗忘与重放都应有优先级 | 系统不能平均对待所有记忆 | 引入 priority score、archive、priority replay |
 
@@ -390,6 +499,12 @@ MIND v0 建议按下面这条路径跑起来：
 - 明确哪些操作属于 online loop，哪些属于 offline loop
 - 评测时比较“有无离线维护”的差异
 
+这里再补一个工程上必须单列的点：
+
+- provenance-based 忘记和记忆重塑不应被偷塞进 offline maintenance
+- 原因不是它不“离线”，而是它需要更高权限、明确范围、预览与审批
+- 因此除了 online / offline，两者之外还要保留一条独立的 `governance / reshape loop`
+
 ### 启发 4：记忆被取回后，应该进入可修订状态
 
 比“做梦”更有工程价值的概念是 `reconsolidation`。
@@ -430,11 +545,18 @@ MIND v0 建议按下面这条路径跑起来：
 - 前期先做 `archive / deprecate / suppress-from-retrieval`
 - replay 调度优先考虑“高价值但易丢失”以及“多次复用、值得晋升”的对象
 
+但这里要严格区分两类“遗忘”：
+
+- 面向优化的遗忘：priority 调整、抑制、归档，属于 memory optimization
+- 面向治理的遗忘：基于 provenance 的 `conceal / erase / reshape`，属于 control plane
+
+前者追求更好的 utility，后者追求更强的可控性、审计性和合规性。
+
 ## 5.5 据此推荐的 MIND 架构增补
 
-如果吸收上面的认知启发，MIND 的推荐结构不应只是“三层记忆”，而应是“多层记忆 + 在线/离线双循环”。
+如果吸收上面的认知启发，MIND 的推荐结构不应只是“三层记忆”，而应是“多层记忆 + online / offline / governance 三循环”。
 
-建议补成下面 6 个功能结构：
+建议补成下面 7 个功能结构：
 
 ### 1. Working Memory Index
 
@@ -495,6 +617,10 @@ MIND v0 建议按下面这条路径跑起来：
 
 负责做 replay、reconsolidation、promotion、归档和优先级更新。
 
+### 7. Provenance / Governance Control Plane
+
+负责保存 direct provenance、provenance footprint、治理计划、审批与执行审计。
+
 ## 5.5.1 架构速查表
 
 | 结构 | 近似生物类比 | 在 MIND 中负责什么 | 前期是否必须 |
@@ -505,6 +631,7 @@ MIND v0 建议按下面这条路径跑起来：
 | `Procedural / Policy Store` | 程序性记忆 | 保留“怎么做”的经验 | 建议尽早预留 |
 | `Priority Tags` | 价值 / 显著性信号 | 决定保留、检索、replay 优先级 | 是 |
 | `Offline Maintenance Loop` | replay / maintenance | 做离线重放、再固化、晋升、归档 | 是 |
+| `Provenance / Governance Control Plane` | 来源与治理控制面 | 保存 direct provenance，并执行 `conceal / erase / reshape` | 是 |
 
 ## 5.5.2 推荐架构图
 
@@ -518,26 +645,32 @@ flowchart LR
     L --> E
     E --> R[Reflector / Reorganizer]
     R --> O[Offline Maintenance]
+    L --> PL[Provenance Ledger]
+    PL --> X[Governance / Reshape Controller]
+    X --> E
+    X --> S
+    X --> P
     O --> S
     O --> P
-    O --> G[Forgetting / Priority Manager]
-    G --> E
-    G --> S
-    G --> P
+    O --> F[Forgetting / Priority Manager]
+    F --> E
+    F --> S
+    F --> P
 ```
 
-## 5.5.3 两条必须显式设计的控制规则
+## 5.5.3 三条必须显式设计的控制规则
 
 | 规则 | 含义 | 工程落点 |
 | --- | --- | --- |
 | `Reconsolidation` | 被取回并修订的记忆生成新版本，而不是原地覆盖 | 版本链、source trace、冲突处理 |
 | `Promotion Policy` | 只有满足条件的 episodic 经验才晋升为 semantic / procedural | 复用阈值、稳定性阈值、收益阈值 |
+| `Governance Isolation` | provenance-based 治理必须与 runtime 优化和 offline maintenance 隔离 | control plane、权限、`plan / preview / approve / execute` |
 
 ## 5.6 一条更可落地的运行主线
 
 MIND 后续可以按这条主线理解：
 
-`在线任务 -> 有限工作记忆索引 -> 访问 episodic / semantic / procedural 记忆 -> 完成任务 -> 写入新 episode -> 离线 replay -> reconsolidation -> schema / policy promotion -> 归档和优先级更新 -> 服务未来任务`
+`在线任务 -> 有限工作记忆索引 -> 访问 episodic / semantic / procedural 记忆 -> 完成任务 -> 写入新 episode -> 离线 replay -> reconsolidation -> schema / policy promotion -> 归档和优先级更新 -> 在必要时进入 provenance-based governance reshape -> 服务未来任务`
 
 这比单纯的“三层存储”更接近一个真正可成长的记忆系统。
 
@@ -591,6 +724,92 @@ MIND 后续可以按这条主线理解：
 这一代主要验证：
 
 “系统能否学会更好的记忆使用方式”
+
+## 6.1 人格层设计
+
+### 从组织好的记忆到人格层
+
+人格层不应被理解为“额外加一个角色提示词”。
+
+更合理的理解是：
+
+- 组织好的记忆为人格提供土壤
+- 人格不是所有记忆的简单总和
+- 人格是某些记忆结构长期稳定沉淀后的慢变投影
+
+建议把这条线拆成 4 层：
+
+### 1. Autobiographical Memory
+
+和“我经历过什么、我和谁发生过什么关系”相关的自传性连续体。
+
+### 2. Preference / Value Schema
+
+跨 episode 稳定偏好、价值排序、行为取向和选择倾向。
+
+### 3. Affective State
+
+短期情绪、主观色彩和当前语气倾向。
+
+它应该允许快速变化和自然衰减，不应被当作长期真理。
+
+### 4. Persona Projection
+
+在当前交互里被外界感知到的语气、立场、风格、自我一致性和主观感受。
+
+### 为什么这条线值得单列
+
+如果只做“会回忆的系统”，MIND 最终更像高阶 memory tool。
+
+如果希望它进一步表现出：
+
+- 连续的自我感
+- 可被感知的风格和主观性
+- 随长期经历缓慢形成的价值取向
+
+那就必须思考“哪些记忆会进入人格层，哪些不会”。
+
+这不是哲学装饰，而是算法边界问题。
+
+### 人格层的工程约束
+
+这条线最容易做错的地方是把人格直接做成：
+
+- 全部长期记忆的总和
+- 一次提示词注入
+- 单次事件驱动的剧烈漂移
+- 不可治理、不可撤销的黑箱
+
+更稳的约束应该是：
+
+- 单次 episode 不能轻易改写价值观或身份感
+- 情绪快变，价值慢变
+- 人格相关结构必须来自跨 episode 稳定证据
+- 需求 1 中的 provenance-based governance 必须能级联到人格层
+
+### 一个更可落地的生长路径
+
+建议的人格生长主线是：
+
+`原始 episode -> 自我相关 / 关系相关 / 价值相关片段标注 -> 反思与跨 episode 稳定性筛选 -> preference / value schema -> 运行时 persona projection`
+
+这里最关键的设计点有两个：
+
+- 人格的“生长”发生在 schema 层，而不是直接发生在 raw log 层
+- 人格的“被感知”发生在 runtime projection 层，而不是要求底层存储天然长得像人格对象
+
+### 为什么现在不把人格直接冻结进核心对象表
+
+当前阶段更稳的做法是：
+
+- 把人格线先写进设计主线
+- 明确它未来大概率会依赖 `SchemaNote`、`ReflectionNote`、autobiographical grouping 和 runtime projection
+- 暂不把它硬塞成新的核心对象类型
+
+原因很简单：
+
+- 现在先冻结“人格是什么、怎么长、怎么被感知”的结构关系，比过早新增一个 `PersonaObject` 更重要
+- 如果对象类型先冻结错了，后面治理、评测和算法都会被绑死
 
 这个分代很重要，因为它决定了前期不应该被哪些问题拖住。
 
@@ -662,6 +881,15 @@ MIND 本质上是研究系统，必须从一开始就考虑如何验证。
 | E | 记忆怎么变得更会记 | 反思、replay、离线整理、轻量重组 | `2 ~ 3 人周` |
 | F | 如何证明这套东西值得做 | baseline、任务集、ablation、评测 | `2 ~ 3 人周` |
 | G | 记忆策略如何继续优化 | 基于反馈的策略改进 | `3 ~ 6 人周` |
+| H | provenance 如何先稳住底座 | direct provenance、可见性隔离、最小治理链 | `2 ~ 3 人周` |
+| I | 运行时记忆深度如何变成可控 policy | 固定档位、`auto` 调度、frontier benchmark | `2 ~ 3 人周` |
+| J | 如何真正按来源重塑记忆网络 | mixed-source rewrite、`erase_scope`、artifact cleanup | `3 ~ 5 人周` |
+| K | 组织好的记忆如何长成人格层 | autobiographical grouping、value schema、persona projection | `3 ~ 6 人周` |
+
+补充说明：
+
+- A ~ G 是当前已经完成并通过本地验收的主阶段
+- H ~ K 是已冻结的后续阶段设计；正式通过口径以 [phase_gates.md](../foundation/phase_gates.md) 中的 gate 为准
 
 ## 阶段 A：把系统定义说清楚
 
@@ -683,8 +911,9 @@ MIND 本质上是研究系统，必须从一开始就考虑如何验证。
 - 什么是 memory object
 - 什么是 primitive
 - 什么是 workspace view
+- 什么是 runtime memory access policy
 - 什么是 memory utility objective
-- 什么是 online loop 与 offline loop
+- 什么是 online / offline / governance loop
 - 什么是 episodic / semantic / procedural / salience 这几类对象
 
 当前正式规范文档见 [spec.md](../foundation/spec.md)。
@@ -929,6 +1158,142 @@ MIND 必须更进一步，解决“当前任务到底怎么以合理成本拿到
 
 ---
 
+## 阶段 H：补 provenance foundation
+
+### 必要性
+
+如果 provenance 只停留在“原始数据旁边挂一些字段”，它既无法支撑治理，也无法支撑后面的 persona 级联。
+
+Phase H 的任务不是做重治理，而是先把 control plane、可见性和审计边界站稳。
+
+### 重点
+
+这个阶段只做最小但必须成立的底座：
+
+- `RawRecord / ImportedRawRecord` 的 authoritative direct provenance
+- `provenance_ledger` 与 `governance_audit`
+- 普通读取与 provenance 读取的最小 capability 分界
+- `plan / preview / conceal / audit` 最小治理链
+- provenance 对 runtime retrieval / ranking / weighting 的隔离
+
+### 难点
+
+- provenance 很容易被偷渡进现有优化路径
+- `conceal` 很容易只在一条读取接口生效，其他路径仍然漏出
+- capability 边界过粗会无用，过细又会提前变成权限系统
+- control plane 一旦和 `source_refs` 混在一起，后面治理会很难收口
+
+### 预计精力
+
+- `2 ~ 3 人周`
+
+### 完成标志
+
+- direct provenance 能稳定绑定到底层原始对象
+- `conceal` 对普通 online / offline 路径生效
+- provenance 读取和治理审计都有明确边界
+
+## 阶段 I：把 runtime access 变成可评测能力
+
+### 必要性
+
+如果运行时只有一条固定 retrieval / workspace 路径，系统在简单任务和高正确性任务上都会吃亏。
+
+Phase I 的目标不是发明新 primitive，而是把访问深度做成稳定的 runtime policy family。
+
+### 重点
+
+- 落地 `Flash / Recall / Reconstruct / Reflective`
+- 落地 `auto` 调度器
+- 冻结 `AccessDepthBench v1`
+- 为档位切换建立 trace、原因码和 frontier benchmark
+- 证明固定档位和 `auto` 各自的适用边界
+
+### 难点
+
+- 档位差异很容易只停留在命名层，没有真实行为差别
+- `auto` 很容易退化成“总是选最深档”
+- 质量和性能需要一起看，不能只做单一平均分
+- 用户显式锁定档位时，系统必须完全服从
+
+### 预计精力
+
+- `2 ~ 3 人周`
+
+### 完成标志
+
+- 四个固定档位和 `auto` 都可单独评测
+- 档位切换有 trace，且可解释
+- `auto` 在固定档位之外形成可复现的质量 / 成本折中
+
+## 阶段 J：把治理从“能看”推进到“能重塑”
+
+### 必要性
+
+只有 provenance 标注和 `conceal` 还不够，系统还不能真正回答“按来源条件重塑整个记忆网络”。
+
+Phase J 是把治理从基础隔离推进到重执行层的阶段。
+
+### 重点
+
+- `plan / preview / approve / execute` 全链路
+- `support unit` 级 mixed-source rewrite
+- `erase_scope` 执行与 artifact cleanup
+- 中断恢复、重试、幂等和审计链完整性
+- 默认 scope 与高风险 `full` scope 的边界
+
+### 难点
+
+- preview 不准，后面的重写就会失真
+- mixed-source rewrite 最容易出现过删、漏删和 dangling support refs
+- 物理清理很容易在缓存、报表、日志或副本路径漏掉角落
+- 治理执行通常比较重，失败恢复会比普通 offline job 更难
+
+### 预计精力
+
+- `3 ~ 5 人周`
+
+### 完成标志
+
+- mixed-source 对象能按最小治理粒度重写
+- `erase_scope` 能按声明范围完成清理
+- 治理执行失败后可恢复、可追审、无旁路泄露
+
+## 阶段 K：让人格层成为可追溯投影
+
+### 必要性
+
+如果 MIND 最终希望表现出连续自我、价值倾向和可感知的主观性，它不能只停留在“有很多记忆对象”。
+
+Phase K 的任务是证明人格层可以长在记忆之上，而不是绕开记忆重新造一个黑箱人格模块。
+
+### 重点
+
+- autobiographical grouping
+- preference / value schema
+- runtime persona projection
+- persona 输出的 evidence trace
+- persona 与 governance 的级联更新
+
+### 难点
+
+- 人格表达很容易变成无依据的风格模仿
+- 偏好、价值和短期状态很容易混在一起
+- persona projection 可能破坏中性任务的稳定性
+- 治理动作之后，旧 persona 表达必须同步收敛
+
+### 预计精力
+
+- `3 ~ 6 人周`
+
+### 完成标志
+
+- persona 相关表达大部分都能追溯到记忆证据
+- 同一 identity bundle 下的人格表达基本稳定
+- 治理后 persona 会同步更新，而不是保留陈旧自我叙述
+
+---
+
 ## 9. 早期最值得优先解决的 4 个问题
 
 如果资源有限，优先级建议如下：
@@ -978,7 +1343,7 @@ MIND 必须更进一步，解决“当前任务到底怎么以合理成本拿到
 
 - 不先做多智能体共享记忆
 - 不先做复杂图数据库方案
-- 不先做非常细的权限系统
+- 不先做非常细的权限系统，但必须保留 provenance / governance 所需的最小 capability 边界
 - 不先做复杂遗忘机制
 - 不先做策略学习或强化学习
 - 不先做过于泛化的知识平台
@@ -1006,8 +1371,9 @@ MIND 必须更进一步，解决“当前任务到底怎么以合理成本拿到
 - 定义对象模型
 - 定义原语
 - 定义 workspace view
+- 定义 runtime access policy
 - 定义 utility objective
-- 定义 online / offline 两条循环
+- 定义 online / offline / governance 三条循环
 
 产出：
 
@@ -1069,7 +1435,7 @@ MIND 必须更进一步，解决“当前任务到底怎么以合理成本拿到
 
 前期推进时，建议始终围绕这一条主线判断工作是否偏航：
 
-`保留原始经验 -> 在有限工作记忆里组织快速索引 -> 生成可塑表示 -> 在任务后写回反思 -> 在离线阶段 replay / reconsolidate / promote -> 对记忆结构做归档与遗忘控制 -> 用后续任务验证是否真的更有用`
+`保留原始经验 -> 在有限工作记忆里组织快速索引 -> 生成可塑表示 -> 在任务后写回反思 -> 在离线阶段 replay / reconsolidate / promote -> 对记忆结构做归档与遗忘控制 -> 在治理阶段按 provenance 主动 reshape -> 用后续任务验证是否真的更有用`
 
 只要这条主线始终成立，项目就在朝 MIND 的核心目标前进。
 

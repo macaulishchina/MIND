@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
@@ -30,7 +30,7 @@ from mind.kernel.retrieval import (
     vector_score,
 )
 from mind.kernel.schema import validate_object
-from mind.kernel.store import SQLiteMemoryStore
+from mind.kernel.store import MemoryStore, SQLiteMemoryStore
 from mind.primitives.contracts import (
     PrimitiveExecutionContext,
     PrimitiveOutcome,
@@ -303,6 +303,18 @@ class TestRetrievalEdgeCases:
         assert showcase[0]["id"].lower() in text
         assert showcase[0]["type"].lower() in text
 
+    def test_build_search_text_excludes_reserved_control_plane_metadata(self) -> None:
+        obj = build_core_object_showcase()[2]
+        obj["metadata"] = dict(obj["metadata"])
+        obj["metadata"]["provenance_id"] = "prov-001"
+        obj["metadata"]["governance_plan"] = {"scope": "memory_world"}
+
+        text = build_search_text(obj)
+
+        assert "prov-001" not in text
+        assert "governance_plan" not in text
+        assert "summary_scope" in text
+
     def test_tokenize_basic(self) -> None:
         result = tokenize("Hello World 123")
         assert result == {"hello", "world", "123"}
@@ -416,6 +428,34 @@ class TestContextProtocolEdgeCases:
         ctx2 = build_workspace_context(result.workspace)
         assert ctx1.text == ctx2.text
         assert ctx1.token_count == ctx2.token_count
+
+    def test_raw_topk_context_excludes_reserved_control_plane_metadata(
+        self,
+    ) -> None:
+        class FakeStore:
+            def read_object(self, object_id: str) -> dict[str, Any]:
+                assert object_id == "raw-control-plane"
+                return {
+                    "id": "raw-control-plane",
+                    "type": "RawRecord",
+                    "content": {"text": "hello"},
+                    "source_refs": [],
+                    "metadata": {
+                        "episode_id": "e1",
+                        "record_kind": "user_message",
+                        "timestamp_order": 1,
+                        "provenance_id": "prov-001",
+                    },
+                }
+
+        ctx = build_raw_topk_context(
+            cast(MemoryStore, FakeStore()),
+            ("raw-control-plane",),
+        )
+
+        payload = json.loads(ctx.text)
+        assert payload["objects"][0]["metadata"]["episode_id"] == "e1"
+        assert "provenance_id" not in payload["objects"][0]["metadata"]
 
 
 # ---------------------------------------------------------------------------

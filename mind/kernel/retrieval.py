@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
+from mind.kernel.schema import strip_control_plane_metadata
 from mind.primitives.contracts import RetrieveQueryMode
 
 EMBEDDING_DIM = 64
@@ -27,13 +28,14 @@ def build_search_text(obj: dict[str, Any]) -> str:
     """Return the canonical search text stored for keyword and vector retrieval."""
 
     object_id = str(obj["id"]).lower()
+    public_metadata = strip_control_plane_metadata(obj["metadata"])
     return " ".join(
         [
             object_id,
             object_id.replace("-", " "),
             str(obj["type"]).lower(),
             json.dumps(obj["content"], ensure_ascii=True, sort_keys=True).lower(),
-            json.dumps(obj["metadata"], ensure_ascii=True, sort_keys=True).lower(),
+            json.dumps(public_metadata, ensure_ascii=True, sort_keys=True).lower(),
         ]
     ).strip()
 
@@ -45,7 +47,8 @@ def build_embedding_text(obj: dict[str, Any]) -> str:
     object_type = str(obj["type"]).lower()
     expanded_id = object_id.replace("-", " ")
     id_ngrams = " ".join(_char_ngrams(object_id))
-    salient_text = _structured_text(obj["content"]) + " " + _selected_metadata_text(obj["metadata"])
+    public_metadata = strip_control_plane_metadata(obj["metadata"])
+    salient_text = _structured_text(obj["content"]) + " " + _selected_metadata_text(public_metadata)
     return " ".join(
         [
             object_id,

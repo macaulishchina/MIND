@@ -6,6 +6,7 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
+from mind.kernel.schema import strip_control_plane_metadata
 from mind.kernel.store import MemoryStore
 
 PHASE_D_CONTEXT_PROTOCOL = "mind.phase_d_context.v1"
@@ -71,7 +72,7 @@ def _raw_object_payload(obj: dict[str, Any]) -> dict[str, Any]:
         "type": obj["type"],
         "content": obj["content"],
         "source_refs": obj["source_refs"],
-        "metadata": obj["metadata"],
+        "metadata": strip_control_plane_metadata(obj["metadata"]),
     }
 
 

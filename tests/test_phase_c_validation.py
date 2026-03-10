@@ -55,3 +55,16 @@ def test_integrity_report_flags_missing_link_endpoints() -> None:
     report = build_integrity_report(showcase)
 
     assert ("showcase-link", "missing-src") in report.dangling_refs
+
+
+def test_objects_reject_reserved_control_plane_metadata_fields() -> None:
+    summary = build_core_object_showcase()[2]
+    summary["metadata"] = dict(summary["metadata"])
+    summary["metadata"]["provenance_id"] = "prov-001"
+
+    errors = validate_object(summary)
+
+    assert (
+        "metadata contains reserved control-plane fields ['provenance_id']"
+        in errors
+    )

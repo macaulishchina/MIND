@@ -50,6 +50,29 @@ VALID_RECORD_KIND = {
 }
 VALID_REFLECTION_KIND = {"success", "failure", "mixed"}
 VALID_SCHEMA_KIND = {"semantic", "procedural"}
+RESERVED_CONTROL_PLANE_METADATA_FIELDS = frozenset(
+    {
+        "conceal",
+        "direct_provenance_id",
+        "direct_provenance_ids",
+        "erase",
+        "erase_scope",
+        "governance",
+        "governance_audit",
+        "governance_execute",
+        "governance_plan",
+        "governance_preview",
+        "governance_projection",
+        "provenance",
+        "provenance_footprint",
+        "provenance_id",
+        "provenance_ids",
+        "provenance_ledger",
+        "reshape",
+        "support_unit",
+        "support_units",
+    }
+)
 
 
 class SchemaValidationError(ValueError):
@@ -95,6 +118,26 @@ def _validate_slot(slot: Any, index: int) -> list[str]:
     if "priority" in slot and not isinstance(slot["priority"], int | float):
         errors.append(f"workspace slot {index} priority must be numeric")
     return errors
+
+
+def strip_control_plane_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
+    """Return metadata with control-plane fields removed from public/runtime paths."""
+
+    return {
+        key: value
+        for key, value in metadata.items()
+        if key not in RESERVED_CONTROL_PLANE_METADATA_FIELDS
+    }
+
+
+def public_object_view(obj: dict[str, Any]) -> dict[str, Any]:
+    """Return the public/runtime-safe view of a memory object."""
+
+    public_obj = dict(obj)
+    metadata = public_obj.get("metadata")
+    if isinstance(metadata, dict):
+        public_obj["metadata"] = strip_control_plane_metadata(metadata)
+    return public_obj
 
 
 def validate_object(obj: dict[str, Any]) -> list[str]:
@@ -153,6 +196,15 @@ def validate_object(obj: dict[str, Any]) -> list[str]:
     if not isinstance(metadata, dict):
         errors.append("field 'metadata' must be an object")
         return errors
+
+    reserved_metadata_fields = sorted(
+        set(metadata).intersection(RESERVED_CONTROL_PLANE_METADATA_FIELDS)
+    )
+    if reserved_metadata_fields:
+        errors.append(
+            "metadata contains reserved control-plane fields "
+            f"{reserved_metadata_fields}"
+        )
 
     if object_type in REQUIRED_METADATA_FIELDS:
         for field in REQUIRED_METADATA_FIELDS[object_type]:
