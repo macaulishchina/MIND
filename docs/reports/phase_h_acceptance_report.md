@@ -85,18 +85,20 @@ Phase H 本次验收结论：`PASS`
 
 | 验证项 | 结果 |
 | --- | --- |
-| `pytest -q` | `144 passed, 11 skipped` |
+| `pytest -q` | `153 passed, 11 skipped` |
 | `ruff check mind tests scripts` | `All checks passed!` |
-| `mypy` | `Success: no issues found in 97 source files` |
+| `mypy` | `Success: no issues found in 98 source files` |
 | `python3 scripts/run_phase_b_gate.py` | `phase_b_gate=PASS` |
 | `python3 scripts/run_phase_c_gate.py` | `phase_c_gate=PASS` |
 | `python3 scripts/run_phase_e_gate.py` | `phase_e_gate=PASS` |
 | `python3 scripts/run_phase_h_gate.py` | `phase_h_gate=PASS` |
 | `python3 scripts/run_phase_g_gate.py` | `phase_g_gate=PASS` |
+| `MIND_TEST_POSTGRES_DSN=... pytest tests/test_postgres_regression.py -q` | `11 passed` |
+| `MIND_POSTGRES_DSN=... mind-postgres-regression` | `PASS` |
 
 备注：
 
-- 当前环境未设置 `MIND_TEST_POSTGRES_DSN`，因此 PostgreSQL 的新增 Phase H 集成回归用例仍处于跳过状态；本次验收未实际执行真实 PG 集成链路
+- PostgreSQL 的 Phase H 集成回归现已在本地临时 `pgvector` 环境中实际执行通过，`0005 / 0006 / 0007` Alembic 迁移链已获得实测验证
 
 ## 3. 逐条核对
 
@@ -218,7 +220,7 @@ Phase H 本次验收结论：`PASS`
 非阻断风险：
 
 - `ImportedRawRecord` 仍只有规范层口径，当前 gate 场景只覆盖 `RawRecord`
-- PostgreSQL 的 Phase H 集成回归已补测试，但当前环境没有 DSN，尚未实际执行
+- PostgreSQL 集成验证目前依赖手工提供测试环境；后续更稳妥的做法仍然是在 CI 中固定这条回归链
 - `erase(scope=full)`、mixed-source rewrite、artifact cleanup 仍然属于后续阶段，不在本次验收范围内
 
 ## 5. 最终结论
@@ -229,6 +231,6 @@ Phase H 本次验收结论：`PASS`
 
 当前状态：
 
-- Phase H provenance foundation 已具备本地 formal gate
+- Phase H provenance foundation 已具备本地 formal gate，并已完成真实 PostgreSQL 集成回归验证
 - 当前 gate 工件默认输出为 [artifacts/phase_h/gate_report.json](../../artifacts/phase_h/gate_report.json)
 - 下一阶段可进入 `Phase I: Runtime Access Modes`
