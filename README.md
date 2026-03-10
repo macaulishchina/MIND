@@ -172,7 +172,7 @@ MIND 当前聚焦于四个核心问题：
 - `mind/fixtures/retrieval_benchmark.py`：固定的 RetrievalBenchmark v0 / v1
 - `mind/fixtures/episode_answer_bench.py`：固定的 `EpisodeAnswerBench v1`
 - `mind/fixtures/long_horizon_dev.py`：固定的 `LongHorizonDev v1`
-- `scripts/run_phase_b_gate.py` / `scripts/run_phase_c_gate.py` / `scripts/run_phase_d_smoke.py` / `scripts/run_phase_e_startup.py` / `scripts/run_phase_e_gate.py` / `scripts/run_phase_f_manifest.py` / `scripts/run_phase_f_baselines.py` / `scripts/run_phase_f_report.py` / `scripts/run_phase_f_comparison.py` / `scripts/run_phase_f_gate.py` / `scripts/run_phase_h_gate.py` / `scripts/run_offline_worker_once.py`：本地 gate / worker 入口
+- `scripts/run_phase_b_gate.py` / `scripts/run_phase_c_gate.py` / `scripts/run_phase_d_smoke.py` / `scripts/run_phase_e_startup.py` / `scripts/run_phase_e_gate.py` / `scripts/run_phase_f_manifest.py` / `scripts/run_phase_f_baselines.py` / `scripts/run_phase_f_report.py` / `scripts/run_phase_f_comparison.py` / `scripts/run_phase_f_gate.py` / `scripts/run_phase_h_gate.py` / `scripts/run_phase_i_gate.py` / `scripts/run_offline_worker_once.py`：本地 gate / worker 入口
 - `tests/test_phase_b_gate.py` / `tests/test_phase_c_gate.py` / `tests/test_phase_d_smoke.py`：阶段 gate 测试
 
 当前存储口径：
@@ -212,6 +212,7 @@ MIND 当前聚焦于四个核心问题：
 - [Phase F 独立审计报告](./docs/reports/phase_f_independent_audit.md)
 - [Phase G 验收报告](./docs/reports/phase_g_acceptance_report.md)
 - [Phase H 验收报告](./docs/reports/phase_h_acceptance_report.md)
+- [Phase I 验收报告](./docs/reports/phase_i_acceptance_report.md)
 - [Phase G 独立审计报告](./docs/reports/phase_g_independent_audit.md)
 - [Phase C 验收报告](./docs/reports/phase_c_acceptance_report.md)
 

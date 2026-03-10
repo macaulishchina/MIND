@@ -8,6 +8,11 @@ import tempfile
 from collections.abc import Sequence
 from pathlib import Path
 
+from .access import (
+    assert_phase_i_gate,
+    evaluate_phase_i_gate,
+    write_phase_i_gate_report_json,
+)
 from .eval import (
     FixedSummaryMemoryBaselineSystem,
     LongHorizonBenchmarkRunner,
@@ -455,6 +460,79 @@ def phase_h_gate_main(argv: Sequence[str] | None = None) -> int:
     print(f"H-7={'PASS' if result.h7_pass else 'FAIL'}")
     print(f"H-8={'PASS' if result.h8_pass else 'FAIL'}")
     print(f"phase_h_gate={'PASS' if result.phase_h_pass else 'FAIL'}")
+    return 0
+
+
+def phase_i_gate_main(argv: Sequence[str] | None = None) -> int:
+    """Run the local Phase I runtime access gate."""
+
+    parser = argparse.ArgumentParser(
+        prog="mind-phase-i-gate",
+        description="Run the full local Phase I runtime access gate.",
+    )
+    parser.add_argument(
+        "--output",
+        default="artifacts/phase_i/gate_report.json",
+        help="Output path for the persisted Phase I gate JSON report.",
+    )
+    args = parser.parse_args(list(argv) if argv is not None else None)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        result = evaluate_phase_i_gate(Path(tmpdir) / "phase_i_gate.sqlite3")
+
+    try:
+        assert_phase_i_gate(result)
+    except RuntimeError as exc:
+        raise SystemExit(str(exc)) from exc
+
+    output_path = write_phase_i_gate_report_json(args.output, result)
+    print("Phase I gate report")
+    print(f"report_path={output_path}")
+    print(f"benchmark_cases={result.case_count}")
+    print(f"benchmark_runs={result.benchmark_run_count}")
+    print(f"callable_modes={','.join(mode.value for mode in result.callable_modes)}")
+    print(f"trace_coverage={result.trace_coverage_count}/{result.trace_total}")
+    print(
+        "flash_floor="
+        f"time_budget_hit_rate:{result.flash_time_budget_hit_rate:.2f},"
+        f"constraint_satisfaction:{result.flash_constraint_satisfaction:.2f}"
+    )
+    print(
+        "recall_floor="
+        f"aqs:{result.recall_answer_quality_score:.2f},"
+        f"mus:{result.recall_memory_use_score:.2f}"
+    )
+    print(
+        "reconstruct_floor="
+        f"faithfulness:{result.reconstruct_answer_faithfulness:.2f},"
+        f"gold_fact_coverage:{result.reconstruct_gold_fact_coverage:.2f}"
+    )
+    print(
+        "reflective_floor="
+        f"faithfulness:{result.reflective_answer_faithfulness:.2f},"
+        f"gold_fact_coverage:{result.reflective_gold_fact_coverage:.2f},"
+        f"constraint_satisfaction:{result.reflective_constraint_satisfaction:.2f}"
+    )
+    print(f"auto_frontier_average_aqs_drop={result.auto_frontier_average_aqs_drop:.4f}")
+    print(
+        "auto_switch_counts="
+        f"upgrade:{result.auto_audit.upgrade_count},"
+        f"downgrade:{result.auto_audit.downgrade_count},"
+        f"jump:{result.auto_audit.jump_count}"
+    )
+    print(
+        "fixed_lock_overrides="
+        f"{result.fixed_lock_override_count}/{result.fixed_lock_run_count}"
+    )
+    print(f"I-1={'PASS' if result.i1_pass else 'FAIL'}")
+    print(f"I-2={'PASS' if result.i2_pass else 'FAIL'}")
+    print(f"I-3={'PASS' if result.i3_pass else 'FAIL'}")
+    print(f"I-4={'PASS' if result.i4_pass else 'FAIL'}")
+    print(f"I-5={'PASS' if result.i5_pass else 'FAIL'}")
+    print(f"I-6={'PASS' if result.i6_pass else 'FAIL'}")
+    print(f"I-7={'PASS' if result.i7_pass else 'FAIL'}")
+    print(f"I-8={'PASS' if result.i8_pass else 'FAIL'}")
+    print(f"phase_i_gate={'PASS' if result.phase_i_pass else 'FAIL'}")
     return 0
 
 

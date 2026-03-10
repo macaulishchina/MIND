@@ -38,6 +38,7 @@
   - [phase_g_acceptance_report.md](./reports/phase_g_acceptance_report.md)：Phase G 正式验收记录
   - [phase_g_independent_audit.md](./reports/phase_g_independent_audit.md)：Phase G 独立审计报告
   - [phase_h_acceptance_report.md](./reports/phase_h_acceptance_report.md)：Phase H 正式验收记录
+  - [phase_i_acceptance_report.md](./reports/phase_i_acceptance_report.md)：Phase I 正式验收记录
 
 ## 查询入口
 
@@ -59,11 +60,12 @@
 - 想看“Phase H 应该先做什么、不该做什么”：先看 [design/phase_h_startup_checklist.md](./design/phase_h_startup_checklist.md)
 - 想看“Phase H 现在是否已经通过本地 formal gate”：先看 [reports/phase_h_acceptance_report.md](./reports/phase_h_acceptance_report.md)
 - 想看“Phase I 应该怎么把固定档位和 `auto` 做成正式能力”：先看 [design/phase_i_startup_checklist.md](./design/phase_i_startup_checklist.md)
+- 想看“Phase I 现在是否已经通过本地 formal gate”：先看 [reports/phase_i_acceptance_report.md](./reports/phase_i_acceptance_report.md)
 - 想看“Phase J 应该怎么做 mixed-source rewrite 和 `erase_scope`”：先看 [design/phase_j_startup_checklist.md](./design/phase_j_startup_checklist.md)
 - 想看“Phase K 应该怎么把人格层限制在可追溯 projection”：先看 [design/phase_k_startup_checklist.md](./design/phase_k_startup_checklist.md)
 - 想看“还在探索中的想法和背景笔记”：先看 [research/research_notes.md](./research/research_notes.md)
 - 想看“Phase D 启动期是怎么收敛的、D-5 最初如何建立”：先看 [reports/phase_d_smoke_report.md](./reports/phase_d_smoke_report.md)
-- 想看“最新的正式结果”：先看 [reports/phase_g_acceptance_report.md](./reports/phase_g_acceptance_report.md)，再看 [reports/phase_f_acceptance_report.md](./reports/phase_f_acceptance_report.md)、[reports/phase_e_acceptance_report.md](./reports/phase_e_acceptance_report.md)、[reports/phase_d_acceptance_report.md](./reports/phase_d_acceptance_report.md) 和 [reports/phase_c_acceptance_report.md](./reports/phase_c_acceptance_report.md)
+- 想看“最新的正式结果”：先看 [reports/phase_i_acceptance_report.md](./reports/phase_i_acceptance_report.md)，再看 [reports/phase_h_acceptance_report.md](./reports/phase_h_acceptance_report.md)、[reports/phase_g_acceptance_report.md](./reports/phase_g_acceptance_report.md)、[reports/phase_f_acceptance_report.md](./reports/phase_f_acceptance_report.md)、[reports/phase_e_acceptance_report.md](./reports/phase_e_acceptance_report.md)、[reports/phase_d_acceptance_report.md](./reports/phase_d_acceptance_report.md) 和 [reports/phase_c_acceptance_report.md](./reports/phase_c_acceptance_report.md)
 - 想看"最新的独立审计 / 审核"：先看 [reports/phase_g_independent_audit.md](./reports/phase_g_independent_audit.md)，再看 [reports/phase_f_independent_audit.md](./reports/phase_f_independent_audit.md)、[reports/phase_e_independent_audit.md](./reports/phase_e_independent_audit.md)、[reports/phase_d_independent_audit.md](./reports/phase_d_independent_audit.md)、[reports/postgres_store_audit.md](./reports/postgres_store_audit.md)、[reports/phase_c_golden_calls_audit.md](./reports/phase_c_golden_calls_audit.md) 和 [reports/phase_c_independent_audit.md](./reports/phase_c_independent_audit.md)
 - 想看“Phase A / B 的历史验收记录”：再看 [reports/phase_a_acceptance_report.md](./reports/phase_a_acceptance_report.md)、[reports/phase_b_acceptance_report.md](./reports/phase_b_acceptance_report.md) 和 [reports/phase_b_independent_audit.md](./reports/phase_b_independent_audit.md)
 
