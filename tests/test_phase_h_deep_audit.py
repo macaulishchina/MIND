@@ -61,16 +61,16 @@ def _context(
 # DEF-1-validate: pyproject.toml script entry exists
 # ---------------------------------------------------------------------------
 def test_pyproject_contains_phase_h_gate_entry() -> None:
-    """DEF-1 regression: mind-phase-h-gate must be registered."""
+    """DEF-1 regression: the renamed Phase H gate entry must be registered."""
     import tomllib
 
     pyproject = Path(__file__).resolve().parent.parent / "pyproject.toml"
     data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
     scripts = data.get("project", {}).get("scripts", {})
-    assert "mind-phase-h-gate" in scripts, (
-        "pyproject.toml is missing mind-phase-h-gate script entry"
+    assert "mindtest-phase-h-gate" in scripts, (
+        "pyproject.toml is missing mindtest-phase-h-gate script entry"
     )
-    assert scripts["mind-phase-h-gate"] == "mind.cli:governance_gate_main"
+    assert scripts["mindtest-phase-h-gate"] == "mind.cli:governance_gate_main"
 
 
 # ---------------------------------------------------------------------------

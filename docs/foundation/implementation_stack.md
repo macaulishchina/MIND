@@ -244,7 +244,7 @@
 当前状态：
 
 - `pyproject.toml` 已建立，`uv` 负责依赖、虚拟环境和脚本入口。
-- 当前默认开发入口包括 `uv run pytest`、`uv run mind-phase-b-gate`、`uv run mind-phase-c-gate`。
+- 当前默认开发入口包括 `uv run pytest`、`uv run mindtest-phase-b-gate`、`uv run mindtest-phase-c-gate`。
 
 ### 5.2 代码质量工具
 

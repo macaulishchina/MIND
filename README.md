@@ -132,9 +132,17 @@ MIND 当前聚焦于四个核心问题：
 
 当前文档已经把 `Phase H ~ O` 的 formal gate、阶段边界和启动清单补齐，用来约束 provenance foundation、runtime access、统一 CLI、统一模型能力层、开发态 telemetry、前端体验、governance reshape 和 persona projection 的实现顺序。
 
-同时，产品化 addendum 已经补入一份独立蓝图：现有 Phase J 形成的是开发/验收 CLI 基线；若保留，该入口应迁移为 `mindtest`，而 `mind` 这个命名保留给未来产品 CLI。正式产品化方案见 [产品化方案与验收蓝图](./docs/design/productization_program.md)。
+同时，产品化 addendum 已经完成首轮落地：现有 Phase J 形成的开发/验收 CLI 已迁移为 `mindtest`，而 `mind` 已切换为产品 CLI。正式产品化方案与完成态说明见 [产品化方案与验收蓝图](./docs/design/productization_program.md)。
 
-这些内容里，`Phase H / I / J` 已经进入实现基线并通过本地 formal gate；`Phase K ~ O` 仍然是后续阶段的正式设计前置约束。
+这些内容里，`Phase H / I / J` 已经进入实现基线并通过本地 formal gate；产品化 `WP-0 ~ WP-6` 也已经完成，补上了应用服务层、用户状态、REST API、MCP、产品 CLI 和部署资产。`Phase K ~ O` 仍然是后续阶段的正式设计前置约束。
+
+当前产品入口包括：
+
+- `mindtest`：开发/验收 CLI
+- `mind`：产品 CLI（`remember / recall / ask / history / session / status / config`）
+- `mind-api`：FastAPI REST 服务
+- `mind-mcp`：MCP Server v1
+- `compose.yaml` + `Dockerfile.api` + `Dockerfile.worker`：本地联调与部署资产
 
 当前落地包括：
 
@@ -234,44 +242,44 @@ MIND 当前聚焦于四个核心问题：
 
 ```bash
 uv sync --extra dev
-uv run mind -h
-uv run mind primitive -h
-uv run mind primitive write-raw --sqlite-path artifacts/dev/mind.sqlite3 --record-kind user_message --episode-id episode-demo --timestamp-order 1 --content "remember this"
-uv run mind primitive read --sqlite-path artifacts/dev/mind.sqlite3 --object-id raw-episode-demo-...
-uv run mind access -h
-uv run mind access run --sqlite-path artifacts/dev/mind.sqlite3 --seed-bench-fixtures --mode flash --task-id task-001 --episode-id episode-001 --query "For episode-001, reply with only success or failure."
-uv run mind access benchmark
-uv run mind governance -h
-uv run mind governance plan-conceal --sqlite-path artifacts/dev/mind.sqlite3 --episode-id episode-demo --reason "conceal demo episode"
-uv run mind demo -h
-uv run mind demo ingest-read
-uv run mind demo access-run
-uv run mind gate -h
-uv run mind gate phase-i --output artifacts/phase_i/gate_report.json
-uv run mind gate phase-j --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:55432/postgres --output artifacts/phase_j/gate_report.json
-uv run mind report -h
-uv run mind report acceptance --phase h
-uv run mind offline -h
-uv run mind offline worker --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:5432/postgres --max-jobs 5
-uv run mind config show
-uv run mind config doctor --backend postgresql
+uv run mindtest -h
+uv run mindtest primitive -h
+uv run mindtest primitive write-raw --sqlite-path artifacts/dev/mind.sqlite3 --record-kind user_message --episode-id episode-demo --timestamp-order 1 --content "remember this"
+uv run mindtest primitive read --sqlite-path artifacts/dev/mind.sqlite3 --object-id raw-episode-demo-...
+uv run mindtest access -h
+uv run mindtest access run --sqlite-path artifacts/dev/mind.sqlite3 --seed-bench-fixtures --mode flash --task-id task-001 --episode-id episode-001 --query "For episode-001, reply with only success or failure."
+uv run mindtest access benchmark
+uv run mindtest governance -h
+uv run mindtest governance plan-conceal --sqlite-path artifacts/dev/mind.sqlite3 --episode-id episode-demo --reason "conceal demo episode"
+uv run mindtest demo -h
+uv run mindtest demo ingest-read
+uv run mindtest demo access-run
+uv run mindtest gate -h
+uv run mindtest gate phase-i --output artifacts/phase_i/gate_report.json
+uv run mindtest gate phase-j --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:55432/postgres --output artifacts/phase_j/gate_report.json
+uv run mindtest report -h
+uv run mindtest report acceptance --phase h
+uv run mindtest offline -h
+uv run mindtest offline worker --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:5432/postgres --max-jobs 5
+uv run mindtest config show
+uv run mindtest config doctor --backend postgresql
 uv run pytest -q
-uv run mind-phase-b-gate
-uv run mind-phase-c-gate
-uv run mind-phase-d-smoke
-uv run mind-phase-e-startup
-uv run mind-phase-e-gate
-uv run mind-phase-f-manifest
-uv run mind-phase-f-baselines
-uv run mind-phase-f-report --repeat-count 3 --output artifacts/phase_f/baseline_report.json
-uv run mind-phase-f-comparison --repeat-count 3 --output artifacts/phase_f/comparison_report.json
-uv run mind-phase-f-gate --repeat-count 3 --output artifacts/phase_f/gate_report.json
-uv run mind-phase-g-cost-report --repeat-count 3 --output artifacts/phase_g/cost_report.json
-uv run mind-phase-g-strategy-dev --run-id 1
-uv run mind-phase-g-gate --repeat-count 3 --output artifacts/phase_g/gate_report.json
-uv run mind-phase-j-gate --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:55432/postgres --output artifacts/phase_j/gate_report.json
-uv run mind-postgres-regression --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:5432/postgres
-uv run mind-offline-worker-once --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:5432/postgres --max-jobs 5
+uv run mindtest-phase-b-gate
+uv run mindtest-phase-c-gate
+uv run mindtest-phase-d-smoke
+uv run mindtest-phase-e-startup
+uv run mindtest-phase-e-gate
+uv run mindtest-phase-f-manifest
+uv run mindtest-phase-f-baselines
+uv run mindtest-phase-f-report --repeat-count 3 --output artifacts/phase_f/baseline_report.json
+uv run mindtest-phase-f-comparison --repeat-count 3 --output artifacts/phase_f/comparison_report.json
+uv run mindtest-phase-f-gate --repeat-count 3 --output artifacts/phase_f/gate_report.json
+uv run mindtest-phase-g-cost-report --repeat-count 3 --output artifacts/phase_g/cost_report.json
+uv run mindtest-phase-g-strategy-dev --run-id 1
+uv run mindtest-phase-g-gate --repeat-count 3 --output artifacts/phase_g/gate_report.json
+uv run mindtest-phase-j-gate --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:55432/postgres --output artifacts/phase_j/gate_report.json
+uv run mindtest-postgres-regression --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:5432/postgres
+uv run mindtest-offline-worker-once --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:5432/postgres --max-jobs 5
 uv run ruff check mind tests scripts
 uv run mypy
 ```

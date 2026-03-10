@@ -15,6 +15,17 @@
 
 ---
 
+## 实施状态（2026-03-10）
+
+截至 `2026-03-10`，本轮产品化范围已经完成到 `WP-6`：
+
+- `WP-0 ~ WP-6`：已实现并进入仓库基线
+- `WP-7 / WP-8`：保留为后续阶段，不属于本轮交付范围
+- `mindtest` / `mind` 已分离；`mind/app` 已成为产品边界；`REST API`、`MCP`、产品 CLI 与部署资产均已落地
+- 最终验收口径为：新增 `WP-0 ~ WP-6` 测试与历史 `Phase B ~ J` 回归一并通过
+
+---
+
 ## 1. 产品化目标
 
 产品化后的 MIND 至少要满足：
@@ -35,13 +46,15 @@
 2. `PrimitiveService`、`AccessService`、`GovernanceService`、`OfflineMaintenanceService` 已经形成库优先的领域能力面
 3. `PostgreSQL` 存储、Alembic migration、Phase H / I / J formal gate 已经落地
 
-当前最主要的产品化缺口是：
+产品化起点的主要缺口曾经是：
 
 1. 缺少统一应用服务层，外部调用方仍需要直接拼装内部 service object
 2. 缺少正式的用户状态 / 会话状态 / 执行策略模型
 3. 缺少真正的 `REST API`、`MCP server` 和部署资产
 4. 缺少产品 CLI；现有 `mind` CLI 实际上是开发/验收总控台
 5. 缺少 provider capability layer、产品级 secret/config、运维拓扑与健康检查
+
+截至 `2026-03-10`，其中 `WP-0 ~ WP-6` 范围内的缺口已经完成收口；provider / telemetry 相关能力继续留在后续阶段。
 
 ---
 
@@ -429,7 +442,7 @@ Provider（按需配置）：
 
 ## 8. 可执行工作包
 
-这套产品化方案按 `WP-0 ~ WP-8` 推进。
+本轮实现按 `WP-0 ~ WP-6` 推进；`WP-7 / WP-8` 保留为后续阶段。
 
 ### 依赖顺序
 
@@ -450,9 +463,11 @@ WP-8 (Telemetry 与前端就绪) ← 依赖 WP-1
 - `WP-0` 必须最先完成，解除命名空间冲突
 - `WP-1` 是所有产品化 transport 和 CLI 的前置依赖
 - `WP-2` 在 `WP-3` 之前完成，确保 REST 入口启动时已有完整上下文
-- `WP-7 / WP-8` 可以与 transport 工作并行，但必须在总体验收前完成
+- `WP-7 / WP-8` 不属于本轮交付范围，继续作为后续产品化阶段
 
 ### `WP-0` CLI 命名空间分离
+
+状态：已实现（`2026-03-10`）
 
 目标：
 
@@ -473,6 +488,8 @@ MUST-PASS：
 
 ### `WP-1` 应用服务层
 
+状态：已实现（`2026-03-10`）
+
 目标：
 
 - 建立统一应用服务与 envelope
@@ -489,6 +506,8 @@ MUST-PASS：
 3. `request_id / idempotency_key / trace_ref` 字段覆盖率 `= 100%`
 
 ### `WP-2` 用户状态与执行策略
+
+状态：已实现（`2026-03-10`）
 
 目标：
 
@@ -507,6 +526,8 @@ MUST-PASS：
 3. provenance 与产品上下文字段混用绕过率 `= 0`
 
 ### `WP-3` REST API v1
+
+状态：已实现（`2026-03-10`）
 
 目标：
 
@@ -527,6 +548,8 @@ MUST-PASS：
 
 ### `WP-4` MCP Server v1
 
+状态：已实现（`2026-03-10`）
+
 目标：
 
 - 暴露正式 MCP 接入
@@ -544,6 +567,8 @@ MUST-PASS：
 3. MCP session 到 `SessionContext` 的映射成功率 `= 100%`
 
 ### `WP-5` 部署与 compose
+
+状态：已实现（`2026-03-10`）
 
 目标：
 
@@ -563,6 +588,8 @@ MUST-PASS：
 3. `DeploymentSmokeSuite v1` 场景通过率 `>= 0.95`
 
 ### `WP-6` 产品 CLI `mind`
+
+状态：已实现（`2026-03-10`）
 
 目标：
 
@@ -586,6 +613,8 @@ MUST-PASS：
 
 ### `WP-7` Capability / Provider Layer
 
+状态：后续阶段
+
 目标：
 
 - 把后续 Phase K 的能力层产品化接入
@@ -603,6 +632,8 @@ MUST-PASS：
 3. provider 不可用时 `fallback_success + structured_failure = 100%`
 
 ### `WP-8` Dev Telemetry 与前端就绪
+
+状态：后续阶段
 
 目标：
 
@@ -640,17 +671,16 @@ MUST-PASS：
 
 ---
 
-## 10. 产品就绪总验收标准
+## 10. `WP-0 ~ WP-6` 总验收标准
 
-当以下条件同时满足时，MIND 才可以宣称具备最小产品就绪形态：
+当以下条件同时满足时，本轮产品化交付才算完成：
 
 1. `mindtest` 与 `mind` 已完成命名空间分离
 2. 应用服务层已经成为所有产品入口的唯一业务边界
 3. `REST API`、`MCP` 和产品 CLI 都已通过统一场景回归
 4. `compose` 联调、迁移、API、worker、Postgres 全部通过部署 smoke
 5. 用户状态、会话状态、执行策略与 provenance 边界已正式冻结
-6. provider layer 可配置、可回退、可追踪
-7. 开发态 telemetry 已足以支撑前端 debug 与内部可视化
+6. `pytest tests/` 全量回归通过
 
 ---
 
@@ -662,6 +692,12 @@ MUST-PASS：
 - 但产品化 addendum 明确要求：
   - 这套 CLI 若保留，必须迁移为 `mindtest`
   - 产品级 `mind` 必须重新按本文件实现
+
+当前仓库状态：
+
+- `mindtest` 已保留为开发/验收 CLI
+- `mind` 已切换为产品 CLI
+- `mind/app`、`mind/api`、`mind/mcp`、部署资产与产品测试工件已经到位
 
 与后续阶段的关系：
 

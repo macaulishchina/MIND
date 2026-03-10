@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from . import __version__
 from .access import (
     AccessMode,
     AccessService,
@@ -123,10 +124,10 @@ _MIND_COMMAND_GROUPS: tuple[_MindCommandGroup, ...] = (
             "reflect, link, and lightweight reorganization."
         ),
         examples=(
-            "mind primitive write-raw --help",
-            "mind primitive read --help",
-            "mind primitive retrieve --help",
-            "mind primitive summarize --help",
+            "mindtest primitive write-raw --help",
+            "mindtest primitive read --help",
+            "mindtest primitive retrieve --help",
+            "mindtest primitive summarize --help",
         ),
     ),
     _MindCommandGroup(
@@ -137,9 +138,9 @@ _MIND_COMMAND_GROUPS: tuple[_MindCommandGroup, ...] = (
             "access and related benchmark flows."
         ),
         examples=(
-            "mind access run --mode flash --help",
-            "mind access run --mode auto --help",
-            "mind access benchmark --help",
+            "mindtest access run --mode flash --help",
+            "mindtest access run --mode auto --help",
+            "mindtest access benchmark --help",
         ),
     ),
     _MindCommandGroup(
@@ -150,9 +151,9 @@ _MIND_COMMAND_GROUPS: tuple[_MindCommandGroup, ...] = (
             "reflection, and future maintenance jobs."
         ),
         examples=(
-            "mind offline worker --help",
-            "mind offline replay --help",
-            "mind offline reflect-episode --help",
+            "mindtest offline worker --help",
+            "mindtest offline replay --help",
+            "mindtest offline reflect-episode --help",
         ),
     ),
     _MindCommandGroup(
@@ -163,9 +164,9 @@ _MIND_COMMAND_GROUPS: tuple[_MindCommandGroup, ...] = (
             "execute flows and future reshape operations."
         ),
         examples=(
-            "mind governance plan-conceal --help",
-            "mind governance preview --help",
-            "mind governance execute-conceal --help",
+            "mindtest governance plan-conceal --help",
+            "mindtest governance preview --help",
+            "mindtest governance execute-conceal --help",
         ),
     ),
     _MindCommandGroup(
@@ -176,9 +177,9 @@ _MIND_COMMAND_GROUPS: tuple[_MindCommandGroup, ...] = (
             "and future unified gate execution."
         ),
         examples=(
-            "mind gate phase-b --help",
-            "mind gate phase-i --help",
-            "mind gate postgres-regression --help",
+            "mindtest gate phase-b --help",
+            "mindtest gate phase-i --help",
+            "mindtest gate postgres-regression --help",
         ),
     ),
     _MindCommandGroup(
@@ -189,9 +190,9 @@ _MIND_COMMAND_GROUPS: tuple[_MindCommandGroup, ...] = (
             "future report collection helpers."
         ),
         examples=(
-            "mind report phase-f-ci --help",
-            "mind report phase-g-cost --help",
-            "mind report acceptance --phase h",
+            "mindtest report phase-f-ci --help",
+            "mindtest report phase-g-cost --help",
+            "mindtest report acceptance --phase h",
         ),
     ),
     _MindCommandGroup(
@@ -202,9 +203,9 @@ _MIND_COMMAND_GROUPS: tuple[_MindCommandGroup, ...] = (
             "retrieve, access, offline, and gate walkthroughs."
         ),
         examples=(
-            "mind demo ingest-read --help",
-            "mind demo access-run --help",
-            "mind demo offline-job --help",
+            "mindtest demo ingest-read --help",
+            "mindtest demo access-run --help",
+            "mindtest demo offline-job --help",
         ),
     ),
     _MindCommandGroup(
@@ -215,9 +216,9 @@ _MIND_COMMAND_GROUPS: tuple[_MindCommandGroup, ...] = (
             "environment checks, and future provider settings."
         ),
         examples=(
-            "mind config show --help",
-            "mind config profile --help",
-            "mind config doctor --help",
+            "mindtest config show --help",
+            "mindtest config profile --help",
+            "mindtest config doctor --help",
         ),
     ),
 )
@@ -2137,22 +2138,22 @@ def build_mind_parser() -> argparse.ArgumentParser:
     """Build the unified top-level `mind` parser."""
 
     parser = argparse.ArgumentParser(
-        prog="mind",
+        prog="mindtest",
         description=(
             "Unified CLI for exploring MIND primitives, runtime access, offline "
             "maintenance, governance, gates, reports, demos, and configuration."
         ),
         epilog=_format_examples(
             (
-                "mind primitive -h",
-                "mind access -h",
-                "mind gate -h",
-                "mind demo -h",
+                "mindtest primitive -h",
+                "mindtest access -h",
+                "mindtest gate -h",
+                "mindtest demo -h",
             )
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--version", action="version", version="mind 0.1.0")
+    parser.add_argument("--version", action="version", version=f"mindtest {__version__}")
     subparsers = parser.add_subparsers(dest="command", metavar="command")
 
     for group in _MIND_COMMAND_GROUPS:
@@ -2261,7 +2262,7 @@ def postgres_regression_main(argv: Sequence[str] | None = None) -> int:
     """Run Phase B/C/D/E checks against a migrated PostgreSQL database."""
 
     parser = argparse.ArgumentParser(
-        prog="mind-postgres-regression",
+        prog="mindtest-postgres-regression",
         description="Run Phase B and Phase C regressions on PostgreSQL.",
     )
     parser.add_argument(
@@ -2415,7 +2416,7 @@ def offline_worker_main(argv: Sequence[str] | None = None) -> int:
     """Run one Phase E offline worker batch against PostgreSQL."""
 
     parser = argparse.ArgumentParser(
-        prog="mind-offline-worker-once",
+        prog="mindtest-offline-worker-once",
         description="Run a single offline maintenance worker batch.",
     )
     parser.add_argument(
@@ -2542,7 +2543,7 @@ def governance_gate_main(argv: Sequence[str] | None = None) -> int:
     """Run the local Phase H provenance foundation gate."""
 
     parser = argparse.ArgumentParser(
-        prog="mind-phase-h-gate",
+        prog="mindtest-phase-h-gate",
         description="Run the full local Phase H provenance foundation gate.",
     )
     parser.add_argument(
@@ -2605,7 +2606,7 @@ def access_gate_main(argv: Sequence[str] | None = None) -> int:
     """Run the local Phase I runtime access gate."""
 
     parser = argparse.ArgumentParser(
-        prog="mind-phase-i-gate",
+        prog="mindtest-phase-i-gate",
         description="Run the full local Phase I runtime access gate.",
     )
     parser.add_argument(
@@ -2684,7 +2685,7 @@ def cli_gate_main(argv: Sequence[str] | None = None) -> int:
     )
 
     parser = argparse.ArgumentParser(
-        prog="mind-phase-j-gate",
+        prog="mindtest-phase-j-gate",
         description="Run the full local Phase J unified CLI gate.",
     )
     parser.add_argument(
@@ -2794,7 +2795,7 @@ def benchmark_report_main(argv: Sequence[str] | None = None) -> int:
     """Run repeated Phase F baselines and persist the CI report."""
 
     parser = argparse.ArgumentParser(
-        prog="mind-phase-f-report",
+        prog="mindtest-phase-f-report",
         description="Run repeated Phase F baselines and persist a 95% CI report.",
     )
     parser.add_argument(
@@ -2861,7 +2862,7 @@ def benchmark_comparison_main(argv: Sequence[str] | None = None) -> int:
     """Run the current MIND system against the Phase F baselines."""
 
     parser = argparse.ArgumentParser(
-        prog="mind-phase-f-comparison",
+        prog="mindtest-phase-f-comparison",
         description="Run Phase F benchmark comparison for F-4 ~ F-6.",
     )
     parser.add_argument(
@@ -2924,7 +2925,7 @@ def benchmark_gate_main(argv: Sequence[str] | None = None) -> int:
     """Run the full local Phase F gate, including F-7 ablations."""
 
     parser = argparse.ArgumentParser(
-        prog="mind-phase-f-gate",
+        prog="mindtest-phase-f-gate",
         description="Run the full local Phase F gate.",
     )
     parser.add_argument(
@@ -2987,7 +2988,7 @@ def strategy_cost_report_main(argv: Sequence[str] | None = None) -> int:
     """Run the Phase G fixed-rule strategy cost report skeleton."""
 
     parser = argparse.ArgumentParser(
-        prog="mind-phase-g-cost-report",
+        prog="mindtest-phase-g-cost-report",
         description="Run the Phase G fixed-rule strategy cost report skeleton.",
     )
     parser.add_argument(
@@ -3025,7 +3026,7 @@ def strategy_dev_main(argv: Sequence[str] | None = None) -> int:
     """Run a local fixed-rule vs optimized-v1 dev comparison."""
 
     parser = argparse.ArgumentParser(
-        prog="mind-phase-g-strategy-dev",
+        prog="mindtest-phase-g-strategy-dev",
         description="Run a Phase G dev comparison between fixed-rule and optimized_v1.",
     )
     parser.add_argument(
@@ -3081,7 +3082,7 @@ def strategy_gate_main(argv: Sequence[str] | None = None) -> int:
     """Run the formal Phase G local gate."""
 
     parser = argparse.ArgumentParser(
-        prog="mind-phase-g-gate",
+        prog="mindtest-phase-g-gate",
         description="Run the full local Phase G strategy optimization gate.",
     )
     parser.add_argument(

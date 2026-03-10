@@ -202,3 +202,50 @@ sa.Index(
     offline_jobs_table.c.priority,
 )
 sa.Index("idx_offline_jobs_kind", offline_jobs_table.c.job_kind)
+
+principals_table = sa.Table(
+    "principals",
+    postgres_metadata,
+    sa.Column("principal_id", sa.Text(), primary_key=True),
+    sa.Column("principal_kind", sa.Text(), nullable=False),
+    sa.Column("tenant_id", sa.Text(), nullable=False),
+    sa.Column("user_id", sa.Text(), nullable=True),
+    sa.Column("roles_json", JSONB(astext_type=sa.Text()), nullable=False),
+    sa.Column("capabilities_json", JSONB(astext_type=sa.Text()), nullable=False),
+    sa.Column("preferences_json", JSONB(astext_type=sa.Text()), nullable=False),
+    sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+)
+
+sa.Index("idx_principals_tenant_id", principals_table.c.tenant_id)
+
+sessions_table = sa.Table(
+    "sessions",
+    postgres_metadata,
+    sa.Column("session_id", sa.Text(), primary_key=True),
+    sa.Column("principal_id", sa.Text(), nullable=False),
+    sa.Column("conversation_id", sa.Text(), nullable=True),
+    sa.Column("channel", sa.Text(), nullable=False),
+    sa.Column("client_id", sa.Text(), nullable=True),
+    sa.Column("device_id", sa.Text(), nullable=True),
+    sa.Column("started_at", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("last_active_at", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("metadata_json", JSONB(astext_type=sa.Text()), nullable=False),
+    sa.ForeignKeyConstraint(["principal_id"], ["principals.principal_id"], ondelete="CASCADE"),
+)
+
+sa.Index("idx_sessions_principal_id", sessions_table.c.principal_id)
+sa.Index("idx_sessions_last_active_at", sessions_table.c.last_active_at)
+
+namespaces_table = sa.Table(
+    "namespaces",
+    postgres_metadata,
+    sa.Column("namespace_id", sa.Text(), primary_key=True),
+    sa.Column("tenant_id", sa.Text(), nullable=False),
+    sa.Column("project_id", sa.Text(), nullable=True),
+    sa.Column("workspace_id", sa.Text(), nullable=True),
+    sa.Column("visibility_policy", sa.Text(), nullable=False),
+    sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+)
+
+sa.Index("idx_namespaces_tenant_id", namespaces_table.c.tenant_id)

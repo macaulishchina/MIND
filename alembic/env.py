@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config, pool
@@ -10,6 +11,9 @@ from alembic import context
 from mind.kernel.sql_tables import postgres_metadata
 
 config = context.config
+env_dsn = os.environ.get("MIND_POSTGRES_DSN")
+if env_dsn:
+    config.set_main_option("sqlalchemy.url", env_dsn)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

@@ -1,0 +1,128 @@
+"""Application service registry — single composition root."""
+
+from __future__ import annotations
+
+from contextlib import contextmanager
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+from mind.access.service import AccessService
+from mind.app.services.access import MemoryAccessService
+from mind.app.services.governance import GovernanceAppService
+from mind.app.services.ingest import MemoryIngestService
+from mind.app.services.jobs import OfflineJobAppService
+from mind.app.services.query import MemoryQueryService
+from mind.app.services.system import SystemStatusService
+from mind.app.services.user_state import UserStateService
+from mind.cli_config import CliBackend, ResolvedCliConfig, resolve_cli_config
+from mind.governance.service import GovernanceService
+from mind.kernel.store import MemoryStore, SQLiteMemoryStore
+from mind.offline.service import OfflineMaintenanceService
+from mind.primitives.service import PrimitiveService
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+
+@dataclass
+class AppServiceRegistry:
+    """Holds all application-layer services and shared infrastructure."""
+
+    store: MemoryStore = field(repr=False)
+    config: ResolvedCliConfig = field(repr=False)
+    primitive_service: PrimitiveService = field(repr=False)
+    access_service: AccessService = field(repr=False)
+    governance_service: GovernanceService = field(repr=False)
+    offline_service: OfflineMaintenanceService = field(repr=False)
+    memory_ingest_service: MemoryIngestService = field(repr=False)
+    memory_query_service: MemoryQueryService = field(repr=False)
+    memory_access_service: MemoryAccessService = field(repr=False)
+    governance_app_service: GovernanceAppService = field(repr=False)
+    offline_job_app_service: OfflineJobAppService = field(repr=False)
+    user_state_service: UserStateService = field(repr=False)
+    system_status_service: SystemStatusService = field(repr=False)
+
+    @property
+    def ingest_service(self) -> MemoryIngestService:
+        return self.memory_ingest_service
+
+    @property
+    def query_service(self) -> MemoryQueryService:
+        return self.memory_query_service
+
+    @property
+    def access_app_service(self) -> MemoryAccessService:
+        return self.memory_access_service
+
+    @property
+    def job_service(self) -> OfflineJobAppService:
+        return self.offline_job_app_service
+
+
+@contextmanager
+def build_app_registry(
+    config: ResolvedCliConfig | None = None,
+) -> Iterator[AppServiceRegistry]:
+    """Build a fully-wired ``AppServiceRegistry`` from config.
+
+    Yields the registry as a context manager so resources (DB connections,
+    etc.) can be cleaned up on exit.
+    """
+
+    if config is None:
+        config = resolve_cli_config()
+
+    # Build the store based on backend
+    store: MemoryStore
+    if config.backend is CliBackend.SQLITE:
+        sqlite_path = config.sqlite_path or Path("artifacts/dev/mind.sqlite3")
+        sqlite_path.parent.mkdir(parents=True, exist_ok=True)
+        store = SQLiteMemoryStore(str(sqlite_path))
+    else:
+        # PostgreSQL backend
+        from mind.kernel.postgres_store import PostgresMemoryStore
+
+        dsn = config.postgres_dsn
+        if dsn is None:
+            raise RuntimeError(
+                "PostgreSQL DSN is required but not configured. "
+                "Set MIND_POSTGRES_DSN or use --postgres-dsn."
+            )
+        store = PostgresMemoryStore(dsn)
+
+    # Build domain services
+    primitive_service = PrimitiveService(store)
+    access_service = AccessService(store)
+    governance_service = GovernanceService(store)
+    offline_service = OfflineMaintenanceService(store)
+    memory_ingest_service = MemoryIngestService(primitive_service)
+    memory_query_service = MemoryQueryService(primitive_service, store)
+    memory_access_service = MemoryAccessService(access_service)
+    governance_app_service = GovernanceAppService(governance_service)
+    offline_job_app_service = OfflineJobAppService(store, offline_service)
+    user_state_service = UserStateService(store)
+    system_status_service = SystemStatusService(store, config=config)
+
+    registry = AppServiceRegistry(
+        store=store,
+        config=config,
+        primitive_service=primitive_service,
+        access_service=access_service,
+        governance_service=governance_service,
+        offline_service=offline_service,
+        memory_ingest_service=memory_ingest_service,
+        memory_query_service=memory_query_service,
+        memory_access_service=memory_access_service,
+        governance_app_service=governance_app_service,
+        offline_job_app_service=offline_job_app_service,
+        user_state_service=user_state_service,
+        system_status_service=system_status_service,
+    )
+
+    try:
+        yield registry
+    finally:
+        # Cleanup if store has a close method
+        if hasattr(store, "close"):
+            store.close()

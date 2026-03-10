@@ -24,12 +24,14 @@ from mind.offline import (
 from mind.primitives import PrimitiveExecutionResult, PrimitiveName, PrimitiveOutcome
 
 
-def test_pyproject_contains_unified_mind_entry() -> None:
+def test_pyproject_contains_split_product_and_dev_entries() -> None:
     pyproject = Path(__file__).resolve().parent.parent / "pyproject.toml"
     data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
     scripts = data.get("project", {}).get("scripts", {})
-    assert "mind" in scripts, "pyproject.toml is missing the unified mind entry point"
-    assert scripts["mind"] == "mind.cli:mind_main"
+    assert "mind" in scripts, "pyproject.toml is missing the product mind entry point"
+    assert "mindtest" in scripts, "pyproject.toml is missing the dev mindtest entry point"
+    assert scripts["mind"] == "mind.product_cli:product_main"
+    assert scripts["mindtest"] == "mind.cli:mind_main"
 
 
 def test_top_level_help_covers_all_phase_j_command_groups(
@@ -45,7 +47,7 @@ def test_top_level_help_covers_all_phase_j_command_groups(
     for command_name in _command_group_lookup():
         assert command_name in output
     assert "Unified CLI" in output
-    assert "mind primitive -h" in output
+    assert "mindtest primitive -h" in output
 
 
 @pytest.mark.parametrize(

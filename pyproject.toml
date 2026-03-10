@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mind"
-version = "0.1.0"
-description = "Phase B/C baseline for the MIND memory system."
+version = "0.2.0"
+description = "Productized MIND memory system with dev, API, MCP, and CLI surfaces."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -16,32 +16,43 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+api = [
+    "fastapi>=0.115,<1",
+    "uvicorn[standard]>=0.34,<1",
+]
 dev = [
     "mypy>=1.18,<2",
     "pytest>=9,<10",
     "ruff>=0.11,<0.12",
 ]
+mcp = [
+    "mcp>=1.0,<2",
+]
 
 [project.scripts]
-mind = "mind.cli:mind_main"
-mind-phase-b-gate = "mind.cli:kernel_gate_main"
-mind-phase-c-gate = "mind.cli:primitive_gate_main"
-mind-phase-d-smoke = "mind.cli:workspace_smoke_main"
-mind-phase-e-startup = "mind.cli:offline_startup_main"
-mind-phase-e-gate = "mind.cli:offline_gate_main"
-mind-phase-f-manifest = "mind.cli:benchmark_manifest_main"
-mind-phase-f-baselines = "mind.cli:benchmark_baselines_main"
-mind-phase-f-report = "mind.cli:benchmark_report_main"
-mind-phase-f-comparison = "mind.cli:benchmark_comparison_main"
-mind-phase-f-gate = "mind.cli:benchmark_gate_main"
-mind-phase-g-cost-report = "mind.cli:strategy_cost_report_main"
-mind-phase-g-strategy-dev = "mind.cli:strategy_dev_main"
-mind-phase-g-gate = "mind.cli:strategy_gate_main"
-mind-phase-h-gate = "mind.cli:governance_gate_main"
-mind-phase-i-gate = "mind.cli:access_gate_main"
-mind-phase-j-gate = "mind.cli:cli_gate_main"
-mind-postgres-regression = "mind.cli:postgres_regression_main"
-mind-offline-worker-once = "mind.cli:offline_worker_main"
+mind = "mind.product_cli:product_main"
+# Primary dev CLI (renamed from 'mind')
+mindtest = "mind.cli:mind_main"
+mindtest-phase-b-gate = "mind.cli:kernel_gate_main"
+mindtest-phase-c-gate = "mind.cli:primitive_gate_main"
+mindtest-phase-d-smoke = "mind.cli:workspace_smoke_main"
+mindtest-phase-e-startup = "mind.cli:offline_startup_main"
+mindtest-phase-e-gate = "mind.cli:offline_gate_main"
+mindtest-phase-f-manifest = "mind.cli:benchmark_manifest_main"
+mindtest-phase-f-baselines = "mind.cli:benchmark_baselines_main"
+mindtest-phase-f-report = "mind.cli:benchmark_report_main"
+mindtest-phase-f-comparison = "mind.cli:benchmark_comparison_main"
+mindtest-phase-f-gate = "mind.cli:benchmark_gate_main"
+mindtest-phase-g-cost-report = "mind.cli:strategy_cost_report_main"
+mindtest-phase-g-strategy-dev = "mind.cli:strategy_dev_main"
+mindtest-phase-g-gate = "mind.cli:strategy_gate_main"
+mindtest-phase-h-gate = "mind.cli:governance_gate_main"
+mindtest-phase-i-gate = "mind.cli:access_gate_main"
+mindtest-phase-j-gate = "mind.cli:cli_gate_main"
+mindtest-postgres-regression = "mind.cli:postgres_regression_main"
+mindtest-offline-worker-once = "mind.cli:offline_worker_main"
+mind-api = "mind.api.app:run_server"
+mind-mcp = "mind.mcp.server:run_mcp"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
