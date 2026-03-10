@@ -1,0 +1,325 @@
+{
+  "family_improvements": [
+    {
+      "family": "cross_episode_pair",
+      "fixed_rule_pus": 0.3528,
+      "optimized_pus": 0.4342,
+      "pus_delta": {
+        "ci_lower": 0.0814,
+        "ci_upper": 0.0814,
+        "mean_diff": 0.0814,
+        "raw_diffs": [
+          0.0814,
+          0.0814,
+          0.0814
+        ],
+        "sample_count": 3
+      }
+    },
+    {
+      "family": "episode_chain",
+      "fixed_rule_pus": 0.4767,
+      "optimized_pus": 0.5608,
+      "pus_delta": {
+        "ci_lower": 0.0841,
+        "ci_upper": 0.0841,
+        "mean_diff": 0.0841,
+        "raw_diffs": [
+          0.0841,
+          0.0841,
+          0.0841
+        ],
+        "sample_count": 3
+      }
+    }
+  ],
+  "fixed_rule_cost_report": {
+    "budget_profile": {
+      "maintenance_budget_ratio": 1.1,
+      "profile_id": "phase_g_fixed_rule_budget_v1",
+      "storage_budget_ratio": 1.2,
+      "token_budget_ratio": 0.1,
+      "total_budget_ratio": 2.4
+    },
+    "maintenance_budget_bias": {
+      "ci_lower": 0.0,
+      "ci_upper": 0.0,
+      "mean": 0.0,
+      "raw_values": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "repeat_count": 3,
+    "storage_budget_bias": {
+      "ci_lower": 0.0,
+      "ci_upper": 0.0,
+      "mean": 0.0,
+      "raw_values": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "strategy_id": "fixed_rule_v1",
+    "system_id": "mind_fixed_rule",
+    "token_budget_bias": {
+      "ci_lower": 0.0,
+      "ci_upper": 0.0,
+      "mean": 0.0,
+      "raw_values": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "total_budget_bias": {
+      "ci_lower": 0.0,
+      "ci_upper": 0.0,
+      "mean": 0.0,
+      "raw_values": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "g1_pass": true,
+  "g2_pass": true,
+  "g3_pass": true,
+  "g4_pass": true,
+  "g5_pass": true,
+  "generated_at": "2026-03-10T02:56:25.311399+00:00",
+  "manifest_hash": "24f203c01bae3cad01fe741a8244b1c1224413579433d22131935ad723740a49",
+  "optimized_cost_report": {
+    "budget_profile": {
+      "maintenance_budget_ratio": 1.1,
+      "profile_id": "phase_g_fixed_rule_budget_v1",
+      "storage_budget_ratio": 1.2,
+      "token_budget_ratio": 0.1,
+      "total_budget_ratio": 2.4
+    },
+    "maintenance_budget_bias": {
+      "ci_lower": 0.0,
+      "ci_upper": 0.0,
+      "mean": 0.0,
+      "raw_values": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "repeat_count": 3,
+    "storage_budget_bias": {
+      "ci_lower": 0.0,
+      "ci_upper": 0.0,
+      "mean": 0.0,
+      "raw_values": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "strategy_id": "optimized_v1",
+    "system_id": "mind_optimized_v1",
+    "token_budget_bias": {
+      "ci_lower": 0.0,
+      "ci_upper": 0.0,
+      "mean": 0.0,
+      "raw_values": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "total_budget_bias": {
+      "ci_lower": 0.0,
+      "ci_upper": 0.0,
+      "mean": 0.0,
+      "raw_values": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "phase_g_pass": true,
+  "pollution_rate_delta": {
+    "ci_lower": 0.0,
+    "ci_upper": 0.0,
+    "mean_diff": 0.0,
+    "raw_diffs": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "sample_count": 3
+  },
+  "pus_improvement": {
+    "ci_lower": 0.0824,
+    "ci_upper": 0.0824,
+    "mean_diff": 0.0824,
+    "raw_diffs": [
+      0.0824,
+      0.0824,
+      0.0824
+    ],
+    "sample_count": 3
+  },
+  "repeat_count": 3,
+  "schema_version": "phase_g_gate_report_v1",
+  "suite_report": {
+    "fixture_hash": "24f203c01bae3cad01fe741a8244b1c1224413579433d22131935ad723740a49",
+    "fixture_name": "LongHorizonEval v1",
+    "repeat_count": 3,
+    "system_reports": [
+      {
+        "context_cost_ratio": {
+          "ci_lower": 0.1,
+          "ci_upper": 0.1,
+          "mean": 0.1,
+          "raw_values": [
+            0.1,
+            0.1,
+            0.1
+          ]
+        },
+        "gold_fact_coverage": {
+          "ci_lower": 0.7833,
+          "ci_upper": 0.7833,
+          "mean": 0.7833,
+          "raw_values": [
+            0.7833,
+            0.7833,
+            0.7833
+          ]
+        },
+        "maintenance_cost_ratio": {
+          "ci_lower": 1.1,
+          "ci_upper": 1.1,
+          "mean": 1.1,
+          "raw_values": [
+            1.1,
+            1.1,
+            1.1
+          ]
+        },
+        "pollution_rate": {
+          "ci_lower": 0.0,
+          "ci_upper": 0.0,
+          "mean": 0.0,
+          "raw_values": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "pus": {
+          "ci_lower": 0.4024,
+          "ci_upper": 0.4024,
+          "mean": 0.4024,
+          "raw_values": [
+            0.4024,
+            0.4024,
+            0.4024
+          ]
+        },
+        "reuse_rate": {
+          "ci_lower": 0.382,
+          "ci_upper": 0.382,
+          "mean": 0.382,
+          "raw_values": [
+            0.382,
+            0.382,
+            0.382
+          ]
+        },
+        "system_id": "mind_fixed_rule",
+        "task_success_rate": {
+          "ci_lower": 0.5667,
+          "ci_upper": 0.5667,
+          "mean": 0.5667,
+          "raw_values": [
+            0.5667,
+            0.5667,
+            0.5667
+          ]
+        }
+      },
+      {
+        "context_cost_ratio": {
+          "ci_lower": 0.1,
+          "ci_upper": 0.1,
+          "mean": 0.1,
+          "raw_values": [
+            0.1,
+            0.1,
+            0.1
+          ]
+        },
+        "gold_fact_coverage": {
+          "ci_lower": 0.7833,
+          "ci_upper": 0.7833,
+          "mean": 0.7833,
+          "raw_values": [
+            0.7833,
+            0.7833,
+            0.7833
+          ]
+        },
+        "maintenance_cost_ratio": {
+          "ci_lower": 1.1,
+          "ci_upper": 1.1,
+          "mean": 1.1,
+          "raw_values": [
+            1.1,
+            1.1,
+            1.1
+          ]
+        },
+        "pollution_rate": {
+          "ci_lower": 0.0,
+          "ci_upper": 0.0,
+          "mean": 0.0,
+          "raw_values": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "pus": {
+          "ci_lower": 0.4848,
+          "ci_upper": 0.4848,
+          "mean": 0.4848,
+          "raw_values": [
+            0.4848,
+            0.4848,
+            0.4848
+          ]
+        },
+        "reuse_rate": {
+          "ci_lower": 0.29,
+          "ci_upper": 0.29,
+          "mean": 0.29,
+          "raw_values": [
+            0.29,
+            0.29,
+            0.29
+          ]
+        },
+        "system_id": "mind_optimized_v1",
+        "task_success_rate": {
+          "ci_lower": 0.7333,
+          "ci_upper": 0.7333,
+          "mean": 0.7333,
+          "raw_values": [
+            0.7333,
+            0.7333,
+            0.7333
+          ]
+        }
+      }
+    ]
+  }
+}

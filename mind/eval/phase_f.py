@@ -351,10 +351,11 @@ def write_phase_f_gate_report_json(
     return output_path
 
 
-def _comparison_interval(
+def comparison_interval(
     left: tuple[float, ...],
     right: tuple[float, ...],
 ) -> ComparisonInterval:
+    """Compute a paired diff interval from matched sample vectors."""
     if len(left) != len(right):
         raise ValueError("comparison intervals require matched sample counts")
     raw_diffs = tuple(round(a - b, 4) for a, b in zip(left, right, strict=True))
@@ -370,7 +371,12 @@ def _comparison_interval(
     )
 
 
-def _comparison_interval_to_dict(interval: ComparisonInterval) -> dict[str, object]:
+# Keep the private alias for internal backward compatibility.
+_comparison_interval = comparison_interval
+
+
+def comparison_interval_to_dict(interval: ComparisonInterval) -> dict[str, object]:
+    """Serialize a ``ComparisonInterval`` to a JSON-friendly dict."""
     return {
         "mean_diff": interval.mean_diff,
         "ci_lower": interval.ci_lower,
@@ -378,6 +384,10 @@ def _comparison_interval_to_dict(interval: ComparisonInterval) -> dict[str, obje
         "sample_count": interval.sample_count,
         "raw_diffs": list(interval.raw_diffs),
     }
+
+
+# Keep the private alias for internal backward compatibility.
+_comparison_interval_to_dict = comparison_interval_to_dict
 
 
 def _suite_report_to_dict(report: BenchmarkSuiteReport) -> dict[str, Any]:

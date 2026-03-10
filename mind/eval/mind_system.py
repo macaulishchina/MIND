@@ -1,4 +1,4 @@
-"""MIND system runner for LongHorizonEval-based Phase F comparison."""
+"""MIND system runner for LongHorizonEval-based Phase F and G evaluation."""
 
 from __future__ import annotations
 
@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from itertools import combinations
 from pathlib import Path
 
-from mind.fixtures.long_horizon_dev import LongHorizonStep
 from mind.fixtures.long_horizon_eval import LongHorizonEvalSequence, build_long_horizon_eval_v1
 from mind.fixtures.retrieval_benchmark import build_phase_d_seed_objects
 from mind.kernel.store import SQLiteMemoryStore
@@ -20,6 +19,7 @@ from mind.offline import (
 )
 
 from .runner import LongHorizonScoreCard
+from .strategy import FixedRuleMindStrategy, MindStrategy, covered_needed_ids
 
 _RAW_TOPK_BASELINE_SIZE = 10.0
 
@@ -29,8 +29,22 @@ class _MindRunResources:
     tempdir: tempfile.TemporaryDirectory[str]
     store: SQLiteMemoryStore
     promotion_schema_ids: dict[str, str]
+    base_object_count: int
+    generated_schema_count: int
+    total_object_count: int
+    storage_cost_ratio: float
     maintenance_cost_ratio: float
     pollution_rate: float
+
+
+@dataclass(frozen=True)
+class MindRunCostSnapshot:
+    run_id: int
+    strategy_id: str
+    base_object_count: int
+    generated_schema_count: int
+    total_object_count: int
+    storage_cost_ratio: float
 
 
 class MindLongHorizonSystem:
@@ -41,9 +55,14 @@ class MindLongHorizonSystem:
         *,
         use_workspace: bool = True,
         use_offline_maintenance: bool = True,
+        strategy: MindStrategy | None = None,
     ) -> None:
         self._use_workspace = use_workspace
         self._use_offline_maintenance = use_offline_maintenance
+        self._strategy = strategy or FixedRuleMindStrategy(
+            prefer_future_coverage=use_workspace,
+            allow_schema_expansion=use_workspace,
+        )
         self._run_resources: dict[int, _MindRunResources] = {}
 
     def run_sequence(
@@ -71,24 +90,26 @@ class MindLongHorizonSystem:
         gold_coverage_total = 0.0
 
         for step_index, step in enumerate(sequence.steps):
-            selected = _select_step_handles(
-                resources.store,
-                tuple(candidate_pool),
-                step.needed_object_ids,
-                ranking_by_id,
-                budget=1,
-                future_steps=sequence.steps[step_index:],
-                prefer_future_coverage=self._use_workspace,
-                allow_schema_expansion=self._use_workspace,
+            decision = self._strategy.select_step_handles(
+                store=resources.store,
+                sequence=sequence,
+                step_index=step_index,
+                step=step,
+                candidate_ids=tuple(candidate_pool),
+                ranking_by_id=ranking_by_id,
             )
+            selected = decision.selected_ids
             selected_steps.append(selected)
-            covered_needed_ids = _covered_needed_ids(
+            step_covered_needed_ids = covered_needed_ids(
                 resources.store,
                 selected,
                 step.needed_object_ids,
-                allow_schema_expansion=self._use_workspace,
+                allow_schema_expansion=decision.allow_schema_expansion,
             )
-            step_gold_coverage = _safe_ratio(len(covered_needed_ids), len(step.needed_object_ids))
+            step_gold_coverage = _safe_ratio(
+                len(step_covered_needed_ids),
+                len(step.needed_object_ids),
+            )
             gold_coverage_total += step_gold_coverage
             if step_gold_coverage == 1.0:
                 task_successes += 1
@@ -115,6 +136,19 @@ class MindLongHorizonSystem:
             resources.tempdir.cleanup()
         self._run_resources.clear()
 
+    def cost_snapshot(self, run_id: int) -> MindRunCostSnapshot:
+        resources = self._run_resources.get(run_id)
+        if resources is None:
+            raise KeyError(f"run_id {run_id} has not been executed")
+        return MindRunCostSnapshot(
+            run_id=run_id,
+            strategy_id=self._strategy.strategy_id,
+            base_object_count=resources.base_object_count,
+            generated_schema_count=resources.generated_schema_count,
+            total_object_count=resources.total_object_count,
+            storage_cost_ratio=resources.storage_cost_ratio,
+        )
+
     def _resources_for_run(self, run_id: int) -> _MindRunResources:
         resources = self._run_resources.get(run_id)
         if resources is not None:
@@ -122,7 +156,9 @@ class MindLongHorizonSystem:
 
         tempdir = tempfile.TemporaryDirectory(prefix=f"mind_phase_f_run_{run_id}_")
         store = SQLiteMemoryStore(Path(tempdir.name) / "mind_phase_f.sqlite3")
-        store.insert_objects(build_phase_d_seed_objects())
+        seed_objects = build_phase_d_seed_objects()
+        base_object_count = len(seed_objects)
+        store.insert_objects(seed_objects)
         promotion_schema_ids: dict[str, str] = {}
         generated_schema_count = 0
 
@@ -149,6 +185,12 @@ class MindLongHorizonSystem:
                 generated_schema_count += 1
 
         total_step_count = sum(len(sequence.steps) for sequence in build_long_horizon_eval_v1())
+        total_object_count = base_object_count + generated_schema_count
+        storage_cost_ratio = (
+            round(total_object_count / float(base_object_count), 4)
+            if base_object_count > 0
+            else 1.0
+        )
         maintenance_cost_ratio = (
             round(1.0 + (generated_schema_count / float(total_step_count)), 4)
             if self._use_offline_maintenance and generated_schema_count > 0
@@ -158,6 +200,10 @@ class MindLongHorizonSystem:
             tempdir=tempdir,
             store=store,
             promotion_schema_ids=promotion_schema_ids,
+            base_object_count=base_object_count,
+            generated_schema_count=generated_schema_count,
+            total_object_count=total_object_count,
+            storage_cost_ratio=storage_cost_ratio,
             maintenance_cost_ratio=maintenance_cost_ratio,
             pollution_rate=0.0,
         )
@@ -213,119 +259,6 @@ def _supports_cross_episode(store: SQLiteMemoryStore, refs: tuple[str, ...]) -> 
         if store.read_object(ref).get("metadata", {}).get("episode_id") is not None
     }
     return len(episode_ids) >= 2
-
-
-def _select_step_handles(
-    store: SQLiteMemoryStore,
-    candidate_ids: tuple[str, ...],
-    needed_object_ids: tuple[str, ...],
-    ranking_by_id: dict[str, float],
-    *,
-    budget: int,
-    future_steps: tuple[LongHorizonStep, ...],
-    prefer_future_coverage: bool,
-    allow_schema_expansion: bool,
-) -> tuple[str, ...]:
-    selected: list[str] = []
-    uncovered = set(needed_object_ids)
-
-    for _ in range(budget):
-        best_id: str | None = None
-        best_key: tuple[float, float, float, float, str] | None = None
-        for object_id in candidate_ids:
-            if object_id in selected:
-                continue
-            coverage = _handle_coverage(
-                store,
-                object_id,
-                allow_schema_expansion=allow_schema_expansion,
-            )
-            new_hits = len(coverage.intersection(uncovered))
-            total_hits = len(coverage.intersection(needed_object_ids))
-            future_hits = (
-                _future_coverage_hits(
-                    store,
-                    object_id,
-                    future_steps,
-                    allow_schema_expansion=allow_schema_expansion,
-                )
-                if prefer_future_coverage
-                else 0
-            )
-            key = (
-                float(new_hits),
-                float(total_hits),
-                float(future_hits),
-                float(ranking_by_id.get(object_id, 0.0)),
-                object_id,
-            )
-            if best_key is None or key > best_key:
-                best_key = key
-                best_id = object_id
-        if best_id is None:
-            break
-        selected.append(best_id)
-        uncovered.difference_update(
-            _handle_coverage(
-                store,
-                best_id,
-                allow_schema_expansion=allow_schema_expansion,
-            )
-        )
-        if not uncovered:
-            break
-
-    return tuple(selected)
-
-
-def _handle_coverage(
-    store: SQLiteMemoryStore,
-    object_id: str,
-    *,
-    allow_schema_expansion: bool,
-) -> set[str]:
-    obj = store.read_object(object_id)
-    coverage = {object_id}
-    metadata = obj.get("metadata", {})
-    if allow_schema_expansion and obj["type"] == "SchemaNote":
-        refs = metadata.get("promotion_source_refs") or metadata.get("evidence_refs") or []
-        coverage.update(str(ref) for ref in refs)
-    return coverage
-
-
-def _covered_needed_ids(
-    store: SQLiteMemoryStore,
-    selected_ids: tuple[str, ...],
-    needed_object_ids: tuple[str, ...],
-    *,
-    allow_schema_expansion: bool,
-) -> set[str]:
-    covered: set[str] = set()
-    needed = set(needed_object_ids)
-    for object_id in selected_ids:
-        covered.update(
-            _handle_coverage(
-                store,
-                object_id,
-                allow_schema_expansion=allow_schema_expansion,
-            ).intersection(needed)
-        )
-    return covered
-
-
-def _future_coverage_hits(
-    store: SQLiteMemoryStore,
-    object_id: str,
-    future_steps: tuple[LongHorizonStep, ...],
-    *,
-    allow_schema_expansion: bool,
-) -> int:
-    coverage = _handle_coverage(
-        store,
-        object_id,
-        allow_schema_expansion=allow_schema_expansion,
-    )
-    return sum(len(coverage.intersection(step.needed_object_ids)) for step in future_steps)
 
 
 def _safe_ratio(numerator: float, denominator: float) -> float:

@@ -11,16 +11,23 @@ from pathlib import Path
 from .eval import (
     FixedSummaryMemoryBaselineSystem,
     LongHorizonBenchmarkRunner,
+    MindLongHorizonSystem,
     NoMemoryBaselineSystem,
+    OptimizedMindStrategy,
     PlainRagBaselineSystem,
     assert_phase_f_comparison,
     assert_phase_f_gate,
+    assert_phase_g_gate,
     build_benchmark_suite_report,
+    evaluate_fixed_rule_cost_report,
     evaluate_phase_f_comparison,
     evaluate_phase_f_gate,
+    evaluate_phase_g_gate,
     write_benchmark_suite_report_json,
     write_phase_f_comparison_report_json,
     write_phase_f_gate_report_json,
+    write_phase_g_cost_report_json,
+    write_phase_g_gate_report_json,
 )
 from .fixtures.long_horizon_eval import (
     build_long_horizon_eval_manifest_v1,
@@ -618,4 +625,149 @@ def phase_f_gate_main(argv: Sequence[str] | None = None) -> int:
     print(f"F-6={'PASS' if result.f6_pass else 'FAIL'}")
     print(f"F-7={'PASS' if result.f7_pass else 'FAIL'}")
     print(f"phase_f_gate={'PASS' if result.phase_f_pass else 'FAIL'}")
+    return 0
+
+
+def phase_g_cost_report_main(argv: Sequence[str] | None = None) -> int:
+    """Run the Phase G fixed-rule strategy cost report skeleton."""
+
+    parser = argparse.ArgumentParser(
+        prog="mind-phase-g-cost-report",
+        description="Run the Phase G fixed-rule strategy cost report skeleton.",
+    )
+    parser.add_argument(
+        "--repeat-count",
+        type=int,
+        default=3,
+        help="Independent run count for cost accounting. Must be >= 1.",
+    )
+    parser.add_argument(
+        "--output",
+        default="artifacts/phase_g/cost_report.json",
+        help="Output path for the persisted Phase G cost report JSON.",
+    )
+    args = parser.parse_args(list(argv) if argv is not None else None)
+
+    result = evaluate_fixed_rule_cost_report(repeat_count=args.repeat_count)
+    output_path = write_phase_g_cost_report_json(args.output, result)
+    print("Phase G cost report")
+    print(f"fixture_name={result.fixture_name}")
+    print(f"fixture_hash={result.fixture_hash}")
+    print(f"strategy_id={result.strategy_id}")
+    print(f"repeat_count={result.repeat_count}")
+    print(f"report_path={output_path}")
+    print(f"token_cost_ratio={result.token_cost_ratio.mean:.2f}")
+    print(f"storage_cost_ratio={result.storage_cost_ratio.mean:.2f}")
+    print(f"maintenance_cost_ratio={result.maintenance_cost_ratio.mean:.2f}")
+    print(f"total_cost_ratio={result.total_cost_ratio.mean:.2f}")
+    print(f"total_budget_ratio={result.budget_profile.total_budget_ratio:.2f}")
+    print(f"total_budget_bias={result.total_budget_bias.mean:.2f}")
+    print("phase_g_cost_report=PASS")
+    return 0
+
+
+def phase_g_strategy_dev_main(argv: Sequence[str] | None = None) -> int:
+    """Run a local fixed-rule vs optimized-v1 dev comparison."""
+
+    parser = argparse.ArgumentParser(
+        prog="mind-phase-g-strategy-dev",
+        description="Run a Phase G dev comparison between fixed-rule and optimized_v1.",
+    )
+    parser.add_argument(
+        "--run-id",
+        type=int,
+        default=1,
+        help="Deterministic run id used by both systems.",
+    )
+    args = parser.parse_args(list(argv) if argv is not None else None)
+
+    runner = LongHorizonBenchmarkRunner(
+        sequences=build_long_horizon_eval_v1(),
+        manifest=build_long_horizon_eval_manifest_v1(),
+    )
+    fixed_system = MindLongHorizonSystem()
+    optimized_system = MindLongHorizonSystem(strategy=OptimizedMindStrategy())
+    try:
+        fixed_run = runner.run_once(
+            system_id="mind_fixed_rule",
+            system=fixed_system,
+            run_id=args.run_id,
+        )
+        optimized_run = runner.run_once(
+            system_id="mind_optimized_v1",
+            system=optimized_system,
+            run_id=args.run_id,
+        )
+        fixed_snapshot = fixed_system.cost_snapshot(args.run_id)
+        optimized_snapshot = optimized_system.cost_snapshot(args.run_id)
+    finally:
+        fixed_system.close()
+        optimized_system.close()
+
+    print("Phase G strategy dev report")
+    print(f"fixture_name={fixed_run.fixture_name}")
+    print(f"fixture_hash={fixed_run.fixture_hash}")
+    print(f"run_id={args.run_id}")
+    print(f"fixed_rule_pus={fixed_run.average_pus:.2f}")
+    print(f"optimized_v1_pus={optimized_run.average_pus:.2f}")
+    print(f"pus_delta={optimized_run.average_pus - fixed_run.average_pus:.2f}")
+    print(f"fixed_rule_context_cost_ratio={fixed_run.average_context_cost_ratio:.2f}")
+    print(f"optimized_v1_context_cost_ratio={optimized_run.average_context_cost_ratio:.2f}")
+    print(f"fixed_rule_storage_cost_ratio={fixed_snapshot.storage_cost_ratio:.2f}")
+    print(f"optimized_v1_storage_cost_ratio={optimized_snapshot.storage_cost_ratio:.2f}")
+    print(
+        "phase_g_strategy_dev="
+        f"{'PASS' if optimized_run.average_pus > fixed_run.average_pus else 'FAIL'}"
+    )
+    return 0
+
+
+def phase_g_gate_main(argv: Sequence[str] | None = None) -> int:
+    """Run the formal Phase G local gate."""
+
+    parser = argparse.ArgumentParser(
+        prog="mind-phase-g-gate",
+        description="Run the full local Phase G strategy optimization gate.",
+    )
+    parser.add_argument(
+        "--repeat-count",
+        type=int,
+        default=3,
+        help="Independent run count for each system. Must be >= 3.",
+    )
+    parser.add_argument(
+        "--output",
+        default="artifacts/phase_g/gate_report.json",
+        help="Output path for the persisted Phase G gate JSON report.",
+    )
+    args = parser.parse_args(list(argv) if argv is not None else None)
+
+    result = evaluate_phase_g_gate(repeat_count=args.repeat_count)
+    try:
+        assert_phase_g_gate(result)
+    except RuntimeError as exc:
+        raise SystemExit(str(exc)) from exc
+
+    output_path = write_phase_g_gate_report_json(args.output, result)
+    print("Phase G gate report")
+    print(f"manifest_hash={result.manifest_hash}")
+    print(f"repeat_count={result.repeat_count}")
+    print(f"report_path={output_path}")
+    print(f"pus_improvement={result.pus_improvement.mean_diff:.2f}")
+    for family_result in result.family_improvements:
+        print(f"{family_result.family}_pus_delta={family_result.pus_delta.mean_diff:.2f}")
+    print(f"token_budget_bias={result.optimized_cost_report.token_budget_bias.mean:.2f}")
+    print(f"storage_budget_bias={result.optimized_cost_report.storage_budget_bias.mean:.2f}")
+    print(
+        "maintenance_budget_bias="
+        f"{result.optimized_cost_report.maintenance_budget_bias.mean:.2f}"
+    )
+    print(f"total_budget_bias={result.optimized_cost_report.total_budget_bias.mean:.2f}")
+    print(f"pollution_rate_delta={result.pollution_rate_delta.mean_diff:.2f}")
+    print(f"G-1={'PASS' if result.g1_pass else 'FAIL'}")
+    print(f"G-2={'PASS' if result.g2_pass else 'FAIL'}")
+    print(f"G-3={'PASS' if result.g3_pass else 'FAIL'}")
+    print(f"G-4={'PASS' if result.g4_pass else 'FAIL'}")
+    print(f"G-5={'PASS' if result.g5_pass else 'FAIL'}")
+    print(f"phase_g_gate={'PASS' if result.phase_g_pass else 'FAIL'}")
     return 0

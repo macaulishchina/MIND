@@ -175,7 +175,7 @@
 
 - 当前仓库已经落地 `offline_jobs`、`OfflineWorker.run_once(...)`、`OfflineMaintenanceService`、promotion policy、`LongHorizonDev v1` 和 formal `Phase E gate`。
 - PostgreSQL claim 路径已采用 `FOR UPDATE SKIP LOCKED + advisory lock` 的最小实现，并已接入 Phase E regression 路径。
-- Phase E 已完成本地验收与独立审计；Phase F 已完成本地验收，第三方独立审计待外部执行；当前工作重点已进入 Phase G。
+- Phase E 已完成本地验收与独立审计；Phase F 已完成本地验收与独立审计；Phase G 已完成本地验收与独立审计。
 
 ### 3.5 Phase F / G：评测、优化、部署演进
 

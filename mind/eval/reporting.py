@@ -6,9 +6,9 @@ import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from statistics import mean, stdev
 from typing import Any
 
+from ._ci import MetricConfidenceInterval, metric_interval
 from .runner import (
     LongHorizonBenchmarkRun,
     LongHorizonEvalSequenceResult,
@@ -17,47 +17,12 @@ from .runner import (
 
 _REPORT_SCHEMA_VERSION = "phase_f_benchmark_report_v1"
 
-_T_CRITICAL_95: dict[int, float] = {
-    1: 12.706,
-    2: 4.303,
-    3: 3.182,
-    4: 2.776,
-    5: 2.571,
-    6: 2.447,
-    7: 2.365,
-    8: 2.306,
-    9: 2.262,
-    10: 2.228,
-    11: 2.201,
-    12: 2.179,
-    13: 2.16,
-    14: 2.145,
-    15: 2.131,
-    16: 2.12,
-    17: 2.11,
-    18: 2.101,
-    19: 2.093,
-    20: 2.086,
-    21: 2.08,
-    22: 2.074,
-    23: 2.069,
-    24: 2.064,
-    25: 2.06,
-    26: 2.056,
-    27: 2.052,
-    28: 2.048,
-    29: 2.045,
-    30: 2.042,
-}
 
+# MetricConfidenceInterval is re-exported from ._ci for backward compatibility.
+# All CI math is consolidated in ._ci to avoid duplication.
 
-@dataclass(frozen=True)
-class MetricConfidenceInterval:
-    mean: float
-    ci_lower: float
-    ci_upper: float
-    sample_count: int
-    raw_values: tuple[float, ...]
+# _metric_interval is an alias for the shared implementation.
+_metric_interval = metric_interval
 
 
 @dataclass(frozen=True)
@@ -177,40 +142,6 @@ def _build_system_report(
         pus=_metric_interval([run.average_pus for run in runs]),
         runs=runs,
     )
-
-
-def _metric_interval(values: list[float]) -> MetricConfidenceInterval:
-    if not values:
-        raise ValueError("metric interval requires at least one value")
-    sample_count = len(values)
-    center = round(mean(values), 4)
-    if sample_count == 1:
-        return MetricConfidenceInterval(
-            mean=center,
-            ci_lower=center,
-            ci_upper=center,
-            sample_count=sample_count,
-            raw_values=tuple(round(value, 4) for value in values),
-        )
-    sample_std = stdev(values)
-    margin = 0.0
-    if sample_std != 0.0:
-        margin = _t_critical(sample_count - 1) * (sample_std / (sample_count ** 0.5))
-    return MetricConfidenceInterval(
-        mean=center,
-        ci_lower=round(center - margin, 4),
-        ci_upper=round(center + margin, 4),
-        sample_count=sample_count,
-        raw_values=tuple(round(value, 4) for value in values),
-    )
-
-
-def _t_critical(degrees_of_freedom: int) -> float:
-    if degrees_of_freedom <= 0:
-        return 0.0
-    if degrees_of_freedom in _T_CRITICAL_95:
-        return _T_CRITICAL_95[degrees_of_freedom]
-    return 1.96
 
 
 def _suite_report_to_dict(report: BenchmarkSuiteReport) -> dict[str, object]:
