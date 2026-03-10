@@ -81,6 +81,10 @@
 | `LongHorizonDev v1` | 至少 `30` 条任务序列；每条序列 `5~10` 步 | 验证 replay / promotion / archive |
 | `LongHorizonEval v1` | 至少 `50` 条任务序列；与 dev 集分离 | 最终比较 MIND 与 baseline |
 | `MindCliScenarioSet v1` | 至少 `25` 个 CLI 场景；覆盖 `help / primitive / access / offline / governance / gate / report / demo` | 验证 Phase J 的统一命令行入口 |
+| `UserStateScenarioSet v1` | 至少 `30` 个场景；覆盖 `principal / tenant / session / conversation / policy` | 验证产品化阶段的用户状态与执行策略边界 |
+| `ProductTransportScenarioSet v1` | 至少 `40` 个场景；覆盖 `REST / MCP / product CLI` 的核心行为一致性 | 验证产品化阶段的统一应用服务与 transport 复用 |
+| `DeploymentSmokeSuite v1` | 至少 `20` 个部署场景；覆盖 compose、迁移、health、worker 与 provider config | 验证产品化阶段的部署与运行基线 |
+| `ProductCliExperienceBench v1` | 至少 `30` 条产品 CLI 流；覆盖 `remember / recall / ask / history / session / status / config` | 验证产品化阶段的最终用户 CLI |
 | `CapabilityAdapterBench v1` | 至少 `40` 个能力调用样例；覆盖 `summarize / reflect / answer / offline_reconstruct` 与 `openai / claude / gemini` 兼容接口 | 验证 Phase K 的统一模型能力调用层 |
 | `InternalTelemetryBench v1` | 至少 `30` 条内部流程样例；覆盖 `primitive / retrieval / workspace / access / offline / governance` 与状态变更链 | 验证 Phase L 的开发态完备观测 |
 | `FrontendExperienceBench v1` | 至少 `20` 条前端体验流；覆盖功能体验、配置、debug 可视化三类入口 | 验证 Phase M 的前端体验层 |
@@ -827,13 +831,22 @@ flowchart LR
 
 ## 阶段 J Gate：Unified CLI Experience 完成
 
+产品化 addendum：
+
+- 历史上的 Phase J `PASS` 继续有效
+- 但如果保留这套统一 CLI 作为开发/验收入口，它的正式命名应迁移到 `mindtest`
+- `mind` 这个命名保留给后续产品 CLI
+- 这条 addendum 不回滚 Phase J 的历史通过记录，只影响产品化后的命名与入口边界
+
+完整产品化蓝图与验收标准见 [../design/productization_program.md](../design/productization_program.md)。
+
 ### 阶段目标
 
 证明系统已经具备一个强大、完整、可发现的统一命令行入口：
 
-- `mind -h` 可以完整呈现帮助
+- 统一开发/验收 CLI 的 help 可以完整呈现
 - 现有 primitive / access / offline / governance / gate / report 都能通过统一 CLI 触达
-- 用户可以仅通过 `mind` 体验和测试现有记忆模块能力
+- 用户和开发者可以仅通过该入口体验和测试现有记忆模块能力
 - 后端、profile、输出格式和 demo 场景都有统一命令语义
 
 阶段 J 明确**不要求**：

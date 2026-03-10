@@ -1452,9 +1452,24 @@ MIND 仍然不定义业务系统完整的 RBAC / ABAC 模型，但为了让 prov
 
 Post-Phase-G addendum 在不改变现有 data plane、control plane 与 governance loop 语义的前提下，继续冻结后续阶段的最小边界。
 
-### 8.7.1 Unified CLI Experience
+### 8.7.1 Developer CLI Baseline 与 Product CLI Namespace
 
-后续 `Phase J / Unified CLI Experience` 的职责是把现有能力收敛为统一的 `mind` 命令行入口。
+历史上的 `Phase J / Unified CLI Experience` 已经证明：
+
+- 现有能力可以被统一收敛到一个开发/验收 CLI
+- profile / backend / demo / gate / report 等能力可以通过单入口触达
+
+但产品化 addendum 进一步冻结：
+
+- 如果这套开发/验收 CLI 保留，它的正式命名应迁移到 `mindtest`
+- `mind` 这个命名保留给产品级 CLI
+- 产品级 CLI 不得继续暴露 phase / gate / fixture / demo 这类开发者主语义
+
+完整产品化方案见 [../design/productization_program.md](../design/productization_program.md)。
+
+后续 `Phase J` 的历史结论继续有效，但它的角色更准确地说是：
+
+**统一开发/验收 CLI 基线，而不是最终产品 CLI。**
 
 它至少应覆盖：
 
@@ -1469,12 +1484,27 @@ Post-Phase-G addendum 在不改变现有 data plane、control plane 与 governan
 
 边界约束：
 
-- CLI 是统一体验层，不是新的 memory semantics 层
+- 开发/验收 CLI 是统一体验层，不是新的 memory semantics 层
 - CLI 不得偷偷改写 primitive、access、offline 或 governance 的既有语义
 - CLI 必须继续服从 capability、visibility、budget 与 provenance 边界
 - CLI 输出必须有稳定 contract，至少支持可读文本与结构化输出两类形态
 
-### 8.7.2 LLM Capability Layer
+### 8.7.2 Productization Service Boundary
+
+产品化 addendum 进一步冻结：
+
+- `REST API`、`MCP`、产品 CLI 和前端都必须复用同一层应用服务
+- transport 不得直接调用 `MemoryStore`
+- transport 不得绕开 capability、governance visibility 与 provenance 边界
+- 产品级调用必须显式携带用户、租户、会话和执行策略上下文
+
+补充约束：
+
+- provenance 可以从产品上下文投影，但不能替代产品上下文
+- 用户状态、租户状态、会话状态不应继续散落在 CLI 参数和 provenance fallback 里
+- 产品态 `mind` 与开发态 `mindtest` 必须分层
+
+### 8.7.3 LLM Capability Layer
 
 后续 `Phase K / LLM Capability Layer` 的职责是把已有处理能力收敛到统一模型能力层，而不是在不同模块里散落 provider 调用点。
 
@@ -1493,7 +1523,7 @@ Post-Phase-G addendum 在不改变现有 data plane、control plane 与 governan
 - provider / model / endpoint / version / timing 必须进入 trace
 - 上层调用方不应因 provider 切换而重写业务调用 contract
 
-### 8.7.3 Development Telemetry
+### 8.7.4 Development Telemetry
 
 后续 `Phase L / Development Telemetry` 的职责是在开发模式下完备采集内部状态变化与执行过程，为未来可视化和 debug 提供数据底座。
 
@@ -1505,7 +1535,7 @@ Post-Phase-G addendum 在不改变现有 data plane、control plane 与 governan
 - telemetry 只是观测层，不是新的业务真相源
 - telemetry 数据必须足以重建内部执行时间线与对象变化链
 
-### 8.7.4 Frontend Experience
+### 8.7.5 Frontend Experience
 
 后续 `Phase M / Frontend Experience` 的职责是基于统一 CLI、统一 capability 层与 telemetry 底座，提供功能体验入口、配置入口与 debug 可视化入口。
 
@@ -1516,7 +1546,7 @@ Post-Phase-G addendum 在不改变现有 data plane、control plane 与 governan
 - debug 入口默认只能在开发模式下开放
 - 前端体验层不应提前引入新的治理或 persona 主语义
 
-### 8.7.5 顺延后的治理与人格阶段
+### 8.7.6 顺延后的治理与人格阶段
 
 Post-Phase-G addendum 进一步明确：
 

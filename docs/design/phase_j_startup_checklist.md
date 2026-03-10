@@ -2,6 +2,13 @@
 
 时点说明：这份文档记录的是 Phase I 通过后，MIND 进入 `Phase J / Unified CLI Experience` 前的启动约束、任务拆分和范围控制。正式通过口径以后续 Phase J 验收报告为准；这里先冻结统一命令行入口的边界，避免把 CLI、前端和模型接入一次性揉成一个失控阶段。
 
+产品化 addendum：
+
+- 这份文档描述的是历史上的统一开发/验收 CLI 启动边界
+- 若这套入口继续保留，其正式命名应迁移到 `mindtest`
+- `mind` 这个命名保留给产品级 CLI
+- 完整产品化方案见 [productization_program.md](./productization_program.md)
+
 ## 目标
 
 Phase J 只做统一命令行体验层，不做前端和模型接入。

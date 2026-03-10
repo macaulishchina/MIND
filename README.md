@@ -132,6 +132,8 @@ MIND 当前聚焦于四个核心问题：
 
 当前文档已经把 `Phase H ~ O` 的 formal gate、阶段边界和启动清单补齐，用来约束 provenance foundation、runtime access、统一 CLI、统一模型能力层、开发态 telemetry、前端体验、governance reshape 和 persona projection 的实现顺序。
 
+同时，产品化 addendum 已经补入一份独立蓝图：现有 Phase J 形成的是开发/验收 CLI 基线；若保留，该入口应迁移为 `mindtest`，而 `mind` 这个命名保留给未来产品 CLI。正式产品化方案见 [产品化方案与验收蓝图](./docs/design/productization_program.md)。
+
 这些内容里，`Phase H / I / J` 已经进入实现基线并通过本地 formal gate；`Phase K ~ O` 仍然是后续阶段的正式设计前置约束。
 
 当前落地包括：
@@ -153,7 +155,7 @@ MIND 当前聚焦于四个核心问题：
 - 完成本地 Phase G gate：`fixed-rule budget baseline`、`optimized_v1`、`G-1 ~ G-5`
 - 完成本地 Phase H gate：direct provenance、最小 governance control plane、online / offline conceal isolation、`H-1 ~ H-8`
 - 完成本地 Phase I gate：runtime access modes、`auto` 调度、`AccessDepthBench v1`、`I-1 ~ I-8`
-- 完成本地 Phase J gate：统一 `mind` CLI、8 个一级命令族、`MindCliScenarioSet v1`、config audit、`J-1 ~ J-6`
+- 完成本地 Phase J gate：统一开发/验收 CLI 基线、8 个一级命令族、`MindCliScenarioSet v1`、config audit、`J-1 ~ J-6`
 
 当前实现包括：
 
@@ -166,12 +168,12 @@ MIND 当前聚焦于四个核心问题：
 - `mind/fixtures/golden_episode_set.py`：`20` 个 golden episodes 与 8 类对象样例
 - `mind/primitives/contracts.py` / `runtime.py` / `service.py`：Phase C primitive contract、运行时包装与服务实现
 - `mind/fixtures/primitive_golden_calls.py`：`200` 条 primitive 调用样例
-- `mind/workspace/builder.py` / `mind/workspace/context_protocol.py` / `mind/workspace/phase_d.py`：Workspace builder、冻结的 Phase D context protocol 与 Phase D smoke 评估器
+- `mind/workspace/builder.py` / `mind/workspace/context_protocol.py` / `mind/workspace/smoke.py`：Workspace builder、冻结的 Phase D context protocol 与 Phase D smoke 评估器
 - `mind/workspace/answer_benchmark.py`：answer-level `D-5` 评分与 A/B benchmark runner
 - `mind/offline/jobs.py` / `mind/offline/service.py` / `mind/offline/worker.py`：Phase E 离线 job contract、maintenance service 与单进程 worker
-- `mind/offline/replay.py` / `mind/offline/audit.py` / `mind/offline/phase_e.py`：Replay target ranking、evidence audit、`LongHorizonDev v1` 与 Phase E gate
-- `mind/governance/service.py` / `mind/governance/phase_h.py`：Phase H governance control plane 与 formal gate
-- `mind/cli.py` / `mind/cli_config.py` / `mind/phase_j.py`：统一 `mind` CLI、profile/backend 解析与 Phase J formal gate
+- `mind/offline/replay.py` / `mind/offline/audit.py` / `mind/offline/assessment.py`：Replay target ranking、evidence audit、`LongHorizonDev v1` 与 Phase E gate
+- `mind/governance/service.py` / `mind/governance/gate.py`：Phase H governance control plane 与 formal gate
+- `mind/cli.py` / `mind/cli_config.py` / `mind/cli_gate.py`：统一开发/验收 CLI、profile/backend 解析与 Phase J formal gate
 - `mind/fixtures/retrieval_benchmark.py`：固定的 RetrievalBenchmark v0 / v1
 - `mind/fixtures/episode_answer_bench.py`：固定的 `EpisodeAnswerBench v1`
 - `mind/fixtures/long_horizon_dev.py`：固定的 `LongHorizonDev v1`
@@ -192,6 +194,7 @@ MIND 当前聚焦于四个核心问题：
 - [文档索引](./docs/README.md)
 - [阶段 A 正式规范](./docs/foundation/spec.md)
 - [设计拆解与实施主文档](./docs/design/design_breakdown.md)
+- [产品化方案与验收蓝图](./docs/design/productization_program.md)
 - [Phase C 启动清单](./docs/design/phase_c_startup_checklist.md)
 - [Phase E 启动清单](./docs/design/phase_e_startup_checklist.md)
 - [Phase F 启动清单](./docs/design/phase_f_startup_checklist.md)

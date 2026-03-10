@@ -10,6 +10,7 @@
   - [implementation_stack.md](./foundation/implementation_stack.md)：分阶段实现技术栈与基础设施冻结方案
 - `design/`
   - [design_breakdown.md](./design/design_breakdown.md)：设计拆解、阶段推进方式与实现重点
+  - [productization_program.md](./design/productization_program.md)：产品化整体蓝图、`mindtest` / `mind` 分层、应用服务、部署与总体验收标准
   - [phase_c_startup_checklist.md](./design/phase_c_startup_checklist.md)：Phase C 启动清单与优先级排序
   - [phase_e_startup_checklist.md](./design/phase_e_startup_checklist.md)：Phase E 启动清单与离线维护基础层现状
   - [phase_f_startup_checklist.md](./design/phase_f_startup_checklist.md)：Phase F 启动清单、任务拆分与评测前置工件
@@ -56,6 +57,7 @@
 - 想看“实现到底该用什么技术栈”：先看 [foundation/implementation_stack.md](./foundation/implementation_stack.md)
 - 想看“为什么现在同时保留 SQLite 和 PostgreSQL，以及两者各自角色”：先看 [foundation/implementation_stack.md](./foundation/implementation_stack.md)
 - 想看“为什么这样设计、怎么推进实现”：先看 [design/design_breakdown.md](./design/design_breakdown.md)
+- 想看“把当前研究原型变成完整产品到底还缺什么、应该怎么做、怎么验收”：先看 [design/productization_program.md](./design/productization_program.md)
 - 想看“为什么要把 provenance / governance 单独做成第三条循环”：先看 [design/design_breakdown.md](./design/design_breakdown.md)
 - 想看“组织好的记忆如何长成人格层”：先看 [design/design_breakdown.md](./design/design_breakdown.md)，再看 [research/research_notes.md](./research/research_notes.md)
 - 想看“Phase C 启动项后来到底怎么收敛”：先看 [design/phase_c_startup_checklist.md](./design/phase_c_startup_checklist.md)
@@ -66,7 +68,7 @@
 - 想看“Phase H 现在是否已经通过本地 formal gate”：先看 [reports/phase_h_acceptance_report.md](./reports/phase_h_acceptance_report.md)
 - 想看“Phase I 应该怎么把固定档位和 `auto` 做成正式能力”：先看 [design/phase_i_startup_checklist.md](./design/phase_i_startup_checklist.md)
 - 想看“Phase I 现在是否已经通过本地 formal gate”：先看 [reports/phase_i_acceptance_report.md](./reports/phase_i_acceptance_report.md)
-- 想看“Phase J 应该怎么把现有能力收敛成统一 `mind` CLI”：先看 [design/phase_j_startup_checklist.md](./design/phase_j_startup_checklist.md)
+- 想看“Phase J 的历史统一 CLI 基线是什么，以及为什么产品化后要拆成 `mindtest` / `mind`”：先看 [design/phase_j_startup_checklist.md](./design/phase_j_startup_checklist.md)，再看 [design/productization_program.md](./design/productization_program.md)
 - 想看“Phase J 现在是否已经通过统一 CLI formal gate”：先看 [reports/phase_j_acceptance_report.md](./reports/phase_j_acceptance_report.md)
 - 想看“Phase K 应该怎么把摘要 / 反思 / 回答 / 离线重构统一成可切换模型能力层”：先看 [design/phase_k_startup_checklist.md](./design/phase_k_startup_checklist.md)
 - 想看“Phase L 应该怎么完整采集内部结构和状态变化”：先看 [design/phase_l_startup_checklist.md](./design/phase_l_startup_checklist.md)
