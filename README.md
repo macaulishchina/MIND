@@ -106,7 +106,7 @@ MIND 当前聚焦于四个核心问题：
 
 ## 当前状态
 
-这个项目目前已有一套 **通过本地 Phase E gate 的实现基线**。
+这个项目目前已有一套 **通过 Phase F 本地验收的实现基线**。
 
 当前落地包括：
 
@@ -123,6 +123,7 @@ MIND 当前聚焦于四个核心问题：
 - 建立 Phase E 离线维护基础层：`offline_jobs`、worker、promotion policy v0
 - 建立 `LongHorizonDev v1`、`ReplayLift` baseline 与本地 Phase E startup baseline
 - 完成本地 Phase E gate：`SchemaValidationPrecision`、`PromotionPrecision@10`、`PUS / PollutionRate` A/B dev eval
+- 完成本地 Phase F gate：`LongHorizonEval v1`、3 个 baseline、`95% CI` report、`F-4 ~ F-7`
 
 当前实现包括：
 
@@ -142,7 +143,7 @@ MIND 当前聚焦于四个核心问题：
 - `mind/fixtures/retrieval_benchmark.py`：固定的 RetrievalBenchmark v0 / v1
 - `mind/fixtures/episode_answer_bench.py`：固定的 `EpisodeAnswerBench v1`
 - `mind/fixtures/long_horizon_dev.py`：固定的 `LongHorizonDev v1`
-- `scripts/run_phase_b_gate.py` / `scripts/run_phase_c_gate.py` / `scripts/run_phase_d_smoke.py` / `scripts/run_phase_e_startup.py` / `scripts/run_offline_worker_once.py`：本地 gate / worker 入口
+- `scripts/run_phase_b_gate.py` / `scripts/run_phase_c_gate.py` / `scripts/run_phase_d_smoke.py` / `scripts/run_phase_e_startup.py` / `scripts/run_phase_e_gate.py` / `scripts/run_phase_f_manifest.py` / `scripts/run_phase_f_baselines.py` / `scripts/run_phase_f_report.py` / `scripts/run_phase_f_comparison.py` / `scripts/run_phase_f_gate.py` / `scripts/run_offline_worker_once.py`：本地 gate / worker 入口
 - `tests/test_phase_b_gate.py` / `tests/test_phase_c_gate.py` / `tests/test_phase_d_smoke.py`：阶段 gate 测试
 
 当前存储口径：
@@ -160,6 +161,7 @@ MIND 当前聚焦于四个核心问题：
 - [设计拆解与实施主文档](./docs/design/design_breakdown.md)
 - [Phase C 启动清单](./docs/design/phase_c_startup_checklist.md)
 - [Phase E 启动清单](./docs/design/phase_e_startup_checklist.md)
+- [Phase F 启动清单](./docs/design/phase_f_startup_checklist.md)
 - [阶段验收与 phase gates](./docs/foundation/phase_gates.md)
 - [实现技术栈冻结文档](./docs/foundation/implementation_stack.md)
 - [初始讨论文档](./docs/research/research_notes.md)
@@ -172,6 +174,8 @@ MIND 当前聚焦于四个核心问题：
 - [Phase D 验收报告](./docs/reports/phase_d_acceptance_report.md)
 - [Phase E 验收报告](./docs/reports/phase_e_acceptance_report.md)
 - [Phase E 独立审计报告](./docs/reports/phase_e_independent_audit.md)
+- [Phase F 验收报告](./docs/reports/phase_f_acceptance_report.md)
+- [Phase F 独立审计报告](./docs/reports/phase_f_independent_audit.md)
 - [Phase C 验收报告](./docs/reports/phase_c_acceptance_report.md)
 
 ## 运行方式
@@ -186,6 +190,11 @@ uv run mind-phase-c-gate
 uv run mind-phase-d-smoke
 uv run mind-phase-e-startup
 uv run mind-phase-e-gate
+uv run mind-phase-f-manifest
+uv run mind-phase-f-baselines
+uv run mind-phase-f-report --repeat-count 3 --output artifacts/phase_f/baseline_report.json
+uv run mind-phase-f-comparison --repeat-count 3 --output artifacts/phase_f/comparison_report.json
+uv run mind-phase-f-gate --repeat-count 3 --output artifacts/phase_f/gate_report.json
 uv run mind-postgres-regression --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:5432/postgres
 uv run mind-offline-worker-once --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:5432/postgres --max-jobs 5
 uv run ruff check mind tests scripts
@@ -201,6 +210,11 @@ uv run mypy
 .venv/bin/python scripts/run_phase_d_smoke.py
 .venv/bin/python scripts/run_phase_e_startup.py
 .venv/bin/python scripts/run_phase_e_gate.py
+.venv/bin/python scripts/run_phase_f_manifest.py
+.venv/bin/python scripts/run_phase_f_baselines.py
+.venv/bin/python scripts/run_phase_f_report.py --repeat-count 3 --output /tmp/phase_f_report.json
+.venv/bin/python scripts/run_phase_f_comparison.py --repeat-count 3 --output /tmp/phase_f_comparison.json
+.venv/bin/python scripts/run_phase_f_gate.py --repeat-count 3 --output /tmp/phase_f_gate.json
 .venv/bin/python scripts/run_postgres_regression.py --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:5432/postgres
 .venv/bin/python scripts/run_offline_worker_once.py --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:5432/postgres --max-jobs 5
 ```
@@ -212,14 +226,17 @@ uv run mypy
 - Phase D smoke：`phase_d_smoke=PASS`
 - Phase E startup：`phase_e_startup=PASS`
 - Phase E gate：`phase_e_gate=PASS`
+- Phase F gate：`phase_f_gate=PASS`
 
 当前阶段状态说明：
 
-- 当前工作树已通过 `Phase E acceptance gate`，并已完成 Phase E 独立审计。
+- 当前工作树已通过 `Phase F acceptance gate`。
 - `D-5` 现在使用 `EpisodeAnswerBench v1` 的 answer-level A/B benchmark，而不是 `task_success_proxy`。
 - `Phase D smoke report` 保留为启动期 / pre-acceptance 基线记录；最新正式口径见 [Phase D 验收报告](./docs/reports/phase_d_acceptance_report.md)。
 - Phase E 已完成本地 gate 与独立审计；正式口径见 [Phase E 验收报告](./docs/reports/phase_e_acceptance_report.md) 和 [Phase E 独立审计报告](./docs/reports/phase_e_independent_audit.md)。
+- Phase F 已完成本地验收与独立审计；正式口径见 [Phase F 验收报告](./docs/reports/phase_f_acceptance_report.md) 和 [Phase F 独立审计报告](./docs/reports/phase_f_independent_audit.md)。
 - [Phase E 启动清单](./docs/design/phase_e_startup_checklist.md) 继续保留启动与收敛轨迹，不再代表当前通过口径。
+- [Phase F 启动清单](./docs/design/phase_f_startup_checklist.md) 继续保留启动与收敛轨迹，不再代表当前通过口径。
 
 ---
 

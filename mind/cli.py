@@ -8,6 +8,24 @@ import tempfile
 from collections.abc import Sequence
 from pathlib import Path
 
+from .eval import (
+    FixedSummaryMemoryBaselineSystem,
+    LongHorizonBenchmarkRunner,
+    NoMemoryBaselineSystem,
+    PlainRagBaselineSystem,
+    assert_phase_f_comparison,
+    assert_phase_f_gate,
+    build_benchmark_suite_report,
+    evaluate_phase_f_comparison,
+    evaluate_phase_f_gate,
+    write_benchmark_suite_report_json,
+    write_phase_f_comparison_report_json,
+    write_phase_f_gate_report_json,
+)
+from .fixtures.long_horizon_eval import (
+    build_long_horizon_eval_manifest_v1,
+    build_long_horizon_eval_v1,
+)
 from .kernel.phase_b import assert_phase_b_gate, evaluate_phase_b_gate
 from .kernel.postgres_store import (
     PostgresMemoryStore,
@@ -362,4 +380,242 @@ def phase_e_gate_main() -> int:
     print(f"E-4={'PASS' if result.e4_pass else 'FAIL'}")
     print(f"E-5={'PASS' if result.e5_pass else 'FAIL'}")
     print(f"phase_e_gate={'PASS' if result.phase_e_pass else 'FAIL'}")
+    return 0
+
+
+def phase_f_manifest_main() -> int:
+    """Print the frozen LongHorizonEval v1 manifest."""
+
+    manifest = build_long_horizon_eval_manifest_v1()
+    family_counts = ",".join(f"{family}:{count}" for family, count in manifest.family_counts)
+    print("Phase F eval manifest")
+    print(f"fixture_name={manifest.fixture_name}")
+    print(f"fixture_hash={manifest.fixture_hash}")
+    print(f"sequence_count={manifest.sequence_count}")
+    print(f"step_range={manifest.min_step_count}..{manifest.max_step_count}")
+    print(f"family_counts={family_counts}")
+    return 0
+
+
+def phase_f_baselines_main() -> int:
+    """Run the three frozen Phase F baselines once on LongHorizonEval v1."""
+
+    sequences = build_long_horizon_eval_v1()
+    manifest = build_long_horizon_eval_manifest_v1()
+    runner = LongHorizonBenchmarkRunner(sequences=sequences, manifest=manifest)
+    runs = (
+        runner.run_once(system_id="no_memory", system=NoMemoryBaselineSystem()),
+        runner.run_once(
+            system_id="fixed_summary_memory",
+            system=FixedSummaryMemoryBaselineSystem(),
+        ),
+        runner.run_once(system_id="plain_rag", system=PlainRagBaselineSystem()),
+    )
+
+    print("Phase F baseline report")
+    print(f"fixture_name={manifest.fixture_name}")
+    print(f"fixture_hash={manifest.fixture_hash}")
+    print(f"sequence_count={manifest.sequence_count}")
+    for run in runs:
+        print(f"{run.system_id}_task_success_rate={run.average_task_success_rate:.2f}")
+        print(f"{run.system_id}_gold_fact_coverage={run.average_gold_fact_coverage:.2f}")
+        print(f"{run.system_id}_reuse_rate={run.average_reuse_rate:.2f}")
+        print(f"{run.system_id}_context_cost_ratio={run.average_context_cost_ratio:.2f}")
+        print(f"{run.system_id}_maintenance_cost_ratio={run.average_maintenance_cost_ratio:.2f}")
+        print(f"{run.system_id}_pollution_rate={run.average_pollution_rate:.2f}")
+        print(f"{run.system_id}_pus={run.average_pus:.2f}")
+    print("phase_f_baselines=PASS")
+    return 0
+
+
+def phase_f_report_main(argv: Sequence[str] | None = None) -> int:
+    """Run repeated Phase F baselines and persist the CI report."""
+
+    parser = argparse.ArgumentParser(
+        prog="mind-phase-f-report",
+        description="Run repeated Phase F baselines and persist a 95% CI report.",
+    )
+    parser.add_argument(
+        "--repeat-count",
+        type=int,
+        default=3,
+        help="Independent run count for each system. Must be >= 3 for F-3.",
+    )
+    parser.add_argument(
+        "--output",
+        default="artifacts/phase_f/baseline_report.json",
+        help="Output path for the persisted JSON report.",
+    )
+    args = parser.parse_args(list(argv) if argv is not None else None)
+
+    if args.repeat_count < 3:
+        raise SystemExit("--repeat-count must be >= 3.")
+
+    sequences = build_long_horizon_eval_v1()
+    manifest = build_long_horizon_eval_manifest_v1()
+    runner = LongHorizonBenchmarkRunner(sequences=sequences, manifest=manifest)
+    report = build_benchmark_suite_report(
+        runs_by_system={
+            "no_memory": runner.run_many(
+                system_id="no_memory",
+                system=NoMemoryBaselineSystem(),
+                repeat_count=args.repeat_count,
+            ),
+            "fixed_summary_memory": runner.run_many(
+                system_id="fixed_summary_memory",
+                system=FixedSummaryMemoryBaselineSystem(),
+                repeat_count=args.repeat_count,
+            ),
+            "plain_rag": runner.run_many(
+                system_id="plain_rag",
+                system=PlainRagBaselineSystem(),
+                repeat_count=args.repeat_count,
+            ),
+        }
+    )
+    output_path = write_benchmark_suite_report_json(args.output, report)
+
+    print("Phase F CI report")
+    print(f"fixture_name={report.fixture_name}")
+    print(f"fixture_hash={report.fixture_hash}")
+    print(f"repeat_count={report.repeat_count}")
+    print(f"report_path={output_path}")
+    for system_report in report.system_reports:
+        print(f"{system_report.system_id}_pus_mean={system_report.pus.mean:.2f}")
+        print(
+            f"{system_report.system_id}_pus_ci="
+            f"{system_report.pus.ci_lower:.2f}..{system_report.pus.ci_upper:.2f}"
+        )
+        print(
+            f"{system_report.system_id}_task_success_ci="
+            f"{system_report.task_success_rate.ci_lower:.2f}"
+            f"..{system_report.task_success_rate.ci_upper:.2f}"
+        )
+    print("phase_f_report=PASS")
+    return 0
+
+
+def phase_f_comparison_main(argv: Sequence[str] | None = None) -> int:
+    """Run the current MIND system against the Phase F baselines."""
+
+    parser = argparse.ArgumentParser(
+        prog="mind-phase-f-comparison",
+        description="Run Phase F benchmark comparison for F-4 ~ F-6.",
+    )
+    parser.add_argument(
+        "--repeat-count",
+        type=int,
+        default=3,
+        help="Independent run count for each system. Must be >= 3.",
+    )
+    parser.add_argument(
+        "--output",
+        default="artifacts/phase_f/comparison_report.json",
+        help="Output path for the persisted comparison JSON report.",
+    )
+    args = parser.parse_args(list(argv) if argv is not None else None)
+
+    result = evaluate_phase_f_comparison(repeat_count=args.repeat_count)
+    try:
+        assert_phase_f_comparison(result)
+    except RuntimeError as exc:
+        raise SystemExit(str(exc)) from exc
+
+    output_path = write_phase_f_comparison_report_json(args.output, result)
+    mind_report = next(
+        system_report
+        for system_report in result.suite_report.system_reports
+        if system_report.system_id == "mind"
+    )
+    print("Phase F comparison report")
+    print(f"fixture_name={result.suite_report.fixture_name}")
+    print(f"fixture_hash={result.suite_report.fixture_hash}")
+    print(f"repeat_count={result.suite_report.repeat_count}")
+    print(f"report_path={output_path}")
+    print(f"mind_pus_mean={mind_report.pus.mean:.2f}")
+    print(
+        "mind_vs_no_memory_diff="
+        f"{result.versus_no_memory.mean_diff:.2f}"
+        f" ({result.versus_no_memory.ci_lower:.2f}..{result.versus_no_memory.ci_upper:.2f})"
+    )
+    print(
+        "mind_vs_fixed_summary_memory_diff="
+        f"{result.versus_fixed_summary_memory.mean_diff:.2f}"
+        f" ({result.versus_fixed_summary_memory.ci_lower:.2f}"
+        f"..{result.versus_fixed_summary_memory.ci_upper:.2f})"
+    )
+    print(
+        "mind_vs_plain_rag_diff="
+        f"{result.versus_plain_rag.mean_diff:.2f}"
+        f" ({result.versus_plain_rag.ci_lower:.2f}..{result.versus_plain_rag.ci_upper:.2f})"
+    )
+    print(f"F-2={'PASS' if result.f2_pass else 'FAIL'}")
+    print(f"F-3={'PASS' if result.f3_pass else 'FAIL'}")
+    print(f"F-4={'PASS' if result.f4_pass else 'FAIL'}")
+    print(f"F-5={'PASS' if result.f5_pass else 'FAIL'}")
+    print(f"F-6={'PASS' if result.f6_pass else 'FAIL'}")
+    print(f"phase_f_comparison={'PASS' if result.phase_f_comparison_pass else 'FAIL'}")
+    return 0
+
+
+def phase_f_gate_main(argv: Sequence[str] | None = None) -> int:
+    """Run the full local Phase F gate, including F-7 ablations."""
+
+    parser = argparse.ArgumentParser(
+        prog="mind-phase-f-gate",
+        description="Run the full local Phase F gate.",
+    )
+    parser.add_argument(
+        "--repeat-count",
+        type=int,
+        default=3,
+        help="Independent run count for each system. Must be >= 3.",
+    )
+    parser.add_argument(
+        "--output",
+        default="artifacts/phase_f/gate_report.json",
+        help="Output path for the persisted gate JSON report.",
+    )
+    args = parser.parse_args(list(argv) if argv is not None else None)
+
+    result = evaluate_phase_f_gate(repeat_count=args.repeat_count)
+    try:
+        assert_phase_f_gate(result)
+    except RuntimeError as exc:
+        raise SystemExit(str(exc)) from exc
+
+    output_path = write_phase_f_gate_report_json(args.output, result)
+    print("Phase F gate report")
+    print(f"manifest_hash={result.manifest_hash}")
+    print(
+        "manifest_step_range="
+        f"{result.manifest_min_step_count}..{result.manifest_max_step_count}"
+    )
+    print(f"repeat_count={result.comparison_result.suite_report.repeat_count}")
+    print(f"report_path={output_path}")
+    print(
+        "mind_vs_no_memory_diff="
+        f"{result.comparison_result.versus_no_memory.mean_diff:.2f}"
+    )
+    print(
+        "mind_vs_fixed_summary_memory_diff="
+        f"{result.comparison_result.versus_fixed_summary_memory.mean_diff:.2f}"
+    )
+    print(
+        "mind_vs_plain_rag_diff="
+        f"{result.comparison_result.versus_plain_rag.mean_diff:.2f}"
+    )
+    print(f"workspace_ablation_drop={result.workspace_ablation.mean_diff:.2f}")
+    print(
+        "offline_maintenance_ablation_drop="
+        f"{result.offline_maintenance_ablation.mean_diff:.2f}"
+    )
+    print(f"F-1={'PASS' if result.f1_pass else 'FAIL'}")
+    print(f"F-2={'PASS' if result.f2_pass else 'FAIL'}")
+    print(f"F-3={'PASS' if result.f3_pass else 'FAIL'}")
+    print(f"F-4={'PASS' if result.f4_pass else 'FAIL'}")
+    print(f"F-5={'PASS' if result.f5_pass else 'FAIL'}")
+    print(f"F-6={'PASS' if result.f6_pass else 'FAIL'}")
+    print(f"F-7={'PASS' if result.f7_pass else 'FAIL'}")
+    print(f"phase_f_gate={'PASS' if result.phase_f_pass else 'FAIL'}")
     return 0
