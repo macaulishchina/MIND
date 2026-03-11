@@ -18,6 +18,7 @@ from mind.primitives.contracts import (
     RetrieveResponse,
 )
 from mind.primitives.service import PrimitiveService, QueryEmbedder, VectorRetriever
+from mind.telemetry import TelemetryEvent, TelemetryEventKind, TelemetryRecorder, TelemetryScope
 from mind.workspace import (
     WorkspaceBuilder,
     WorkspaceBuildError,
@@ -60,6 +61,7 @@ class _ModePlan:
 class _ModeExecution:
     mode: AccessMode
     context_kind: AccessContextKind
+    workspace_id: str | None
     context_object_ids: tuple[str, ...]
     context_text: str
     context_token_count: int
@@ -133,16 +135,23 @@ class AccessService:
         clock: Callable[[], datetime] | None = None,
         vector_retriever: VectorRetriever | None = None,
         query_embedder: QueryEmbedder | None = None,
+        telemetry_recorder: TelemetryRecorder | None = None,
     ) -> None:
         self.store = store
         self._clock = clock or _utc_now
+        self._telemetry_recorder = telemetry_recorder
         self._primitive_service = PrimitiveService(
             store,
             clock=self._clock,
             vector_retriever=vector_retriever,
             query_embedder=query_embedder,
+            telemetry_recorder=telemetry_recorder,
         )
-        self._workspace_builder = WorkspaceBuilder(store, clock=self._clock)
+        self._workspace_builder = WorkspaceBuilder(
+            store,
+            clock=self._clock,
+            telemetry_recorder=telemetry_recorder,
+        )
 
     def run(
         self,
@@ -155,9 +164,54 @@ class AccessService:
         except ValidationError as exc:
             raise AccessServiceError(str(exc)) from exc
 
+        run_id = execution_context.telemetry_run_id or f"access-{validated_request.task_id}"
+        operation_id = f"access-{validated_request.task_id}"
+        correlated_context = self._with_telemetry_context(
+            execution_context,
+            operation_id=operation_id,
+            parent_event_id=f"{operation_id}-entry",
+        )
+        self._record_access_telemetry(
+            enabled=execution_context.dev_mode,
+            event=TelemetryEvent(
+                event_id=f"{operation_id}-entry",
+                scope=TelemetryScope.ACCESS,
+                kind=TelemetryEventKind.ENTRY,
+                occurred_at=self._clock(),
+                run_id=run_id,
+                operation_id=operation_id,
+                actor=execution_context.actor,
+                payload={
+                    "requested_mode": validated_request.requested_mode.value,
+                    "task_id": validated_request.task_id,
+                    "task_family": (
+                        validated_request.task_family.value
+                        if validated_request.task_family is not None
+                        else None
+                    ),
+                    "query_modes": [mode.value for mode in validated_request.query_modes],
+                    "filters": validated_request.filters.model_dump(mode="json"),
+                    "hard_constraints": list(validated_request.hard_constraints),
+                },
+                debug_fields={
+                    "time_budget_ms": validated_request.time_budget_ms,
+                },
+            ),
+        )
+
         if validated_request.requested_mode is AccessMode.AUTO:
-            return self._run_auto(validated_request, execution_context)
-        return self._run_locked(validated_request, execution_context)
+            response = self._run_auto(validated_request, correlated_context)
+        else:
+            response = self._run_locked(validated_request, correlated_context)
+
+        self._record_access_trace(
+            response=response,
+            actor=execution_context.actor,
+            enabled=execution_context.dev_mode,
+            run_id=run_id,
+            operation_id=operation_id,
+        )
+        return response
 
     def _run_locked(
         self,
@@ -364,6 +418,10 @@ class AccessService:
                     slot_limit=plan.workspace_slot_limit,
                     purpose=plan.purpose,
                     workspace_id=f"workspace-{mode.value}-{request.task_id}",
+                    dev_mode=context.dev_mode,
+                    telemetry_run_id=context.telemetry_run_id,
+                    telemetry_operation_id=f"workspace-{mode.value}-{request.task_id}",
+                    telemetry_parent_event_id=context.telemetry_parent_event_id,
                 )
             except WorkspaceBuildError as exc:
                 raise AccessServiceError(str(exc)) from exc
@@ -424,6 +482,11 @@ class AccessService:
         return _ModeExecution(
             mode=mode,
             context_kind=context_kind,
+            workspace_id=(
+                f"workspace-{mode.value}-{request.task_id}"
+                if plan.build_workspace
+                else None
+            ),
             context_object_ids=context_object_ids,
             context_text=serialized_context.text,
             context_token_count=serialized_context.token_count,
@@ -438,6 +501,102 @@ class AccessService:
             has_reflection_signal=has_reflection_signal,
             simple_enough=simple_enough,
         )
+
+    def _record_access_trace(
+        self,
+        *,
+        response: AccessRunResponse,
+        actor: str,
+        enabled: bool,
+        run_id: str,
+        operation_id: str,
+    ) -> None:
+        decision_events = [
+            event for event in response.trace.events if event.event_kind is AccessTraceKind.SELECT_MODE
+        ]
+        parent_event_id = f"{operation_id}-entry"
+        for index, decision in enumerate(decision_events, start=1):
+            event_id = f"{operation_id}-decision-{index}"
+            self._record_access_telemetry(
+                enabled=enabled,
+                event=TelemetryEvent(
+                    event_id=event_id,
+                    scope=TelemetryScope.ACCESS,
+                    kind=TelemetryEventKind.DECISION,
+                    occurred_at=self._clock(),
+                    run_id=run_id,
+                    operation_id=operation_id,
+                    parent_event_id=parent_event_id,
+                    actor=actor,
+                    payload={
+                        "mode": decision.mode.value,
+                        "reason_code": decision.reason_code.value if decision.reason_code else None,
+                        "switch_kind": decision.switch_kind.value if decision.switch_kind else None,
+                        "from_mode": decision.from_mode.value if decision.from_mode else None,
+                        "target_ids": list(decision.target_ids),
+                    },
+                    debug_fields={"summary": decision.summary},
+                ),
+            )
+            parent_event_id = event_id
+
+        self._record_access_telemetry(
+            enabled=enabled,
+            event=TelemetryEvent(
+                event_id=f"{operation_id}-context",
+                scope=TelemetryScope.ACCESS,
+                kind=TelemetryEventKind.CONTEXT_RESULT,
+                occurred_at=self._clock(),
+                run_id=run_id,
+                operation_id=operation_id,
+                parent_event_id=parent_event_id,
+                actor=actor,
+                payload={
+                    "context_kind": response.context_kind.value,
+                    "context_object_ids": list(response.context_object_ids),
+                    "candidate_ids": list(response.candidate_ids),
+                    "selected_object_ids": list(response.selected_object_ids),
+                    "verification_notes": list(response.verification_notes),
+                },
+                debug_fields={
+                    "candidate_count": len(response.candidate_ids),
+                    "read_count": len(response.read_object_ids),
+                    "selected_count": len(response.selected_object_ids),
+                    "context_token_count": response.context_token_count,
+                },
+            ),
+        )
+        self._record_access_telemetry(
+            enabled=enabled,
+            event=TelemetryEvent(
+                event_id=f"{operation_id}-result",
+                scope=TelemetryScope.ACCESS,
+                kind=TelemetryEventKind.ACTION_RESULT,
+                occurred_at=self._clock(),
+                run_id=run_id,
+                operation_id=operation_id,
+                parent_event_id=f"{operation_id}-context",
+                actor=actor,
+                payload={
+                    "resolved_mode": response.resolved_mode.value,
+                    "trace_summary": response.trace.events[-1].summary,
+                },
+                debug_fields={
+                    "trace_event_count": len(response.trace.events),
+                    "expanded_read_count": len(response.expanded_object_ids),
+                },
+            ),
+        )
+
+    def _record_access_telemetry(
+        self,
+        *,
+        enabled: bool,
+        event: TelemetryEvent,
+    ) -> None:
+        if not enabled or self._telemetry_recorder is None:
+            return
+        self._telemetry_recorder.record(event)
 
     def _choose_initial_auto_mode(
         self,
@@ -602,6 +761,20 @@ class AccessService:
         result = self._primitive_service.read({"object_ids": object_ids}, context)
         response = self._require_read_success(result)
         return list(response.objects)
+
+    @staticmethod
+    def _with_telemetry_context(
+        context: PrimitiveExecutionContext,
+        *,
+        operation_id: str,
+        parent_event_id: str,
+    ) -> PrimitiveExecutionContext:
+        return context.model_copy(
+            update={
+                "telemetry_operation_id": operation_id,
+                "telemetry_parent_event_id": parent_event_id,
+            }
+        )
 
     @staticmethod
     def _workspace_scores(

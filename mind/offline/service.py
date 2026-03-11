@@ -6,10 +6,12 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any
 
+from mind.capabilities import CapabilityService, OfflineReconstructRequest
 from mind.kernel.retrieval import build_query_embedding
 from mind.kernel.store import MemoryStore
 from mind.primitives.contracts import PrimitiveExecutionContext, PrimitiveOutcome
 from mind.primitives.service import PrimitiveService
+from mind.telemetry import TelemetryEvent, TelemetryEventKind, TelemetryRecorder, TelemetryScope
 
 from .jobs import (
     OfflineJob,
@@ -32,13 +34,19 @@ class OfflineMaintenanceService:
         store: MemoryStore,
         *,
         clock: Callable[[], datetime] | None = None,
+        capability_service: CapabilityService | None = None,
+        telemetry_recorder: TelemetryRecorder | None = None,
     ) -> None:
         self.store = store
         self._clock = clock or _utc_now
+        self._telemetry_recorder = telemetry_recorder
+        self._capability_service = capability_service or CapabilityService(clock=self._clock)
         self._primitive_service = PrimitiveService(
             store,
             clock=self._clock,
             query_embedder=build_query_embedding,
+            capability_service=self._capability_service,
+            telemetry_recorder=telemetry_recorder,
         )
 
     def process_job(
@@ -46,25 +54,210 @@ class OfflineMaintenanceService:
         job: OfflineJob,
         *,
         actor: str,
+        dev_mode: bool = False,
+        telemetry_run_id: str | None = None,
     ) -> dict[str, Any]:
         """Run one offline job and return a structured result payload."""
 
-        if job.job_kind is OfflineJobKind.REFLECT_EPISODE:
-            return self._process_reflect_episode(job, actor=actor)
-        if job.job_kind is OfflineJobKind.PROMOTE_SCHEMA:
-            return self._process_promote_schema(job, actor=actor)
-        raise OfflineMaintenanceError(f"unsupported offline job kind '{job.job_kind.value}'")
+        run_id = telemetry_run_id or f"offline-{job.job_id}"
+        operation_id = f"offline-{job.job_kind.value}-{job.job_id}"
+        last_parent_event_id = f"{operation_id}-entry"
+        self._record_telemetry(
+            enabled=dev_mode,
+            event=TelemetryEvent(
+                event_id=last_parent_event_id,
+                scope=TelemetryScope.OFFLINE,
+                kind=TelemetryEventKind.ENTRY,
+                occurred_at=self._clock(),
+                run_id=run_id,
+                operation_id=operation_id,
+                job_id=job.job_id,
+                actor=actor,
+                payload={
+                    "job_kind": job.job_kind.value,
+                    "payload": dict(job.payload),
+                    "status": job.status.value,
+                },
+                debug_fields={
+                    "priority": job.priority,
+                    "attempt_count": job.attempt_count,
+                    "max_attempts": job.max_attempts,
+                },
+            ),
+        )
+
+        try:
+            if job.job_kind is OfflineJobKind.REFLECT_EPISODE:
+                payload = ReflectEpisodeJobPayload.model_validate(job.payload)
+                last_parent_event_id = f"{operation_id}-dispatch"
+                self._record_telemetry(
+                    enabled=dev_mode,
+                    event=TelemetryEvent(
+                        event_id=last_parent_event_id,
+                        scope=TelemetryScope.OFFLINE,
+                        kind=TelemetryEventKind.DECISION,
+                        occurred_at=self._clock(),
+                        run_id=run_id,
+                        operation_id=operation_id,
+                        parent_event_id=f"{operation_id}-entry",
+                        job_id=job.job_id,
+                        actor=actor,
+                        payload={
+                            "stage": "dispatch",
+                            "job_kind": job.job_kind.value,
+                            "handler": "reflect_episode",
+                            "primitive": "reflect",
+                            "episode_id": payload.episode_id,
+                            "focus": payload.focus,
+                        },
+                    ),
+                )
+                result = self._process_reflect_episode(
+                    job,
+                    actor=actor,
+                    payload=payload,
+                    dev_mode=dev_mode,
+                    telemetry_run_id=run_id,
+                    telemetry_operation_id=operation_id,
+                    telemetry_parent_event_id=last_parent_event_id,
+                )
+            elif job.job_kind is OfflineJobKind.PROMOTE_SCHEMA:
+                payload = PromoteSchemaJobPayload.model_validate(job.payload)
+                last_parent_event_id = f"{operation_id}-dispatch"
+                self._record_telemetry(
+                    enabled=dev_mode,
+                    event=TelemetryEvent(
+                        event_id=last_parent_event_id,
+                        scope=TelemetryScope.OFFLINE,
+                        kind=TelemetryEventKind.DECISION,
+                        occurred_at=self._clock(),
+                        run_id=run_id,
+                        operation_id=operation_id,
+                        parent_event_id=f"{operation_id}-entry",
+                        job_id=job.job_id,
+                        actor=actor,
+                        payload={
+                            "stage": "dispatch",
+                            "job_kind": job.job_kind.value,
+                            "handler": "promote_schema",
+                            "primitive": "reorganize_simple",
+                            "target_refs": list(payload.target_refs),
+                            "requested_reason": payload.reason,
+                        },
+                    ),
+                )
+                decision, target_objects = self._assess_promotion(payload)
+                last_parent_event_id = f"{operation_id}-assessment"
+                self._record_telemetry(
+                    enabled=dev_mode,
+                    event=TelemetryEvent(
+                        event_id=last_parent_event_id,
+                        scope=TelemetryScope.OFFLINE,
+                        kind=TelemetryEventKind.DECISION,
+                        occurred_at=self._clock(),
+                        run_id=run_id,
+                        operation_id=operation_id,
+                        parent_event_id=f"{operation_id}-dispatch",
+                        job_id=job.job_id,
+                        actor=actor,
+                        payload={
+                            "stage": "promotion_assessment",
+                            "promote": decision.promote,
+                            "reason": decision.reason,
+                            "supporting_episode_ids": list(decision.supporting_episode_ids),
+                            "evidence_refs": list(decision.evidence_refs),
+                        },
+                        debug_fields={
+                            "target_count": len(target_objects),
+                            "supporting_episode_count": len(decision.supporting_episode_ids),
+                        },
+                    ),
+                )
+                if not decision.promote:
+                    raise OfflineMaintenanceError(decision.reason)
+                result = self._process_promote_schema(
+                    job,
+                    actor=actor,
+                    payload=payload,
+                    decision=decision,
+                    target_objects=target_objects,
+                    dev_mode=dev_mode,
+                    telemetry_run_id=run_id,
+                    telemetry_operation_id=operation_id,
+                    telemetry_parent_event_id=last_parent_event_id,
+                )
+            else:
+                raise OfflineMaintenanceError(
+                    f"unsupported offline job kind '{job.job_kind.value}'"
+                )
+        except Exception as exc:
+            self._record_telemetry(
+                enabled=dev_mode,
+                event=TelemetryEvent(
+                    event_id=f"{operation_id}-result",
+                    scope=TelemetryScope.OFFLINE,
+                    kind=TelemetryEventKind.ACTION_RESULT,
+                    occurred_at=self._clock(),
+                    run_id=run_id,
+                    operation_id=operation_id,
+                    parent_event_id=last_parent_event_id,
+                    job_id=job.job_id,
+                    actor=actor,
+                    payload={
+                        "outcome": "failure",
+                        "job_kind": job.job_kind.value,
+                        "error_type": type(exc).__name__,
+                        "error_message": str(exc),
+                    },
+                ),
+            )
+            raise
+
+        self._record_telemetry(
+            enabled=dev_mode,
+            event=TelemetryEvent(
+                event_id=f"{operation_id}-result",
+                scope=TelemetryScope.OFFLINE,
+                kind=TelemetryEventKind.ACTION_RESULT,
+                occurred_at=self._clock(),
+                run_id=run_id,
+                operation_id=operation_id,
+                parent_event_id=last_parent_event_id,
+                job_id=job.job_id,
+                actor=actor,
+                payload={
+                    "outcome": "success",
+                    "job_kind": job.job_kind.value,
+                    "result": result,
+                },
+                debug_fields={
+                    "result_keys": sorted(result),
+                },
+            ),
+        )
+        return result
 
     def _process_reflect_episode(
         self,
         job: OfflineJob,
         *,
         actor: str,
+        payload: ReflectEpisodeJobPayload,
+        dev_mode: bool,
+        telemetry_run_id: str,
+        telemetry_operation_id: str,
+        telemetry_parent_event_id: str,
     ) -> dict[str, Any]:
-        payload = ReflectEpisodeJobPayload.model_validate(job.payload)
         result = self._primitive_service.reflect(
             payload.model_dump(mode="json"),
-            self._context(actor=actor, budget_scope_id=job.job_id),
+            self._context(
+                actor=actor,
+                budget_scope_id=job.job_id,
+                dev_mode=dev_mode,
+                telemetry_run_id=telemetry_run_id,
+                telemetry_operation_id=telemetry_operation_id,
+                telemetry_parent_event_id=telemetry_parent_event_id,
+            ),
         )
         if result.outcome is not PrimitiveOutcome.SUCCESS or result.response is None:
             raise OfflineMaintenanceError(_primitive_failure_message(result.error))
@@ -82,21 +275,37 @@ class OfflineMaintenanceService:
         job: OfflineJob,
         *,
         actor: str,
+        payload: PromoteSchemaJobPayload,
+        decision: Any,
+        target_objects: list[dict[str, Any]],
+        dev_mode: bool,
+        telemetry_run_id: str,
+        telemetry_operation_id: str,
+        telemetry_parent_event_id: str,
     ) -> dict[str, Any]:
-        payload = PromoteSchemaJobPayload.model_validate(job.payload)
-        target_objects = [self.store.read_object(object_id) for object_id in payload.target_refs]
-        decision = assess_schema_promotion(target_objects)
-        if not decision.promote:
-            raise OfflineMaintenanceError(decision.reason)
-
-        reason = f"{payload.reason}; {decision.reason}"
+        reconstruction = self._capability_service.offline_reconstruct(
+            OfflineReconstructRequest(
+                request_id=f"offline-promote-{job.job_id}",
+                objective=f"{payload.reason}; {decision.reason}",
+                evidence_text=_promotion_evidence_text(target_objects),
+                episode_ids=list(decision.supporting_episode_ids),
+                evidence_refs=list(decision.evidence_refs),
+            )
+        )
         result = self._primitive_service.reorganize_simple(
             {
                 "target_refs": payload.target_refs,
                 "operation": "synthesize_schema",
-                "reason": reason,
+                "reason": reconstruction.reconstruction_text,
             },
-            self._context(actor=actor, budget_scope_id=job.job_id),
+            self._context(
+                actor=actor,
+                budget_scope_id=job.job_id,
+                dev_mode=dev_mode,
+                telemetry_run_id=telemetry_run_id,
+                telemetry_operation_id=telemetry_operation_id,
+                telemetry_parent_event_id=telemetry_parent_event_id,
+            ),
         )
         if result.outcome is not PrimitiveOutcome.SUCCESS or result.response is None:
             raise OfflineMaintenanceError(_primitive_failure_message(result.error))
@@ -113,19 +322,44 @@ class OfflineMaintenanceService:
             "supporting_episode_ids": list(decision.supporting_episode_ids),
             "stability_score": latest_schema["metadata"]["stability_score"],
             "source_refs": list(latest_schema["source_refs"]),
+            "reconstruction_text": reconstruction.reconstruction_text,
         }
+
+    def _assess_promotion(
+        self,
+        payload: PromoteSchemaJobPayload,
+    ) -> tuple[Any, list[dict[str, Any]]]:
+        target_objects = [self.store.read_object(object_id) for object_id in payload.target_refs]
+        return assess_schema_promotion(target_objects), target_objects
 
     @staticmethod
     def _context(
         *,
         actor: str,
         budget_scope_id: str,
+        dev_mode: bool = False,
+        telemetry_run_id: str | None = None,
+        telemetry_operation_id: str | None = None,
+        telemetry_parent_event_id: str | None = None,
     ) -> PrimitiveExecutionContext:
         return PrimitiveExecutionContext(
             actor=actor,
             budget_scope_id=budget_scope_id,
             budget_limit=100.0,
+            dev_mode=dev_mode,
+            telemetry_run_id=telemetry_run_id,
+            telemetry_operation_id=telemetry_operation_id,
+            telemetry_parent_event_id=telemetry_parent_event_id,
         )
+
+    def _record_telemetry(
+        self,
+        *,
+        enabled: bool,
+        event: TelemetryEvent,
+    ) -> None:
+        if enabled and self._telemetry_recorder is not None:
+            self._telemetry_recorder.record(event)
 
 
 def _primitive_failure_message(error: Any) -> str:
@@ -134,6 +368,26 @@ def _primitive_failure_message(error: Any) -> str:
     code = getattr(error, "code", None)
     message = getattr(error, "message", None)
     return f"{code.value if code is not None else 'primitive_error'}: {message}"
+
+
+def _promotion_evidence_text(target_objects: list[dict[str, Any]]) -> str:
+    lines = []
+    for obj in target_objects:
+        metadata = obj.get("metadata", {})
+        episode_id = metadata.get("episode_id") or "-"
+        lines.append(
+            f"{obj['id']} [{obj['type']}] episode={episode_id}: {_object_signal_text(obj)}"
+        )
+    return "\n".join(lines)
+
+
+def _object_signal_text(obj: dict[str, Any]) -> str:
+    content = obj.get("content", {})
+    for key in ("summary", "text", "rule", "title", "result_summary"):
+        value = content.get(key)
+        if value:
+            return str(value)
+    return str(content)[:240]
 
 
 def _utc_now() -> datetime:

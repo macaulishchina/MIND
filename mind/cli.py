@@ -22,6 +22,21 @@ from .access import (
     evaluate_access_gate,
     write_access_gate_report_json,
 )
+from .capabilities import (
+    CapabilityAdapter,
+    CapabilityProviderFamily,
+    assert_capability_gate,
+    build_capability_adapters_from_environment,
+    evaluate_capability_gate,
+    evaluate_capability_provider_compatibility_report,
+    write_capability_gate_report_json,
+    write_capability_provider_compatibility_report_json,
+)
+from .frontend import (
+    assert_frontend_gate,
+    evaluate_frontend_gate,
+    write_frontend_gate_report_json,
+)
 from .cli_config import (
     CliBackend,
     CliProfile,
@@ -109,6 +124,7 @@ _CliHandler = Callable[[argparse.Namespace], int]
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _SUMMARY_SCOPES: tuple[str, ...] = ("episode", "task", "object_set")
 _ACCESS_QUERY_MODES: tuple[str, ...] = ("keyword", "time_window", "vector")
+_LIVE_CAPABILITY_PROVIDER_CHOICES: tuple[str, ...] = ("openai", "claude", "gemini")
 _ACCEPTANCE_REPORTS: dict[str, Path] = {
     phase: _REPO_ROOT / f"docs/reports/phase_{phase}_acceptance_report.md"
     for phase in ("a", "b", "c", "d", "e", "f", "g", "h", "i", "j")
@@ -179,6 +195,8 @@ _MIND_COMMAND_GROUPS: tuple[_MindCommandGroup, ...] = (
         examples=(
             "mindtest gate phase-b --help",
             "mindtest gate phase-i --help",
+            "mindtest gate phase-k --help",
+            "mindtest gate phase-m --help",
             "mindtest gate postgres-regression --help",
         ),
     ),
@@ -192,6 +210,7 @@ _MIND_COMMAND_GROUPS: tuple[_MindCommandGroup, ...] = (
         examples=(
             "mindtest report phase-f-ci --help",
             "mindtest report phase-g-cost --help",
+            "mindtest report phase-k-compatibility --help",
             "mindtest report acceptance --phase h",
         ),
     ),
@@ -255,6 +274,10 @@ def _build_forwarded_argv(
     for attr_name, flag in option_pairs:
         value = getattr(args, attr_name)
         if value is None:
+            continue
+        if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+            for item in value:
+                forwarded.extend((flag, str(item)))
             continue
         forwarded.extend((flag, str(value)))
     return forwarded
@@ -1639,6 +1662,47 @@ def _configure_gate_commands(command_parser: argparse.ArgumentParser) -> None:
         )
     )
 
+    phase_k_parser = gate_subparsers.add_parser(
+        "phase-k",
+        help="Run the local Phase K capability-layer gate.",
+        description="Run the local Phase K capability-layer gate.",
+    )
+    phase_k_parser.add_argument(
+        "--output",
+        default="artifacts/phase_k/gate_report.json",
+        help="Output path for the persisted Phase K gate JSON report.",
+    )
+    phase_k_parser.add_argument(
+        "--live-provider",
+        action="append",
+        choices=_LIVE_CAPABILITY_PROVIDER_CHOICES,
+        default=[],
+        help="Optional live provider adapter to execute during the gate. May be passed multiple times.",
+    )
+    phase_k_parser.set_defaults(
+        _mind_handler=_run_forwarded_command(
+            capability_gate_main,
+            (("output", "--output"), ("live_provider", "--live-provider")),
+        )
+    )
+
+    phase_m_parser = gate_subparsers.add_parser(
+        "phase-m",
+        help="Run the local Phase M frontend-experience gate.",
+        description="Run the local Phase M frontend-experience gate.",
+    )
+    phase_m_parser.add_argument(
+        "--output",
+        default="artifacts/phase_m/gate_report.json",
+        help="Output path for the persisted Phase M gate JSON report.",
+    )
+    phase_m_parser.set_defaults(
+        _mind_handler=_run_forwarded_command(
+            frontend_gate_main,
+            (("output", "--output"),),
+        )
+    )
+
     postgres_regression_parser = gate_subparsers.add_parser(
         "postgres-regression",
         help="Run the PostgreSQL regression bundle for Phase B/C/D/E.",
@@ -2119,6 +2183,30 @@ def _configure_report_commands(command_parser: argparse.ArgumentParser) -> None:
         _mind_handler=_run_forwarded_command(
             strategy_cost_report_main,
             (("repeat_count", "--repeat-count"), ("output", "--output")),
+        )
+    )
+
+    phase_k_compatibility_parser = report_subparsers.add_parser(
+        "phase-k-compatibility",
+        help="Run the Phase K provider compatibility report.",
+        description="Run the Phase K provider compatibility report.",
+    )
+    phase_k_compatibility_parser.add_argument(
+        "--output",
+        default="artifacts/phase_k/provider_compatibility.json",
+        help="Output path for the persisted Phase K compatibility JSON report.",
+    )
+    phase_k_compatibility_parser.add_argument(
+        "--live-provider",
+        action="append",
+        choices=_LIVE_CAPABILITY_PROVIDER_CHOICES,
+        default=[],
+        help="Optional live provider adapter to execute during the report. May be passed multiple times.",
+    )
+    phase_k_compatibility_parser.set_defaults(
+        _mind_handler=_run_forwarded_command(
+            capability_compatibility_report_main,
+            (("output", "--output"), ("live_provider", "--live-provider")),
         )
     )
 
@@ -2748,6 +2836,116 @@ def cli_gate_main(argv: Sequence[str] | None = None) -> int:
     return 0
 
 
+def capability_gate_main(argv: Sequence[str] | None = None) -> int:
+    """Run the local Phase K capability-layer gate."""
+
+    parser = argparse.ArgumentParser(
+        prog="mindtest-phase-k-gate",
+        description="Run the local Phase K capability-layer gate.",
+    )
+    parser.add_argument(
+        "--output",
+        default="artifacts/phase_k/gate_report.json",
+        help="Output path for the persisted Phase K gate JSON report.",
+    )
+    parser.add_argument(
+        "--live-provider",
+        action="append",
+        choices=_LIVE_CAPABILITY_PROVIDER_CHOICES,
+        default=[],
+        help="Optional live provider adapter to execute during the gate. May be passed multiple times.",
+    )
+    args = parser.parse_args(list(argv) if argv is not None else None)
+
+    adapters = _build_live_capability_adapters(args.live_provider)
+    result = evaluate_capability_gate(adapters=adapters)
+
+    try:
+        assert_capability_gate(result)
+    except RuntimeError as exc:
+        raise SystemExit(str(exc)) from exc
+
+    output_path = write_capability_gate_report_json(args.output, result)
+    print("Phase K gate report")
+    print(f"report_path={output_path}")
+    print(f"live_providers={_format_live_provider_summary(adapters)}")
+    print(
+        "contracts="
+        f"{result.contract_audit.request_contract_count}/{result.contract_audit.capability_count}"
+    )
+    print(
+        "benchmark="
+        f"{result.benchmark_result.passed_case_count}/{result.benchmark_result.case_count}"
+    )
+    print(
+        "failure_audit="
+        f"{result.failure_audit.fallback_success_count + result.failure_audit.structured_failure_count}/"
+        f"{result.failure_audit.audited_case_count}"
+    )
+    print(
+        "trace_coverage="
+        f"{result.trace_audit.complete_trace_count}/{result.trace_audit.audited_case_count}"
+    )
+    for provider_summary in result.compatibility_report.providers:
+        print(
+            f"provider_{provider_summary.provider_family.value}="
+            f"pass_rate:{provider_summary.benchmark_pass_rate:.4f},"
+            f"failed_cases:{provider_summary.benchmark_failed_case_count},"
+            f"trace_coverage:{provider_summary.trace_coverage:.4f}"
+        )
+    print(f"K-1={'PASS' if result.k1_pass else 'FAIL'}")
+    print(f"K-2={'PASS' if result.k2_pass else 'FAIL'}")
+    print(f"K-3={'PASS' if result.k3_pass else 'FAIL'}")
+    print(f"K-4={'PASS' if result.k4_pass else 'FAIL'}")
+    print(f"K-5={'PASS' if result.k5_pass else 'FAIL'}")
+    print(f"K-6={'PASS' if result.k6_pass else 'FAIL'}")
+    print(f"K-7={'PASS' if result.k7_pass else 'FAIL'}")
+    print(f"phase_k_gate={'PASS' if result.capability_gate_pass else 'FAIL'}")
+    return 0
+
+
+def capability_compatibility_report_main(argv: Sequence[str] | None = None) -> int:
+    """Run the Phase K provider compatibility report."""
+
+    parser = argparse.ArgumentParser(
+        prog="mindtest-phase-k-compatibility-report",
+        description="Run the Phase K provider compatibility report.",
+    )
+    parser.add_argument(
+        "--output",
+        default="artifacts/phase_k/provider_compatibility.json",
+        help="Output path for the persisted Phase K compatibility JSON report.",
+    )
+    parser.add_argument(
+        "--live-provider",
+        action="append",
+        choices=_LIVE_CAPABILITY_PROVIDER_CHOICES,
+        default=[],
+        help="Optional live provider adapter to execute during the report. May be passed multiple times.",
+    )
+    args = parser.parse_args(list(argv) if argv is not None else None)
+
+    adapters = _build_live_capability_adapters(args.live_provider)
+    report = evaluate_capability_provider_compatibility_report(adapters=adapters)
+    output_path = write_capability_provider_compatibility_report_json(args.output, report)
+
+    print("Phase K provider compatibility report")
+    print(f"report_path={output_path}")
+    print(f"live_providers={_format_live_provider_summary(adapters)}")
+    print(f"benchmark_case_count={report.benchmark_case_count}")
+    print(f"benchmark_pass_rate={report.benchmark_pass_rate:.4f}")
+    print(f"failure_audit_pass_rate={report.failure_audit_pass_rate:.4f}")
+    print(f"trace_audit_coverage={report.trace_audit_coverage:.4f}")
+    for provider_summary in report.providers:
+        print(
+            f"provider_{provider_summary.provider_family.value}="
+            f"benchmark_pass_rate:{provider_summary.benchmark_pass_rate:.4f},"
+            f"failed_cases:{provider_summary.benchmark_failed_case_count},"
+            f"trace_coverage:{provider_summary.trace_coverage:.4f}"
+        )
+    return 0
+
+
 def benchmark_manifest_main() -> int:
     """Print the frozen LongHorizonEval v1 manifest."""
 
@@ -3128,4 +3326,89 @@ def strategy_gate_main(argv: Sequence[str] | None = None) -> int:
     print(f"G-4={'PASS' if result.g4_pass else 'FAIL'}")
     print(f"G-5={'PASS' if result.g5_pass else 'FAIL'}")
     print(f"phase_g_gate={'PASS' if result.strategy_gate_pass else 'FAIL'}")
+    return 0
+
+
+def _build_live_capability_adapters(
+    requested_providers: Sequence[str],
+) -> list[CapabilityAdapter]:
+    families = _requested_live_provider_families(requested_providers)
+    adapters = build_capability_adapters_from_environment(provider_families=families or None)
+    if not families:
+        return adapters
+    available_families = {adapter.descriptor.provider_family for adapter in adapters}
+    missing = [family.value for family in families if family not in available_families]
+    if missing:
+        raise SystemExit(
+            "Missing configured auth for live providers: " + ", ".join(sorted(missing))
+        )
+    return adapters
+
+
+def _requested_live_provider_families(
+    requested_providers: Sequence[str],
+) -> tuple[CapabilityProviderFamily, ...]:
+    seen: set[CapabilityProviderFamily] = set()
+    ordered_families: list[CapabilityProviderFamily] = []
+    for provider in requested_providers:
+        family = CapabilityProviderFamily(provider)
+        if family in seen:
+            continue
+        seen.add(family)
+        ordered_families.append(family)
+    return tuple(ordered_families)
+
+
+def _format_live_provider_summary(adapters: Sequence[CapabilityAdapter]) -> str:
+    live_providers = [
+        adapter.descriptor.provider_family.value
+        for adapter in adapters
+        if adapter.descriptor.provider_family is not CapabilityProviderFamily.DETERMINISTIC
+    ]
+    return ",".join(live_providers) if live_providers else "none"
+
+
+def frontend_gate_main(argv: Sequence[str] | None = None) -> int:
+    """Run the local Phase M frontend-experience gate."""
+
+    parser = argparse.ArgumentParser(
+        prog="mindtest-phase-m-gate",
+        description="Run the local Phase M frontend-experience gate.",
+    )
+    parser.add_argument(
+        "--output",
+        default="artifacts/phase_m/gate_report.json",
+        help="Output path for the persisted Phase M gate JSON report.",
+    )
+    args = parser.parse_args(list(argv) if argv is not None else None)
+
+    result = evaluate_frontend_gate()
+
+    try:
+        assert_frontend_gate(result)
+    except RuntimeError as exc:
+        raise SystemExit(str(exc)) from exc
+
+    output_path = write_frontend_gate_report_json(args.output, result)
+    print("Phase M gate report")
+    print(f"report_path={output_path}")
+    print(
+        "flow_report="
+        f"{result.flow_report.passed_count}/{result.flow_report.scenario_count}"
+    )
+    print(
+        "responsive_audit="
+        f"{result.responsive_audit.passed_count}/{result.responsive_audit.scenario_count}"
+    )
+    print(
+        "dev_mode_audit="
+        f"{result.dev_mode_audit.passed_count}/{result.dev_mode_audit.scenario_count}"
+    )
+    print(f"M-1={'PASS' if result.m1_pass else 'FAIL'}")
+    print(f"M-2={'PASS' if result.m2_pass else 'FAIL'}")
+    print(f"M-3={'PASS' if result.m3_pass else 'FAIL'}")
+    print(f"M-4={'PASS' if result.m4_pass else 'FAIL'}")
+    print(f"M-5={'PASS' if result.m5_pass else 'FAIL'}")
+    print(f"M-6={'PASS' if result.m6_pass else 'FAIL'}")
+    print(f"phase_m_gate={'PASS' if result.frontend_gate_pass else 'FAIL'}")
     return 0

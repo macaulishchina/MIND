@@ -2,6 +2,41 @@
 
 时点说明：这份文档记录的是 Phase L 通过后，MIND 进入 `Phase M / Frontend Experience` 前的启动约束、任务拆分和范围控制。正式通过口径以后续 Phase M 验收报告为准；这里先冻结前端阶段的功能边界，避免把体验入口、配置入口和后续治理 / persona 一起推成一个失控产品阶段。
 
+## 当前实现状态
+
+截至 `2026-03-11`，Phase M 的前置整理已经完成大半，并且已经进入首轮 UI 壳层实现：
+
+- `mind/frontend/contracts.py` 已冻结第一版 frontend-facing debug timeline query / response contract
+- `mind/frontend/debug.py` 已能把 raw telemetry 投影成前端可依赖的 timeline / object-delta 视图
+- `mind/frontend/experience.py` 已冻结第一版 frontend-facing experience contract 与 catalog projection
+- `mind/frontend/settings.py` 已冻结第一版 frontend-facing settings contract
+- `mind/frontend/audit.py` 已提供第一版 responsive audit 与 JSON report 写出
+- `mind/frontend/reporting.py` 已提供第一版 frontend flow report 与 JSON report 写出
+- `mind/frontend/gate.py` 已提供第一版 Phase M formal gate 与 JSON report 写出
+- `mind/app/services/frontend.py` 已提供第一版 frontend debug query app service，并已扩展出 frontend-facing experience service
+- `mind/api/routers/frontend.py` 已把 catalog / gate-demo / settings / settings preview / settings apply / settings restore / debug timeline / experience flows 暴露到现有 FastAPI transport
+- 顶层 `frontend/` 已落下第一版静态 ES-module frontend shell，并由 `mind/api/app.py` 以 `/frontend` 静态挂载
+- `mind/fixtures/frontend_experience_bench.py` 已冻结 `FrontendExperienceBench v1`
+- 对应测试已覆盖：
+  - contract selector 约束
+  - dev-mode debug 隔离
+  - manual telemetry projection
+  - real primitive telemetry projection
+  - frontend experience catalog 覆盖与真实 app service projection
+  - frontend gate/demo summary surface 与 frontend-facing service / REST transport / 静态壳层回归
+  - frontend experience bench 覆盖与分类约束
+  - frontend settings snapshot apply / restore 与 principal preferences 持久化回归
+  - transport 层 debug query 暴露与 registry 集成
+  - frontend REST transport surface 与 dev-mode debug route 回归
+  - 静态 frontend mount、asset 提供与交互表单壳层回归
+  - debug context / evidence projection 与静态页面可视化回归
+  - responsive audit 与 JSON report 回归
+  - frontend settings projection 与 system status 对接
+
+当前仍未开始的部分：
+
+- 无
+
 ## 目标
 
 Phase M 做前端体验层，不提前实现后续治理重塑和人格层能力。
@@ -45,6 +80,12 @@ Phase M 明确不做：
   - 功能调用
   - 配置读写
   - telemetry / debug 查询
+- 当前已完成第一块前置：
+  - experience contract 与 catalog projection
+  - debug timeline query / response contract
+  - raw telemetry -> frontend-facing projection helper
+  - settings contract 与 config snapshot projection
+  - `FrontendExperienceBench v1`
 
 ### `M2` 功能体验入口
 

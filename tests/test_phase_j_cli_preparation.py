@@ -594,6 +594,7 @@ def test_gate_help_lists_real_gate_subcommands(capsys: pytest.CaptureFixture[str
     assert "phase-b" in output
     assert "phase-i" in output
     assert "phase-j" in output
+    assert "phase-k" in output
     assert "postgres-regression" in output
 
 
@@ -656,6 +657,41 @@ def test_gate_phase_j_forwards_output_and_dsn(monkeypatch: pytest.MonkeyPatch) -
     ]
 
 
+def test_gate_phase_k_forwards_output_and_live_providers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Sequence[str] | None] = {"argv": None}
+
+    def fake_capability_gate_main(argv: Sequence[str] | None = None) -> int:
+        captured["argv"] = argv
+        return 0
+
+    monkeypatch.setattr("mind.cli.capability_gate_main", fake_capability_gate_main)
+
+    exit_code = mind_main(
+        [
+            "gate",
+            "phase-k",
+            "--output",
+            "/tmp/phase_k_gate.json",
+            "--live-provider",
+            "openai",
+            "--live-provider",
+            "claude",
+        ]
+    )
+
+    assert exit_code == 0
+    assert captured["argv"] == [
+        "--output",
+        "/tmp/phase_k_gate.json",
+        "--live-provider",
+        "openai",
+        "--live-provider",
+        "claude",
+    ]
+
+
 def test_gate_postgres_regression_forwards_dsn(monkeypatch: pytest.MonkeyPatch) -> None:
     captured: dict[str, Sequence[str] | None] = {"argv": None}
 
@@ -680,6 +716,7 @@ def test_report_help_lists_real_report_subcommands(capsys: pytest.CaptureFixture
     output = capsys.readouterr().out
     assert "phase-f-ci" in output
     assert "phase-g-cost" in output
+    assert "phase-k-compatibility" in output
     assert "acceptance" in output
 
 
@@ -742,6 +779,40 @@ def test_report_phase_g_cost_forwards_repeat_count_and_output(
         "4",
         "--output",
         "/tmp/phase_g_cost.json",
+    ]
+
+
+def test_report_phase_k_compatibility_forwards_output_and_live_providers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Sequence[str] | None] = {"argv": None}
+
+    def fake_capability_compatibility_report_main(argv: Sequence[str] | None = None) -> int:
+        captured["argv"] = argv
+        return 0
+
+    monkeypatch.setattr(
+        "mind.cli.capability_compatibility_report_main",
+        fake_capability_compatibility_report_main,
+    )
+
+    exit_code = mind_main(
+        [
+            "report",
+            "phase-k-compatibility",
+            "--output",
+            "/tmp/phase_k_compatibility.json",
+            "--live-provider",
+            "gemini",
+        ]
+    )
+
+    assert exit_code == 0
+    assert captured["argv"] == [
+        "--output",
+        "/tmp/phase_k_compatibility.json",
+        "--live-provider",
+        "gemini",
     ]
 
 

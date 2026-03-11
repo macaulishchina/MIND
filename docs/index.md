@@ -29,6 +29,9 @@ source $HOME/.local/bin/env
 - 想对接 HTTP：看 [REST API 指南](./product/api.md) 和 [API Reference](./reference/api-reference.md)
 - 想对接 MCP：看 [MCP 指南](./product/mcp.md) 和 [MCP Tool Reference](./reference/mcp-tool-reference.md)
 - 想理解 `mind/app`、存储和 transport 边界：看 [系统总览](./architecture/system-overview.md)
+- 想确认“最初设计了哪些能力、现在各层暴露到什么程度”：看 [能力暴露矩阵](./architecture/capability-surface-matrix.md)
+- 想理解统一 capability layer、provider adapter 和 Phase K gate：看 [Capability Layer](./architecture/capability-layer.md)
+- 想理解轻量 frontend shell、frontend-facing transport 和 Phase M gate：看 [Frontend Experience](./architecture/frontend-experience.md)
 - 想追溯历史阶段、验收和研究材料：看 [历史资料与证据](./history-and-evidence.md)
 
 ## 文档分层
@@ -52,7 +55,7 @@ source $HOME/.local/bin/env
 ## 版本与来源
 
 - 当前仓库版本：`0.2.0`
-- 当前文档覆盖范围：`WP-0 ~ WP-6` 已完成的产品化基线
+- 当前文档覆盖范围：`WP-0 ~ WP-6` 已完成的产品化基线，外加 `Phase K / L / M` 的 capability-layer、telemetry 和 frontend 实现基线
 - 历史 Phase B ~ J 的规范、gate、审计和报告继续保留在 `docs/foundation/`、`docs/design/`、`docs/reports/`
 
 ## 本地预览

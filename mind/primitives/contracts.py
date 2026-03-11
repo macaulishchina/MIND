@@ -123,6 +123,10 @@ class PrimitiveExecutionContext(ContractModel):
     budget_scope_id: str = Field(default="global", min_length=1)
     budget_limit: NonNegativeFloat | None = None
     capabilities: list[Capability] = Field(default_factory=lambda: [Capability.MEMORY_READ])
+    dev_mode: bool = False
+    telemetry_run_id: str | None = None
+    telemetry_operation_id: str | None = None
+    telemetry_parent_event_id: str | None = None
 
 
 class MemoryObject(ContractModel):

@@ -2,6 +2,31 @@
 
 时点说明：这份文档记录的是 Phase K 通过后，MIND 进入 `Phase L / Development Telemetry` 前的启动约束、任务拆分和范围控制。正式通过口径以后续 Phase L 验收报告为准；这里先冻结开发态观测机制的边界，避免把 telemetry、前端可视化和性能治理搅在一起。
 
+## 当前实现状态
+
+截至 `2026-03-11`，Phase L 已进入 instrumentation 接入阶段，`L1` 基线和 `L2` 的大部分主路径已经落地：
+
+- `mind/telemetry/contracts.py` 已冻结最小 telemetry event contract
+- `mind/fixtures/internal_telemetry_bench.py` 已冻结 `InternalTelemetryBench v1` 骨架
+- 对应 contract / fixture 测试已进入本地回归
+- primitive runtime 已支持 `dev_mode` 开关下的 telemetry 采集
+- `write_raw / summarize / link / reflect / reorganize_simple` 已具备 primitive 入口事件、结果事件和 `object_delta` 事件
+- `retrieve` 已具备 retrieval 入口事件、排序决策事件和结果事件
+- `WorkspaceBuilder` 已具备 workspace 入口事件、slot 选择事件和上下文结果事件
+- `AccessService` 已具备访问入口事件、模式选择/切换事件和上下文结果事件
+- `OfflineMaintenanceService` 已具备离线作业入口事件、分发/评估决策事件和作业结果事件
+- `GovernanceService` 已具备治理入口事件、选择决策事件和执行结果事件
+- `OfflineWorker` 已支持把 `dev_mode` 透传到离线维护服务
+- `PrimitiveExecutionContext` 已支持 `telemetry_operation_id / telemetry_parent_event_id`
+- `primitive / retrieval / workspace / access / offline / governance` 已具备第一轮跨层父子链
+- `mind/telemetry/audit.py` 已具备 trace audit、state-delta audit 和 replayable timeline audit
+- `mind/telemetry/audit.py` 已具备 coverage audit 和 debug-field audit
+- `mind/telemetry/gate.py` 已具备 Phase L formal gate 聚合、toggle audit 和 gate report JSON 持久化
+- `mind/telemetry/runtime.py` 已具备 JSONL 持久化 recorder 与 env/path 解析
+- app registry 已支持在显式 telemetry path 下把 dev-mode telemetry 落盘
+
+当前代码任务已完成，剩余的是阶段验收文档和下一阶段对接。
+
 ## 目标
 
 Phase L 只做开发模式下的完备内部观测，不做前端展示。
@@ -54,6 +79,7 @@ Phase L 明确不做：
   - access
   - offline
   - governance
+- 上述 6 条主路径现已完成第一轮接入，当前剩余的是跨路径关联和完备度收口
 - 再补：
   - object delta
   - budget / trace 关键字段
@@ -67,6 +93,11 @@ Phase L 明确不做：
   - `workspace_id`
   - `object_version`
 - 目标是后续能重建完整内部时间线
+- 当前已完成第一轮：
+  - 外层服务可把 primitive/retrieval/object_delta 事件挂到父事件下
+  - access 路径可把 workspace 事件挂到 access 入口下
+  - 离线作业内的 primitive 写路径已复用离线 operation_id
+  - telemetry stream 已可运行 trace/state-delta/timeline 三类 audit
 
 ### `L4` 开关与隔离
 
@@ -74,6 +105,10 @@ Phase L 明确不做：
 - 开关关闭时：
   - 不写持久 telemetry
   - 不改变现有能力语义
+- 当前已具备：
+  - `MIND_DEV_MODE` 可作为产品层默认 dev-mode 开关
+  - `MIND_DEV_TELEMETRY_PATH` 可显式指定 JSONL 落盘路径
+  - 未开启 dev-mode 时，即使配置了 path 也不会创建 telemetry 文件
 
 ### `L5` Gate 与报告
 
@@ -82,6 +117,7 @@ Phase L 明确不做：
   - state delta completeness report
   - replayable timeline audit
   - Phase L gate report
+- 当前 Phase L 的代码与测试任务已经收口，下一步应转入 Phase M 前置整理
 
 ## 当前关键设计约束
 

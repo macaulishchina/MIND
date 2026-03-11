@@ -5,12 +5,14 @@ from __future__ import annotations
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from os import environ
+from pathlib import Path
 from uuid import uuid4
 
 import uvicorn
 from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError as PydanticValidationError
 
 from mind import __version__
@@ -21,6 +23,7 @@ from mind.api._utils import (
 )
 from mind.api.routers import (
     access_router,
+    frontend_router,
     governance_router,
     jobs_router,
     memories_router,
@@ -47,11 +50,13 @@ def create_app(config: ResolvedCliConfig | None = None) -> FastAPI:
     _install_exception_handlers(app)
     app.include_router(memories_router)
     app.include_router(access_router)
+    app.include_router(frontend_router)
     app.include_router(governance_router)
     app.include_router(jobs_router)
     app.include_router(sessions_router)
     app.include_router(users_router)
     app.include_router(system_router)
+    _install_frontend_mount(app)
     return app
 
 
@@ -111,3 +116,9 @@ def _install_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(Exception)
     async def handle_unexpected_error(request: Request, exc: Exception) -> JSONResponse:
         return unexpected_error_response(request, exc)
+
+
+def _install_frontend_mount(app: FastAPI) -> None:
+    frontend_dir = Path(__file__).resolve().parents[2] / "frontend"
+    if frontend_dir.exists():
+        app.mount("/frontend", StaticFiles(directory=frontend_dir, html=True), name="frontend")

@@ -134,7 +134,7 @@ MIND 当前聚焦于四个核心问题：
 
 同时，产品化 addendum 已经完成首轮落地：现有 Phase J 形成的开发/验收 CLI 已迁移为 `mindtest`，而 `mind` 已切换为产品 CLI。正式产品化方案与完成态说明见 [产品化方案与验收蓝图](./docs/design/productization_program.md)。
 
-这些内容里，`Phase H / I / J` 已经进入实现基线并通过本地 formal gate；产品化 `WP-0 ~ WP-6` 也已经完成，补上了应用服务层、用户状态、REST API、MCP、产品 CLI 和部署资产。`Phase K ~ O` 仍然是后续阶段的正式设计前置约束。
+这些内容里，`Phase H / I / J` 已经进入实现基线并通过本地 formal gate；产品化 `WP-0 ~ WP-6` 也已经完成，补上了应用服务层、用户状态、REST API、MCP、产品 CLI 和部署资产。`Phase K / L / M` 现在也都已进入实现基线：K 补上了统一 capability contract、provider adapter、failure/trace audit 和 gate/report，L 补上了开发态 telemetry、audit 与 formal gate，M 补上了轻量静态 frontend shell、frontend-facing transport、responsive audit、flow report 和 formal gate。更正式的 acceptance report 与后续 Phase N / O 的产品面仍在后续收口。
 
 当前产品入口包括：
 
@@ -209,6 +209,7 @@ MIND 当前聚焦于四个核心问题：
 - [REST API 指南](./docs/product/api.md)
 - [MCP 指南](./docs/product/mcp.md)
 - [系统总览](./docs/architecture/system-overview.md)
+- [Frontend Experience](./docs/architecture/frontend-experience.md)
 - [历史资料与证据](./docs/history-and-evidence.md)
 - [产品化方案与验收蓝图](./docs/design/productization_program.md)
 - [产品化审计报告](./docs/reports/productization_audit_report.md)

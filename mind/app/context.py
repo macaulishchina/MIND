@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from enum import StrEnum
+from os import environ
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -16,6 +17,8 @@ from mind.kernel.provenance import (
     SourceChannel as ProvenanceSourceChannel,
 )
 from mind.primitives.contracts import Capability, PrimitiveExecutionContext
+
+_TRUE_ENV_VALUES = frozenset({"1", "true", "yes", "on"})
 
 # ---------------------------------------------------------------------------
 # Supporting enums
@@ -143,11 +146,19 @@ def resolve_execution_context(
     if principal is not None:
         capabilities = list(principal.capabilities)
 
+    dev_mode = policy.dev_mode if policy is not None else _env_dev_mode()
+
     return PrimitiveExecutionContext(
         actor=actor,
         budget_scope_id=budget_scope_id,
         budget_limit=budget_limit,
         capabilities=capabilities,
+        dev_mode=dev_mode,
+        telemetry_run_id=(
+            session.request_id
+            if session is not None and session.request_id
+            else session.session_id if session is not None else None
+        ),
     )
 
 
@@ -186,6 +197,10 @@ def _producer_kind_for(principal_kind: PrincipalKind | None) -> ProducerKind:
     if principal_kind is PrincipalKind.API_KEY:
         return ProducerKind.OPERATOR
     return ProducerKind.SYSTEM
+
+
+def _env_dev_mode() -> bool:
+    return environ.get("MIND_DEV_MODE", "").strip().lower() in _TRUE_ENV_VALUES
 
 
 def _provenance_channel_for(

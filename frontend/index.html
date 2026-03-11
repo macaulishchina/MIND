@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MIND Frontend Workbench</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="workbench" id="app-shell">
+      <section class="hero">
+        <div class="eyebrow">Phase M lightweight frontend</div>
+        <h1>MIND Frontend Workbench</h1>
+        <p class="lede">
+          Static ES-module frontend over the existing FastAPI product surface.
+          No Python-rendered UI, no heavy build chain.
+        </p>
+        <form class="auth-panel" id="auth-form">
+          <label>
+            <span>API Key</span>
+            <input
+              id="api-key"
+              name="api_key"
+              type="password"
+              placeholder="Enter X-API-Key for /v1 calls"
+              autocomplete="off"
+            />
+          </label>
+          <div class="button-row">
+            <button type="submit" class="button">Save Key</button>
+            <button type="button" class="subtle-button" id="clear-key">Clear</button>
+          </div>
+          <p class="hint" id="auth-status">No API key stored.</p>
+        </form>
+      </section>
+
+      <section class="surface-grid">
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Overview</h2>
+            <button class="subtle-button" id="reload-overview" type="button">Reload</button>
+          </div>
+          <div class="overview-grid" id="overview-grid">
+            <div class="empty-state">Save an API key to load catalog and runtime settings.</div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Settings Preview</h2>
+            <span class="panel-note">/v1/frontend/settings:preview</span>
+          </div>
+          <form class="settings-form" id="settings-form">
+            <label>
+              <span>Backend</span>
+              <select id="settings-backend" name="backend">
+                <option value="">no change</option>
+              </select>
+            </label>
+            <label>
+              <span>Profile</span>
+              <select id="settings-profile" name="profile">
+                <option value="">no change</option>
+              </select>
+            </label>
+            <label>
+              <span>Provider</span>
+              <select id="settings-provider" name="provider">
+                <option value="">no change</option>
+              </select>
+            </label>
+            <label>
+              <span>Model</span>
+              <input id="settings-model" name="model" type="text" placeholder="leave blank for no change" />
+            </label>
+            <label>
+              <span>Dev Mode</span>
+              <select id="settings-dev-mode" name="dev_mode">
+                <option value="">no change</option>
+                <option value="true">true</option>
+                <option value="false">false</option>
+              </select>
+            </label>
+            <div class="button-row">
+              <button type="submit" class="button">Preview</button>
+              <button type="button" class="subtle-button" id="settings-apply">Apply</button>
+              <button type="button" class="subtle-button" id="settings-restore">Restore</button>
+              <button type="button" class="subtle-button" id="settings-reset">Reset</button>
+            </div>
+          </form>
+          <div class="result-panel" id="settings-result">
+            <div class="empty-state">No preview loaded.</div>
+          </div>
+        </article>
+      </section>
+
+      <section class="surface-grid">
+        <article class="panel" id="gate-demo-panel">
+          <div class="panel-head">
+            <h2>Gate / Demo</h2>
+            <button class="subtle-button" id="load-gate-demo" type="button">Load</button>
+          </div>
+          <p class="panel-note">/v1/frontend/gate-demo</p>
+          <div class="result-panel" id="gate-demo-result">
+            <div class="empty-state">No gate or demo summary loaded.</div>
+          </div>
+        </article>
+      </section>
+
+      <section class="surface-grid">
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Ingest</h2>
+            <span class="panel-note">/v1/frontend/ingest</span>
+          </div>
+          <form class="settings-form" id="ingest-form">
+            <label class="wide-field">
+              <span>Content</span>
+              <textarea
+                id="ingest-content"
+                name="content"
+                rows="4"
+                placeholder="Store one memory or note"
+              ></textarea>
+            </label>
+            <label>
+              <span>Episode ID</span>
+              <input id="ingest-episode-id" name="episode_id" type="text" placeholder="optional" />
+            </label>
+            <label>
+              <span>Timestamp Order</span>
+              <input
+                id="ingest-timestamp-order"
+                name="timestamp_order"
+                type="number"
+                min="1"
+                value="1"
+              />
+            </label>
+            <div class="button-row">
+              <button type="submit" class="button">Store</button>
+              <button type="button" class="subtle-button" id="ingest-reset">Reset</button>
+            </div>
+          </form>
+          <div class="result-panel" id="ingest-result">
+            <div class="empty-state">No ingest run yet.</div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Retrieve</h2>
+            <span class="panel-note">/v1/frontend/retrieve</span>
+          </div>
+          <form class="settings-form" id="retrieve-form">
+            <label class="wide-field">
+              <span>Query</span>
+              <input id="retrieve-query" name="query" type="text" placeholder="Find related memories" />
+            </label>
+            <label>
+              <span>Episode ID</span>
+              <input id="retrieve-episode-id" name="episode_id" type="text" placeholder="optional" />
+            </label>
+            <label>
+              <span>Max Candidates</span>
+              <input
+                id="retrieve-max-candidates"
+                name="max_candidates"
+                type="number"
+                min="1"
+                max="50"
+                value="10"
+              />
+            </label>
+            <div class="button-row">
+              <button type="submit" class="button">Retrieve</button>
+              <button type="button" class="subtle-button" id="retrieve-reset">Reset</button>
+            </div>
+          </form>
+          <div class="result-panel" id="retrieve-result">
+            <div class="empty-state">No retrieval run yet.</div>
+          </div>
+        </article>
+      </section>
+
+      <section class="surface-grid">
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Access</h2>
+            <span class="panel-note">/v1/frontend/access</span>
+          </div>
+          <form class="settings-form" id="access-form">
+            <label class="wide-field">
+              <span>Query</span>
+              <textarea
+                id="access-query"
+                name="query"
+                rows="3"
+                placeholder="Ask memory a question"
+              ></textarea>
+            </label>
+            <label>
+              <span>Depth</span>
+              <select id="access-depth" name="depth">
+                <option value="auto">auto</option>
+                <option value="flash">flash</option>
+                <option value="focus">focus</option>
+                <option value="reconstruct">reconstruct</option>
+                <option value="reflective_access">reflective_access</option>
+              </select>
+            </label>
+            <label>
+              <span>Episode ID</span>
+              <input id="access-episode-id" name="episode_id" type="text" placeholder="optional" />
+            </label>
+            <label>
+              <span>Task ID</span>
+              <input id="access-task-id" name="task_id" type="text" placeholder="optional" />
+            </label>
+            <label class="checkbox-field">
+              <span>Explain</span>
+              <input id="access-explain" name="explain" type="checkbox" />
+            </label>
+            <div class="button-row">
+              <button type="submit" class="button">Run Access</button>
+              <button type="button" class="subtle-button" id="access-reset">Reset</button>
+            </div>
+          </form>
+          <div class="result-panel" id="access-result">
+            <div class="empty-state">No access run yet.</div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Offline</h2>
+            <span class="panel-note">/v1/frontend/offline</span>
+          </div>
+          <form class="settings-form" id="offline-form">
+            <label>
+              <span>Job Kind</span>
+              <select id="offline-job-kind" name="job_kind">
+                <option value="reflect_episode">reflect_episode</option>
+                <option value="promote_schema">promote_schema</option>
+              </select>
+            </label>
+            <label>
+              <span>Episode ID</span>
+              <input id="offline-episode-id" name="episode_id" type="text" placeholder="for reflect_episode" />
+            </label>
+            <label>
+              <span>Focus</span>
+              <input id="offline-focus" name="focus" type="text" placeholder="reflection focus" />
+            </label>
+            <label class="wide-field">
+              <span>Target Refs</span>
+              <input id="offline-target-refs" name="target_refs" type="text" placeholder="comma separated ids for promote_schema" />
+            </label>
+            <label class="wide-field">
+              <span>Reason</span>
+              <input id="offline-reason" name="reason" type="text" placeholder="promotion reason" />
+            </label>
+            <label>
+              <span>Priority</span>
+              <input
+                id="offline-priority"
+                name="priority"
+                type="number"
+                min="0"
+                max="1"
+                step="0.1"
+                value="0.5"
+              />
+            </label>
+            <div class="button-row">
+              <button type="submit" class="button">Submit Job</button>
+              <button type="button" class="subtle-button" id="offline-reset">Reset</button>
+            </div>
+          </form>
+          <div class="result-panel" id="offline-result">
+            <div class="empty-state">No offline submission yet.</div>
+          </div>
+        </article>
+      </section>
+
+      <section class="surface-grid">
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Debug Timeline</h2>
+            <span class="panel-note">/v1/frontend/debug:timeline</span>
+          </div>
+          <form class="debug-form" id="debug-form">
+            <label>
+              <span>Run ID</span>
+              <input id="debug-run-id" name="run_id" type="text" placeholder="req-..." />
+            </label>
+            <label>
+              <span>Operation ID</span>
+              <input id="debug-operation-id" name="operation_id" type="text" placeholder="optional" />
+            </label>
+            <label>
+              <span>Object ID</span>
+              <input id="debug-object-id" name="object_id" type="text" placeholder="optional" />
+            </label>
+            <label>
+              <span>Limit</span>
+              <input id="debug-limit" name="limit" type="number" min="1" max="500" value="80" />
+            </label>
+            <div class="button-row">
+              <button type="submit" class="button">Load Timeline</button>
+              <button type="button" class="subtle-button" id="debug-reset">Reset</button>
+            </div>
+          </form>
+          <div class="result-panel" id="debug-result">
+            <div class="empty-state">No debug query loaded.</div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Workbench Notes</h2>
+          </div>
+          <ul class="notes-list">
+            <li>This frontend is static and browser-native. The backend remains authoritative.</li>
+            <li>API key handling stays explicit in the UI; debug data is still gated by server-side dev mode.</li>
+            <li>Experience flows now run through frontend-facing transport instead of directly binding raw product endpoints.</li>
+            <li>Current next gap is gate/demo coverage and richer debug context or evidence visualization.</li>
+          </ul>
+        </article>
+      </section>
+    </main>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

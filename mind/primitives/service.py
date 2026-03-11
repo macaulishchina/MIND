@@ -10,10 +10,16 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
+from mind.capabilities import (
+    CapabilityService,
+    ReflectRequest as CapabilityReflectRequest,
+    SummarizeRequest as CapabilitySummarizeRequest,
+)
 from mind.kernel.provenance import build_direct_provenance_record, build_provenance_summary
 from mind.kernel.retrieval import build_query_embedding
 from mind.kernel.schema import public_object_view, strip_control_plane_metadata
 from mind.kernel.store import MemoryStore, PrimitiveTransaction, StoreError
+from mind.telemetry import TelemetryEventKind, TelemetryRecorder, TelemetryScope
 
 from .contracts import (
     BudgetCost,
@@ -44,7 +50,12 @@ from .contracts import (
     WriteRawRequest,
     WriteRawResponse,
 )
-from .runtime import PrimitiveHandlerResult, PrimitiveRejectedError, PrimitiveRuntime
+from .runtime import (
+    PrimitiveHandlerResult,
+    PrimitiveRejectedError,
+    PrimitiveRuntime,
+    PrimitiveTelemetryEmission,
+)
 
 SummaryScope = {"episode", "task", "object_set"}
 InaccessibleStatuses = {"invalid"}
@@ -63,12 +74,19 @@ class PrimitiveService:
         clock: Callable[[], datetime] | None = None,
         vector_retriever: VectorRetriever | None = None,
         query_embedder: QueryEmbedder | None = None,
+        capability_service: CapabilityService | None = None,
+        telemetry_recorder: TelemetryRecorder | None = None,
     ) -> None:
         self.store = store
         self._clock = clock or _utc_now
-        self._runtime = PrimitiveRuntime(store, clock=self._clock)
+        self._runtime = PrimitiveRuntime(
+            store,
+            clock=self._clock,
+            telemetry_recorder=telemetry_recorder,
+        )
         self._vector_retriever = vector_retriever
         self._query_embedder = query_embedder
+        self._capability_service = capability_service or CapabilityService(clock=self._clock)
 
     def write_raw(
         self,
@@ -86,6 +104,10 @@ class PrimitiveService:
         return self._runtime.execute_write(
             primitive=PrimitiveName.WRITE_RAW,
             actor=execution_context.actor,
+            dev_mode=execution_context.dev_mode,
+            telemetry_run_id=execution_context.telemetry_run_id,
+            telemetry_operation_id=execution_context.telemetry_operation_id,
+            telemetry_parent_event_id=execution_context.telemetry_parent_event_id,
             request_model=WriteRawRequest,
             response_model=WriteRawResponse,
             request_payload=request,
@@ -108,6 +130,10 @@ class PrimitiveService:
         return self._runtime.execute_read(
             primitive=PrimitiveName.READ,
             actor=execution_context.actor,
+            dev_mode=execution_context.dev_mode,
+            telemetry_run_id=execution_context.telemetry_run_id,
+            telemetry_operation_id=execution_context.telemetry_operation_id,
+            telemetry_parent_event_id=execution_context.telemetry_parent_event_id,
             request_model=ReadRequest,
             response_model=ReadResponse,
             request_payload=request,
@@ -141,6 +167,10 @@ class PrimitiveService:
         return self._runtime.execute_read(
             primitive=PrimitiveName.RETRIEVE,
             actor=execution_context.actor,
+            dev_mode=execution_context.dev_mode,
+            telemetry_run_id=execution_context.telemetry_run_id,
+            telemetry_operation_id=execution_context.telemetry_operation_id,
+            telemetry_parent_event_id=execution_context.telemetry_parent_event_id,
             request_model=RetrieveRequest,
             response_model=RetrieveResponse,
             request_payload=request,
@@ -163,6 +193,10 @@ class PrimitiveService:
         return self._runtime.execute_write(
             primitive=PrimitiveName.SUMMARIZE,
             actor=execution_context.actor,
+            dev_mode=execution_context.dev_mode,
+            telemetry_run_id=execution_context.telemetry_run_id,
+            telemetry_operation_id=execution_context.telemetry_operation_id,
+            telemetry_parent_event_id=execution_context.telemetry_parent_event_id,
             request_model=SummarizeRequest,
             response_model=SummarizeResponse,
             request_payload=request,
@@ -185,6 +219,10 @@ class PrimitiveService:
         return self._runtime.execute_write(
             primitive=PrimitiveName.LINK,
             actor=execution_context.actor,
+            dev_mode=execution_context.dev_mode,
+            telemetry_run_id=execution_context.telemetry_run_id,
+            telemetry_operation_id=execution_context.telemetry_operation_id,
+            telemetry_parent_event_id=execution_context.telemetry_parent_event_id,
             request_model=LinkRequest,
             response_model=LinkResponse,
             request_payload=request,
@@ -207,6 +245,10 @@ class PrimitiveService:
         return self._runtime.execute_write(
             primitive=PrimitiveName.REFLECT,
             actor=execution_context.actor,
+            dev_mode=execution_context.dev_mode,
+            telemetry_run_id=execution_context.telemetry_run_id,
+            telemetry_operation_id=execution_context.telemetry_operation_id,
+            telemetry_parent_event_id=execution_context.telemetry_parent_event_id,
             request_model=ReflectRequest,
             response_model=ReflectResponse,
             request_payload=request,
@@ -229,6 +271,10 @@ class PrimitiveService:
         return self._runtime.execute_write(
             primitive=PrimitiveName.REORGANIZE_SIMPLE,
             actor=execution_context.actor,
+            dev_mode=execution_context.dev_mode,
+            telemetry_run_id=execution_context.telemetry_run_id,
+            telemetry_operation_id=execution_context.telemetry_operation_id,
+            telemetry_parent_event_id=execution_context.telemetry_parent_event_id,
             request_model=ReorganizeSimpleRequest,
             response_model=ReorganizeSimpleResponse,
             request_payload=request,
@@ -295,6 +341,7 @@ class PrimitiveService:
                 provenance_id=provenance_id,
             ),
             target_ids=(object_id,),
+            mutated_ids=(object_id,),
             budget_events=(
                 self._budget_event(
                     context=context,
@@ -489,6 +536,46 @@ class PrimitiveService:
                     metadata=evidence_summary,
                 ),
             ),
+            telemetry_emissions=(
+                PrimitiveTelemetryEmission(
+                    scope=TelemetryScope.RETRIEVAL,
+                    kind=TelemetryEventKind.ENTRY,
+                    payload={
+                        "query_modes": [mode.value for mode in request.query_modes],
+                        "filters": request.filters.model_dump(mode="json"),
+                        "budget": request.budget.model_dump(mode="json"),
+                    },
+                    debug_fields={
+                        "max_candidates": max_candidates,
+                        "filtered_count": len(filtered_objects),
+                    },
+                ),
+                PrimitiveTelemetryEmission(
+                    scope=TelemetryScope.RETRIEVAL,
+                    kind=TelemetryEventKind.DECISION,
+                    payload={
+                        "retrieval_backend": retrieval_backend,
+                        "candidate_ids": candidate_ids,
+                        "candidate_scores": candidate_scores,
+                    },
+                    debug_fields={
+                        "returned_count": len(candidate_ids),
+                        "used_vector_override": retrieval_backend == "legacy_vector_override",
+                    },
+                ),
+                PrimitiveTelemetryEmission(
+                    scope=TelemetryScope.RETRIEVAL,
+                    kind=TelemetryEventKind.ACTION_RESULT,
+                    payload={
+                        "evidence_summary": evidence_summary,
+                        "candidate_summaries": candidate_summaries,
+                    },
+                    debug_fields={
+                        "top_candidate_id": candidate_ids[0] if candidate_ids else None,
+                        "top_score": candidate_scores[0] if candidate_scores else None,
+                    },
+                ),
+            ),
         )
 
     def _summarize(
@@ -506,7 +593,14 @@ class PrimitiveService:
 
         source_objects = self._read_existing_objects(request.input_refs, transaction)
         combined_text = " ".join(self._object_text(obj) for obj in source_objects)
-        summary_text = self._summarize_text(combined_text)
+        summary_text = self._capability_service.summarize(
+            CapabilitySummarizeRequest(
+                request_id=f"primitive-summarize-{uuid4().hex[:8]}",
+                source_text=combined_text,
+                source_refs=list(request.input_refs),
+                instruction=f"summary_scope={request.summary_scope};target_kind={request.target_kind}",
+            )
+        ).summary_text
         costs = [
             BudgetCost(category=PrimitiveCostCategory.GENERATION, amount=2.0),
             BudgetCost(category=PrimitiveCostCategory.MAINTENANCE, amount=0.5),
@@ -548,6 +642,7 @@ class PrimitiveService:
         return PrimitiveHandlerResult(
             response=SummarizeResponse(summary_object_id=summary_object_id),
             target_ids=(summary_object_id,),
+            mutated_ids=(summary_object_id,),
             budget_events=(
                 self._budget_event(
                     context=context,
@@ -608,6 +703,7 @@ class PrimitiveService:
         return PrimitiveHandlerResult(
             response=LinkResponse(link_object_id=link_object_id),
             target_ids=(request.src_id, request.dst_id, link_object_id),
+            mutated_ids=(link_object_id,),
             budget_events=(
                 self._budget_event(
                     context=context,
@@ -647,13 +743,25 @@ class PrimitiveService:
         created_at = self._clock().isoformat()
         reflection_object_id = self._new_object_id("reflection")
         success = bool(episode_object.get("metadata", {}).get("success"))
+        source_refs = [request.episode_id] + [record["id"] for record in raw_records[-2:]]
+        evidence_text = " ".join(self._object_text(record) for record in raw_records[-2:])
+        reflection_summary = self._capability_service.reflect(
+            CapabilityReflectRequest(
+                request_id=f"primitive-reflect-{uuid4().hex[:8]}",
+                focus=request.focus,
+                evidence_text=evidence_text,
+                episode_id=request.episode_id,
+                outcome_hint="success" if success else "failure",
+                evidence_refs=source_refs,
+            )
+        ).reflection_text
         reflection_object = {
             "id": reflection_object_id,
             "type": "ReflectionNote",
             "content": {
-                "summary": self._reflection_summary(request.focus, success),
+                "summary": reflection_summary,
             },
-            "source_refs": [request.episode_id] + [record["id"] for record in raw_records[-2:]],
+            "source_refs": source_refs,
             "created_at": created_at,
             "updated_at": created_at,
             "version": 1,
@@ -678,6 +786,7 @@ class PrimitiveService:
         return PrimitiveHandlerResult(
             response=ReflectResponse(reflection_object_id=reflection_object_id),
             target_ids=(request.episode_id, reflection_object_id),
+            mutated_ids=(reflection_object_id,),
             budget_events=(
                 self._budget_event(
                     context=context,
@@ -746,6 +855,7 @@ class PrimitiveService:
                 new_object_ids=new_object_ids,
             ),
             target_ids=tuple(updated_ids + new_object_ids),
+            mutated_ids=tuple(updated_ids + new_object_ids),
             budget_events=(
                 self._budget_event(
                     context=context,

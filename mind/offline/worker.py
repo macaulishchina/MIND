@@ -30,11 +30,13 @@ class OfflineWorker:
         *,
         worker_id: str = "mind-offline-worker",
         clock: Callable[[], datetime] | None = None,
+        dev_mode: bool = False,
     ) -> None:
         self.job_store = job_store
         self.maintenance_service = maintenance_service
         self.worker_id = worker_id
         self._clock = clock or _utc_now
+        self._dev_mode = dev_mode
 
     def run_once(
         self,
@@ -59,7 +61,11 @@ class OfflineWorker:
                 break
 
             try:
-                result = self.maintenance_service.process_job(job, actor=self.worker_id)
+                result = self.maintenance_service.process_job(
+                    job,
+                    actor=self.worker_id,
+                    dev_mode=self._dev_mode,
+                )
             except Exception as exc:
                 failed_jobs += 1
                 self.job_store.fail_offline_job(

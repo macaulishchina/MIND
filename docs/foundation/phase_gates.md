@@ -907,6 +907,13 @@ flowchart LR
 当 `K-1 ~ K-7` 全部通过时，阶段 K `PASS`。
 此时模型能力层不再是零散调用点，而成为可配置、可切换、可回退的统一能力面；阶段 L 才适合深入内部做完备观测。
 
+当前本地验证入口：
+
+- `mindtest gate phase-k`
+- `mindtest report phase-k-compatibility`
+- `mindtest-phase-k-gate`
+- `mindtest-phase-k-compatibility-report`
+
 ---
 
 ## 阶段 L Gate：Development Telemetry 完成
@@ -975,6 +982,11 @@ flowchart LR
 
 当 `M-1 ~ M-6` 全部通过时，阶段 M `PASS`。
 此时系统已经具备完整的体验入口、配置入口和可视化 debug 入口；原本更重的治理执行与人格层工作顺延到后续阶段。
+
+当前本地验证入口：
+
+- `mindtest gate phase-m`
+- `mindtest-phase-m-gate`
 
 ---
 

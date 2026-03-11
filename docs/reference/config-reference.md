@@ -27,6 +27,7 @@
 | `MIND_DOCS_BIND` | 文档站 bind 地址；dev 默认 `0.0.0.0:8002`，prod 默认 `0.0.0.0:8001` |
 | `MIND_LOG_LEVEL` | 日志级别 |
 | `MIND_DEV_MODE` | 开发模式开关 |
+| `MIND_DEV_TELEMETRY_PATH` | 开发模式 telemetry JSONL 落盘路径；仅在 `dev_mode=true` 时实际写入 |
 | `MIND_PIP_INDEX_URL` | Docker 构建时的主 PyPI 镜像源，默认 `https://pypi.tuna.tsinghua.edu.cn/simple` |
 | `MIND_PIP_EXTRA_INDEX_URL` | Docker 构建时的附加 PyPI 镜像源 |
 | `MIND_PIP_TRUSTED_HOST` | Docker 构建时的可信镜像域名，默认 `pypi.tuna.tsinghua.edu.cn` |

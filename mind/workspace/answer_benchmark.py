@@ -7,6 +7,7 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
+from mind.capabilities import CapabilityService, generate_answer_text
 from mind.fixtures.episode_answer_bench import AnswerKind, EpisodeAnswerBenchCase
 from mind.kernel.retrieval import build_search_text, tokenize
 
@@ -32,6 +33,8 @@ class AnswerScore:
 def answer_from_raw_topk(
     case: EpisodeAnswerBenchCase,
     context: SerializedContext,
+    *,
+    capability_service: CapabilityService | None = None,
 ) -> GeneratedAnswer:
     payload = json.loads(context.text)
     objects = list(payload["objects"])
@@ -42,15 +45,22 @@ def answer_from_raw_topk(
             return GeneratedAnswer(text="", support_ids=())
         result = str(target["metadata"].get("result", target["content"].get("result_summary", "")))
         task_id = str(target["metadata"].get("task_id", case.task_id))
-        return GeneratedAnswer(text=f"{task_id}: {result}", support_ids=(str(target["id"]),))
+        return _answer_from_capability(
+            case,
+            draft_text=f"{task_id}: {result}",
+            support_ids=(str(target["id"]),),
+            capability_service=capability_service,
+        )
 
     if case.answer_kind is AnswerKind.SUMMARY:
         target = _best_object_match(objects, case.prompt, object_types={"SummaryNote"})
         if target is None:
             return GeneratedAnswer(text="", support_ids=())
-        return GeneratedAnswer(
-            text=str(target["content"].get("summary", "")),
+        return _answer_from_capability(
+            case,
+            draft_text=str(target["content"].get("summary", "")),
             support_ids=(str(target["id"]),),
+            capability_service=capability_service,
         )
 
     if case.answer_kind is AnswerKind.RESULT_AND_SUMMARY:
@@ -73,9 +83,11 @@ def answer_from_raw_topk(
         if summary is not None:
             parts.append(str(summary["content"].get("summary", "")))
             support_ids.append(str(summary["id"]))
-        return GeneratedAnswer(
-            text=" | ".join(part for part in parts if part),
+        return _answer_from_capability(
+            case,
+            draft_text=" | ".join(part for part in parts if part),
             support_ids=tuple(support_ids),
+            capability_service=capability_service,
         )
 
     if case.answer_kind is AnswerKind.FINAL_RAW:
@@ -95,9 +107,11 @@ def answer_from_raw_topk(
                 str(obj["id"]),
             ),
         )
-        return GeneratedAnswer(
-            text=str(target["content"].get("text", "")),
+        return _answer_from_capability(
+            case,
+            draft_text=str(target["content"].get("text", "")),
             support_ids=(str(target["id"]),),
+            capability_service=capability_service,
         )
 
     raise RuntimeError(f"unsupported answer kind {case.answer_kind.value}")
@@ -106,6 +120,8 @@ def answer_from_raw_topk(
 def answer_from_workspace(
     case: EpisodeAnswerBenchCase,
     context: SerializedContext,
+    *,
+    capability_service: CapabilityService | None = None,
 ) -> GeneratedAnswer:
     payload = json.loads(context.text)
     selected_ids = tuple(str(object_id) for object_id in payload["selected_object_ids"])
@@ -129,13 +145,23 @@ def answer_from_workspace(
         if target is None:
             return GeneratedAnswer(text="", support_ids=())
         result = _extract_result(target["summary"])
-        return GeneratedAnswer(text=f"{case.task_id}: {result}", support_ids=(target["object_id"],))
+        return _answer_from_capability(
+            case,
+            draft_text=f"{case.task_id}: {result}",
+            support_ids=(target["object_id"],),
+            capability_service=capability_service,
+        )
 
     if case.answer_kind is AnswerKind.SUMMARY:
         target = _best_slot_match(slots, case.prompt)
         if target is None:
             return GeneratedAnswer(text="", support_ids=())
-        return GeneratedAnswer(text=target["summary"], support_ids=(target["object_id"],))
+        return _answer_from_capability(
+            case,
+            draft_text=target["summary"],
+            support_ids=(target["object_id"],),
+            capability_service=capability_service,
+        )
 
     if case.answer_kind is AnswerKind.RESULT_AND_SUMMARY:
         task_slot = _best_slot_match(slots, case.prompt, require_result_marker=True)
@@ -149,13 +175,23 @@ def answer_from_workspace(
         if summary_slot is not None:
             parts.append(summary_slot["summary"])
             support_ids.append(summary_slot["object_id"])
-        return GeneratedAnswer(text=" | ".join(parts), support_ids=tuple(support_ids))
+        return _answer_from_capability(
+            case,
+            draft_text=" | ".join(parts),
+            support_ids=tuple(support_ids),
+            capability_service=capability_service,
+        )
 
     if case.answer_kind is AnswerKind.FINAL_RAW:
         target = _best_slot_match(slots, case.prompt)
         if target is None:
             return GeneratedAnswer(text="", support_ids=())
-        return GeneratedAnswer(text=target["summary"], support_ids=(target["object_id"],))
+        return _answer_from_capability(
+            case,
+            draft_text=target["summary"],
+            support_ids=(target["object_id"],),
+            capability_service=capability_service,
+        )
 
     raise RuntimeError(f"unsupported answer kind {case.answer_kind.value}")
 
@@ -245,6 +281,28 @@ def _extract_result(summary: str) -> str:
     if match is not None:
         return match.group(1).strip().lower()
     return summary.strip().lower()
+
+
+def _answer_from_capability(
+    case: EpisodeAnswerBenchCase,
+    *,
+    draft_text: str,
+    support_ids: tuple[str, ...],
+    capability_service: CapabilityService | None,
+) -> GeneratedAnswer:
+    if not draft_text:
+        return GeneratedAnswer(text="", support_ids=support_ids)
+    return GeneratedAnswer(
+        text=generate_answer_text(
+            question=case.prompt,
+            context_text=draft_text,
+            support_ids=support_ids,
+            max_answer_tokens=case.max_answer_tokens,
+            capability_service=capability_service,
+            request_id_prefix="workspace-answer",
+        ),
+        support_ids=support_ids,
+    )
 
 
 def _coverage(actual_ids: tuple[str, ...], gold_ids: tuple[str, ...]) -> float:

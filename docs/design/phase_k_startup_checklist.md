@@ -2,6 +2,25 @@
 
 时点说明：这份文档记录的是 Phase J 通过后，MIND 进入 `Phase K / LLM Capability Layer` 前的启动约束、任务拆分和范围控制。正式通过口径以后续 Phase K 验收报告为准；这里先冻结统一能力调用层，避免把 provider 适配、前端配置和内部观测一起揉成一个超大阶段。
 
+## 当前实现状态
+
+截至 `2026-03-11`，Phase K 已经不是纯设计占位，而是进入实现基线。
+
+当前已经落地：
+
+- capability catalog、typed contract 与 adapter protocol
+- provider config 模型与 deterministic baseline
+- `openai / claude / gemini` 真实 adapter
+- `summarize / reflect / answer / offline_reconstruct` 接入统一 capability 层
+- `CapabilityAdapterBench v1`、failure audit、trace audit、provider compatibility report、Phase K formal gate
+- `mindtest gate phase-k` 与 `mindtest report phase-k-compatibility` 开发入口
+
+当前仍待收口：
+
+- Phase K 正式 acceptance report
+- 面向 operator / 产品面的进一步说明
+- 进入 Phase L 前的 telemetry 前置约束梳理
+
 ## 目标
 
 Phase K 只做统一模型能力层，不做前端和内部可视化。

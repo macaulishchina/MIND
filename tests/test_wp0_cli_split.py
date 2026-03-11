@@ -155,6 +155,8 @@ class TestMindtestAliases:
         "mindtest-phase-h-gate",
         "mindtest-phase-i-gate",
         "mindtest-phase-j-gate",
+        "mindtest-phase-k-gate",
+        "mindtest-phase-k-compatibility-report",
         "mindtest-postgres-regression",
         "mindtest-offline-worker-once",
     ]

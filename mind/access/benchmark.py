@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from mind.capabilities import CapabilityService, generate_answer_text
 from mind.fixtures.access_depth_bench import AccessDepthBenchCase, build_access_depth_bench_v1
 from mind.fixtures.retrieval_benchmark import build_canonical_seed_objects
 from mind.kernel.store import MemoryStore, MemoryStoreFactory, SQLiteMemoryStore
@@ -333,6 +334,8 @@ def _generate_answer(
     case: AccessDepthBenchCase,
     context_kind: AccessContextKind,
     context: SerializedContext,
+    *,
+    capability_service: CapabilityService | None = None,
 ) -> AccessGeneratedAnswer:
     support_items = _support_items(context_kind, context.text)
     matched_parts: list[str] = []
@@ -357,8 +360,21 @@ def _generate_answer(
         gold_fact_ids=case.gold_fact_ids,
     )
 
+    draft_text = " | ".join(matched_parts)
     return AccessGeneratedAnswer(
-        text=" | ".join(matched_parts),
+        text=(
+            generate_answer_text(
+                question=case.prompt,
+                context_text=draft_text,
+                support_ids=tuple(support_ids),
+                hard_constraints=case.hard_constraints,
+                max_answer_tokens=case.max_answer_tokens,
+                capability_service=capability_service,
+                request_id_prefix="access-answer",
+            )
+            if draft_text
+            else ""
+        ),
         support_ids=tuple(support_ids),
         matched_fragments=tuple(matched_fragments),
     )

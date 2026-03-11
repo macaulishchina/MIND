@@ -68,9 +68,15 @@ async def test_rest_endpoint_workflow_and_error_envelope(
     health = await api_client.get("/v1/system/health", headers=headers)
     readiness = await api_client.get("/v1/system/readiness", headers=headers)
     config = await api_client.get("/v1/system/config", headers=headers)
+    frontend_catalog = await api_client.get("/v1/frontend/catalog", headers=headers)
+    frontend_settings = await api_client.get("/v1/frontend/settings", headers=headers)
     assert health.status_code == 200
     assert readiness.status_code == 200
     assert config.status_code == 200
+    assert frontend_catalog.status_code == 200
+    assert frontend_settings.status_code == 200
+    assert frontend_catalog.json()["result"]["bench_version"] == "FrontendExperienceBench v1"
+    assert frontend_settings.json()["result"]["runtime"]["backend"] == "sqlite"
 
     get_memory = await api_client.get(f"/v1/memories/{state['memory_id']}", headers=headers)
     list_memories = await api_client.get("/v1/memories", headers=headers)
@@ -186,6 +192,208 @@ async def test_rest_pagination(api_client: httpx.AsyncClient) -> None:
         job["job_id"] for job in filtered_jobs.json()["result"]["jobs"]
     ]
     assert state["pending_job_id"] in filtered_job_ids
+
+
+@pytest.mark.anyio
+async def test_frontend_debug_route_requires_server_side_dev_mode(
+    api_client: httpx.AsyncClient,
+) -> None:
+    response = await api_client.post(
+        "/v1/frontend/debug:timeline",
+        headers=_auth_headers(),
+        json={"run_id": "req-front-debug-disabled"},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "unsupported_operation"
+
+
+@pytest.mark.anyio
+async def test_frontend_settings_preview_route_returns_preview(
+    api_client: httpx.AsyncClient,
+) -> None:
+    response = await api_client.post(
+        "/v1/frontend/settings:preview",
+        headers=_auth_headers(),
+        json={"provider": "openai", "model": "gpt-4.1-mini", "dev_mode": True},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["result"]["preview"]["provider"]["provider"] == "openai"
+    assert "dev_mode" in response.json()["result"]["changed_keys"]
+
+
+@pytest.mark.anyio
+async def test_frontend_settings_apply_and_restore_routes_persist_snapshots(
+    api_client: httpx.AsyncClient,
+) -> None:
+    headers = _auth_headers()
+
+    first_apply = await api_client.post(
+        "/v1/frontend/settings:apply",
+        headers=headers,
+        json={"provider": "openai", "model": "gpt-4.1-mini"},
+    )
+    second_apply = await api_client.post(
+        "/v1/frontend/settings:apply",
+        headers=headers,
+        json={"profile": "postgres_main", "dev_mode": True},
+    )
+    page = await api_client.get("/v1/frontend/settings", headers=headers)
+    restore = await api_client.post(
+        "/v1/frontend/settings:restore",
+        headers=headers,
+        json={},
+    )
+
+    assert first_apply.status_code == 200
+    assert second_apply.status_code == 200
+    assert page.status_code == 200
+    assert page.json()["result"]["snapshot_state"]["restore_available"] is True
+    assert restore.status_code == 200
+    assert restore.json()["result"]["action"] == "restore"
+    assert restore.json()["result"]["current_snapshot"]["request"]["provider"] == "openai"
+
+
+@pytest.mark.anyio
+async def test_frontend_settings_restore_route_fails_without_previous_snapshot(
+    api_client: httpx.AsyncClient,
+) -> None:
+    response = await api_client.post(
+        "/v1/frontend/settings:restore",
+        headers=_auth_headers(),
+        json={},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "not_found"
+
+
+@pytest.mark.anyio
+async def test_frontend_experience_routes_project_product_flows(
+    api_client: httpx.AsyncClient,
+) -> None:
+    headers = _auth_headers()
+    episode_id = "front-rest-ep-1"
+
+    ingest = await api_client.post(
+        "/v1/frontend/ingest",
+        headers=headers,
+        json={
+            "content": "frontend route ingest seed",
+            "episode_id": episode_id,
+            "timestamp_order": 1,
+        },
+    )
+    assert ingest.status_code == 200
+    ingest_result = ingest.json()["result"]
+    assert ingest_result["object_id"].startswith("raw-")
+
+    retrieve = await api_client.post(
+        "/v1/frontend/retrieve",
+        headers=headers,
+        json={
+            "query": "frontend route ingest",
+            "episode_id": episode_id,
+            "max_candidates": 5,
+        },
+    )
+    assert retrieve.status_code == 200
+    retrieve_result = retrieve.json()["result"]
+    assert retrieve_result["candidate_count"] >= 1
+    assert retrieve_result["candidates"][0]["object_id"] == ingest_result["object_id"]
+
+    access = await api_client.post(
+        "/v1/frontend/access",
+        headers=headers,
+        json={
+            "query": "what was stored for the frontend route?",
+            "episode_id": episode_id,
+            "depth": "focus",
+            "explain": True,
+        },
+    )
+    assert access.status_code == 200
+    access_result = access.json()["result"]
+    assert access_result["resolved_depth"] == "focus"
+    assert access_result["candidate_count"] >= 1
+
+    offline = await api_client.post(
+        "/v1/frontend/offline",
+        headers=headers,
+        json={
+            "job_kind": "reflect_episode",
+            "payload": {
+                "episode_id": episode_id,
+                "focus": "frontend route reflection",
+            },
+        },
+    )
+    assert offline.status_code == 200
+    assert offline.json()["result"]["status"] == "pending"
+
+
+@pytest.mark.anyio
+async def test_frontend_gate_demo_route_returns_summary_surface(
+    api_client: httpx.AsyncClient,
+) -> None:
+    response = await api_client.get("/v1/frontend/gate-demo", headers=_auth_headers())
+
+    assert response.status_code == 200
+    result = response.json()["result"]
+    assert result["page_version"] == "FrontendGateDemoPage v1"
+    assert len(result["entries"]) == 7
+    assert result["entries"][0]["kind"] == "demo"
+
+
+@pytest.mark.anyio
+async def test_frontend_debug_route_projects_persisted_telemetry(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("MIND_API_KEY", "test-api-key")
+    monkeypatch.setenv("MIND_DEV_MODE", "true")
+    monkeypatch.setenv("MIND_DEV_TELEMETRY_PATH", str(tmp_path / "telemetry.jsonl"))
+
+    config = resolve_cli_config(
+        backend="sqlite",
+        sqlite_path=str(tmp_path / "wp3-frontend-debug.sqlite3"),
+        allow_sqlite=True,
+    )
+    app = create_app(config)
+
+    async with app.router.lifespan_context(app):
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(
+            transport=transport,
+            base_url="http://testserver",
+        ) as client:
+            headers = _auth_headers()
+            remember = await client.post(
+                "/v1/memories",
+                headers={**headers, "X-Request-ID": "req-front-debug-enabled"},
+                json={
+                    "content": "frontend debug api memory",
+                    "episode_id": "front-debug-ep-1",
+                    "timestamp_order": 1,
+                },
+            )
+            assert remember.status_code == 200
+
+            timeline = await client.post(
+                "/v1/frontend/debug:timeline",
+                headers=headers,
+                json={
+                    "run_id": "req-front-debug-enabled",
+                    "include_state_deltas": True,
+                },
+            )
+
+    assert timeline.status_code == 200
+    assert timeline.json()["result"]["returned_event_count"] >= 3
+    assert len(timeline.json()["result"]["object_deltas"]) >= 1
+    assert "context_views" in timeline.json()["result"]
+    assert "evidence_views" in timeline.json()["result"]
 
 
 @pytest.mark.anyio

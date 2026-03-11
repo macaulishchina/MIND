@@ -95,6 +95,27 @@ class TestContext:
         ctx = resolve_execution_context(policy=policy)
         assert ctx.budget_limit == 50.0
 
+    def test_resolve_with_dev_mode_and_request_id_sets_telemetry_fields(self) -> None:
+        session = SessionContext(session_id="sess-abc", request_id="req-123")
+        policy = ExecutionPolicy(dev_mode=True)
+
+        ctx = resolve_execution_context(session=session, policy=policy)
+
+        assert ctx.dev_mode is True
+        assert ctx.telemetry_run_id == "req-123"
+
+    def test_resolve_uses_env_dev_mode_when_policy_is_absent(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        session = SessionContext(session_id="sess-abc", request_id="req-env")
+        monkeypatch.setenv("MIND_DEV_MODE", "true")
+
+        ctx = resolve_execution_context(session=session)
+
+        assert ctx.dev_mode is True
+        assert ctx.telemetry_run_id == "req-env"
+
     def test_principal_context_frozen(self) -> None:
         p = PrincipalContext(principal_id="test")
         with pytest.raises(PydanticValidationError):
@@ -164,6 +185,7 @@ class TestRegistry:
         )
         with build_app_registry(config) as registry:
             assert registry.store is not None
+            assert registry.capability_service is not None
             assert registry.primitive_service is not None
             assert registry.access_service is not None
             assert registry.governance_service is not None
@@ -173,8 +195,89 @@ class TestRegistry:
             assert registry.memory_access_service is not None
             assert registry.governance_app_service is not None
             assert registry.offline_job_app_service is not None
+            assert registry.frontend_debug_service is not None
             assert registry.user_state_service is not None
             assert registry.system_status_service is not None
+
+    def test_build_registry_attaches_dev_telemetry_persistence(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from mind.app.registry import build_app_registry
+        from mind.cli_config import resolve_cli_config
+
+        telemetry_path = tmp_path / "telemetry" / "events.jsonl"
+        monkeypatch.setenv("MIND_DEV_TELEMETRY_PATH", str(telemetry_path))
+        config = resolve_cli_config(
+            backend="sqlite",
+            sqlite_path=str(tmp_path / "reg_test_telemetry.sqlite3"),
+        )
+
+        with build_app_registry(config) as registry:
+            assert registry.telemetry_recorder is not None
+
+    def test_registry_persists_dev_mode_telemetry_when_enabled(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from mind.app.registry import build_app_registry
+        from mind.cli_config import resolve_cli_config
+
+        telemetry_path = tmp_path / "telemetry" / "events.jsonl"
+        monkeypatch.setenv("MIND_DEV_MODE", "true")
+        config = resolve_cli_config(
+            backend="sqlite",
+            sqlite_path=str(tmp_path / "reg_test_persist.sqlite3"),
+        )
+
+        with build_app_registry(config, telemetry_path=telemetry_path) as registry:
+            resp = registry.memory_ingest_service.remember(
+                _make_request(
+                    session=SessionContext(session_id="sess-dev", request_id="req-dev"),
+                    input={
+                        "content": "persist dev telemetry",
+                        "episode_id": "ep-dev-1",
+                        "timestamp_order": 1,
+                    },
+                )
+            )
+            assert resp.status == AppStatus.OK
+
+        assert telemetry_path.exists()
+        lines = telemetry_path.read_text(encoding="utf-8").strip().splitlines()
+        assert len(lines) >= 3
+        assert '"scope":"primitive"' in lines[0]
+        assert any('"scope":"object_delta"' in line for line in lines)
+
+    def test_registry_does_not_persist_when_dev_mode_is_disabled(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        from mind.app.registry import build_app_registry
+        from mind.cli_config import resolve_cli_config
+
+        telemetry_path = tmp_path / "telemetry" / "events.jsonl"
+        config = resolve_cli_config(
+            backend="sqlite",
+            sqlite_path=str(tmp_path / "reg_test_disabled.sqlite3"),
+        )
+
+        with build_app_registry(config, telemetry_path=telemetry_path) as registry:
+            resp = registry.memory_ingest_service.remember(
+                _make_request(
+                    session=SessionContext(session_id="sess-off", request_id="req-off"),
+                    input={
+                        "content": "disabled telemetry",
+                        "episode_id": "ep-off-1",
+                        "timestamp_order": 1,
+                    },
+                )
+            )
+            assert resp.status == AppStatus.OK
+
+        assert not telemetry_path.exists()
 
 
 # ---------------------------------------------------------------------------
@@ -392,23 +495,99 @@ class TestSystemService:
         resp = svc.readiness()
         assert resp.status == AppStatus.OK
 
-    def test_config_summary(self, tmp_path: Path) -> None:
+    def test_config_summary(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         from mind.app.services.system import SystemStatusService
+        from mind.cli_config import resolve_cli_config
 
+        monkeypatch.setenv("MIND_DEV_MODE", "true")
+        monkeypatch.setenv("MIND_DEV_TELEMETRY_PATH", str(tmp_path / "telemetry.jsonl"))
         store = _build_sqlite_store(tmp_path)
-        svc = SystemStatusService(store, config=None)
+        config = resolve_cli_config(
+            backend="sqlite",
+            sqlite_path=str(tmp_path / "config_summary.sqlite3"),
+        )
+        svc = SystemStatusService(store, config=config)
         resp = svc.config_summary()
         assert resp.status == AppStatus.OK
+        assert resp.result is not None
+        assert resp.result["backend"] == "sqlite"
+        assert resp.result["profile"] == "sqlite_local"
+        assert resp.result["dev_mode"] is True
+        assert resp.result["dev_telemetry_configured"] is True
 
-    def test_provider_status(self, tmp_path: Path) -> None:
+    def test_provider_status(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         from mind.app.services.system import SystemStatusService
 
+        monkeypatch.delenv("MIND_PROVIDER", raising=False)
+        monkeypatch.delenv("MIND_MODEL", raising=False)
         store = _build_sqlite_store(tmp_path)
         svc = SystemStatusService(store)
         resp = svc.provider_status()
         assert resp.status == AppStatus.OK
         assert resp.result is not None
         assert resp.result["provider"] == "stub"
+        assert resp.result["provider_family"] == "deterministic"
+        assert resp.result["status"] == "available"
+        assert resp.result["execution"] == "deterministic_adapter_ready"
+        assert resp.result["auth"]["configured"] is True
+        assert resp.result["supported_capabilities"] == [
+            "summarize",
+            "reflect",
+            "answer",
+            "offline_reconstruct",
+        ]
+
+    def test_provider_status_reports_missing_auth_for_external_provider(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from mind.app.services.system import SystemStatusService
+
+        monkeypatch.setenv("MIND_PROVIDER", "openai")
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+        monkeypatch.delenv("MIND_PROVIDER_API_KEY", raising=False)
+
+        store = _build_sqlite_store(tmp_path)
+        svc = SystemStatusService(store)
+        resp = svc.provider_status()
+
+        assert resp.status == AppStatus.OK
+        assert resp.result is not None
+        assert resp.result["provider_family"] == "openai"
+        assert resp.result["status"] == "missing_auth"
+        assert resp.result["execution"] == "adapter_unavailable_missing_auth"
+        assert resp.result["auth"]["configured"] is False
+
+    def test_provider_status_reports_ready_external_adapter(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from mind.app.services.system import SystemStatusService
+
+        monkeypatch.setenv("MIND_PROVIDER", "claude")
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "test-secret")
+        monkeypatch.delenv("MIND_PROVIDER_API_KEY", raising=False)
+
+        store = _build_sqlite_store(tmp_path)
+        svc = SystemStatusService(store)
+        resp = svc.provider_status()
+
+        assert resp.status == AppStatus.OK
+        assert resp.result is not None
+        assert resp.result["provider_family"] == "claude"
+        assert resp.result["status"] == "available"
+        assert resp.result["execution"] == "claude_messages_adapter_ready"
+        assert resp.result["auth"]["configured"] is True
 
 
 # ---------------------------------------------------------------------------

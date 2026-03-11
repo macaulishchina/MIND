@@ -10,6 +10,7 @@ from typing import Any
 
 from mind.kernel.schema import ensure_valid_object
 from mind.kernel.store import MemoryStore, StoreError
+from mind.telemetry import TelemetryEvent, TelemetryEventKind, TelemetryRecorder, TelemetryScope
 
 InaccessibleWorkspaceStatuses = {"invalid"}
 
@@ -33,9 +34,11 @@ class WorkspaceBuilder:
         store: MemoryStore,
         *,
         clock: Callable[[], datetime] | None = None,
+        telemetry_recorder: TelemetryRecorder | None = None,
     ) -> None:
         self.store = store
         self._clock = clock or (lambda: datetime.now(UTC))
+        self._telemetry_recorder = telemetry_recorder
 
     def build(
         self,
@@ -47,6 +50,10 @@ class WorkspaceBuilder:
         selection_policy: str = "retrieval-score-then-priority",
         purpose: str = "task workspace",
         workspace_id: str | None = None,
+        dev_mode: bool = False,
+        telemetry_run_id: str | None = None,
+        telemetry_operation_id: str | None = None,
+        telemetry_parent_event_id: str | None = None,
     ) -> WorkspaceBuildResult:
         if not task_id:
             raise WorkspaceBuildError("task_id must be non-empty")
@@ -56,6 +63,34 @@ class WorkspaceBuilder:
             raise WorkspaceBuildError("candidate_ids must be non-empty")
         if candidate_scores is not None and len(candidate_scores) != len(candidate_ids):
             raise WorkspaceBuildError("candidate_scores must align with candidate_ids")
+
+        resolved_workspace_id = workspace_id or f"workspace-{task_id}"
+        run_id = telemetry_run_id or resolved_workspace_id
+        operation_id = telemetry_operation_id or resolved_workspace_id
+        self._record_telemetry(
+            enabled=dev_mode,
+            event=TelemetryEvent(
+                event_id=f"{operation_id}-entry",
+                scope=TelemetryScope.WORKSPACE,
+                kind=TelemetryEventKind.ENTRY,
+                occurred_at=self._clock(),
+                run_id=run_id,
+                operation_id=operation_id,
+                parent_event_id=telemetry_parent_event_id,
+                workspace_id=resolved_workspace_id,
+                payload={
+                    "task_id": task_id,
+                    "candidate_ids": list(candidate_ids),
+                    "candidate_scores": list(candidate_scores or []),
+                    "selection_policy": selection_policy,
+                    "purpose": purpose,
+                },
+                debug_fields={
+                    "candidate_count": len(candidate_ids),
+                    "slot_limit": slot_limit,
+                },
+            ),
+        )
 
         deduped_candidates = self._dedupe_candidates(candidate_ids, candidate_scores)
         ranked_candidates: list[tuple[dict[str, Any], float]] = []
@@ -95,9 +130,40 @@ class WorkspaceBuilder:
             for index, (obj, score) in enumerate(selected)
         ]
         selected_ids = tuple(obj["id"] for obj, _ in selected)
+        self._record_telemetry(
+            enabled=dev_mode,
+            event=TelemetryEvent(
+                event_id=f"{operation_id}-selection",
+                scope=TelemetryScope.WORKSPACE,
+                kind=TelemetryEventKind.DECISION,
+                occurred_at=self._clock(),
+                run_id=run_id,
+                operation_id=operation_id,
+                parent_event_id=f"{operation_id}-entry",
+                workspace_id=resolved_workspace_id,
+                payload={
+                    "selected_ids": list(selected_ids),
+                    "skipped_ids": list(skipped_ids),
+                    "ranked_candidates": [
+                        {
+                            "object_id": obj["id"],
+                            "score": round(score, 4),
+                            "priority": float(obj["priority"]),
+                            "type": obj["type"],
+                        }
+                        for obj, score in ranked_candidates
+                    ],
+                },
+                debug_fields={
+                    "selected_count": len(selected_ids),
+                    "skipped_count": len(skipped_ids),
+                    "deduped_candidate_count": len(deduped_candidates),
+                },
+            ),
+        )
         now = self._clock().isoformat()
         workspace = {
-            "id": workspace_id or f"workspace-{task_id}",
+            "id": resolved_workspace_id,
             "type": "WorkspaceView",
             "content": {
                 "purpose": purpose,
@@ -118,6 +184,26 @@ class WorkspaceBuilder:
             },
         }
         ensure_valid_object(workspace)
+        self._record_telemetry(
+            enabled=dev_mode,
+            event=TelemetryEvent(
+                event_id=f"{operation_id}-result",
+                scope=TelemetryScope.WORKSPACE,
+                kind=TelemetryEventKind.CONTEXT_RESULT,
+                occurred_at=self._clock(),
+                run_id=run_id,
+                operation_id=operation_id,
+                parent_event_id=f"{operation_id}-selection",
+                workspace_id=resolved_workspace_id,
+                payload={
+                    "workspace_object": workspace,
+                },
+                debug_fields={
+                    "slot_count": len(slots),
+                    "workspace_priority": workspace["priority"],
+                },
+            ),
+        )
         return WorkspaceBuildResult(
             workspace=workspace,
             selected_ids=selected_ids,
@@ -217,3 +303,13 @@ class WorkspaceBuilder:
         if check is None:
             return False
         return bool(check(object_id))
+
+    def _record_telemetry(
+        self,
+        *,
+        enabled: bool,
+        event: TelemetryEvent,
+    ) -> None:
+        if not enabled or self._telemetry_recorder is None:
+            return
+        self._telemetry_recorder.record(event)

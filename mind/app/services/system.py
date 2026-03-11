@@ -2,11 +2,22 @@
 
 from __future__ import annotations
 
+from os import environ
 from typing import Any
+from collections.abc import Mapping
 
 from mind.app._service_utils import new_response
 from mind.app.contracts import AppRequest, AppResponse, AppStatus
+from mind.capabilities import (
+    CAPABILITY_CATALOG,
+    CapabilityProviderConfig,
+    CapabilityProviderFamily,
+    resolve_capability_provider_config,
+)
 from mind.kernel.store import MemoryStore
+from mind.telemetry import resolve_dev_telemetry_path
+
+_TRUE_ENV_VALUES = frozenset({"1", "true", "yes", "on"})
 
 
 class SystemStatusService:
@@ -56,30 +67,87 @@ class SystemStatusService:
     def config_summary(self, req: AppRequest | None = None) -> AppResponse:
         """Return sanitized configuration summary."""
         resp = new_response(req, fallback_request_id="config")
-
-        config_data: dict[str, Any] = {}
-        if self._config is not None:
-            config_data = {
-                "backend": getattr(self._config, "backend", "unknown"),
-                "profile": getattr(self._config, "resolved_profile", "unknown"),
-            }
-            # Redact sensitive values
-            if hasattr(self._config, "postgres_dsn") and self._config.postgres_dsn:
-                config_data["postgres_dsn"] = "***redacted***"
-
         resp.status = AppStatus.OK
-        resp.result = config_data
+        resp.result = build_config_summary_payload(self._config)
         return resp
 
     def provider_status(self, req: AppRequest | None = None) -> AppResponse:
-        """Provider availability (stub — deterministic stubs always available)."""
+        """Return the resolved provider configuration summary."""
         resp = new_response(req, fallback_request_id="provider")
-
+        provider_config = resolve_capability_provider_config()
         resp.status = AppStatus.OK
-        resp.result = {
-            "provider": "stub",
-            "model": "deterministic",
-            "status": "available",
-            "note": "LLM provider integration deferred to WP-7",
-        }
+        resp.result = build_provider_status_payload(provider_config)
         return resp
+
+
+def build_config_summary_payload(
+    config: Any = None,
+    *,
+    env: Mapping[str, str] | None = None,
+) -> dict[str, Any]:
+    """Build the stable config summary payload used by product/frontend surfaces."""
+
+    config_data: dict[str, Any] = {
+        "backend": "unknown",
+        "profile": "unknown",
+        "backend_source": "unknown",
+        "profile_source": "unknown",
+        "dev_mode": _env_dev_mode(env=env),
+        "dev_telemetry_configured": resolve_dev_telemetry_path(env=env) is not None,
+    }
+    if config is not None:
+        config_data = {
+            **config_data,
+            "backend": _enum_or_value(getattr(config, "backend", "unknown")),
+            "profile": _enum_or_value(getattr(config, "resolved_profile", "unknown")),
+            "backend_source": getattr(config, "backend_source", "unknown"),
+            "profile_source": getattr(config, "requested_profile_source", "unknown"),
+        }
+        if hasattr(config, "postgres_dsn") and config.postgres_dsn:
+            config_data["postgres_dsn"] = "***redacted***"
+    return config_data
+
+
+def build_provider_status_payload(
+    provider_config: CapabilityProviderConfig,
+) -> dict[str, Any]:
+    """Build the stable provider status payload used by product/frontend surfaces."""
+
+    available = (
+        provider_config.provider_family is CapabilityProviderFamily.DETERMINISTIC
+        or provider_config.auth.is_configured()
+    )
+    execution = _provider_execution(provider_config.provider_family, auth_configured=available)
+    return {
+        **provider_config.redacted_summary(),
+        "status": "available" if available else "missing_auth",
+        "execution": execution,
+        "supported_capabilities": [capability.value for capability in CAPABILITY_CATALOG],
+    }
+
+
+def _provider_execution(
+    provider_family: CapabilityProviderFamily,
+    *,
+    auth_configured: bool,
+) -> str:
+    if provider_family is CapabilityProviderFamily.DETERMINISTIC:
+        return "deterministic_adapter_ready"
+    if not auth_configured:
+        return "adapter_unavailable_missing_auth"
+    if provider_family is CapabilityProviderFamily.OPENAI:
+        return "openai_responses_adapter_ready"
+    if provider_family is CapabilityProviderFamily.CLAUDE:
+        return "claude_messages_adapter_ready"
+    if provider_family is CapabilityProviderFamily.GEMINI:
+        return "gemini_generate_content_adapter_ready"
+    return "adapter_unknown"
+
+
+def _enum_or_value(value: Any) -> Any:
+    return getattr(value, "value", value)
+
+
+def _env_dev_mode(*, env: Mapping[str, str] | None = None) -> bool:
+    active_env = env or environ
+    return active_env.get("MIND_DEV_MODE", "").strip().lower() in _TRUE_ENV_VALUES
