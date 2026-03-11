@@ -431,6 +431,9 @@ class PrimitiveService:
             selected = scores[:max_candidates]
             candidate_ids = [item[0]["id"] for item in selected]
             candidate_scores = [round(item[1], 4) for item in selected]
+            candidate_summaries = [
+                self._object_summary(item[0], score=round(item[1], 4)) for item in selected
+            ]
             retrieval_backend = "legacy_vector_override"
         else:
             query_embedding = (
@@ -450,6 +453,10 @@ class PrimitiveService:
             )
             candidate_ids = [match.object["id"] for match in matches]
             candidate_scores = [round(match.score, 4) for match in matches]
+            candidate_summaries = [
+                self._object_summary(match.object, score=round(match.score, 4))
+                for match in matches
+            ]
             retrieval_backend = "store_search"
 
         retrieval_cost = [
@@ -470,6 +477,7 @@ class PrimitiveService:
             response=RetrieveResponse(
                 candidate_ids=candidate_ids,
                 scores=candidate_scores,
+                candidate_summaries=candidate_summaries,
                 evidence_summary=evidence_summary,
             ),
             target_ids=tuple(candidate_ids),
@@ -935,6 +943,36 @@ class PrimitiveService:
             ensure_ascii=True,
             sort_keys=True,
         ).lower()
+
+    @staticmethod
+    def _object_summary(obj: dict[str, Any], *, score: float | None = None) -> dict[str, Any]:
+        metadata = obj.get("metadata", {})
+        summary = {
+            "object_id": obj.get("id"),
+            "type": obj.get("type"),
+            "status": obj.get("status"),
+            "episode_id": metadata.get("episode_id"),
+            "content_preview": PrimitiveService._preview_text(obj.get("content")),
+        }
+        if score is not None:
+            summary["score"] = score
+        return summary
+
+    @staticmethod
+    def _preview_text(content: Any) -> str | None:
+        if content is None:
+            return None
+        if isinstance(content, str):
+            text = " ".join(content.split())
+            return text[:77] + "..." if len(text) > 80 else text
+        if isinstance(content, dict):
+            if isinstance(content.get("summary"), str):
+                text = " ".join(content["summary"].split())
+                return text[:77] + "..." if len(text) > 80 else text
+            text = " ".join(json.dumps(content, ensure_ascii=True, sort_keys=True).split())
+            return text[:77] + "..." if len(text) > 80 else text
+        text = " ".join(str(content).split())
+        return text[:77] + "..." if len(text) > 80 else text
 
     @staticmethod
     def _summarize_text(text: str) -> str:

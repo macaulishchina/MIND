@@ -64,9 +64,11 @@ class _ModeExecution:
     context_text: str
     context_token_count: int
     candidate_ids: tuple[str, ...]
+    candidate_summaries: tuple[dict[str, Any], ...]
     read_object_ids: tuple[str, ...]
     expanded_object_ids: tuple[str, ...]
     selected_object_ids: tuple[str, ...]
+    selected_summaries: tuple[dict[str, Any], ...]
     verification_notes: tuple[str, ...]
     events: tuple[AccessModeTraceEvent, ...]
     has_reflection_signal: bool
@@ -209,6 +211,7 @@ class AccessService:
         first_execution = self._execute_mode(initial_mode, request, context)
         events.extend(first_execution.events)
         aggregate_candidate_ids = list(first_execution.candidate_ids)
+        aggregate_candidate_summaries = list(first_execution.candidate_summaries)
         aggregate_read_object_ids = list(first_execution.read_object_ids)
         aggregate_expanded_object_ids = list(first_execution.expanded_object_ids)
         final_execution = first_execution
@@ -233,6 +236,10 @@ class AccessService:
             aggregate_candidate_ids = _merge_ids(
                 aggregate_candidate_ids,
                 final_execution.candidate_ids,
+            )
+            aggregate_candidate_summaries = _merge_summaries(
+                aggregate_candidate_summaries,
+                final_execution.candidate_summaries,
             )
             aggregate_read_object_ids = _merge_ids(
                 aggregate_read_object_ids,
@@ -263,6 +270,7 @@ class AccessService:
             execution=final_execution,
             trace=trace,
             candidate_ids=aggregate_candidate_ids,
+            candidate_summaries=aggregate_candidate_summaries,
             read_object_ids=aggregate_read_object_ids,
             expanded_object_ids=aggregate_expanded_object_ids,
         )
@@ -280,6 +288,11 @@ class AccessService:
             request=request,
             candidate_ids=list(retrieve_response.candidate_ids),
             candidate_scores=list(retrieve_response.scores),
+        )
+        candidate_summaries = self._candidate_summaries(
+            list(retrieve_response.candidate_summaries),
+            candidate_ids,
+            candidate_scores,
         )
         if not candidate_ids:
             raise AccessServiceError("retrieve returned no candidates for runtime access")
@@ -330,6 +343,7 @@ class AccessService:
 
         verification_notes: list[str] = []
         selected_object_ids: list[str] = []
+        selected_summaries: list[dict[str, Any]] = []
         observed_objects = list(primary_objects)
         if not plan.build_workspace:
             context_object_ids = tuple(read_object_ids[: plan.raw_context_limit])
@@ -356,6 +370,7 @@ class AccessService:
             serialized_context = build_workspace_context(workspace_result.workspace)
             context_kind = AccessContextKind.WORKSPACE
             selected_object_ids = list(workspace_result.selected_ids)
+            selected_summaries = self._selected_summaries(primary_objects, selected_object_ids)
             events.append(
                 AccessModeTraceEvent(
                     event_kind=AccessTraceKind.WORKSPACE,
@@ -413,9 +428,11 @@ class AccessService:
             context_text=serialized_context.text,
             context_token_count=serialized_context.token_count,
             candidate_ids=tuple(candidate_ids),
+            candidate_summaries=tuple(candidate_summaries),
             read_object_ids=tuple(read_object_ids),
             expanded_object_ids=tuple(expanded_object_ids),
             selected_object_ids=tuple(selected_object_ids),
+            selected_summaries=tuple(selected_summaries),
             verification_notes=tuple(verification_notes),
             events=tuple(events),
             has_reflection_signal=has_reflection_signal,
@@ -693,12 +710,55 @@ class AccessService:
             target_ids=list(context_object_ids),
         )
 
+    @staticmethod
+    def _candidate_summaries(
+        summaries: list[dict[str, Any]],
+        candidate_ids: list[str],
+        candidate_scores: list[float],
+    ) -> list[dict[str, Any]]:
+        summary_map = {
+            str(item.get("object_id")): dict(item)
+            for item in summaries
+            if item.get("object_id") is not None
+        }
+        normalized: list[dict[str, Any]] = []
+        for index, object_id in enumerate(candidate_ids):
+            summary = dict(summary_map.get(object_id, {"object_id": object_id}))
+            if index < len(candidate_scores):
+                summary.setdefault("score", candidate_scores[index])
+            normalized.append(summary)
+        return normalized
+
+    @staticmethod
+    def _selected_summaries(
+        primary_objects: list[Any],
+        selected_object_ids: list[str],
+    ) -> list[dict[str, Any]]:
+        object_map = {obj.id: obj for obj in primary_objects}
+        summaries: list[dict[str, Any]] = []
+        for object_id in selected_object_ids:
+            obj = object_map.get(object_id)
+            if obj is None:
+                summaries.append({"object_id": object_id})
+                continue
+            summaries.append(
+                {
+                    "object_id": obj.id,
+                    "type": obj.type,
+                    "status": obj.status,
+                    "episode_id": obj.metadata.get("episode_id"),
+                    "content_preview": _object_content_preview(obj.content),
+                }
+            )
+        return summaries
+
     def _build_response(
         self,
         *,
         execution: _ModeExecution,
         trace: AccessRunTrace,
         candidate_ids: list[str] | None = None,
+        candidate_summaries: list[dict[str, Any]] | None = None,
         read_object_ids: list[str] | None = None,
         expanded_object_ids: list[str] | None = None,
     ) -> AccessRunResponse:
@@ -709,6 +769,11 @@ class AccessService:
             context_text=execution.context_text,
             context_token_count=execution.context_token_count,
             candidate_ids=list(execution.candidate_ids if candidate_ids is None else candidate_ids),
+            candidate_summaries=list(
+                execution.candidate_summaries
+                if candidate_summaries is None
+                else candidate_summaries
+            ),
             read_object_ids=list(
                 execution.read_object_ids if read_object_ids is None else read_object_ids
             ),
@@ -718,6 +783,7 @@ class AccessService:
                 else expanded_object_ids
             ),
             selected_object_ids=list(execution.selected_object_ids),
+            selected_summaries=list(execution.selected_summaries),
             verification_notes=list(execution.verification_notes),
             trace=trace,
         )
@@ -754,6 +820,43 @@ def _merge_ids(existing: list[str], incoming: tuple[str, ...]) -> list[str]:
         if object_id not in merged:
             merged.append(object_id)
     return merged
+
+
+def _merge_summaries(
+    existing: list[dict[str, Any]],
+    incoming: tuple[dict[str, Any], ...],
+) -> list[dict[str, Any]]:
+    merged = list(existing)
+    seen = {
+        str(item.get("object_id"))
+        for item in existing
+        if item.get("object_id") is not None
+    }
+    for item in incoming:
+        object_id = item.get("object_id")
+        if object_id is None or str(object_id) in seen:
+            continue
+        merged.append(dict(item))
+        seen.add(str(object_id))
+    return merged
+
+
+def _object_content_preview(content: Any) -> str | None:
+    if content is None:
+        return None
+    if isinstance(content, str):
+        compact = " ".join(content.split())
+    elif isinstance(content, dict):
+        summary = content.get("summary")
+        if isinstance(summary, str):
+            compact = " ".join(summary.split())
+        else:
+            compact = " ".join(str(content).split())
+    else:
+        compact = " ".join(str(content).split())
+    if not compact:
+        return None
+    return compact[:77] + "..." if len(compact) > 80 else compact
 
 
 def _query_text(query: str | dict[str, Any]) -> str:

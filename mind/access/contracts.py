@@ -185,9 +185,11 @@ class AccessRunResponse(AccessModel):
     context_text: str = Field(min_length=1)
     context_token_count: int = Field(ge=0)
     candidate_ids: list[str] = Field(default_factory=list)
+    candidate_summaries: list[dict[str, Any]] = Field(default_factory=list)
     read_object_ids: list[str] = Field(default_factory=list)
     expanded_object_ids: list[str] = Field(default_factory=list)
     selected_object_ids: list[str] = Field(default_factory=list)
+    selected_summaries: list[dict[str, Any]] = Field(default_factory=list)
     verification_notes: list[str] = Field(default_factory=list)
     trace: AccessRunTrace
 
@@ -211,5 +213,9 @@ class AccessRunResponse(AccessModel):
                 raise ValueError("reflective access responses require verification notes")
         elif self.verification_notes:
             raise ValueError("only reflective access may define verification notes")
+        if self.candidate_summaries and len(self.candidate_summaries) > len(self.candidate_ids):
+            raise ValueError("candidate_summaries cannot exceed candidate_ids")
+        if self.selected_summaries and len(self.selected_summaries) != len(self.selected_object_ids):
+            raise ValueError("selected_summaries must match selected_object_ids")
 
         return self

@@ -286,7 +286,7 @@ class TestUserStateStoreProtocol:
 class TestProductCliCommandDispatch:
     """Unit-level tests for build_product_parser and dispatch."""
 
-    def test_remember_parses_required_args(self) -> None:
+    def test_remember_parses_args(self) -> None:
         from mind.product_cli import build_product_parser
 
         parser = build_product_parser()
@@ -297,6 +297,15 @@ class TestProductCliCommandDispatch:
         assert args.episode_id == "ep-test"
         assert args.timestamp_order == 1  # default
         assert args.principal_id == "cli-user"  # default
+
+    def test_remember_episode_id_defaults_to_none(self) -> None:
+        from mind.product_cli import build_product_parser
+
+        parser = build_product_parser()
+        args = parser.parse_args(["remember", "hello world"])
+
+        assert args.command == "remember"
+        assert args.episode_id is None
 
     def test_recall_parses_query(self) -> None:
         from mind.product_cli import build_product_parser
@@ -356,11 +365,11 @@ class TestProductCliCommandDispatch:
         assert args.session_command == "show"
         assert args.session_id == "sess-x"
 
-    def test_no_command_returns_zero(self) -> None:
+    def test_no_command_enters_interactive_shell(self, monkeypatch: pytest.MonkeyPatch) -> None:
         from mind.product_cli import product_main
 
-        out = io.StringIO()
-        with redirect_stdout(out), redirect_stderr(io.StringIO()):
+        monkeypatch.setattr("mind.product_cli._run_interactive_shell", lambda args, parser: 0)
+        with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
             code = product_main([])
 
         assert code == 0
@@ -390,6 +399,7 @@ class TestCrossLayerIntegration:
         remember_out = io.StringIO()
         with redirect_stdout(remember_out), redirect_stderr(io.StringIO()):
             code = product_main([
+                "--json",
                 "--sqlite-path", sqlite_path,
                 "remember", "audit test content",
                 "--episode-id", "ep-audit",
@@ -402,6 +412,7 @@ class TestCrossLayerIntegration:
         recall_out = io.StringIO()
         with redirect_stdout(recall_out), redirect_stderr(io.StringIO()):
             code = product_main([
+                "--json",
                 "--sqlite-path", sqlite_path,
                 "recall", "audit test",
             ])
@@ -409,6 +420,7 @@ class TestCrossLayerIntegration:
         recall_payload = json.loads(recall_out.getvalue())
         assert recall_payload["status"] == "ok"
         assert len(recall_payload["result"]["candidate_ids"]) >= 1
+        assert recall_payload["result"]["candidates"][0]["object_type"] == "RawRecord"
 
     def test_session_lifecycle_via_product_cli(self, tmp_path: Path) -> None:
         from mind.product_cli import product_main
@@ -419,6 +431,7 @@ class TestCrossLayerIntegration:
         open_out = io.StringIO()
         with redirect_stdout(open_out), redirect_stderr(io.StringIO()):
             code = product_main([
+                "--json",
                 "--sqlite-path", sqlite_path,
                 "session", "open",
                 "--principal-id", "audit-principal",
@@ -434,6 +447,7 @@ class TestCrossLayerIntegration:
         show_out = io.StringIO()
         with redirect_stdout(show_out), redirect_stderr(io.StringIO()):
             code = product_main([
+                "--json",
                 "--sqlite-path", sqlite_path,
                 "session", "show", "audit-session",
             ])
@@ -445,6 +459,7 @@ class TestCrossLayerIntegration:
         list_out = io.StringIO()
         with redirect_stdout(list_out), redirect_stderr(io.StringIO()):
             code = product_main([
+                "--json",
                 "--sqlite-path", sqlite_path,
                 "session", "list",
                 "--principal-id", "audit-principal",
@@ -460,14 +475,14 @@ class TestCrossLayerIntegration:
 
         status_out = io.StringIO()
         with redirect_stdout(status_out), redirect_stderr(io.StringIO()):
-            code = product_main(["--sqlite-path", sqlite_path, "status"])
+            code = product_main(["--json", "--sqlite-path", sqlite_path, "status"])
         assert code == 0
         status_payload = json.loads(status_out.getvalue())
         assert status_payload["status"] == "ok"
 
         config_out = io.StringIO()
         with redirect_stdout(config_out), redirect_stderr(io.StringIO()):
-            code = product_main(["--sqlite-path", sqlite_path, "config"])
+            code = product_main(["--json", "--sqlite-path", sqlite_path, "config"])
         assert code == 0
         config_payload = json.loads(config_out.getvalue())
         assert config_payload["status"] == "ok"

@@ -7,6 +7,7 @@ import io
 import json
 import sys
 import tomllib
+from argparse import Namespace
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from typing import Any
@@ -17,7 +18,15 @@ from mind.api.client import MindAPIClient
 from mind.app.registry import build_app_registry
 from mind.cli_config import ResolvedCliConfig, resolve_cli_config
 from mind.fixtures import build_product_cli_bench_v1, build_user_state_scenarios_v1
-from mind.product_cli import LocalProductClient, build_product_parser, product_main
+from mind.product_cli import (
+    LocalProductClient,
+    _default_episode_id,
+    _dispatch_command,
+    _merge_shell_args,
+    _run_interactive_shell,
+    build_product_parser,
+    product_main,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -43,6 +52,24 @@ def test_product_cli_help_excludes_dev_commands(capsys: pytest.CaptureFixture[st
     output = capsys.readouterr().out
     for command in ("primitive", "access", "governance", "demo", "gate", "report", "offline"):
         assert command not in output
+
+
+def test_product_cli_supports_json_flag() -> None:
+    parser = build_product_parser()
+
+    args = parser.parse_args(["--json", "status"])
+
+    assert args.json is True
+    assert args.command == "status"
+
+
+def test_product_cli_supports_color_flag() -> None:
+    parser = build_product_parser()
+
+    args = parser.parse_args(["--color", "always", "status"])
+
+    assert args.color == "always"
+    assert args.command == "status"
 
 
 def test_pyproject_points_mind_to_product_cli_and_removes_deprecated_aliases() -> None:
@@ -98,6 +125,16 @@ def test_mind_api_package_does_not_eagerly_import_server_module() -> None:
     assert "mind.api.app" not in sys.modules
     assert callable(api_module.create_app)
     assert "mind.api.app" in sys.modules
+
+
+def test_product_cli_rejects_sqlite_outside_test_override(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("MIND_ALLOW_SQLITE_FOR_TESTS", raising=False)
+
+    with pytest.raises(SystemExit, match="SQLite is test-only"):
+        product_main(["--sqlite-path", str(tmp_path / "forbidden.sqlite3"), "status"])
 
 
 def test_product_cli_experience_bench_v1(tmp_path: Path) -> None:
@@ -168,6 +205,198 @@ def test_local_vs_remote_cli_behavior_consistency(
     assert matches / len(comparable_commands) >= 0.95
 
 
+def test_product_cli_status_default_output_is_human_readable(tmp_path: Path) -> None:
+    exit_code, output = _run_product_cli_text(["--sqlite-path", str(tmp_path / "status.sqlite3"), "status"])
+
+    assert exit_code == 0
+    assert "System Status [OK]" in output
+    assert "Health" in output
+    assert "Checks" in output
+    assert "{" not in output
+
+
+def test_product_cli_remember_default_output_is_human_readable(tmp_path: Path) -> None:
+    exit_code, output = _run_product_cli_text(
+        [
+            "--sqlite-path",
+            str(tmp_path / "remember.sqlite3"),
+            "remember",
+            "hello formatter",
+            "--episode-id",
+            "fmt-1",
+        ]
+    )
+
+    assert exit_code == 0
+    assert "Stored Memory [OK]" in output
+    assert "Object ID" in output
+    assert "Provenance ID" in output
+    assert "{" not in output
+
+
+def test_product_cli_recall_shows_object_type_column(tmp_path: Path) -> None:
+    store_path = tmp_path / "recall-type.sqlite3"
+    _seed_cli_backend(store_path)
+
+    exit_code, output = _run_product_cli_text(
+        ["--color", "never", "--sqlite-path", str(store_path), "recall", "seed"]
+    )
+
+    assert exit_code == 0
+    assert "Candidates" in output
+    assert "Type" in output
+    assert "RawRecord" in output
+
+
+def test_product_cli_ask_shows_access_depth_and_object_details(tmp_path: Path) -> None:
+    store_path = tmp_path / "ask-details.sqlite3"
+    _seed_cli_backend(store_path)
+
+    exit_code, output = _run_product_cli_text(
+        ["--color", "never", "--sqlite-path", str(store_path), "ask", "seed"]
+    )
+
+    assert exit_code == 0
+    assert "Access Depth" in output
+    assert "focus" in output
+    assert "Selected Objects" in output
+    assert "Episode" in output
+    assert "Preview" in output
+    assert output.index("Object ID") < output.index("Type")
+
+
+def test_product_cli_color_always_emits_ansi_sequences(tmp_path: Path) -> None:
+    exit_code, output = _run_product_cli_text(
+        [
+            "--color",
+            "always",
+            "--sqlite-path",
+            str(tmp_path / "status-color.sqlite3"),
+            "status",
+        ]
+    )
+
+    assert exit_code == 0
+    assert "\x1b[" in output
+
+
+def test_product_cli_remember_episode_id_is_optional() -> None:
+    parser = build_product_parser()
+
+    args = parser.parse_args(["remember", "hello world"])
+
+    assert args.command == "remember"
+    assert args.content == "hello world"
+    assert args.episode_id is None
+
+
+def test_product_cli_dispatch_generates_default_episode_id(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("mind.product_cli._default_episode_id", lambda: "user-host-window")
+
+    captured: dict[str, Any] = {}
+
+    class _FakeClient:
+        def remember(self, payload: dict[str, Any]) -> dict[str, Any]:
+            captured["payload"] = payload
+            return {"status": "ok", "result": payload}
+
+    args = Namespace(
+        command="remember",
+        content="hello world",
+        episode_id=None,
+        timestamp_order=1,
+        principal_id="cli-user",
+        session_id=None,
+        conversation_id=None,
+    )
+
+    payload = _dispatch_command(args, _FakeClient())
+
+    assert captured["payload"]["episode_id"] == "user-host-window"
+    assert payload["result"]["episode_id"] == "user-host-window"
+
+
+def test_default_episode_id_uses_username_hostname_and_window_id(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("mind.product_cli.getpass.getuser", lambda: "Alice")
+    monkeypatch.setattr("mind.product_cli.socket.gethostname", lambda: "devbox.local")
+    monkeypatch.setenv("TERM_SESSION_ID", "Tab 7")
+
+    assert _default_episode_id() == "alice-devbox-local-tab-7"
+
+
+def test_interactive_shell_executes_commands_and_reuses_session_defaults(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    parser = build_product_parser()
+    session_args = parser.parse_args(["--json"])
+    seen: list[dict[str, Any]] = []
+
+    class _FakeClient:
+        def health(self) -> dict[str, Any]:
+            return {"status": "ok", "result": {"store": "connected"}}
+
+        def remember(self, payload: dict[str, Any]) -> dict[str, Any]:
+            seen.append(payload)
+            return {"status": "ok", "result": {"object_id": "obj-1"}}
+
+    class _FakeContext:
+        def __enter__(self) -> _FakeClient:
+            return _FakeClient()
+
+        def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+            return None
+
+    inputs = iter(['remember "hello shell"', "exit"])
+    monkeypatch.setattr("mind.product_cli._client_context", lambda args: _FakeContext())
+    monkeypatch.setattr("builtins.input", lambda prompt="": next(inputs))
+    monkeypatch.setattr("mind.product_cli._default_episode_id", lambda: "auto-ep")
+
+    exit_code = _run_interactive_shell(session_args, parser)
+
+    assert exit_code == 0
+    assert seen[0]["episode_id"] == "auto-ep"
+    out = capsys.readouterr().out
+    assert "Connected to local-postgres" in out
+    assert '"status": "ok"' in out
+
+
+def test_merge_shell_args_preserves_session_transport_defaults() -> None:
+    session_args = Namespace(
+        local=False,
+        remote=None,
+        api_key="secret",
+        json=True,
+        profile="postgres_main",
+        backend="postgresql",
+        postgres_dsn="postgresql+psycopg://postgres:postgres@127.0.0.1:5432/mind",
+        sqlite_path=None,
+    )
+    shell_args = Namespace(
+        local=False,
+        remote=None,
+        api_key=None,
+        json=False,
+        profile=None,
+        backend=None,
+        postgres_dsn=None,
+        sqlite_path=None,
+        command="status",
+    )
+
+    merged = _merge_shell_args(session_args, shell_args)
+
+    assert merged.api_key == "secret"
+    assert merged.json is True
+    assert merged.profile == "postgres_main"
+    assert merged.backend == "postgresql"
+    assert merged.postgres_dsn == session_args.postgres_dsn
+
+
 def test_user_state_scenario_fixture_set_is_complete() -> None:
     scenarios = build_user_state_scenarios_v1()
 
@@ -190,12 +419,25 @@ def _run_bench_scenario(*, sqlite_path: Path, argv: tuple[str, ...]) -> bool:
 
 
 def _run_product_cli(argv: list[str]) -> tuple[int, dict[str, Any]]:
+    return _run_product_cli_json(argv)
+
+
+def _run_product_cli_json(argv: list[str]) -> tuple[int, dict[str, Any]]:
+    stdout = io.StringIO()
+    stderr = io.StringIO()
+    with redirect_stdout(stdout), redirect_stderr(stderr):
+        exit_code = product_main(["--json", *argv])
+    output = stdout.getvalue() or stderr.getvalue()
+    return exit_code, json.loads(output)
+
+
+def _run_product_cli_text(argv: list[str]) -> tuple[int, str]:
     stdout = io.StringIO()
     stderr = io.StringIO()
     with redirect_stdout(stdout), redirect_stderr(stderr):
         exit_code = product_main(argv)
     output = stdout.getvalue() or stderr.getvalue()
-    return exit_code, json.loads(output)
+    return exit_code, output
 
 
 def _sqlite_config(path: Path) -> ResolvedCliConfig:
@@ -240,7 +482,15 @@ def _normalize_cli_payload(command: str, payload: dict[str, Any]) -> dict[str, A
         return {"status": payload["status"], "result_keys": sorted(result.keys())}
     if command == "recall":
         result = payload["result"]
-        return {"status": payload["status"], "result_keys": sorted(result.keys())}
+        candidate_types = tuple(
+            candidate.get("object_type")
+            for candidate in result.get("candidates", [])
+        )
+        return {
+            "status": payload["status"],
+            "result_keys": sorted(result.keys()),
+            "candidate_types": candidate_types,
+        }
     if command == "ask":
         result = payload["result"]
         return {

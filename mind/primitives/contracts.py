@@ -206,12 +206,15 @@ class RetrieveRequest(ContractModel):
 class RetrieveResponse(ContractModel):
     candidate_ids: list[str] = Field(default_factory=list)
     scores: list[float] = Field(default_factory=list)
+    candidate_summaries: list[dict[str, Any]] = Field(default_factory=list)
     evidence_summary: str | dict[str, Any]
 
     @model_validator(mode="after")
     def match_scores_to_candidates(self) -> RetrieveResponse:
         if len(self.candidate_ids) != len(self.scores):
             raise ValueError("candidate_ids and scores must have the same length")
+        if self.candidate_summaries and len(self.candidate_summaries) != len(self.candidate_ids):
+            raise ValueError("candidate_summaries and candidate_ids must have the same length")
         return self
 
 

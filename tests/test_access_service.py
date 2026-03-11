@@ -81,6 +81,11 @@ def test_recall_mode_builds_workspace_context(tmp_path: Path) -> None:
     assert result.resolved_mode is AccessMode.RECALL
     assert result.context_kind is AccessContextKind.WORKSPACE
     assert result.selected_object_ids
+    assert result.candidate_summaries
+    assert result.candidate_summaries[0]["object_id"] == result.candidate_ids[0]
+    assert "content_preview" in result.candidate_summaries[0]
+    assert result.selected_summaries
+    assert result.selected_summaries[0]["object_id"] == result.selected_object_ids[0]
     assert any(event.event_kind is AccessTraceKind.WORKSPACE for event in result.trace.events)
 
 
