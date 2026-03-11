@@ -199,42 +199,25 @@ MIND 当前聚焦于四个核心问题：
 
 ## 文档结构
 
-- [文档索引](./docs/README.md)
-- [阶段 A 正式规范](./docs/foundation/spec.md)
-- [设计拆解与实施主文档](./docs/design/design_breakdown.md)
+- [产品文档首页](./docs/index.md)
+- [文档索引与作者指南](./docs/docs-authoring.md)
+- [产品概览](./docs/product/overview.md)
+- [快速开始](./docs/product/quickstart.md)
+- [部署指南](./docs/product/deployment.md)
+- [CLI 指南](./docs/product/cli.md)
+- [REST API 指南](./docs/product/api.md)
+- [MCP 指南](./docs/product/mcp.md)
+- [系统总览](./docs/architecture/system-overview.md)
+- [历史资料与证据](./docs/history-and-evidence.md)
 - [产品化方案与验收蓝图](./docs/design/productization_program.md)
-- [Phase C 启动清单](./docs/design/phase_c_startup_checklist.md)
-- [Phase E 启动清单](./docs/design/phase_e_startup_checklist.md)
-- [Phase F 启动清单](./docs/design/phase_f_startup_checklist.md)
-- [Phase G 启动清单](./docs/design/phase_g_startup_checklist.md)
-- [Phase H 启动清单](./docs/design/phase_h_startup_checklist.md)
-- [Phase I 启动清单](./docs/design/phase_i_startup_checklist.md)
-- [Phase J 启动清单](./docs/design/phase_j_startup_checklist.md)
-- [Phase K 启动清单](./docs/design/phase_k_startup_checklist.md)
-- [Phase L 启动清单](./docs/design/phase_l_startup_checklist.md)
-- [Phase M 启动清单](./docs/design/phase_m_startup_checklist.md)
-- [Phase N 启动清单](./docs/design/phase_n_startup_checklist.md)
-- [Phase O 启动清单](./docs/design/phase_o_startup_checklist.md)
-- [阶段验收与 phase gates](./docs/foundation/phase_gates.md)
-- [实现技术栈冻结文档](./docs/foundation/implementation_stack.md)
-- [初始讨论文档](./docs/research/research_notes.md)
-- [Phase B 验收报告](./docs/reports/phase_b_acceptance_report.md)
-- [Phase C 独立审计报告](./docs/reports/phase_c_independent_audit.md)
-- [Phase C Golden Calls 独立审计报告](./docs/reports/phase_c_golden_calls_audit.md)
-- [PostgreSQL Store 审核报告](./docs/reports/postgres_store_audit.md)
-- [Phase D Smoke 与 D-5 Benchmark 当前状态报告](./docs/reports/phase_d_smoke_report.md)
-- [Phase D 独立审计报告](./docs/reports/phase_d_independent_audit.md)
-- [Phase D 验收报告](./docs/reports/phase_d_acceptance_report.md)
-- [Phase E 验收报告](./docs/reports/phase_e_acceptance_report.md)
-- [Phase E 独立审计报告](./docs/reports/phase_e_independent_audit.md)
-- [Phase F 验收报告](./docs/reports/phase_f_acceptance_report.md)
-- [Phase F 独立审计报告](./docs/reports/phase_f_independent_audit.md)
-- [Phase G 验收报告](./docs/reports/phase_g_acceptance_report.md)
-- [Phase H 验收报告](./docs/reports/phase_h_acceptance_report.md)
-- [Phase I 验收报告](./docs/reports/phase_i_acceptance_report.md)
-- [Phase J 验收报告](./docs/reports/phase_j_acceptance_report.md)
-- [Phase G 独立审计报告](./docs/reports/phase_g_independent_audit.md)
-- [Phase C 验收报告](./docs/reports/phase_c_acceptance_report.md)
+- [产品化审计报告](./docs/reports/productization_audit_report.md)
+
+本地预览产品文档：
+
+```bash
+uv sync --extra docs
+uv run mkdocs serve
+```
 
 ## 运行方式
 

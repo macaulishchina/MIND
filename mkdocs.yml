@@ -1,0 +1,71 @@
+site_name: MIND
+site_description: Product-grade documentation for the MIND memory system
+docs_dir: docs
+site_dir: site
+exclude_docs: |
+  design/**
+  foundation/**
+  reports/**
+  research/**
+
+theme:
+  name: material
+  language: zh
+  features:
+    - navigation.sections
+    - navigation.instant
+    - navigation.top
+    - search.suggest
+    - content.code.copy
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_root_heading: true
+            show_source: false
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - pymdownx.highlight:
+      anchor_linenums: true
+
+nav:
+  - 首页: index.md
+  - 产品:
+      - 产品概览: product/overview.md
+      - 快速开始: product/quickstart.md
+      - 部署指南: product/deployment.md
+      - CLI 指南: product/cli.md
+      - REST API 指南: product/api.md
+      - MCP 指南: product/mcp.md
+      - 用户与会话: product/sessions-and-users.md
+  - 参考:
+      - CLI Reference: reference/cli-reference.md
+      - API Reference: reference/api-reference.md
+      - MCP Tool Reference: reference/mcp-tool-reference.md
+      - Config Reference: reference/config-reference.md
+      - Error Reference: reference/error-reference.md
+  - 运维:
+      - 部署 Runbook: ops/runbook-deploy.md
+      - 升级 Runbook: ops/runbook-upgrade.md
+      - 故障排查: ops/runbook-troubleshooting.md
+      - 安全与密钥: ops/security.md
+  - 架构:
+      - 系统总览: architecture/system-overview.md
+      - 应用服务层: architecture/app-layer.md
+      - 存储模型: architecture/storage-model.md
+      - 传输模型: architecture/transport-model.md
+      - 文档系统: architecture/documentation-system.md
+  - 历史与证据:
+      - 历史资料说明: history-and-evidence.md
+      - 作者指南: docs-authoring.md
