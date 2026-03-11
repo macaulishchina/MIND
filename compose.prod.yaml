@@ -1,0 +1,46 @@
+# compose.prod.yaml — 生产环境覆盖层
+# 手动调用时, 仍需配合 compose.yaml 顶部说明显式传入:
+#   --project-name / --env-file / MIND_ENV_FILE
+#
+# 功能:
+#   - WARNING 日志级别 (生产级别)
+#   - MIND_DEV_MODE=false (关闭开发特性)
+#   - CPU / 内存资源限制
+#   - 容器后台运行 (配合 -d 参数)
+
+services:
+  api:
+    environment:
+      MIND_LOG_LEVEL: WARNING
+      MIND_DEV_MODE: "false"
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 256M
+
+  worker:
+    environment:
+      MIND_LOG_LEVEL: WARNING
+      MIND_DEV_MODE: "false"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+
+  postgres:
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 512M

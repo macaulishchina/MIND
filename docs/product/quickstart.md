@@ -54,8 +54,7 @@ uv run mind config
 先准备环境变量：
 
 ```bash
-cp .env.example .env
-export MIND_API_KEY=change-me
+export MIND_API_KEY='dev-key'
 ```
 
 再启动服务：
@@ -68,14 +67,14 @@ uv run mind-api
 
 ```bash
 curl \
-  -H 'X-API-Key: change-me' \
+  -H 'X-API-Key: dev-key' \
   http://127.0.0.1:8000/v1/system/health
 ```
 
 ## 9. 用远程模式走 CLI
 
 ```bash
-uv run mind --remote http://127.0.0.1:8000 --api-key change-me status
+uv run mind --remote http://127.0.0.1:8000 --api-key dev-key status
 ```
 
 ## 下一步

@@ -9,7 +9,7 @@ MIND 现在已经同时提供 4 类正式入口：
 
 这套文档的目标不是重复设计文档，而是把“如何使用、如何部署、如何排障、系统怎么组织”拆成独立且可维护的层次。
 
-## 前置依赖：安装 uv
+## 前置依赖：安装 uv (可选)
 
 MIND 项目默认使用 `uv` 管理依赖与环境，如果您本地还未安装 `uv`，可以执行以下命令进行安装（或参考 [uv官方文档](https://github.com/astral-sh/uv)）：
 
@@ -24,7 +24,8 @@ source $HOME/.local/bin/env
 ## 从哪里开始
 
 - 想 10 分钟跑通产品体验：看 [快速开始](./product/quickstart.md)
-- 想直接部署 API/worker：看 [部署指南](./product/deployment.md)
+- 想搭建开发环境（热更新、调试）：看 [开发环境指南](./ops/dev-environment.md)
+- 想部署到生产：看 [部署指南](./product/deployment.md)
 - 想对接 HTTP：看 [REST API 指南](./product/api.md) 和 [API Reference](./reference/api-reference.md)
 - 想对接 MCP：看 [MCP 指南](./product/mcp.md) 和 [MCP Tool Reference](./reference/mcp-tool-reference.md)
 - 想理解 `mind/app`、存储和 transport 边界：看 [系统总览](./architecture/system-overview.md)
@@ -57,8 +58,16 @@ source $HOME/.local/bin/env
 ## 本地预览
 
 ```bash
+./scripts/dev.sh
+```
+
+开发环境会默认带上热更新文档服务，访问 `http://127.0.0.1:8002`。
+
+如果只想单独预览文档站：
+
+```bash
 uv sync --extra docs
-uv run mkdocs serve --livereload -a 0.0.0.0:8001
+uv run mkdocs serve --livereload -a 0.0.0.0:8003
 ```
 
 发布前建议至少执行一次严格构建：

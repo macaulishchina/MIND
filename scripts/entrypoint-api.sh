@@ -19,4 +19,11 @@ if [ "$host" = "$bind" ]; then
 fi
 
 alembic upgrade head
-exec uvicorn mind.api.app:create_app --factory --host "$host" --port "$port"
+
+if [ "${MIND_DEV_MODE:-false}" = "true" ]; then
+  echo "[entrypoint] DEV MODE: uvicorn --reload --log-level debug"
+  exec uvicorn mind.api.app:create_app --factory --host "$host" --port "$port" \
+    --reload --reload-dir /app/mind --log-level debug
+else
+  exec uvicorn mind.api.app:create_app --factory --host "$host" --port "$port"
+fi

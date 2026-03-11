@@ -56,7 +56,9 @@ nav:
       - Config Reference: reference/config-reference.md
       - Error Reference: reference/error-reference.md
   - 运维:
+      - 开发环境: ops/dev-environment.md
       - 部署 Runbook: ops/runbook-deploy.md
+      - 文档发布 Runbook: ops/runbook-docs-release.md
       - 升级 Runbook: ops/runbook-upgrade.md
       - 故障排查: ops/runbook-troubleshooting.md
       - 安全与密钥: ops/security.md

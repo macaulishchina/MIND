@@ -27,6 +27,7 @@ _REQUIRED_DOC_PATHS = (
     "docs/reference/config-reference.md",
     "docs/reference/error-reference.md",
     "docs/ops/runbook-deploy.md",
+    "docs/ops/runbook-docs-release.md",
     "docs/ops/runbook-upgrade.md",
     "docs/ops/runbook-troubleshooting.md",
     "docs/ops/security.md",
@@ -95,6 +96,30 @@ def test_docs_entrypoints_describe_preview_and_audiences() -> None:
 
     assert "./docs/index.md" in readme
     assert "uv run mkdocs serve" in readme
+    assert "docs-release.sh" in docs_authoring
+    assert "docs-release.sh" in readme
+
+
+def test_docs_release_assets_and_github_pages_workflow_exist() -> None:
+    workflow_path = ROOT / ".github" / "workflows" / "docs-pages.yml"
+    dockerfile_path = ROOT / "Dockerfile.docs"
+    compose_docs_path = ROOT / "compose.docs.yaml"
+    docs_release_script = ROOT / "scripts" / "docs-release.sh"
+
+    assert workflow_path.exists()
+    assert dockerfile_path.exists()
+    assert compose_docs_path.exists()
+    assert docs_release_script.exists()
+
+    workflow = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
+    triggers = workflow["on"]
+    assert {"pull_request", "push", "workflow_dispatch"}.issubset(triggers)
+    assert "build" in workflow["jobs"]
+    assert "deploy" in workflow["jobs"]
+
+    workflow_text = workflow_path.read_text(encoding="utf-8")
+    assert "actions/upload-pages-artifact" in workflow_text
+    assert "actions/deploy-pages" in workflow_text
 
 
 def _collect_nav_paths(nav: list[Any]) -> list[str]:

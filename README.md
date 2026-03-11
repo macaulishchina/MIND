@@ -215,9 +215,34 @@ MIND 当前聚焦于四个核心问题：
 本地预览产品文档：
 
 ```bash
-uv sync --extra docs
-uv run mkdocs serve
+./scripts/dev.sh
 ```
+
+开发环境会同时启动带热更新的文档服务，默认地址是 `http://127.0.0.1:8002`。
+
+如果只想单独预览文档站：
+
+```bash
+uv sync --extra docs
+uv run mkdocs serve --livereload -a 0.0.0.0:8003
+```
+
+本地构建/发布静态文档站：
+
+```bash
+./scripts/docs-release.sh build
+./scripts/docs-release.sh publish-local
+```
+
+`publish-local` 默认发布到 `http://127.0.0.1:8004`，避免与开发/生产环境冲突。
+
+默认已使用清华 TUNA PyPI 镜像。如果你需要覆盖，可在 `.env.dev.local` / `.env.prod.local` 中设置：
+`MIND_PIP_INDEX_URL`、`MIND_PIP_EXTRA_INDEX_URL`、`MIND_PIP_TRUSTED_HOST`。
+
+GitHub Pages 自动发布：
+
+- workflow: `.github/workflows/docs-pages.yml`
+- push 到 `main`、tag `v*` / `docs-v*` 或手动触发后会构建并发布
 
 ## 运行方式
 

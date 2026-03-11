@@ -51,4 +51,4 @@
 - `schema_invalid`
 - `unsafe_content`
 
-完整枚举以 [mind/app/contracts.py](/home/macaulish/workspace/MIND/mind/app/contracts.py) 中的 `AppErrorCode` 为准。
+完整枚举以 `mind/app/contracts.py` 中的 `AppErrorCode` 为准。

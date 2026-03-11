@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import importlib
 import io
 import json
+import sys
 import tomllib
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
@@ -84,6 +86,18 @@ def test_mind_api_client_serializes_requests(
     assert request.headers["X-api-key"] == "secret"
     assert json.loads(request.data.decode("utf-8"))["content"] == "hello"
     assert response["status"] == "ok"
+
+
+def test_mind_api_package_does_not_eagerly_import_server_module() -> None:
+    sys.modules.pop("mind.api", None)
+    sys.modules.pop("mind.api.app", None)
+
+    api_module = importlib.import_module("mind.api")
+
+    assert api_module.MindAPIClient is MindAPIClient
+    assert "mind.api.app" not in sys.modules
+    assert callable(api_module.create_app)
+    assert "mind.api.app" in sys.modules
 
 
 def test_product_cli_experience_bench_v1(tmp_path: Path) -> None:

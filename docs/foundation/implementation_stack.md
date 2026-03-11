@@ -565,7 +565,7 @@ CI 原则：
 冻结结论：
 
 - 配置来源以环境变量为主
-- 本地开发可用 `.env`
+- 本地脚本默认使用按环境拆分的运行时文件：`.env.dev.local` / `.env.prod.local`
 - 使用 typed settings 模型统一读取配置
 
 约束：

@@ -10,8 +10,16 @@
 ## 本地预览
 
 ```bash
+./scripts/dev.sh
+```
+
+这会同时启动 API、worker 和带热更新的文档站，默认文档地址为 `http://127.0.0.1:8002`。
+
+如果只需要独立文档预览：
+
+```bash
 uv sync --extra docs
-uv run mkdocs serve --livereload
+uv run mkdocs serve --livereload -a 0.0.0.0:8003
 ```
 
 发布前建议做一次严格构建：
@@ -19,6 +27,15 @@ uv run mkdocs serve --livereload
 ```bash
 uv run mkdocs build --strict
 ```
+
+如果要做可交付的静态站构建或本地发布，使用：
+
+```bash
+./scripts/docs-release.sh build
+./scripts/docs-release.sh publish-local
+```
+
+`publish-local` 默认使用 `http://127.0.0.1:8004`，用于模拟生产态静态站。
 
 ## 产品文档分层
 
@@ -38,6 +55,7 @@ uv run mkdocs build --strict
   - [error-reference.md](./reference/error-reference.md)
 - `ops/`
   - [runbook-deploy.md](./ops/runbook-deploy.md)
+  - [runbook-docs-release.md](./ops/runbook-docs-release.md)
   - [runbook-upgrade.md](./ops/runbook-upgrade.md)
   - [runbook-troubleshooting.md](./ops/runbook-troubleshooting.md)
   - [security.md](./ops/security.md)

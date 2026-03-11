@@ -39,9 +39,12 @@
 
 ## 发布建议
 
-- 本地预览：`uv run mkdocs serve`
+- 开发环境热更：`./scripts/dev.sh`，文档站默认 `http://127.0.0.1:8002`
+- 本地预览：`uv run mkdocs serve --livereload -a 0.0.0.0:8003`
 - 严格构建：`uv run mkdocs build --strict`
-- 版本化发布：使用 `mike` 维护 `latest` 和版本分支
+- 本地静态发布：`./scripts/docs-release.sh publish-local`，默认 `http://127.0.0.1:8004`
+- GitHub 发布：`.github/workflows/docs-pages.yml` 构建并发布 GitHub Pages
+- 如需额外做版本化文档分支，可继续使用 `mike`
 
 ## 当前限制
 

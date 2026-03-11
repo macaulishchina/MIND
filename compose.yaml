@@ -1,11 +1,22 @@
+# compose.yaml — 公共基础配置
+#
+# 用法 (推荐通过脚本调用):
+#   开发: ./scripts/dev.sh
+#   生产: ./scripts/deploy.sh
+#
+# 手动调用时, 请同时指定:
+#   1. --project-name 区分 dev / prod 资源
+#   2. --env-file      指向对应运行时环境文件
+#   3. MIND_ENV_FILE   让 service env_file 读取同一份文件
+
 services:
   postgres:
     image: pgvector/pgvector:pg16
     restart: unless-stopped
     environment:
-      POSTGRES_DB: mind
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${MIND_POSTGRES_DB:-mind}
+      POSTGRES_USER: ${MIND_POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${MIND_POSTGRES_PASSWORD:-postgres}
     ports:
       - "5432:5432"
     volumes:
@@ -23,9 +34,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.api
+      args:
+        PIP_INDEX_URL: ${MIND_PIP_INDEX_URL:-https://pypi.tuna.tsinghua.edu.cn/simple}
+        PIP_EXTRA_INDEX_URL: ${MIND_PIP_EXTRA_INDEX_URL:-}
+        PIP_TRUSTED_HOST: ${MIND_PIP_TRUSTED_HOST:-pypi.tuna.tsinghua.edu.cn}
     restart: unless-stopped
     env_file:
-      - .env
+      - ${MIND_ENV_FILE:-.env}
     environment:
       MIND_POSTGRES_DSN: ${MIND_POSTGRES_DSN}
       MIND_API_KEY: ${MIND_API_KEY}
@@ -58,9 +73,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.worker
+      args:
+        PIP_INDEX_URL: ${MIND_PIP_INDEX_URL:-https://pypi.tuna.tsinghua.edu.cn/simple}
+        PIP_EXTRA_INDEX_URL: ${MIND_PIP_EXTRA_INDEX_URL:-}
+        PIP_TRUSTED_HOST: ${MIND_PIP_TRUSTED_HOST:-pypi.tuna.tsinghua.edu.cn}
     restart: unless-stopped
     env_file:
-      - .env
+      - ${MIND_ENV_FILE:-.env}
     environment:
       MIND_POSTGRES_DSN: ${MIND_POSTGRES_DSN}
       MIND_LOG_LEVEL: ${MIND_LOG_LEVEL:-INFO}

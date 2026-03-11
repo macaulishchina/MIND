@@ -11,7 +11,7 @@
 
 ## 密钥管理建议
 
-- 不要把 `.env` 提交进仓库
+- 不要把 `.env`、`.env.dev.local`、`.env.prod.local` 提交进仓库
 - 不要把真实 DSN 写进文档示例
 - 使用部署系统的 secret store 注入 `MIND_API_KEY`
 - 轮换 API key 时同步更新依赖方
