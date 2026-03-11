@@ -1,4 +1,4 @@
-# MIND Documentation
+# MIND Documentation.
 
 MIND 现在已经同时提供 4 类正式入口：
 
@@ -8,6 +8,18 @@ MIND 现在已经同时提供 4 类正式入口：
 - `mindtest`：开发/验收 CLI，保留给工程回归和阶段 gate
 
 这套文档的目标不是重复设计文档，而是把“如何使用、如何部署、如何排障、系统怎么组织”拆成独立且可维护的层次。
+
+## 前置依赖：安装 uv
+
+MIND 项目默认使用 `uv` 管理依赖与环境，如果您本地还未安装 `uv`，可以执行以下命令进行安装（或参考 [uv官方文档](https://github.com/astral-sh/uv)）：
+
+```bash
+# macOS / Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# 激活 uv 环境变量
+source $HOME/.local/bin/env
+```
 
 ## 从哪里开始
 
@@ -46,7 +58,7 @@ MIND 现在已经同时提供 4 类正式入口：
 
 ```bash
 uv sync --extra docs
-uv run mkdocs serve
+uv run mkdocs serve --livereload -a 0.0.0.0:8001
 ```
 
 发布前建议至少执行一次严格构建：

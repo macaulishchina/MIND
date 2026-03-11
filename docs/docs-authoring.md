@@ -11,7 +11,7 @@
 
 ```bash
 uv sync --extra docs
-uv run mkdocs serve
+uv run mkdocs serve --livereload
 ```
 
 发布前建议做一次严格构建：
