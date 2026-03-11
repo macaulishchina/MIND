@@ -39,10 +39,10 @@
 
 ## 发布建议
 
-- 开发环境热更：`./scripts/dev.sh`，文档站默认 `http://127.0.0.1:8002`
-- 本地预览：`uv run mkdocs serve --livereload -a 0.0.0.0:8003`
+- 开发环境热更：`./scripts/dev.sh`，文档站默认 `http://127.0.0.1:18602`
+- 本地预览：`uv run mkdocs serve --livereload -a 0.0.0.0:18603`
 - 严格构建：`uv run mkdocs build --strict`
-- 本地静态发布：`./scripts/docs-release.sh publish-local`，默认 `http://127.0.0.1:8004`
+- 本地静态发布：`./scripts/docs-release.sh publish-local`，默认 `http://127.0.0.1:18604`
 - GitHub 发布：`.github/workflows/docs-pages.yml` 构建并发布 GitHub Pages
 - 如需额外做版本化文档分支，可继续使用 `mike`
 

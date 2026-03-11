@@ -53,9 +53,9 @@
 ## 最小检查
 
 ```bash
-curl -H 'X-API-Key: YOUR_KEY' http://127.0.0.1:8000/v1/system/health
-curl -H 'X-API-Key: YOUR_KEY' http://127.0.0.1:8000/v1/system/readiness
-curl -I http://127.0.0.1:8001/
+curl -H 'X-API-Key: YOUR_KEY' http://127.0.0.1:18600/v1/system/health
+curl -H 'X-API-Key: YOUR_KEY' http://127.0.0.1:18600/v1/system/readiness
+curl -I http://127.0.0.1:18601/
 ```
 
 ## 服务管理
@@ -77,7 +77,7 @@ curl -I http://127.0.0.1:8001/
 - `MIND_POSTGRES_PASSWORD` 是否与 DSN 中密码一致
 - `MIND_API_KEY` 是否已配置
 - `.env.prod.local` 中是否还有 `CHANGE_ME` 占位符
-- 静态文档站是否已在 `http://127.0.0.1:8001` 返回 200
+- 静态文档站是否已在 `http://127.0.0.1:18601` 返回 200
 - Alembic migration 是否在 API 启动前执行
 - Worker 是否在循环调用 `mindtest-offline-worker-once`
 - 日志级别是否为 `WARNING`（正常生产行为）
@@ -85,4 +85,4 @@ curl -I http://127.0.0.1:8001/
 ## 开发环境
 
 如果是搭建开发环境，请参考 [开发环境指南](./dev-environment.md)。
-开发环境内置的热更新文档站默认地址为 `http://127.0.0.1:8002`；它与生产静态文档站 `http://127.0.0.1:8001` 分离。
+开发环境内置的热更新文档站默认地址为 `http://127.0.0.1:18602`；它与生产静态文档站 `http://127.0.0.1:18601` 分离。

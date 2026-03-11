@@ -23,8 +23,8 @@
 
 | 变量 | 说明 |
 |---|---|
-| `MIND_API_BIND` | API bind 地址；compose 脚本当前固定为 `0.0.0.0:8000` |
-| `MIND_DOCS_BIND` | 文档站 bind 地址；dev 默认 `0.0.0.0:8002`，prod 默认 `0.0.0.0:8001` |
+| `MIND_API_BIND` | API bind 地址；compose 脚本当前固定为 `0.0.0.0:18600` |
+| `MIND_DOCS_BIND` | 文档站 bind 地址；dev 默认 `0.0.0.0:18602`，prod 默认 `0.0.0.0:18601` |
 | `MIND_LOG_LEVEL` | 日志级别 |
 | `MIND_DEV_MODE` | 开发模式开关 |
 | `MIND_DEV_TELEMETRY_PATH` | 开发模式 telemetry JSONL 落盘路径；仅在 `dev_mode=true` 时实际写入 |

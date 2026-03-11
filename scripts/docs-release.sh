@@ -8,13 +8,18 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 PROJECT_NAME="mind-docs"
 COMPOSE_FILE="compose.docs.yaml"
-DOCS_BIND="${DOCS_BIND:-0.0.0.0:8004}"
+DOCS_BIND="${DOCS_BIND:-0.0.0.0:18604}"
 ARTIFACT_DIR="$PROJECT_ROOT/artifacts/docs-release"
 
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
+IS_TTY_STDOUT=0
+
+if [ -t 1 ]; then
+    IS_TTY_STDOUT=1
+fi
 
 info()  { printf "${GREEN}[DOCS]${NC} %s\n" "$1"; }
 warn()  { printf "${YELLOW}[DOCS]${NC} %s\n" "$1"; }
@@ -31,8 +36,39 @@ bind_port() {
     fi
 }
 
+supports_hyperlinks() {
+    if [ "${MIND_PLAIN_URLS:-0}" = "1" ] || [ "$IS_TTY_STDOUT" != "1" ] || [ "${TERM:-}" = "dumb" ]; then
+        return 1
+    fi
+
+    if [ -n "${FORCE_HYPERLINKS:-}" ] \
+        || [ -n "${WT_SESSION:-}" ] \
+        || [ -n "${WEZTERM_PANE:-}" ] \
+        || [ -n "${KITTY_WINDOW_ID:-}" ] \
+        || [ -n "${VTE_VERSION:-}" ]; then
+        return 0
+    fi
+
+    case "${TERM_PROGRAM:-}" in
+        iTerm.app|WezTerm|vscode|ghostty|Hyper)
+            return 0
+            ;;
+    esac
+
+    return 1
+}
+
+format_link() {
+    url="$1"
+    if supports_hyperlinks; then
+        printf '\033]8;;%s\007%s\033]8;;\007' "$url" "$url"
+    else
+        printf '%s' "$url"
+    fi
+}
+
 docs_url() {
-    printf 'http://127.0.0.1:%s\n' "$(bind_port "$DOCS_BIND" 8004)"
+    printf 'http://127.0.0.1:%s\n' "$(bind_port "$DOCS_BIND" 18604)"
 }
 
 show_help() {
@@ -53,7 +89,7 @@ MIND 静态文档站构建与发布脚本
 本地文档服务:
   compose project: ${PROJECT_NAME}
   Host bind: ${DOCS_BIND}
-  URL: $(docs_url)
+  URL: $(format_link "$(docs_url)")
 EOF
 }
 
@@ -104,7 +140,7 @@ publish_local() {
     cd "$PROJECT_ROOT"
     info "构建并发布本地静态文档服务..."
     compose up --build -d
-    info "本地文档服务已启动: $(docs_url)"
+    info "本地文档服务已启动: $(format_link "$(docs_url)")"
 }
 
 cd "$PROJECT_ROOT"

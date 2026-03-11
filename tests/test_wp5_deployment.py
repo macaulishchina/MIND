@@ -98,8 +98,9 @@ def test_compose_dev_yaml_exists_and_valid() -> None:
         docs_svc["build"]["args"]["PIP_INDEX_URL"]
         == "${MIND_PIP_INDEX_URL:-https://pypi.tuna.tsinghua.edu.cn/simple}"
     )
-    assert any("8002" in str(v) for v in docs_svc["ports"])
+    assert any("18602" in str(v) for v in docs_svc["ports"])
     assert "healthcheck" in docs_svc
+    assert any("18606:5678" in str(v) for v in api_svc["ports"])
 
 
 def test_compose_prod_yaml_exists_and_valid() -> None:
@@ -116,8 +117,21 @@ def test_compose_docs_yaml_exists_and_valid() -> None:
     assert "docs" in compose_docs["services"]
     docs_svc = compose_docs["services"]["docs"]
     assert docs_svc["build"]["dockerfile"] == "Dockerfile.docs"
-    assert any("8001" in str(v) for v in docs_svc["ports"])
+    assert any("18601" in str(v) for v in docs_svc["ports"])
     assert "healthcheck" in docs_svc
+
+
+def test_compose_runtime_ports_use_mind_1860x_family() -> None:
+    compose_data = parse_compose_file(ROOT / "compose.yaml")
+    compose_dev = parse_compose_file(ROOT / "compose.dev.yaml")
+
+    postgres_svc = compose_data["services"]["postgres"]
+    api_svc = compose_data["services"]["api"]
+    dev_api_svc = compose_dev["services"]["api"]
+
+    assert any("18605:5432" in str(v) for v in postgres_svc["ports"])
+    assert any("18600:18600" in str(v) for v in api_svc["ports"])
+    assert any("18606:5678" in str(v) for v in dev_api_svc["ports"])
 
 
 def test_env_example_covers_required_vars() -> None:
@@ -165,7 +179,8 @@ def test_env_dev_covers_required_vars() -> None:
     assert "DEBUG" in content
     assert "true" in content.lower()
     assert "MIND_POSTGRES_PASSWORD=postgres" in content
-    assert "MIND_DOCS_BIND=0.0.0.0:8002" in content
+    assert "MIND_API_BIND=0.0.0.0:18600" in content
+    assert "MIND_DOCS_BIND=0.0.0.0:18602" in content
     assert "MIND_PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple" in content
     assert "MIND_PIP_TRUSTED_HOST=pypi.tuna.tsinghua.edu.cn" in content
 
@@ -192,6 +207,8 @@ def test_env_prod_covers_required_vars() -> None:
 
     assert "WARNING" in content
     assert "MIND_POSTGRES_PASSWORD=CHANGE_ME" in content
+    assert "MIND_API_BIND=0.0.0.0:18600" in content
+    assert "MIND_DOCS_BIND=0.0.0.0:18601" in content
     assert "MIND_DEV_MODE=false" in content
     assert "MIND_PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple" in content
     assert "MIND_PIP_TRUSTED_HOST=pypi.tuna.tsinghua.edu.cn" in content
@@ -231,7 +248,7 @@ def test_docs_release_script_builds_and_publishes_static_site() -> None:
 
     assert 'PROJECT_NAME="mind-docs"' in docs_release_script
     assert 'COMPOSE_FILE="compose.docs.yaml"' in docs_release_script
-    assert 'DOCS_BIND="${DOCS_BIND:-0.0.0.0:8004}"' in docs_release_script
+    assert 'DOCS_BIND="${DOCS_BIND:-0.0.0.0:18604}"' in docs_release_script
     assert "mkdocs build --strict" in docs_release_script
     assert "publish-local" in docs_release_script
 

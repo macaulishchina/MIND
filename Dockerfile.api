@@ -20,6 +20,6 @@ COPY scripts/entrypoint-api.sh /app/scripts/entrypoint-api.sh
 
 RUN pip install --upgrade pip && pip install ".[api]" && chmod +x /app/scripts/entrypoint-api.sh
 
-EXPOSE 8000
+EXPOSE 18600
 
 ENTRYPOINT ["/app/scripts/entrypoint-api.sh"]

@@ -20,11 +20,12 @@
 
 默认地址：
 
-- API：`http://127.0.0.1:8000`
-- API 文档：`http://127.0.0.1:8000/docs`
-- 健康：`http://127.0.0.1:8000/v1/system/health`
-- 就绪：`http://127.0.0.1:8000/v1/system/readiness`
-- 文档：`http://127.0.0.1:8002`
+- API：`http://127.0.0.1:18600`
+- 项目页面：`http://127.0.0.1:18600/frontend/`
+- API 文档：`http://127.0.0.1:18600/docs`
+- 健康：`http://127.0.0.1:18600/v1/system/health`
+- 就绪：`http://127.0.0.1:18600/v1/system/readiness`
+- 文档：`http://127.0.0.1:18602`
 
 如果要以前台 attach 模式运行：
 
@@ -36,10 +37,10 @@
 
 ```bash
 uv sync --extra docs
-uv run mkdocs serve --livereload -a 0.0.0.0:8003
+uv run mkdocs serve --livereload -a 0.0.0.0:18603
 ```
 
-然后打开 `http://127.0.0.1:8003`。
+然后打开 `http://127.0.0.1:18603`。
 
 ### 常用命令
 
@@ -86,7 +87,7 @@ MIND_ENV_FILE=.env.dev.local docker compose --project-name mind-dev --env-file .
 
 ### 远程调试
 
-开发环境暴露 debugpy 端口 `5678`。在代码中添加：
+开发环境把宿主机 `18606` 映射到容器内 debugpy `5678`。在代码中添加：
 
 ```python
 import debugpy
@@ -94,7 +95,7 @@ debugpy.listen(("0.0.0.0", 5678))
 debugpy.wait_for_client()  # 可选：等待调试器连接
 ```
 
-然后在 IDE 中配置远程调试，连接到 `localhost:5678`。
+然后在 IDE 中配置远程调试，连接到 `localhost:18606`。
 
 ### Worker 轮询
 
@@ -111,8 +112,8 @@ debugpy.wait_for_client()  # 可选：等待调试器连接
 | `MIND_API_KEY` | `dev-key` | 开发用 API 密钥 |
 | `MIND_LOG_LEVEL` | `DEBUG` | 日志级别 |
 | `MIND_DEV_MODE` | `true` | 启用开发特性 |
-| `MIND_API_BIND` | `0.0.0.0:8000` | compose 开发环境当前固定为 8000 |
-| `MIND_DOCS_BIND` | `0.0.0.0:8002` | compose 开发环境文档热更端口 |
+| `MIND_API_BIND` | `0.0.0.0:18600` | compose 开发环境当前固定为 18600 |
+| `MIND_DOCS_BIND` | `0.0.0.0:18602` | compose 开发环境文档热更端口 |
 | `MIND_PROVIDER` | `stub` | 使用 stub 无需真实 LLM |
 | `MIND_PIP_INDEX_URL` | `https://pypi.tuna.tsinghua.edu.cn/simple` | Docker 构建时的主 PyPI 镜像源 |
 | `MIND_PIP_EXTRA_INDEX_URL` | 空 | Docker 构建时的附加 PyPI 镜像源 |
@@ -142,7 +143,7 @@ MIND_ENV_FILE=.env.dev docker compose \
   up postgres -d
 
 # 3. 配置环境变量 (注意 DSN 用 localhost)
-export MIND_POSTGRES_DSN='postgresql+psycopg://postgres:postgres@127.0.0.1:5432/mind'
+export MIND_POSTGRES_DSN='postgresql+psycopg://postgres:postgres@127.0.0.1:18605/mind'
 export MIND_API_KEY='dev-key'
 export MIND_DEV_MODE=true
 

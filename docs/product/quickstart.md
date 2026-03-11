@@ -19,7 +19,7 @@ uv sync --extra dev --extra api --extra mcp --extra docs
 ## 3. 配置本地产品 CLI 使用的 PostgreSQL DSN
 
 ```bash
-export MIND_POSTGRES_DSN='postgresql+psycopg://postgres:postgres@127.0.0.1:5432/mind'
+export MIND_POSTGRES_DSN='postgresql+psycopg://postgres:postgres@127.0.0.1:18605/mind'
 export MIND_API_KEY='dev-key'
 ```
 
@@ -69,13 +69,13 @@ mind config
 ```bash
 curl \
   -H 'X-API-Key: dev-key' \
-  http://127.0.0.1:8000/v1/system/health
+  http://127.0.0.1:18600/v1/system/health
 ```
 
 ## 10. 用远程模式走 CLI
 
 ```bash
-mind --remote http://127.0.0.1:8000 --api-key dev-key status
+mind --remote http://127.0.0.1:18600 --api-key dev-key status
 ```
 
 ## 下一步

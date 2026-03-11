@@ -18,7 +18,7 @@ services:
       POSTGRES_USER: ${MIND_POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${MIND_POSTGRES_PASSWORD:-postgres}
     ports:
-      - "5432:5432"
+      - "18605:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -44,7 +44,7 @@ services:
     environment:
       MIND_POSTGRES_DSN: ${MIND_POSTGRES_DSN}
       MIND_API_KEY: ${MIND_API_KEY}
-      MIND_API_BIND: ${MIND_API_BIND:-0.0.0.0:8000}
+      MIND_API_BIND: ${MIND_API_BIND:-0.0.0.0:18600}
       MIND_PROVIDER: ${MIND_PROVIDER:-stub}
       MIND_MODEL: ${MIND_MODEL:-deterministic}
       MIND_LOG_LEVEL: ${MIND_LOG_LEVEL:-INFO}
@@ -53,14 +53,14 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "8000:8000"
+      - "18600:18600"
     healthcheck:
       test:
         - CMD-SHELL
         - >
           python -c "import os, urllib.request;
           req = urllib.request.Request(
-          'http://127.0.0.1:8000/v1/system/health',
+          'http://127.0.0.1:18600/v1/system/health',
           headers={'X-API-Key': os.environ['MIND_API_KEY']},
           );
           urllib.request.urlopen(req, timeout=5)"

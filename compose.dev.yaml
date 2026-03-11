@@ -22,9 +22,9 @@ services:
       MIND_LOG_LEVEL: DEBUG
       MIND_DEV_MODE: "true"
     ports:
-      - "8000:8000"
-      # debugpy 远程调试端口 (可选: 在代码中 import debugpy; debugpy.listen(5678))
-      - "5678:5678"
+      - "18600:18600"
+      # debugpy 远程调试端口 (宿主机 18606 -> 容器 5678)
+      - "18606:5678"
 
   worker:
     volumes:
@@ -55,7 +55,7 @@ services:
       - .:/app:ro
       - docs_site:/app/site
     ports:
-      - "${MIND_DOCS_BIND:-0.0.0.0:8002}:8000"
+      - "${MIND_DOCS_BIND:-0.0.0.0:18602}:8000"
     healthcheck:
       test:
         - CMD-SHELL

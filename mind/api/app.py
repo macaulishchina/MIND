@@ -63,7 +63,7 @@ def create_app(config: ResolvedCliConfig | None = None) -> FastAPI:
 def run_server() -> None:
     """Run the FastAPI app with uvicorn."""
 
-    port = int(environ.get("PORT", "8000"))
+    port = int(environ.get("PORT", "18600"))
     uvicorn.run(
         "mind.api.app:create_app",
         factory=True,

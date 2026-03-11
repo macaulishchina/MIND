@@ -64,13 +64,13 @@ source $HOME/.local/bin/env
 ./scripts/dev.sh
 ```
 
-开发环境会默认带上热更新文档服务，访问 `http://127.0.0.1:8002`。
+开发环境会默认带上热更新文档服务，访问 `http://127.0.0.1:18602`。
 
 如果只想单独预览文档站：
 
 ```bash
 uv sync --extra docs
-uv run mkdocs serve --livereload -a 0.0.0.0:8003
+uv run mkdocs serve --livereload -a 0.0.0.0:18603
 ```
 
 发布前建议至少执行一次严格构建：

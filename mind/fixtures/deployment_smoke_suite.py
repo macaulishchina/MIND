@@ -76,12 +76,17 @@ def build_deployment_smoke_suite_v1() -> tuple[DeploymentSmokeScenario, ...]:
         ),
         DeploymentSmokeScenario("api_builds_dockerfile_api", "api uses Dockerfile.api"),
         DeploymentSmokeScenario("worker_builds_dockerfile_worker", "worker uses Dockerfile.worker"),
-        DeploymentSmokeScenario("api_exposes_8000", "api publishes port 8000"),
+        DeploymentSmokeScenario("api_exposes_18600", "api publishes port 18600"),
         DeploymentSmokeScenario("worker_runs_loop", "worker command loops the offline worker"),
         DeploymentSmokeScenario("docs_healthcheck", "docs service has healthcheck"),
         DeploymentSmokeScenario("docs_builds_dockerfile_docs", "docs uses Dockerfile.docs"),
-        DeploymentSmokeScenario("docs_exposes_8001", "docs publishes port 8001"),
-        DeploymentSmokeScenario("dev_docs_exposes_8002", "dev docs publishes port 8002"),
+        DeploymentSmokeScenario("docs_exposes_18601", "docs publishes port 18601"),
+        DeploymentSmokeScenario("dev_docs_exposes_18602", "dev docs publishes port 18602"),
+        DeploymentSmokeScenario("postgres_exposes_18605", "postgres publishes port 18605"),
+        DeploymentSmokeScenario(
+            "dev_api_debugpy_exposes_18606",
+            "dev api publishes debugpy host port 18606",
+        ),
         DeploymentSmokeScenario("dockerfile_api_exists", "Dockerfile.api exists"),
         DeploymentSmokeScenario("dockerfile_api_installs_api", "Dockerfile.api installs .[api]"),
         DeploymentSmokeScenario(
@@ -173,10 +178,18 @@ def evaluate_deployment_smoke_suite(root: Path) -> DeploymentSmokeReport:
         "api_builds_dockerfile_api": _dockerfile_ref(api) == "Dockerfile.api",
         "docs_builds_dockerfile_docs": _dockerfile_ref(docs) == "Dockerfile.docs",
         "worker_builds_dockerfile_worker": _dockerfile_ref(worker) == "Dockerfile.worker",
-        "api_exposes_8000": "8000:8000" in list(api.get("ports", [])),
-        "docs_exposes_8001": any("8001" in str(port) for port in list(docs.get("ports", []))),
-        "dev_docs_exposes_8002": any(
-            "8002" in str(port) for port in list(dev_docs.get("ports", []))
+        "api_exposes_18600": "18600:18600" in list(api.get("ports", [])),
+        "docs_exposes_18601": any("18601" in str(port) for port in list(docs.get("ports", []))),
+        "dev_docs_exposes_18602": any(
+            "18602" in str(port) for port in list(dev_docs.get("ports", []))
+        ),
+        "postgres_exposes_18605": any(
+            "18605:5432" in str(port) for port in list(postgres.get("ports", []))
+        ),
+        "dev_api_debugpy_exposes_18606": any(
+            "18606:5678" in str(port) for port in list(api.get("ports", []))
+        ) or any(
+            "18606:5678" in str(port) for port in list(compose_dev_services.get("api", {}).get("ports", []))
         ),
         "worker_runs_loop": "mindtest-offline-worker-once" in _worker_command(worker),
         "dockerfile_api_exists": dockerfile_api.exists(),

@@ -24,6 +24,11 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
+IS_TTY_STDOUT=0
+
+if [ -t 1 ]; then
+    IS_TTY_STDOUT=1
+fi
 
 info()  { printf "${GREEN}[DEV]${NC} %s\n" "$1"; }
 warn()  { printf "${YELLOW}[DEV]${NC} %s\n" "$1"; }
@@ -37,6 +42,37 @@ bind_port() {
         printf '%s\n' "$port"
     else
         printf '%s\n' "$default_port"
+    fi
+}
+
+supports_hyperlinks() {
+    if [ "${MIND_PLAIN_URLS:-0}" = "1" ] || [ "$IS_TTY_STDOUT" != "1" ] || [ "${TERM:-}" = "dumb" ]; then
+        return 1
+    fi
+
+    if [ -n "${FORCE_HYPERLINKS:-}" ] \
+        || [ -n "${WT_SESSION:-}" ] \
+        || [ -n "${WEZTERM_PANE:-}" ] \
+        || [ -n "${KITTY_WINDOW_ID:-}" ] \
+        || [ -n "${VTE_VERSION:-}" ]; then
+        return 0
+    fi
+
+    case "${TERM_PROGRAM:-}" in
+        iTerm.app|WezTerm|vscode|ghostty|Hyper)
+            return 0
+            ;;
+    esac
+
+    return 1
+}
+
+format_link() {
+    url="$1"
+    if supports_hyperlinks; then
+        printf '\033]8;;%s\007%s\033]8;;\007' "$url" "$url"
+    else
+        printf '%s' "$url"
     fi
 }
 
@@ -64,20 +100,22 @@ MIND 开发环境管理脚本
   - 源码热更新: 本地修改 mind/ 目录即时生效
   - 文档热更新: MkDocs dev server 随开发环境一起启动
   - DEBUG 日志级别
-  - 远程调试端口: 5678 (debugpy)
+  - MIND 1860x 端口族: API 18600 / 文档 18602 / 预览 18603 / DB 18605 / debugpy 18606
+  - 远程调试端口: 18606 (映射到容器内 debugpy 5678)
   - Worker 轮询间隔: 3s
 
 开发环境地址:
-  API:      http://127.0.0.1:8000
-  API 文档: http://127.0.0.1:8000/docs
-  健康:     http://127.0.0.1:8000/v1/system/health
-  就绪:     http://127.0.0.1:8000/v1/system/readiness
-  项目文档: http://127.0.0.1:8002/
+  API:      $(format_link "http://127.0.0.1:18600")
+  项目页面: $(format_link "http://127.0.0.1:18600/frontend/")
+  API 文档: $(format_link "http://127.0.0.1:18600/docs")
+  健康:     $(format_link "http://127.0.0.1:18600/v1/system/health")
+  就绪:     $(format_link "http://127.0.0.1:18600/v1/system/readiness")
+  项目文档: $(format_link "http://127.0.0.1:18602/")
 
 可选的独立文档预览:
   uv sync --extra docs
-  uv run mkdocs serve --livereload -a 0.0.0.0:8003
-  打开: http://127.0.0.1:8003
+  uv run mkdocs serve --livereload -a 0.0.0.0:18603
+  打开: $(format_link "http://127.0.0.1:18603")
 EOF
 }
 
@@ -113,7 +151,7 @@ dsn_password() {
 
 api_url() {
     api_bind="$(read_env_value "MIND_API_BIND" "$PROJECT_ROOT/$ENV_FILE")"
-    printf 'http://127.0.0.1:%s\n' "$(bind_port "$api_bind" 8000)"
+    printf 'http://127.0.0.1:%s\n' "$(bind_port "$api_bind" 18600)"
 }
 
 api_docs_url() {
@@ -128,9 +166,13 @@ api_readiness_url() {
     printf '%s/v1/system/readiness\n' "$(api_url)"
 }
 
+frontend_url() {
+    printf '%s/frontend/\n' "$(api_url)"
+}
+
 docs_url() {
     docs_bind="$(read_env_value "MIND_DOCS_BIND" "$PROJECT_ROOT/$ENV_FILE")"
-    printf 'http://127.0.0.1:%s/\n' "$(bind_port "$docs_bind" 8002)"
+    printf 'http://127.0.0.1:%s/\n' "$(bind_port "$docs_bind" 18602)"
 }
 
 validate_env() {
@@ -139,8 +181,8 @@ validate_env() {
     postgres_dsn="$(read_env_value "MIND_POSTGRES_DSN" "$PROJECT_ROOT/$ENV_FILE")"
     dsn_password_value="$(dsn_password "$postgres_dsn")"
 
-    if [ -n "$bind" ] && [ "$bind" != "0.0.0.0:8000" ]; then
-        error "compose 开发环境当前仅支持 MIND_API_BIND=0.0.0.0:8000 (当前: $bind)"
+    if [ -n "$bind" ] && [ "$bind" != "0.0.0.0:18600" ]; then
+        error "compose 开发环境当前仅支持 MIND_API_BIND=0.0.0.0:18600 (当前: $bind)"
         exit 1
     fi
     if [ -n "$postgres_password" ] && [ -n "$dsn_password_value" ] && [ "$postgres_password" != "$dsn_password_value" ]; then
@@ -171,11 +213,12 @@ show_detached_summary() {
     echo ""
     info "========================================="
     info "  开发环境已在后台启动"
-    info "  API:      $(api_url)"
-    info "  API 文档: $(api_docs_url)"
-    info "  健康:     $(api_health_url)"
-    info "  就绪:     $(api_readiness_url)"
-    info "  项目文档: $(docs_url)"
+    info "  API:      $(format_link "$(api_url)")"
+    info "  项目页面: $(format_link "$(frontend_url)")"
+    info "  API 文档: $(format_link "$(api_docs_url)")"
+    info "  健康:     $(format_link "$(api_health_url)")"
+    info "  就绪:     $(format_link "$(api_readiness_url)")"
+    info "  项目文档: $(format_link "$(docs_url)")"
     info "  日志:     ./scripts/dev.sh --logs"
     info "  状态:     ./scripts/dev.sh --status"
     info "========================================="

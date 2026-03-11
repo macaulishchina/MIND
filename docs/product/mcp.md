@@ -13,7 +13,7 @@ uv sync --extra mcp
 ## 启动
 
 ```bash
-export MIND_POSTGRES_DSN='postgresql+psycopg://postgres:postgres@127.0.0.1:5432/mind'
+export MIND_POSTGRES_DSN='postgresql+psycopg://postgres:postgres@127.0.0.1:18605/mind'
 uv run mind-mcp
 ```
 

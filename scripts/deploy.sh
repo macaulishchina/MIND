@@ -25,6 +25,11 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
+IS_TTY_STDOUT=0
+
+if [ -t 1 ]; then
+    IS_TTY_STDOUT=1
+fi
 
 info()  { printf "${GREEN}[DEPLOY]${NC} %s\n" "$1"; }
 warn()  { printf "${YELLOW}[DEPLOY]${NC} %s\n" "$1"; }
@@ -38,6 +43,37 @@ bind_port() {
         printf '%s\n' "$port"
     else
         printf '%s\n' "$default_port"
+    fi
+}
+
+supports_hyperlinks() {
+    if [ "${MIND_PLAIN_URLS:-0}" = "1" ] || [ "$IS_TTY_STDOUT" != "1" ] || [ "${TERM:-}" = "dumb" ]; then
+        return 1
+    fi
+
+    if [ -n "${FORCE_HYPERLINKS:-}" ] \
+        || [ -n "${WT_SESSION:-}" ] \
+        || [ -n "${WEZTERM_PANE:-}" ] \
+        || [ -n "${KITTY_WINDOW_ID:-}" ] \
+        || [ -n "${VTE_VERSION:-}" ]; then
+        return 0
+    fi
+
+    case "${TERM_PROGRAM:-}" in
+        iTerm.app|WezTerm|vscode|ghostty|Hyper)
+            return 0
+            ;;
+    esac
+
+    return 1
+}
+
+format_link() {
+    url="$1"
+    if supports_hyperlinks; then
+        printf '\033]8;;%s\007%s\033]8;;\007' "$url" "$url"
+    else
+        printf '%s' "$url"
     fi
 }
 
@@ -63,7 +99,9 @@ MIND 生产部署脚本
 配置:
   compose project: ${PROJECT_NAME}
   日志级别: WARNING
-  静态文档: 默认 http://127.0.0.1:8001
+  MIND 1860x 端口族: API 18600 / 文档 18601 / DB 18605
+  项目页面: 默认 $(format_link "http://127.0.0.1:18600/frontend/")
+  静态文档: 默认 $(format_link "http://127.0.0.1:18601")
   资源限制: 已配置 (CPU/内存)
   后台运行: 是 (detached mode)
 EOF
@@ -120,8 +158,8 @@ validate_env() {
     postgres_password="$(read_env_value "MIND_POSTGRES_PASSWORD" "$env_path")"
     postgres_dsn="$(read_env_value "MIND_POSTGRES_DSN" "$env_path")"
     dsn_password_value="$(dsn_password "$postgres_dsn")"
-    if [ -n "$bind" ] && [ "$bind" != "0.0.0.0:8000" ]; then
-        error "compose 生产环境当前仅支持 MIND_API_BIND=0.0.0.0:8000 (当前: $bind)"
+    if [ -n "$bind" ] && [ "$bind" != "0.0.0.0:18600" ]; then
+        error "compose 生产环境当前仅支持 MIND_API_BIND=0.0.0.0:18600 (当前: $bind)"
         exit 1
     fi
 
@@ -165,12 +203,12 @@ compose() {
 
 docs_url() {
     docs_bind="$(read_env_value "MIND_DOCS_BIND" "$PROJECT_ROOT/$ENV_FILE")"
-    printf 'http://127.0.0.1:%s/\n' "$(bind_port "$docs_bind" 8001)"
+    printf 'http://127.0.0.1:%s/\n' "$(bind_port "$docs_bind" 18601)"
 }
 
 api_url() {
     api_bind="$(read_env_value "MIND_API_BIND" "$PROJECT_ROOT/$ENV_FILE")"
-    printf 'http://127.0.0.1:%s\n' "$(bind_port "$api_bind" 8000)"
+    printf 'http://127.0.0.1:%s\n' "$(bind_port "$api_bind" 18600)"
 }
 
 api_docs_url() {
@@ -183,6 +221,10 @@ api_health_url() {
 
 api_readiness_url() {
     printf '%s/v1/system/readiness\n' "$(api_url)"
+}
+
+frontend_url() {
+    printf '%s/frontend/\n' "$(api_url)"
 }
 
 build_docs_site() {
@@ -237,11 +279,12 @@ show_detached_summary() {
     echo ""
     info "========================================="
     info "  部署完成"
-    info "  API:      $(api_url)"
-    info "  API 文档: $(api_docs_url)"
-    info "  健康:     $(api_health_url)"
-    info "  就绪:     $(api_readiness_url)"
-    info "  项目文档: $(docs_url)"
+    info "  API:      $(format_link "$(api_url)")"
+    info "  项目页面: $(format_link "$(frontend_url)")"
+    info "  API 文档: $(format_link "$(api_docs_url)")"
+    info "  健康:     $(format_link "$(api_health_url)")"
+    info "  就绪:     $(format_link "$(api_readiness_url)")"
+    info "  项目文档: $(format_link "$(docs_url)")"
     info "  日志:     ./scripts/deploy.sh --logs"
     info "  状态:     ./scripts/deploy.sh --status"
     info "========================================="

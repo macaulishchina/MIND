@@ -5,7 +5,7 @@ REST 服务由 `mind-api` 暴露，底层统一调用 `mind/app`。
 ## 启动
 
 ```bash
-export MIND_POSTGRES_DSN='postgresql+psycopg://postgres:postgres@127.0.0.1:5432/mind'
+export MIND_POSTGRES_DSN='postgresql+psycopg://postgres:postgres@127.0.0.1:18605/mind'
 export MIND_API_KEY='change-me'
 uv run mind-api
 ```
@@ -88,6 +88,6 @@ curl \
   -X POST \
   -H 'Content-Type: application/json' \
   -H 'X-API-Key: change-me' \
-  http://127.0.0.1:8000/v1/memories \
+  http://127.0.0.1:18600/v1/memories \
   -d '{"content":"hello","episode_id":"ep-1","timestamp_order":1}'
 ```

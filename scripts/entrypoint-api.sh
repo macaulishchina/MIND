@@ -11,7 +11,7 @@ if [ -z "${MIND_API_KEY:-}" ]; then
   exit 1
 fi
 
-bind="${MIND_API_BIND:-0.0.0.0:8000}"
+bind="${MIND_API_BIND:-0.0.0.0:18600}"
 host="${bind%:*}"
 port="${bind##*:}"
 if [ "$host" = "$bind" ]; then

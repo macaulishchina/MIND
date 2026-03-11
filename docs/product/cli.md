@@ -20,7 +20,7 @@
 启动前需要通过环境变量或参数提供 PostgreSQL DSN：
 
 ```bash
-export MIND_POSTGRES_DSN='postgresql+psycopg://postgres:postgres@127.0.0.1:5432/mind'
+export MIND_POSTGRES_DSN='postgresql+psycopg://postgres:postgres@127.0.0.1:18605/mind'
 mind status
 ```
 

@@ -2,7 +2,7 @@
 #
 # 用法:
 #   生产部署: ./scripts/deploy.sh
-#   本地发布: ./scripts/docs-release.sh publish-local (默认绑定 8004)
+#   本地发布: ./scripts/docs-release.sh publish-local (默认绑定 18604)
 
 services:
   docs:
@@ -11,7 +11,7 @@ services:
       dockerfile: Dockerfile.docs
     restart: unless-stopped
     ports:
-      - "${MIND_DOCS_BIND:-0.0.0.0:8001}:80"
+      - "${MIND_DOCS_BIND:-0.0.0.0:18601}:80"
     healthcheck:
       test:
         - CMD-SHELL

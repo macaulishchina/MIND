@@ -59,13 +59,14 @@
 脚本会固定使用独立的 compose project `mind-prod`，避免与开发环境共用容器、网络和数据库卷。
 后台部署完成后，脚本会打印以下完整 URL：
 
-- API：`http://127.0.0.1:8000`
-- API 文档：`http://127.0.0.1:8000/docs`
-- 健康：`http://127.0.0.1:8000/v1/system/health`
-- 就绪：`http://127.0.0.1:8000/v1/system/readiness`
-- 项目文档：`http://127.0.0.1:8001/`
+- API：`http://127.0.0.1:18600`
+- 项目页面：`http://127.0.0.1:18600/frontend/`
+- API 文档：`http://127.0.0.1:18600/docs`
+- 健康：`http://127.0.0.1:18600/v1/system/health`
+- 就绪：`http://127.0.0.1:18600/v1/system/readiness`
+- 项目文档：`http://127.0.0.1:18601/`
 
-开发环境的热更新文档站则由 `./scripts/dev.sh` 提供，默认使用 `http://127.0.0.1:8002`。
+开发环境的热更新文档站则由 `./scripts/dev.sh` 提供，默认使用 `http://127.0.0.1:18602`。
 
 ### 手动部署
 
@@ -106,8 +107,8 @@ MIND_ENV_FILE=.env.prod.local docker compose \
 | `MIND_MODEL` | `deterministic` | 模型名称 |
 | `MIND_LOG_LEVEL` | `WARNING` | 日志级别（生产） |
 | `MIND_DEV_MODE` | `false` | 开发模式 (生产必须为 false) |
-| `MIND_API_BIND` | `0.0.0.0:8000` | API 监听地址（compose 部署当前固定为 8000） |
-| `MIND_DOCS_BIND` | `0.0.0.0:8001` | 生产静态文档站监听地址 |
+| `MIND_API_BIND` | `0.0.0.0:18600` | API 监听地址（compose 部署当前固定为 18600） |
+| `MIND_DOCS_BIND` | `0.0.0.0:18601` | 生产静态文档站监听地址 |
 | `MIND_PIP_INDEX_URL` | `https://pypi.tuna.tsinghua.edu.cn/simple` | Docker 构建时的主 PyPI 镜像源 |
 | `MIND_PIP_EXTRA_INDEX_URL` | 空 | Docker 构建时的附加 PyPI 镜像源 |
 | `MIND_PIP_TRUSTED_HOST` | `pypi.tuna.tsinghua.edu.cn` | Docker 构建时的可信镜像域名 |
@@ -126,12 +127,12 @@ MIND_ENV_FILE=.env.prod.local docker compose \
 
 - **静态文档站构建**: 基于 `mkdocs build --strict`
 - **文档服务发布**: Nginx 提供只读静态站
-- **默认访问地址**: `http://127.0.0.1:8001`
+- **默认访问地址**: `http://127.0.0.1:18601`
 
 开发环境文档站则由 `compose.dev.yaml` 提供：
 
 - **文档热更新**: `mkdocs serve --livereload`
-- **默认访问地址**: `http://127.0.0.1:8002`
+- **默认访问地址**: `http://127.0.0.1:18602`
 - **用途**: 本地开发与联调，不用于生产发布
 
 生产配置默认已使用清华 TUNA PyPI 镜像；如果需要覆盖，可在 `.env.prod.local` 中配置 `MIND_PIP_INDEX_URL` /
@@ -143,9 +144,9 @@ MIND_ENV_FILE=.env.prod.local docker compose \
 部署脚本会自动执行 smoke check。也可手动验证：
 
 ```bash
-curl -H 'X-API-Key: YOUR_KEY' http://127.0.0.1:8000/v1/system/health
-curl -H 'X-API-Key: YOUR_KEY' http://127.0.0.1:8000/v1/system/readiness
-curl -I http://127.0.0.1:8001/
+curl -H 'X-API-Key: YOUR_KEY' http://127.0.0.1:18600/v1/system/health
+curl -H 'X-API-Key: YOUR_KEY' http://127.0.0.1:18600/v1/system/readiness
+curl -I http://127.0.0.1:18601/
 ```
 
 更全面的验收测试：

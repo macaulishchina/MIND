@@ -220,13 +220,14 @@ MIND 当前聚焦于四个核心问题：
 ./scripts/dev.sh
 ```
 
-开发环境会同时启动带热更新的文档服务，默认地址是 `http://127.0.0.1:8002`。
+开发环境会同时启动带热更新的文档服务，默认地址是 `http://127.0.0.1:18602`。
+产品前端页面则挂载在 API 下：`http://127.0.0.1:18600/frontend/`。
 
 如果只想单独预览文档站：
 
 ```bash
 uv sync --extra docs
-uv run mkdocs serve --livereload -a 0.0.0.0:8003
+uv run mkdocs serve --livereload -a 0.0.0.0:18603
 ```
 
 本地构建/发布静态文档站：
@@ -236,7 +237,7 @@ uv run mkdocs serve --livereload -a 0.0.0.0:8003
 ./scripts/docs-release.sh publish-local
 ```
 
-`publish-local` 默认发布到 `http://127.0.0.1:8004`，避免与开发/生产环境冲突。
+`publish-local` 默认发布到 `http://127.0.0.1:18604`，避免与开发/生产环境冲突。
 
 默认已使用清华 TUNA PyPI 镜像。如果你需要覆盖，可在 `.env.dev.local` / `.env.prod.local` 中设置：
 `MIND_PIP_INDEX_URL`、`MIND_PIP_EXTRA_INDEX_URL`、`MIND_PIP_TRUSTED_HOST`。
@@ -271,7 +272,7 @@ uv run mindtest gate phase-j --dsn postgresql+psycopg://postgres:postgres@127.0.
 uv run mindtest report -h
 uv run mindtest report acceptance --phase h
 uv run mindtest offline -h
-uv run mindtest offline worker --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:5432/postgres --max-jobs 5
+uv run mindtest offline worker --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:18605/postgres --max-jobs 5
 uv run mindtest config show
 uv run mindtest config doctor --backend postgresql
 uv run pytest -q
@@ -289,8 +290,8 @@ uv run mindtest-phase-g-cost-report --repeat-count 3 --output artifacts/phase_g/
 uv run mindtest-phase-g-strategy-dev --run-id 1
 uv run mindtest-phase-g-gate --repeat-count 3 --output artifacts/phase_g/gate_report.json
 uv run mindtest-phase-j-gate --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:55432/postgres --output artifacts/phase_j/gate_report.json
-uv run mindtest-postgres-regression --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:5432/postgres
-uv run mindtest-offline-worker-once --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:5432/postgres --max-jobs 5
+uv run mindtest-postgres-regression --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:18605/postgres
+uv run mindtest-offline-worker-once --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:18605/postgres --max-jobs 5
 uv run ruff check mind tests scripts
 uv run mypy
 ```
@@ -313,8 +314,8 @@ uv run mypy
 .venv/bin/python scripts/run_phase_g_strategy_dev.py --run-id 1
 .venv/bin/python scripts/run_phase_g_gate.py --repeat-count 3 --output /tmp/phase_g_gate.json
 .venv/bin/python scripts/run_phase_j_gate.py --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:55432/postgres --output /tmp/phase_j_gate.json
-.venv/bin/python scripts/run_postgres_regression.py --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:5432/postgres
-.venv/bin/python scripts/run_offline_worker_once.py --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:5432/postgres --max-jobs 5
+.venv/bin/python scripts/run_postgres_regression.py --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:18605/postgres
+.venv/bin/python scripts/run_offline_worker_once.py --dsn postgresql+psycopg://postgres:postgres@127.0.0.1:18605/postgres --max-jobs 5
 ```
 
 当前本地 gate 基线输出应满足：
