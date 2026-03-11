@@ -71,7 +71,7 @@ def build_app_registry(
     """
 
     if config is None:
-        config = resolve_cli_config()
+        config = resolve_cli_config(allow_sqlite=False)
 
     # Build the store based on backend
     store: MemoryStore

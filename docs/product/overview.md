@@ -48,6 +48,7 @@ MIND 是一套面向长期记忆工作流的产品化系统。当前基线已经
 - background offline jobs
 - health / readiness / config summary
 - compose + migration entrypoint
+- PostgreSQL-only 产品运行时
 
 ## 入口选择
 
@@ -57,6 +58,8 @@ MIND 是一套面向长期记忆工作流的产品化系统。当前基线已经
 | `mind-api` | 服务化集成 | 平台、后端 |
 | `mind-mcp` | agent tool 接入 | agent runtime |
 | `mindtest` | 开发、gate、回归 | 内部工程团队 |
+
+所有产品入口统一以 PostgreSQL 作为运行时存储；SQLite 不属于产品 surface，只保留给 `mindtest`、测试和基线校验。
 
 ## 不在本轮范围内
 

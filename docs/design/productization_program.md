@@ -11,7 +11,7 @@
 - 历史 `Phase J` 形成的统一开发/验收 CLI 基线继续有效
 - 但从产品化开始，开发/验收 CLI 的命名必须迁移到 `mindtest`
 - `mind` 这个命名保留给产品级 CLI
-- 产品化工作默认建立在 `PostgreSQL` 真相源之上；`SQLite` 仅保留为 reference backend、测试和低成本原型
+- 产品化工作默认建立在 `PostgreSQL` 真相源之上；`SQLite` 仅保留为 reference backend、测试和 parity 校验
 
 ---
 

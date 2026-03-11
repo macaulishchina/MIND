@@ -5,9 +5,12 @@ REST 服务由 `mind-api` 暴露，底层统一调用 `mind/app`。
 ## 启动
 
 ```bash
+export MIND_POSTGRES_DSN='postgresql+psycopg://postgres:postgres@127.0.0.1:5432/mind'
 export MIND_API_KEY='change-me'
 uv run mind-api
 ```
+
+`mind-api` 没有 SQLite fallback；启动前必须准备 PostgreSQL DSN。使用 compose 或 `./scripts/dev.sh` 时，这个环境变量会由运行时文件提供。
 
 ## 认证
 

@@ -13,7 +13,8 @@
 - transport 不直接碰 domain service
 - domain 不知道 REST/MCP/CLI
 - `mind/app` 是统一业务边界
-- PostgreSQL 是正式真相源，SQLite 是 reference backend
+- `mind` / REST / MCP / compose runtime 统一使用 PostgreSQL
+- SQLite 只保留给测试、gate 和 reference backend 校验
 
 ## 主要模块
 

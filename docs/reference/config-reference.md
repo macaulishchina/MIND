@@ -30,25 +30,27 @@
 | `MIND_PIP_INDEX_URL` | Docker 构建时的主 PyPI 镜像源，默认 `https://pypi.tuna.tsinghua.edu.cn/simple` |
 | `MIND_PIP_EXTRA_INDEX_URL` | Docker 构建时的附加 PyPI 镜像源 |
 | `MIND_PIP_TRUSTED_HOST` | Docker 构建时的可信镜像域名，默认 `pypi.tuna.tsinghua.edu.cn` |
-| `MIND_SQLITE_PATH` | SQLite 路径覆盖 |
-| `MIND_CLI_PROFILE` | CLI profile 覆盖（`auto` / `sqlite_local` / `postgres_main` / `postgres_test`） |
+| `MIND_SQLITE_PATH` | 仅测试/验收 CLI (`mindtest`) 使用的 SQLite 路径覆盖 |
+| `MIND_CLI_PROFILE` | CLI profile 覆盖（`mindtest` 完整支持 `auto` / `sqlite_local` / `postgres_main` / `postgres_test`；产品 CLI 仅接受 `auto` / `postgres_main`） |
 | `MIND_TEST_POSTGRES_DSN` | Postgres test profile DSN |
 
 ## CLI Profiles
 
+下表描述开发/验收 CLI (`mindtest`) 的完整 profile 目录。产品运行时 `mind` / `mind-api` / `mind-mcp` / compose 部署默认只走 PostgreSQL。
+
 | Profile | 默认 backend | 用途 |
 |---|---|---|
-| `auto` | 自动解析 | 有 `MIND_POSTGRES_DSN` 就走 PostgreSQL，否则回退 SQLite |
-| `sqlite_local` | `sqlite` | 本地开发和轻量回归 |
-| `postgres_main` | `postgresql` | 正式 backend / worker |
+| `auto` | 自动解析 | `mindtest` 中有 `MIND_POSTGRES_DSN` 就走 PostgreSQL，否则回退 SQLite；产品运行时会固定解析到 PostgreSQL 主路径 |
+| `sqlite_local` | `sqlite` | 仅测试、gate 和 reference backend 回归 |
+| `postgres_main` | `postgresql` | 正式 backend / worker / 产品运行时 |
 | `postgres_test` | `postgresql` | 回归和临时测试 |
 
 ## CLI Backends
 
 | Backend | 说明 |
 |---|---|
-| `sqlite` | reference backend |
-| `postgresql` | 正式真相源 |
+| `sqlite` | 仅测试/reference backend |
+| `postgresql` | 正式真相源；`mind` / API / MCP / compose 运行时统一使用 |
 
 ## 脱敏规则
 

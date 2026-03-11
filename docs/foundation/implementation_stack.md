@@ -41,7 +41,7 @@
 | 数据模型校验 | `Pydantic v2` | 已冻结 | 对象 validator 仍保留手写实现；primitive request / response 已转为显式 typed models |
 | SQL 访问层 | `SQLAlchemy 2 Core` + `psycopg 3` | 已冻结 | 只用 Core，不采用 ORM domain mapping |
 | 数据库迁移 | `Alembic` | 已冻结 | Postgres 阶段的 schema 变更必须走 migration |
-| 本地最小存储 | `SQLite` | 已冻结 | Phase B / C 基线、CI、快速本地原型 |
+| 本地最小存储 | `SQLite` | 已冻结 | Phase B / C 基线、CI、gate 与 parity 校验 |
 | 正式主存储 | `PostgreSQL 16` + `JSONB` | 已冻结 | Phase D 起的默认真相源 |
 | 向量检索 | `pgvector` | 已冻结 | 不单独引入向量数据库 |
 | 关键词检索 | `pg_trgm` 为主，`Postgres FTS` 为辅 | 已冻结 | 兼顾中文/多语言和结构化过滤 |
@@ -273,7 +273,7 @@
 进一步说明：
 
 - `SQLite` 和 `PostgreSQL` 不是两个正式主存储；项目只有一个正式真相源，即 `PostgreSQL`。
-- `SQLite` 保留的目的，是提供一个低依赖、快启动、确定性的 reference backend，用于 Phase B / C 基线、单元测试、CI 和快速本地原型。
+- `SQLite` 保留的目的，是提供一个低依赖、快启动、确定性的 reference backend，用于 Phase B / C 基线、单元测试、CI、gate 和 parity 校验。
 - 新的正式能力以 `PostgreSQL` 为准，尤其是依赖 `JSONB`、`pg_trgm`、`pgvector`、Alembic migration、真实事务与索引能力的部分。
 - `SQLite` 继续存在，是为了验证上层 `MemoryStore` 语义没有漂移，而不是为了长期双写、双活或双真相源。
 - 一旦某项能力明显依赖 PostgreSQL 特性，不要求 `SQLite` 与其完全等价；此时 `SQLite` 只需继续承担最小语义基线与回归检查职责。
@@ -602,8 +602,8 @@ CI 原则：
 MIND 在当前阶段的正式实现技术栈应理解为：
 
 - 核心语言：`Python 3.12`
-- 当前基线后端：`SQLite`
-- 正式主后端：`PostgreSQL 16 + JSONB + pgvector + pg_trgm`
+- 测试 / reference backend：`SQLite`
+- 产品 / 运行时后端：`PostgreSQL 16 + JSONB + pgvector + pg_trgm`
 - 外部 API 框架：`FastAPI`（需要服务化时启用）
 - 数据模型：`Pydantic v2`
 - SQL 层：`SQLAlchemy 2 Core + psycopg 3 + Alembic`

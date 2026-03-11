@@ -6,13 +6,13 @@
 
 - 正式真相源
 - compose 默认 backend
-- 支撑 worker 和多 transport 集成
+- 支撑 `mind` / REST / MCP / worker / compose 多 transport 集成
 
 ### SQLite
 
 - reference backend
-- 测试与 CI
-- 低成本本地原型
+- 仅测试、CI、gate 和 parity 校验
+- 不属于产品运行时或部署路径
 
 ## 新增产品态表
 
@@ -34,4 +34,4 @@
 
 ## 文档策略
 
-面向最终用户的文档只暴露“如何选择 backend、如何配置 DSN、如何恢复/升级”；更底层的 schema 演化和历史设计继续放在 foundation/design/reports。
+面向最终用户的文档只暴露 PostgreSQL 运行时的配置、部署和恢复路径；SQLite 只在测试、foundation 和历史证据文档中出现。

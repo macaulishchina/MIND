@@ -180,10 +180,10 @@ def build_product_cli_bench_v1() -> tuple[ProductCliScenario, ...]:
             "Show resolved config.",
         ),
         ProductCliScenario(
-            "config_sqlite",
+            "config_local_explicit",
             "config",
-            ("mind", "--backend", "sqlite", "config"),
-            "Show sqlite config explicitly.",
+            ("mind", "--local", "config"),
+            "Show local config explicitly.",
         ),
     )
 

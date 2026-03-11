@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from mind.cli_config import (
     CliBackend,
     CliProfile,
@@ -12,8 +14,20 @@ from mind.cli_config import (
 )
 
 
-def test_auto_profile_defaults_to_sqlite_without_postgres_env() -> None:
-    resolved = resolve_cli_config(env={})
+def test_runtime_auto_profile_defaults_to_postgres_without_postgres_env() -> None:
+    resolved = resolve_cli_config(env={}, allow_sqlite=False)
+
+    assert resolved.requested_profile is CliProfile.AUTO
+    assert resolved.resolved_profile is CliProfile.POSTGRES_MAIN
+    assert resolved.backend is CliBackend.POSTGRESQL
+    assert resolved.sqlite_path is None
+    assert resolved.sqlite_path_source is None
+    assert resolved.postgres_dsn is None
+    assert resolved.postgres_dsn_source == "missing:MIND_POSTGRES_DSN"
+
+
+def test_test_mode_auto_profile_can_still_fallback_to_sqlite() -> None:
+    resolved = resolve_cli_config(env={}, allow_sqlite=True)
 
     assert resolved.requested_profile is CliProfile.AUTO
     assert resolved.resolved_profile is CliProfile.SQLITE_LOCAL
@@ -35,6 +49,7 @@ def test_auto_profile_prefers_postgres_when_main_dsn_exists() -> None:
 def test_cli_profile_override_beats_environment_profile() -> None:
     resolved = resolve_cli_config(
         profile="sqlite_local",
+        allow_sqlite=True,
         env={
             "MIND_CLI_PROFILE": "postgres_test",
             "MIND_TEST_POSTGRES_DSN": "postgresql+psycopg://test",
@@ -64,6 +79,7 @@ def test_backend_override_to_postgres_uses_cli_dsn() -> None:
         profile="sqlite_local",
         backend="postgresql",
         postgres_dsn="postgresql+psycopg://override",
+        allow_sqlite=True,
         env={},
     )
 
@@ -75,7 +91,7 @@ def test_backend_override_to_postgres_uses_cli_dsn() -> None:
 
 
 def test_config_doctor_warns_when_postgres_dsn_missing() -> None:
-    resolved = resolve_cli_config(profile="postgres_main", env={})
+    resolved = resolve_cli_config(profile="postgres_main", env={}, allow_sqlite=False)
     checks = build_config_doctor_checks(resolved)
 
     assert checks[-1].name == "postgres_dsn"
@@ -98,3 +114,8 @@ def test_redact_dsn_masks_password() -> None:
     redacted = redact_dsn("postgresql+psycopg://user:secret@127.0.0.1:5432/postgres")
 
     assert redacted == "postgresql+psycopg://user:***@127.0.0.1:5432/postgres"
+
+
+def test_runtime_rejects_explicit_sqlite_requests() -> None:
+    with pytest.raises(RuntimeError):
+        resolve_cli_config(backend="sqlite", env={}, allow_sqlite=False)

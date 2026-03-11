@@ -1369,6 +1369,7 @@ def _resolve_demo_postgres_config(args: argparse.Namespace) -> ResolvedCliConfig
         backend=backend,
         sqlite_path=getattr(args, "sqlite_path", None),
         postgres_dsn=getattr(args, "dsn", None),
+        allow_sqlite=True,
     )
 
 
@@ -1927,6 +1928,7 @@ def _resolve_cli_config_from_args(args: argparse.Namespace) -> ResolvedCliConfig
         backend=getattr(args, "backend", None),
         sqlite_path=getattr(args, "sqlite_path", None),
         postgres_dsn=getattr(args, "dsn", None),
+        allow_sqlite=True,
     )
 
 

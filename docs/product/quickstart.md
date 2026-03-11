@@ -1,6 +1,6 @@
 # 快速开始
 
-这个快速开始默认你在仓库根目录，并且希望先用本地 SQLite 跑通最短链路。
+这个快速开始默认你在仓库根目录，并且希望直接走 PostgreSQL-backed 产品路径。SQLite 只保留给测试和 `mindtest` 验收流。
 
 ## 1. 安装依赖
 
@@ -8,10 +8,25 @@
 uv sync --extra dev --extra api --extra mcp --extra docs
 ```
 
-## 2. 看产品 CLI
+## 2. 启动开发环境
 
 ```bash
-uv run mind -h
+./scripts/dev.sh
+```
+
+开发环境会拉起 PostgreSQL、API、worker 和文档站。
+
+## 3. 配置本地产品 CLI 使用的 PostgreSQL DSN
+
+```bash
+export MIND_POSTGRES_DSN='postgresql+psycopg://postgres:postgres@127.0.0.1:5432/mind'
+export MIND_API_KEY='dev-key'
+```
+
+## 4. 看产品 CLI
+
+```bash
+mind -h
 ```
 
 你应该能看到 7 组命令：
@@ -24,46 +39,32 @@ uv run mind -h
 - `status`
 - `config`
 
-## 3. 写入一条记忆
+## 5. 写入一条记忆
 
 ```bash
-uv run mind remember "hello from quickstart" --episode-id quickstart-001
+mind remember "hello from quickstart" --episode-id quickstart-001
 ```
 
-## 4. 回忆这条记忆
+## 6. 回忆这条记忆
 
 ```bash
-uv run mind recall hello
+mind recall hello
 ```
 
-## 5. 打开一个会话
+## 7. 打开一个会话
 
 ```bash
-uv run mind session open --principal-id quickstart-user --session-id quickstart-session
+mind session open --principal-id quickstart-user --session-id quickstart-session
 ```
 
-## 6. 查看系统状态
+## 8. 查看系统状态
 
 ```bash
-uv run mind status
-uv run mind config
+mind status
+mind config
 ```
 
-## 7. 启动 REST API
-
-先准备环境变量：
-
-```bash
-export MIND_API_KEY='dev-key'
-```
-
-再启动服务：
-
-```bash
-uv run mind-api
-```
-
-## 8. 调 API
+## 9. 调 API
 
 ```bash
 curl \
@@ -71,10 +72,10 @@ curl \
   http://127.0.0.1:8000/v1/system/health
 ```
 
-## 9. 用远程模式走 CLI
+## 10. 用远程模式走 CLI
 
 ```bash
-uv run mind --remote http://127.0.0.1:8000 --api-key dev-key status
+mind --remote http://127.0.0.1:8000 --api-key dev-key status
 ```
 
 ## 下一步

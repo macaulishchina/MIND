@@ -88,6 +88,7 @@ async def test_rest_endpoint_workflow_and_error_envelope(
     assert list_memories.status_code == 200
     assert search.status_code == 200
     assert recall.status_code == 200
+    assert recall.json()["result"]["candidates"][0]["object_type"] == "RawRecord"
 
     ask = await api_client.post("/v1/access:ask", headers=headers, json={"query": "alpha"})
     run = await api_client.post(

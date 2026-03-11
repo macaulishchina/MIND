@@ -168,7 +168,7 @@ MIND 当前聚焦于四个核心问题：
 当前实现包括：
 
 - `mind/kernel/schema.py`：8 类核心对象的 schema validator
-- `mind/kernel/store.py`：基于 SQLite 的 reference store，用于基线、测试和快速本地原型
+- `mind/kernel/store.py`：基于 SQLite 的 reference store，用于基线、测试和 backend parity 校验
 - `mind/kernel/postgres_store.py`：正式 PostgreSQL backend 与迁移辅助
 - `mind/kernel/retrieval.py`：共享 retrieval 语义、search text 与 deterministic embedding 基线
 - `mind/kernel/integrity.py`：trace / cycle / version chain 完整性检查
@@ -192,8 +192,9 @@ MIND 当前聚焦于四个核心问题：
 当前存储口径：
 
 - `PostgreSQL` 是 Phase D 起的正式主存储和默认真相源。
-- `SQLite` 会继续保留，但角色是 reference backend，用于 Phase B / C 基线、CI、测试和快速本地原型。
-- 这不是“双主库并存”；保留 `SQLite` 的原因是工程回归和低成本开发，而不是业务正式运行。
+- `mind` / `mind-api` / `mind-mcp` / compose 运行时统一只使用 `PostgreSQL`。
+- `SQLite` 会继续保留，但角色仅限 reference backend，用于 Phase B / C 基线、CI、测试和 parity 校验。
+- 这不是“双主库并存”；`SQLite` 不再属于产品运行时路径。
 
 ---
 
@@ -252,6 +253,7 @@ GitHub Pages 自动发布：
 uv sync --extra dev
 uv run mindtest -h
 uv run mindtest primitive -h
+# 以下 SQLite 示例仅用于测试/验收 CLI (`mindtest`)，不适用于产品运行时 `mind`
 uv run mindtest primitive write-raw --sqlite-path artifacts/dev/mind.sqlite3 --record-kind user_message --episode-id episode-demo --timestamp-order 1 --content "remember this"
 uv run mindtest primitive read --sqlite-path artifacts/dev/mind.sqlite3 --object-id raw-episode-demo-...
 uv run mindtest access -h

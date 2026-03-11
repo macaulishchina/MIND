@@ -13,8 +13,11 @@ uv sync --extra mcp
 ## 启动
 
 ```bash
+export MIND_POSTGRES_DSN='postgresql+psycopg://postgres:postgres@127.0.0.1:5432/mind'
 uv run mind-mcp
 ```
+
+`mind-mcp` 和 REST 一样只支持 PostgreSQL 运行时；SQLite 仅保留给测试和 `mindtest`。
 
 如果没有安装官方 `mcp` 包，当前实现会明确报错并提示安装 `mind[mcp]`。
 

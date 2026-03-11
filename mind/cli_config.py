@@ -51,13 +51,14 @@ class ConfigDoctorCheck:
 
 
 DEFAULT_SQLITE_PATH = Path("artifacts/dev/mind.sqlite3")
+SQLITE_TEST_OVERRIDE_ENV = "MIND_ALLOW_SQLITE_FOR_TESTS"
 
 _PROFILE_SPECS: tuple[CliProfileSpec, ...] = (
     CliProfileSpec(
         profile=CliProfile.AUTO,
         description=(
-            "Default CLI profile. Prefer PostgreSQL when MIND_POSTGRES_DSN is set; "
-            "otherwise fall back to the local SQLite reference path."
+            "Default CLI profile. Product/runtime paths resolve to PostgreSQL; "
+            "test/dev callers may still opt into the SQLite reference path."
         ),
         default_backend=CliBackend.SQLITE,
         env_hint=None,
@@ -65,7 +66,7 @@ _PROFILE_SPECS: tuple[CliProfileSpec, ...] = (
     CliProfileSpec(
         profile=CliProfile.SQLITE_LOCAL,
         description=(
-            "Local SQLite profile for fast development, tests, and reference-backend runs."
+            "SQLite reference profile reserved for tests, gate flows, and backend parity checks."
         ),
         default_backend=CliBackend.SQLITE,
         env_hint="MIND_SQLITE_PATH",
@@ -101,14 +102,27 @@ def resolve_cli_config(
     backend: CliBackend | str | None = None,
     sqlite_path: str | Path | None = None,
     postgres_dsn: str | None = None,
+    allow_sqlite: bool | None = None,
     env: Mapping[str, str] | None = None,
 ) -> ResolvedCliConfig:
     """Resolve the active CLI configuration from CLI overrides and environment."""
 
     active_env = env or environ
+    sqlite_allowed = _resolve_sqlite_allowed(active_env, allow_sqlite)
     requested_profile, requested_profile_source = _resolve_requested_profile(profile, active_env)
     backend_override = _coerce_backend(backend)
-    resolved_profile = _resolve_profile(requested_profile, backend_override, active_env)
+    _validate_sqlite_request(
+        requested_profile=requested_profile,
+        backend_override=backend_override,
+        sqlite_path=sqlite_path,
+        sqlite_allowed=sqlite_allowed,
+    )
+    resolved_profile = _resolve_profile(
+        requested_profile,
+        backend_override,
+        active_env,
+        sqlite_allowed=sqlite_allowed,
+    )
     resolved_backend = backend_override or _profile_spec(resolved_profile).default_backend
     backend_source = (
         "cli" if backend_override is not None else f"profile:{resolved_profile.value}"
@@ -117,6 +131,11 @@ def resolve_cli_config(
     resolved_sqlite_path: Path | None = None
     sqlite_path_source: str | None = None
     if resolved_backend is CliBackend.SQLITE:
+        if not sqlite_allowed:
+            raise RuntimeError(
+                "SQLite backend is test-only. Use PostgreSQL via MIND_POSTGRES_DSN "
+                "or --postgres-dsn."
+            )
         if sqlite_path is not None:
             resolved_sqlite_path = Path(sqlite_path)
             sqlite_path_source = "cli"
@@ -257,6 +276,8 @@ def _resolve_profile(
     requested_profile: CliProfile,
     backend_override: CliBackend | None,
     env: Mapping[str, str],
+    *,
+    sqlite_allowed: bool,
 ) -> CliProfile:
     if requested_profile is not CliProfile.AUTO:
         return requested_profile
@@ -266,7 +287,38 @@ def _resolve_profile(
         return CliProfile.POSTGRES_MAIN
     if env.get("MIND_POSTGRES_DSN"):
         return CliProfile.POSTGRES_MAIN
-    return CliProfile.SQLITE_LOCAL
+    if sqlite_allowed:
+        return CliProfile.SQLITE_LOCAL
+    return CliProfile.POSTGRES_MAIN
+
+
+def _resolve_sqlite_allowed(
+    env: Mapping[str, str],
+    allow_sqlite: bool | None,
+) -> bool:
+    if allow_sqlite is not None:
+        return allow_sqlite
+    return env.get(SQLITE_TEST_OVERRIDE_ENV, "").lower() in {"1", "true", "yes", "on"}
+
+
+def _validate_sqlite_request(
+    *,
+    requested_profile: CliProfile,
+    backend_override: CliBackend | None,
+    sqlite_path: str | Path | None,
+    sqlite_allowed: bool,
+) -> None:
+    if sqlite_allowed:
+        return
+    if requested_profile is CliProfile.SQLITE_LOCAL:
+        raise RuntimeError(
+            "SQLite profile is test-only. Use the PostgreSQL-backed product runtime instead."
+        )
+    if backend_override is CliBackend.SQLITE or sqlite_path is not None:
+        raise RuntimeError(
+            "SQLite backend is test-only. Use PostgreSQL via MIND_POSTGRES_DSN "
+            "or --postgres-dsn."
+        )
 
 
 def _dsn_env_var_for_profile(profile: CliProfile) -> str:

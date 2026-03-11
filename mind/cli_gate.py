@@ -570,7 +570,7 @@ def _evaluate_config_audit() -> _AuditOutcome:
     failures: list[str] = []
     pass_count = 0
     for case_id, env, overrides, expected in cases:
-        result = resolve_cli_config(env=env, **overrides)
+        result = resolve_cli_config(env=env, allow_sqlite=True, **overrides)
         if _config_case_matches(result, expected):
             pass_count += 1
             continue

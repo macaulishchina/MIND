@@ -8,6 +8,7 @@ from mind.app._service_utils import latest_trace_ref, new_response, result_error
 from mind.app.context import resolve_execution_context
 from mind.app.contracts import AppError, AppErrorCode, AppRequest, AppResponse, AppStatus
 from mind.app.errors import map_domain_error
+from mind.kernel.schema import public_object_view
 from mind.kernel.store import MemoryStore
 from mind.primitives.contracts import PrimitiveErrorCode, PrimitiveName, PrimitiveOutcome
 from mind.primitives.service import PrimitiveService
@@ -134,7 +135,10 @@ class MemoryQueryService:
 
         if result.outcome is PrimitiveOutcome.SUCCESS and result.response is not None:
             resp.status = AppStatus.OK
-            resp.result = result.response
+            response_payload = dict(result.response)
+            candidate_ids = list(response_payload.get("candidate_ids") or [])
+            response_payload["candidates"] = self._candidate_summaries(candidate_ids)
+            resp.result = response_payload
         else:
             resp.status = result_status(result.outcome)
             resp.error = result_error(result)
@@ -177,3 +181,28 @@ class MemoryQueryService:
             resp.error = map_domain_error(exc)
 
         return resp
+
+    def _candidate_summaries(self, candidate_ids: list[str]) -> list[dict[str, Any]]:
+        summaries: list[dict[str, Any]] = []
+        for object_id in candidate_ids:
+            try:
+                obj = public_object_view(self._store.read_object(object_id))
+            except Exception:
+                continue
+
+            summary: dict[str, Any] = {
+                "object_id": str(obj.get("id") or object_id),
+                "object_type": str(obj.get("type") or "unknown"),
+            }
+            preview = _content_preview(obj.get("content"))
+            if preview:
+                summary["content_preview"] = preview
+            summaries.append(summary)
+        return summaries
+
+
+def _content_preview(content: Any) -> str | None:
+    if isinstance(content, str):
+        compact = " ".join(content.split())
+        return compact[:117] + "..." if len(compact) > 120 else compact
+    return None
