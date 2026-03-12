@@ -76,6 +76,13 @@ const ACCESS_DEPTH_LABELS = {
   reflective_access: "深度整理",
 };
 
+const PROVIDER_FAMILY_LABELS = {
+  deterministic: "确定性回退",
+  openai: "OpenAI",
+  claude: "Claude",
+  gemini: "Gemini",
+};
+
 const elements = {
   authForm: document.querySelector("#auth-form"),
   authSubmit: document.querySelector("#auth-submit"),
@@ -394,6 +401,10 @@ function localizeAccessDepth(value) {
   return ACCESS_DEPTH_LABELS[value] || value;
 }
 
+function localizeProviderFamily(value) {
+  return PROVIDER_FAMILY_LABELS[value] || value || "未注明";
+}
+
 function localizeContentType(value) {
   return value || "未注明";
 }
@@ -479,7 +490,7 @@ function renderOverview(catalog, settings) {
               value: (entry.supported_viewports || []).map(localizeViewport).join(" / ") || "暂无",
             },
             { label: "示例数", value: (entry.scenario_ids || []).length },
-            { label: "使用限制", value: entry.requires_dev_mode ? "需先开启高级排查" : "可直接使用" },
+            { label: "使用条件", value: entry.requires_dev_mode ? "需先开启高级排查" : "连接后即可使用" },
           ])}
         </article>
       `;
@@ -642,7 +653,7 @@ function renderGateDemo(page) {
                   <div class="meta">
                     ${(entry.supported_viewports || []).map(localizeViewport).join(" / ") || "暂无"}
                     / ${(entry.scenario_ids || []).length} 个示例
-                    / ${entry.requires_dev_mode ? "需先开启高级排查" : "可直接查看"}
+                    / ${entry.requires_dev_mode ? "需先开启高级排查" : "已在当前页展示"}
                   </div>
                 </li>
               `,
@@ -846,20 +857,31 @@ function renderRetrieveResult(result) {
 function renderAccessResult(result) {
   const candidateObjects = result.candidate_objects || [];
   const selectedObjects = result.selected_objects || [];
+  const answer = result.answer || null;
+  const answerTrace = answer?.trace || null;
+  const supportIds = answer?.support_ids || [];
   elements.accessResult.innerHTML = `
     <div class="status ${selectedObjects.length ? "status-ok" : "status-warn"}">
       本次回答参考了 ${escapeHtml(result.selected_count)} 条内容
     </div>
     <div class="result-grid">
       <div class="result-block">
-        <h3>回答摘要</h3>
-        <p class="meta">${escapeHtml(result.summary || "系统已整理好这次回答。")}</p>
+        <h3>回答详情</h3>
+        <p class="meta">${escapeHtml(answer?.text || result.summary || "系统已整理好这次回答。")}</p>
         ${renderMetricList([
           { label: "参考范围", value: result.context_object_count },
           { label: "可参考内容", value: result.candidate_count },
           { label: "实际采用", value: result.selected_count },
           { label: "回答方式", value: localizeAccessDepth(result.resolved_depth) },
+          { label: "回答来源", value: localizeProviderFamily(answerTrace?.provider_family) },
+          { label: "回答依据", value: supportIds.length },
         ])}
+        ${answerTrace?.fallback_used
+          ? `<p class="meta">已触发回退：${escapeHtml(answerTrace.fallback_reason || "provider 不可用，已改用确定性路径。")}</p>`
+          : ""}
+        ${supportIds.length
+          ? `<p class="meta">依据对象：${escapeHtml(supportIds.join(", "))}</p>`
+          : ""}
       </div>
       <div class="result-block">
         <h3>可参考内容</h3>

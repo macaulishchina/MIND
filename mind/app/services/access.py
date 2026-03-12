@@ -7,8 +7,9 @@ from typing import Any
 from mind.access.service import AccessService
 from mind.app._service_utils import latest_trace_ref, new_response
 from mind.app.context import resolve_execution_context
-from mind.app.contracts import AppRequest, AppResponse, AppStatus
+from mind.app.contracts import AppError, AppErrorCode, AppRequest, AppResponse, AppStatus
 from mind.app.errors import map_domain_error
+from mind.capabilities import resolve_capability_provider_config
 
 
 class MemoryAccessService:
@@ -40,7 +41,25 @@ class MemoryAccessService:
 
     def _do_run(self, req: AppRequest, *, mode: str) -> AppResponse:
         resp = new_response(req)
-        ctx = resolve_execution_context(req.principal, req.session, req.policy)
+        if req.provider_selection is not None:
+            try:
+                resolve_capability_provider_config(selection=req.provider_selection)
+            except RuntimeError as exc:
+                resp.status = AppStatus.ERROR
+                resp.error = AppError(
+                    code=AppErrorCode.VALIDATION_ERROR,
+                    message=str(exc),
+                    details={
+                        "provider_selection": req.provider_selection.model_dump(mode="json")
+                    },
+                )
+                return resp
+        ctx = resolve_execution_context(
+            req.principal,
+            req.session,
+            req.policy,
+            req.provider_selection,
+        )
 
         query = req.input.get("query", "")
         task_id = req.input.get("task_id", req.request_id)

@@ -17,6 +17,8 @@ from .contracts import (
 )
 from .debug import FrontendDebugUnavailableError, build_frontend_debug_timeline
 from .experience import (
+    FrontendAccessAnswerTraceView,
+    FrontendAccessAnswerView,
     FrontendAccessEvidenceView,
     FrontendAccessRequest,
     FrontendAccessResult,
@@ -86,6 +88,8 @@ __all__ = [
     "FrontendDebugContextView",
     "FrontendDebugEvidenceView",
     "FrontendDebugUnavailableError",
+    "FrontendAccessAnswerTraceView",
+    "FrontendAccessAnswerView",
     "FrontendAccessEvidenceView",
     "FrontendAccessRequest",
     "FrontendAccessResult",

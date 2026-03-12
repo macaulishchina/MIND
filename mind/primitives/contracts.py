@@ -124,6 +124,7 @@ class PrimitiveExecutionContext(ContractModel):
     budget_limit: NonNegativeFloat | None = None
     capabilities: list[Capability] = Field(default_factory=lambda: [Capability.MEMORY_READ])
     dev_mode: bool = False
+    provider_selection: dict[str, Any] | None = None
     telemetry_run_id: str | None = None
     telemetry_operation_id: str | None = None
     telemetry_parent_event_id: str | None = None

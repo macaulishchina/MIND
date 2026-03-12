@@ -6,7 +6,11 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any
 
-from mind.capabilities import CapabilityService, OfflineReconstructRequest
+from mind.capabilities import (
+    CapabilityService,
+    OfflineReconstructRequest,
+    resolve_capability_provider_config,
+)
 from mind.kernel.retrieval import build_query_embedding
 from mind.kernel.store import MemoryStore
 from mind.primitives.contracts import PrimitiveExecutionContext, PrimitiveOutcome
@@ -55,6 +59,7 @@ class OfflineMaintenanceService:
         *,
         actor: str,
         dev_mode: bool = False,
+        provider_selection: dict[str, Any] | None = None,
         telemetry_run_id: str | None = None,
     ) -> dict[str, Any]:
         """Run one offline job and return a structured result payload."""
@@ -117,6 +122,7 @@ class OfflineMaintenanceService:
                     actor=actor,
                     payload=payload,
                     dev_mode=dev_mode,
+                    provider_selection=provider_selection,
                     telemetry_run_id=run_id,
                     telemetry_operation_id=operation_id,
                     telemetry_parent_event_id=last_parent_event_id,
@@ -182,6 +188,7 @@ class OfflineMaintenanceService:
                     decision=decision,
                     target_objects=target_objects,
                     dev_mode=dev_mode,
+                    provider_selection=provider_selection,
                     telemetry_run_id=run_id,
                     telemetry_operation_id=operation_id,
                     telemetry_parent_event_id=last_parent_event_id,
@@ -244,6 +251,7 @@ class OfflineMaintenanceService:
         actor: str,
         payload: ReflectEpisodeJobPayload,
         dev_mode: bool,
+        provider_selection: dict[str, Any] | None,
         telemetry_run_id: str,
         telemetry_operation_id: str,
         telemetry_parent_event_id: str,
@@ -254,6 +262,7 @@ class OfflineMaintenanceService:
                 actor=actor,
                 budget_scope_id=job.job_id,
                 dev_mode=dev_mode,
+                provider_selection=provider_selection,
                 telemetry_run_id=telemetry_run_id,
                 telemetry_operation_id=telemetry_operation_id,
                 telemetry_parent_event_id=telemetry_parent_event_id,
@@ -279,10 +288,12 @@ class OfflineMaintenanceService:
         decision: Any,
         target_objects: list[dict[str, Any]],
         dev_mode: bool,
+        provider_selection: dict[str, Any] | None,
         telemetry_run_id: str,
         telemetry_operation_id: str,
         telemetry_parent_event_id: str,
     ) -> dict[str, Any]:
+        provider_config = self._capability_provider_config(provider_selection)
         reconstruction = self._capability_service.offline_reconstruct(
             OfflineReconstructRequest(
                 request_id=f"offline-promote-{job.job_id}",
@@ -290,7 +301,8 @@ class OfflineMaintenanceService:
                 evidence_text=_promotion_evidence_text(target_objects),
                 episode_ids=list(decision.supporting_episode_ids),
                 evidence_refs=list(decision.evidence_refs),
-            )
+            ),
+            provider_config=provider_config,
         )
         result = self._primitive_service.reorganize_simple(
             {
@@ -302,6 +314,7 @@ class OfflineMaintenanceService:
                 actor=actor,
                 budget_scope_id=job.job_id,
                 dev_mode=dev_mode,
+                provider_selection=provider_selection,
                 telemetry_run_id=telemetry_run_id,
                 telemetry_operation_id=telemetry_operation_id,
                 telemetry_parent_event_id=telemetry_parent_event_id,
@@ -338,6 +351,7 @@ class OfflineMaintenanceService:
         actor: str,
         budget_scope_id: str,
         dev_mode: bool = False,
+        provider_selection: dict[str, Any] | None = None,
         telemetry_run_id: str | None = None,
         telemetry_operation_id: str | None = None,
         telemetry_parent_event_id: str | None = None,
@@ -347,6 +361,7 @@ class OfflineMaintenanceService:
             budget_scope_id=budget_scope_id,
             budget_limit=100.0,
             dev_mode=dev_mode,
+            provider_selection=provider_selection,
             telemetry_run_id=telemetry_run_id,
             telemetry_operation_id=telemetry_operation_id,
             telemetry_parent_event_id=telemetry_parent_event_id,
@@ -360,6 +375,17 @@ class OfflineMaintenanceService:
     ) -> None:
         if enabled and self._telemetry_recorder is not None:
             self._telemetry_recorder.record(event)
+
+    @staticmethod
+    def _capability_provider_config(
+        provider_selection: dict[str, Any] | None,
+    ) -> Any:
+        if not provider_selection:
+            return None
+        try:
+            return resolve_capability_provider_config(selection=provider_selection)
+        except RuntimeError as exc:
+            raise OfflineMaintenanceError(str(exc)) from exc
 
 
 def _primitive_failure_message(error: Any) -> str:

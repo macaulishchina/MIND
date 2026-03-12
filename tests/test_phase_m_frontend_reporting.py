@@ -27,6 +27,7 @@ def test_frontend_flow_report_passes_on_current_static_frontend() -> None:
     assert report.transport_surface_present is True
     assert report.responsive_audit_pass is True
     assert report.experience_flow_pass is True
+    assert report.contract_audit_pass is True
     assert report.config_audit_pass is True
     assert report.debug_ui_audit_pass is True
     assert report.dev_mode_guard_pass is True
@@ -48,6 +49,7 @@ def test_frontend_flow_report_round_trips_json(tmp_path: Path) -> None:
     assert payload["schema_version"] == "frontend_flow_report_v1"
     assert payload["passed"] is True
     assert payload["coverage"] == 1.0
+    assert payload["contract_audit_pass"] is True
     assert restored == report
 
 
@@ -87,3 +89,34 @@ def test_frontend_flow_report_fails_when_transport_surface_regresses(
         item for item in report.scenario_results if item.scenario_id == "config_recovery_mobile"
     )
     assert 'transport:"/v1/frontend/settings:restore"' in scenario.missing_checks
+
+
+def test_frontend_flow_report_fails_when_access_answer_contract_regresses(
+    tmp_path: Path,
+) -> None:
+    frontend_root = Path(__file__).resolve().parents[1] / "frontend"
+    broken_root = tmp_path / "frontend"
+    broken_root.mkdir()
+
+    for name in ("index.html", "styles.css", "api.js"):
+        (broken_root / name).write_text(
+            (frontend_root / name).read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+    (broken_root / "app.js").write_text(
+        (frontend_root / "app.js")
+        .read_text(encoding="utf-8")
+        .replace("const answer = result.answer || null;", "const answer = null;"),
+        encoding="utf-8",
+    )
+
+    report = evaluate_frontend_flow_report(broken_root)
+
+    assert report.passed is False
+    assert report.contract_audit_pass is False
+    assert report.transport_surface_present is True
+    assert "access_run_auto_desktop" in report.failure_ids
+    scenario = next(
+        item for item in report.scenario_results if item.scenario_id == "access_run_auto_desktop"
+    )
+    assert "contract:js:result.answer" in scenario.missing_checks

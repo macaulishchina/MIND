@@ -13,6 +13,7 @@
 ```
 
 脚本会默认在后台完成部署，并在最后执行 smoke check。它固定使用独立的 compose project `mind-prod`，并同时启动静态文档站。完成后会打印完整访问 URL。
+smoke check 除了验证 `health / readiness / docs`，还会执行 `mindtest gate product-readiness`，并把 gate 工件落在 `artifacts/product/product_readiness_gate.json` 与 `artifacts/product/product_readiness_gate.md`。
 
 如果你需要前台 attach 模式：
 
@@ -49,6 +50,7 @@
 5. 等待 `worker` heartbeat 正常
 6. 验证 `docs` 静态站可访问
 7. 验证 `health` 和 `readiness`
+8. 执行 `mindtest gate product-readiness --output artifacts/product/product_readiness_gate.json --markdown-output artifacts/product/product_readiness_gate.md`
 
 ## 最小检查
 
@@ -56,7 +58,12 @@
 curl -H 'X-API-Key: YOUR_KEY' http://127.0.0.1:18600/v1/system/health
 curl -H 'X-API-Key: YOUR_KEY' http://127.0.0.1:18600/v1/system/readiness
 curl -I http://127.0.0.1:18601/
+mindtest gate product-readiness --output artifacts/product/product_readiness_gate.json --markdown-output artifacts/product/product_readiness_gate.md
 ```
+
+## GitHub Actions Gate
+
+仓库提供了 `.github/workflows/product-readiness.yml`，在 pull request 和 push 到 `main` / `v*` / `release-v*` 时执行 readiness gate 并上传 artifact bundle。详见 [部署指南](../product/deployment.md#部署验收)。
 
 ## 服务管理
 
@@ -78,6 +85,8 @@ curl -I http://127.0.0.1:18601/
 - `MIND_API_KEY` 是否已配置
 - `.env.prod.local` 中是否还有 `CHANGE_ME` 占位符
 - 静态文档站是否已在 `http://127.0.0.1:18601` 返回 200
+- `artifacts/product/product_readiness_gate.json` 中是否记录了失败组件和 failure ids
+- `artifacts/product/product_readiness_gate.md` 是否给出了可读的 gate 摘要表
 - Alembic migration 是否在 API 启动前执行
 - Worker 是否在循环调用 `mindtest-offline-worker-once`
 - 日志级别是否为 `WARNING`（正常生产行为）

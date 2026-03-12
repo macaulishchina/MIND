@@ -11,6 +11,11 @@ from typing import Any
 from mind.fixtures import FrontendExperienceScenario, build_frontend_experience_bench_v1
 
 from .audit import FRONTEND_ENTRYPOINT_MARKERS, evaluate_frontend_responsive_audit
+from .experience import (
+    FrontendAccessAnswerTraceView,
+    FrontendAccessAnswerView,
+    FrontendAccessResult,
+)
 
 _SCHEMA_VERSION = "frontend_flow_report_v1"
 _DEFAULT_FRONTEND_ROOT = Path(__file__).resolve().parents[2] / "frontend"
@@ -87,6 +92,7 @@ class FrontendFlowReport:
     responsive_audit_pass: bool
     responsive_coverage: float
     experience_flow_pass: bool
+    contract_audit_pass: bool
     config_audit_pass: bool
     debug_ui_audit_pass: bool
     dev_mode_guard_pass: bool
@@ -106,6 +112,7 @@ class FrontendFlowReport:
             self.transport_surface_present
             and self.responsive_audit_pass
             and self.experience_flow_pass
+            and self.contract_audit_pass
             and self.config_audit_pass
             and self.debug_ui_audit_pass
             and self.dev_mode_guard_pass
@@ -149,6 +156,12 @@ def evaluate_frontend_flow_report(
                 api_js=api_js,
             )
         )
+        missing_checks.extend(
+            _missing_contract_markers(
+                scenario.entrypoint,
+                app_js=app_js,
+            )
+        )
 
         responsive_result = responsive_results.get(scenario.scenario_id)
         if responsive_result is not None and not responsive_result.passed:
@@ -180,6 +193,10 @@ def evaluate_frontend_flow_report(
         any(check.startswith("transport:") for check in result.missing_checks)
         for result in scenario_results
     )
+    contract_audit_pass = not any(
+        any(check.startswith("contract:") for check in result.missing_checks)
+        for result in scenario_results
+    )
     covered_experience_entrypoints_set = {
         result.entrypoint
         for result in scenario_results
@@ -205,6 +222,7 @@ def evaluate_frontend_flow_report(
         responsive_audit_pass=responsive_audit.passed,
         responsive_coverage=responsive_audit.coverage,
         experience_flow_pass=covered_experience_entrypoints == _REQUIRED_EXPERIENCE_ENTRYPOINTS,
+        contract_audit_pass=contract_audit_pass,
         config_audit_pass=category_map["config"].passed,
         debug_ui_audit_pass=category_map["debug"].passed,
         dev_mode_guard_pass=debug_guard.passed and all(
@@ -295,6 +313,30 @@ def _missing_transport_markers(
     )
 
 
+def _missing_contract_markers(
+    entrypoint: str,
+    *,
+    app_js: str,
+) -> tuple[str, ...]:
+    if entrypoint != "access":
+        return ()
+
+    missing: list[str] = []
+    for field in ("answer",):
+        if field not in FrontendAccessResult.model_fields:
+            missing.append(f"contract:model:FrontendAccessResult.{field}")
+    for field in ("text", "support_ids", "trace"):
+        if field not in FrontendAccessAnswerView.model_fields:
+            missing.append(f"contract:model:FrontendAccessAnswerView.{field}")
+    for field in ("provider_family", "fallback_used", "fallback_reason"):
+        if field not in FrontendAccessAnswerTraceView.model_fields:
+            missing.append(f"contract:model:FrontendAccessAnswerTraceView.{field}")
+    for marker in ("result.answer", "supportIds", "provider_family", "fallback_used"):
+        if marker not in app_js:
+            missing.append(f"contract:js:{marker}")
+    return tuple(missing)
+
+
 def _report_to_dict(report: FrontendFlowReport) -> dict[str, Any]:
     return {
         "schema_version": report.schema_version,
@@ -310,6 +352,7 @@ def _report_to_dict(report: FrontendFlowReport) -> dict[str, Any]:
         "responsive_audit_pass": report.responsive_audit_pass,
         "responsive_coverage": report.responsive_coverage,
         "experience_flow_pass": report.experience_flow_pass,
+        "contract_audit_pass": report.contract_audit_pass,
         "config_audit_pass": report.config_audit_pass,
         "debug_ui_audit_pass": report.debug_ui_audit_pass,
         "dev_mode_guard_pass": report.dev_mode_guard_pass,
@@ -354,6 +397,7 @@ def _report_from_dict(payload: dict[str, Any]) -> FrontendFlowReport:
         responsive_audit_pass=bool(payload["responsive_audit_pass"]),
         responsive_coverage=float(payload["responsive_coverage"]),
         experience_flow_pass=bool(payload["experience_flow_pass"]),
+        contract_audit_pass=bool(payload["contract_audit_pass"]),
         config_audit_pass=bool(payload["config_audit_pass"]),
         debug_ui_audit_pass=bool(payload["debug_ui_audit_pass"]),
         dev_mode_guard_pass=bool(payload["dev_mode_guard_pass"]),

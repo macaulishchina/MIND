@@ -122,6 +122,33 @@ def test_docs_release_assets_and_github_pages_workflow_exist() -> None:
     assert "actions/deploy-pages" in workflow_text
 
 
+def test_product_readiness_workflow_exists() -> None:
+    workflow_path = ROOT / ".github" / "workflows" / "product-readiness.yml"
+    artifact_script_path = ROOT / "scripts" / "product-readiness-artifacts.sh"
+
+    assert workflow_path.exists()
+    assert artifact_script_path.exists()
+
+    workflow = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
+    triggers = workflow["on"]
+    assert {"pull_request", "push", "workflow_dispatch"}.issubset(triggers)
+    assert "gate" in workflow["jobs"]
+
+    workflow_text = workflow_path.read_text(encoding="utf-8")
+    assert "uv sync --extra docs --extra api --extra mcp" in workflow_text
+    assert "product-readiness-artifacts.sh" in workflow_text
+    assert "actions/upload-artifact" in workflow_text
+    assert "artifacts/product/transport_audit_report.json" in workflow_text
+    assert "artifacts/product/deployment_smoke_report.json" in workflow_text
+    assert "artifacts/product/product_readiness_report.json" in workflow_text
+    assert "artifacts/product/product_readiness_gate.json" in workflow_text
+    assert "artifacts/product/transport_audit_report.md" in workflow_text
+    assert "artifacts/product/deployment_smoke_report.md" in workflow_text
+    assert "artifacts/product/product_readiness_report.md" in workflow_text
+    assert "artifacts/product/product_readiness_gate.md" in workflow_text
+    assert "GITHUB_STEP_SUMMARY" in workflow_text
+
+
 def _collect_nav_paths(nav: list[Any]) -> list[str]:
     paths: list[str] = []
     for item in nav:

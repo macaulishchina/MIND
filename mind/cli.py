@@ -72,6 +72,22 @@ from .fixtures.long_horizon_eval import (
     build_long_horizon_eval_manifest_v1,
     build_long_horizon_eval_v1,
 )
+from .fixtures.deployment_smoke_suite import (
+    evaluate_deployment_smoke_suite,
+    write_deployment_smoke_report_markdown,
+    write_deployment_smoke_report_json,
+)
+from .fixtures.product_readiness_report import (
+    assert_product_readiness_report,
+    evaluate_product_readiness_report,
+    write_product_readiness_report_markdown,
+    write_product_readiness_report_json,
+)
+from .fixtures.product_transport_audit import (
+    evaluate_runtime_product_transport_audit_report,
+    write_product_transport_audit_markdown,
+    write_product_transport_audit_json,
+)
 from .fixtures.retrieval_benchmark import build_canonical_seed_objects
 from .governance import (
     GovernanceService,
@@ -211,6 +227,7 @@ _MIND_COMMAND_GROUPS: tuple[_MindCommandGroup, ...] = (
             "mindtest report phase-f-ci --help",
             "mindtest report phase-g-cost --help",
             "mindtest report phase-k-compatibility --help",
+            "mindtest report product-readiness --help",
             "mindtest report acceptance --phase h",
         ),
     ),
@@ -1703,6 +1720,28 @@ def _configure_gate_commands(command_parser: argparse.ArgumentParser) -> None:
         )
     )
 
+    product_readiness_parser = gate_subparsers.add_parser(
+        "product-readiness",
+        help="Run the aggregated product readiness gate.",
+        description="Run the aggregated product readiness gate.",
+    )
+    product_readiness_parser.add_argument(
+        "--output",
+        default="artifacts/product/product_readiness_gate.json",
+        help="Output path for the persisted product readiness gate JSON report.",
+    )
+    product_readiness_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional output path for a human-readable Markdown gate summary.",
+    )
+    product_readiness_parser.set_defaults(
+        _mind_handler=_run_forwarded_command(
+            product_readiness_gate_main,
+            (("output", "--output"), ("markdown_output", "--markdown-output")),
+        )
+    )
+
     postgres_regression_parser = gate_subparsers.add_parser(
         "postgres-regression",
         help="Run the PostgreSQL regression bundle for Phase B/C/D/E.",
@@ -2207,6 +2246,75 @@ def _configure_report_commands(command_parser: argparse.ArgumentParser) -> None:
         _mind_handler=_run_forwarded_command(
             capability_compatibility_report_main,
             (("output", "--output"), ("live_provider", "--live-provider")),
+        )
+    )
+
+    product_transport_parser = report_subparsers.add_parser(
+        "product-transport",
+        help="Run the product transport audit report.",
+        description="Run the shared REST / MCP / product CLI transport audit report.",
+    )
+    product_transport_parser.add_argument(
+        "--output",
+        default="artifacts/product/transport_audit_report.json",
+        help="Output path for the persisted product transport audit JSON report.",
+    )
+    product_transport_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional output path for a human-readable Markdown summary.",
+    )
+    product_transport_parser.set_defaults(
+        _mind_handler=_run_forwarded_command(
+            product_transport_report_main,
+            (("output", "--output"), ("markdown_output", "--markdown-output")),
+        )
+    )
+
+    deployment_smoke_parser = report_subparsers.add_parser(
+        "deployment-smoke",
+        help="Run the deployment smoke report.",
+        description="Run the DeploymentSmokeSuite v1 report against the current repository assets.",
+    )
+    deployment_smoke_parser.add_argument(
+        "--output",
+        default="artifacts/product/deployment_smoke_report.json",
+        help="Output path for the persisted deployment smoke JSON report.",
+    )
+    deployment_smoke_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional output path for a human-readable Markdown summary.",
+    )
+    deployment_smoke_parser.set_defaults(
+        _mind_handler=_run_forwarded_command(
+            deployment_smoke_report_main,
+            (("output", "--output"), ("markdown_output", "--markdown-output")),
+        )
+    )
+
+    product_readiness_parser = report_subparsers.add_parser(
+        "product-readiness",
+        help="Run the product readiness report.",
+        description=(
+            "Run the aggregated product readiness report across transport, deployment smoke, "
+            "and frontend gate assets."
+        ),
+    )
+    product_readiness_parser.add_argument(
+        "--output",
+        default="artifacts/product/product_readiness_report.json",
+        help="Output path for the persisted product readiness JSON report.",
+    )
+    product_readiness_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional output path for a human-readable Markdown summary.",
+    )
+    product_readiness_parser.set_defaults(
+        _mind_handler=_run_forwarded_command(
+            product_readiness_report_main,
+            (("output", "--output"), ("markdown_output", "--markdown-output")),
         )
     )
 
@@ -2946,6 +3054,148 @@ def capability_compatibility_report_main(argv: Sequence[str] | None = None) -> i
     return 0
 
 
+def product_transport_report_main(argv: Sequence[str] | None = None) -> int:
+    """Run the product transport audit report."""
+
+    parser = argparse.ArgumentParser(
+        prog="mindtest-product-transport-report",
+        description="Run the shared REST / MCP / product CLI transport audit report.",
+    )
+    parser.add_argument(
+        "--output",
+        default="artifacts/product/transport_audit_report.json",
+        help="Output path for the persisted product transport audit JSON report.",
+    )
+    parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional output path for a human-readable Markdown summary.",
+    )
+    args = parser.parse_args(list(argv) if argv is not None else None)
+
+    report = evaluate_runtime_product_transport_audit_report()
+    output_path = write_product_transport_audit_json(args.output, report)
+    markdown_output_path = (
+        write_product_transport_audit_markdown(
+            args.markdown_output,
+            report,
+            title="Product Transport Audit Report",
+        )
+        if args.markdown_output
+        else None
+    )
+
+    print("Product transport audit report")
+    print(f"report_path={output_path}")
+    if markdown_output_path is not None:
+        print(f"markdown_path={markdown_output_path}")
+    print(f"scenario_count={report.scenario_count}")
+    print(f"coverage={report.coverage:.4f}")
+    print(f"rest_mcp_pass_rate={report.rest_mcp_pass_rate:.4f}")
+    print(f"rest_cli_pass_rate={report.rest_cli_pass_rate:.4f}")
+    if report.failure_ids:
+        print(f"failure_ids={','.join(report.failure_ids)}")
+    print(f"product_transport_report={'PASS' if report.passed else 'FAIL'}")
+    return 0
+
+
+def deployment_smoke_report_main(argv: Sequence[str] | None = None) -> int:
+    """Run the deployment smoke report."""
+
+    parser = argparse.ArgumentParser(
+        prog="mindtest-deployment-smoke-report",
+        description="Run the DeploymentSmokeSuite v1 report against the current repository assets.",
+    )
+    parser.add_argument(
+        "--output",
+        default="artifacts/product/deployment_smoke_report.json",
+        help="Output path for the persisted deployment smoke JSON report.",
+    )
+    parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional output path for a human-readable Markdown summary.",
+    )
+    args = parser.parse_args(list(argv) if argv is not None else None)
+
+    report = evaluate_deployment_smoke_suite(_REPO_ROOT)
+    output_path = write_deployment_smoke_report_json(args.output, report)
+    markdown_output_path = (
+        write_deployment_smoke_report_markdown(
+            args.markdown_output,
+            report,
+            title="Deployment Smoke Report",
+        )
+        if args.markdown_output
+        else None
+    )
+
+    print("Deployment smoke report")
+    print(f"report_path={output_path}")
+    if markdown_output_path is not None:
+        print(f"markdown_path={markdown_output_path}")
+    print(f"scenario_count={report.scenario_count}")
+    print(f"passed_count={report.passed_count}")
+    print(f"pass_rate={report.pass_rate:.4f}")
+    if report.failure_ids:
+        print(f"failure_ids={','.join(report.failure_ids)}")
+    print(f"deployment_smoke_report={'PASS' if report.passed else 'FAIL'}")
+    return 0
+
+
+def product_readiness_report_main(argv: Sequence[str] | None = None) -> int:
+    """Run the product readiness report."""
+
+    parser = argparse.ArgumentParser(
+        prog="mindtest-product-readiness-report",
+        description=(
+            "Run the aggregated product readiness report across transport, deployment smoke, "
+            "and frontend gate assets."
+        ),
+    )
+    parser.add_argument(
+        "--output",
+        default="artifacts/product/product_readiness_report.json",
+        help="Output path for the persisted product readiness JSON report.",
+    )
+    parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional output path for a human-readable Markdown summary.",
+    )
+    args = parser.parse_args(list(argv) if argv is not None else None)
+
+    report = evaluate_product_readiness_report(_REPO_ROOT)
+    output_path = write_product_readiness_report_json(args.output, report)
+    markdown_output_path = (
+        write_product_readiness_report_markdown(
+            args.markdown_output,
+            report,
+            title="Product Readiness Report",
+        )
+        if args.markdown_output
+        else None
+    )
+
+    print("Product readiness report")
+    print(f"report_path={output_path}")
+    if markdown_output_path is not None:
+        print(f"markdown_path={markdown_output_path}")
+    print(f"component_count={report.component_count}")
+    print(f"passed_component_count={report.passed_component_count}")
+    for component in report.components:
+        print(
+            f"{component.component_id}="
+            f"{'PASS' if component.passed else 'FAIL'}:"
+            f"{component.passed_count}/{component.scenario_count}:"
+            f"{component.detail}"
+        )
+    if report.failure_ids:
+        print(f"failure_ids={','.join(report.failure_ids)}")
+    print(f"product_readiness_report={'PASS' if report.passed else 'FAIL'}")
+    return 0
+
+
 def benchmark_manifest_main() -> int:
     """Print the frozen LongHorizonEval v1 manifest."""
 
@@ -3404,6 +3654,12 @@ def frontend_gate_main(argv: Sequence[str] | None = None) -> int:
         "dev_mode_audit="
         f"{result.dev_mode_audit.passed_count}/{result.dev_mode_audit.scenario_count}"
     )
+    print(
+        "product_transport_audit="
+        f"coverage:{result.product_transport_audit.coverage:.4f},"
+        f"rest_mcp:{result.product_transport_audit.rest_mcp_pass_rate:.4f},"
+        f"rest_cli:{result.product_transport_audit.rest_cli_pass_rate:.4f}"
+    )
     print(f"M-1={'PASS' if result.m1_pass else 'FAIL'}")
     print(f"M-2={'PASS' if result.m2_pass else 'FAIL'}")
     print(f"M-3={'PASS' if result.m3_pass else 'FAIL'}")
@@ -3411,4 +3667,57 @@ def frontend_gate_main(argv: Sequence[str] | None = None) -> int:
     print(f"M-5={'PASS' if result.m5_pass else 'FAIL'}")
     print(f"M-6={'PASS' if result.m6_pass else 'FAIL'}")
     print(f"phase_m_gate={'PASS' if result.frontend_gate_pass else 'FAIL'}")
+    return 0
+
+
+def product_readiness_gate_main(argv: Sequence[str] | None = None) -> int:
+    """Run the aggregated product readiness gate."""
+
+    parser = argparse.ArgumentParser(
+        prog="mindtest-product-readiness-gate",
+        description="Run the aggregated product readiness gate.",
+    )
+    parser.add_argument(
+        "--output",
+        default="artifacts/product/product_readiness_gate.json",
+        help="Output path for the persisted product readiness gate JSON report.",
+    )
+    parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional output path for a human-readable Markdown gate summary.",
+    )
+    args = parser.parse_args(list(argv) if argv is not None else None)
+
+    report = evaluate_product_readiness_report(_REPO_ROOT)
+    output_path = write_product_readiness_report_json(args.output, report)
+    markdown_output_path = (
+        write_product_readiness_report_markdown(
+            args.markdown_output,
+            report,
+            title="Product Readiness Gate",
+        )
+        if args.markdown_output
+        else None
+    )
+
+    try:
+        assert_product_readiness_report(report)
+    except RuntimeError as exc:
+        raise SystemExit(str(exc)) from exc
+
+    print("Product readiness gate")
+    print(f"report_path={output_path}")
+    if markdown_output_path is not None:
+        print(f"markdown_path={markdown_output_path}")
+    print(f"component_count={report.component_count}")
+    print(f"passed_component_count={report.passed_component_count}")
+    for component in report.components:
+        print(
+            f"{component.component_id}="
+            f"{'PASS' if component.passed else 'FAIL'}:"
+            f"{component.passed_count}/{component.scenario_count}:"
+            f"{component.detail}"
+        )
+    print(f"product_readiness_gate={'PASS' if report.passed else 'FAIL'}")
     return 0

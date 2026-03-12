@@ -50,6 +50,7 @@ class OfflineJob(BaseModel):
     job_kind: OfflineJobKind
     status: OfflineJobStatus = OfflineJobStatus.PENDING
     payload: dict[str, Any]
+    provider_selection: dict[str, Any] | None = None
     priority: float = Field(default=0.5, ge=0, le=1)
     available_at: datetime
     created_at: datetime
@@ -119,6 +120,7 @@ def new_offline_job(
     *,
     job_kind: OfflineJobKind,
     payload: BaseModel | dict[str, Any],
+    provider_selection: dict[str, Any] | None = None,
     priority: float = 0.5,
     available_at: datetime | None = None,
     max_attempts: int = 3,
@@ -136,6 +138,9 @@ def new_offline_job(
         job_id=job_id or f"offline-job-{uuid4().hex}",
         job_kind=job_kind,
         payload=payload_json,
+        provider_selection=(
+            dict(provider_selection) if provider_selection is not None else None
+        ),
         priority=priority,
         available_at=ready_at,
         created_at=created_at,

@@ -83,7 +83,7 @@
 | `MindCliScenarioSet v1` | 至少 `25` 个 CLI 场景；覆盖 `help / primitive / access / offline / governance / gate / report / demo` | 验证 Phase J 的统一命令行入口 |
 | `UserStateScenarioSet v1` | 至少 `30` 个场景；覆盖 `principal / tenant / session / conversation / policy` | 验证产品化阶段的用户状态与执行策略边界 |
 | `ProductTransportScenarioSet v1` | 至少 `40` 个场景；覆盖 `REST / MCP / product CLI` 的核心行为一致性 | 验证产品化阶段的统一应用服务与 transport 复用 |
-| `DeploymentSmokeSuite v1` | 至少 `20` 个部署场景；覆盖 compose、迁移、health、worker 与 provider config | 验证产品化阶段的部署与运行基线 |
+| `DeploymentSmokeSuite v1` | 至少 `20` 个部署场景；覆盖 compose、迁移、health、worker、provider config 与 runtime transport consistency | 验证产品化阶段的部署与运行基线 |
 | `ProductCliExperienceBench v1` | 至少 `30` 条产品 CLI 流；覆盖 `remember / recall / ask / history / session / status / config` | 验证产品化阶段的最终用户 CLI |
 | `CapabilityAdapterBench v1` | 至少 `40` 个能力调用样例；覆盖 `summarize / reflect / answer / offline_reconstruct` 与 `openai / claude / gemini` 兼容接口 | 验证 Phase K 的统一模型能力调用层 |
 | `InternalTelemetryBench v1` | 至少 `30` 条内部流程样例；覆盖 `primitive / retrieval / workspace / access / offline / governance` 与状态变更链 | 验证 Phase L 的开发态完备观测 |
@@ -974,7 +974,7 @@ flowchart LR
 | `M-1` | 功能体验流覆盖 | 在 `FrontendExperienceBench v1` 上，`ingest / retrieve / access / offline / gate-demo = 5/5` 主流程通过 | frontend E2E |
 | `M-2` | 配置入口完整度 | backend / profile / provider / model / dev-mode 配置项覆盖率 `= 100%` | config audit |
 | `M-3` | debug 可视化完备度 | 内部事件时间线、对象变化、context 选择和 evidence 支撑可视化覆盖率 `>= 0.95` | debug UI audit |
-| `M-4` | 前后端 contract 稳定性 | 前后端 JSON contract 校验通过率 `= 100%` | API contract tests |
+| `M-4` | 前后端 contract 稳定性 | 前后端 JSON contract 校验通过率 `= 100%` | API contract tests + runtime product transport audit |
 | `M-5` | 多端可用性 | 关键页面在 desktop / mobile viewport 的渲染与基本交互通过率 `= 100%` | responsive audit |
 | `M-6` | debug 隔离 | debug 入口仅在开发模式下可用；普通体验流无额外泄露与权限漂移 | dev-mode regression |
 

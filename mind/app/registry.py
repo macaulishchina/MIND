@@ -132,7 +132,11 @@ def build_app_registry(
         capability_service=capability_service,
         telemetry_recorder=effective_telemetry_recorder,
     )
-    access_service = AccessService(store, telemetry_recorder=effective_telemetry_recorder)
+    access_service = AccessService(
+        store,
+        capability_service=capability_service,
+        telemetry_recorder=effective_telemetry_recorder,
+    )
     governance_service = GovernanceService(store, telemetry_recorder=effective_telemetry_recorder)
     offline_service = OfflineMaintenanceService(
         store,

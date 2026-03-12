@@ -141,12 +141,13 @@ MIND_ENV_FILE=.env.prod.local docker compose \
 
 ## 部署验收
 
-部署脚本会自动执行 smoke check。也可手动验证：
+部署脚本会自动执行 smoke check。当前 smoke check 不只验证 `health / readiness / docs`，还会执行 `mindtest gate product-readiness`，并把结果写到 `artifacts/product/product_readiness_gate.json` 与 `artifacts/product/product_readiness_gate.md`。也可手动验证：
 
 ```bash
 curl -H 'X-API-Key: YOUR_KEY' http://127.0.0.1:18600/v1/system/health
 curl -H 'X-API-Key: YOUR_KEY' http://127.0.0.1:18600/v1/system/readiness
 curl -I http://127.0.0.1:18601/
+mindtest gate product-readiness --output artifacts/product/product_readiness_gate.json --markdown-output artifacts/product/product_readiness_gate.md
 ```
 
 更全面的验收测试：
@@ -154,7 +155,11 @@ curl -I http://127.0.0.1:18601/
 ```bash
 uv run pytest tests/test_wp5_deployment.py -q
 uv run pytest tests/test_wp3_rest_api.py -q
+./scripts/product-readiness-artifacts.sh
 ```
+
+`DeploymentSmokeSuite v1` 除了静态 compose / Docker 资产检查，还会执行 runtime product transport audit，确认 REST / MCP / CLI 一致性在部署基线上没有漂移。
+`./scripts/product-readiness-artifacts.sh` 可一键生成 `product-transport`、`deployment-smoke`、`product-readiness` 三类 report / gate 的 JSON 与 Markdown 工件。CI 入口 `.github/workflows/product-readiness.yml` 复用同一脚本并上传完整 artifact bundle。
 
 ## 运维
 

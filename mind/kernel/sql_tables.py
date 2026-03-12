@@ -182,6 +182,7 @@ offline_jobs_table = sa.Table(
     sa.Column("job_kind", sa.Text(), nullable=False),
     sa.Column("status", sa.Text(), nullable=False),
     sa.Column("payload_json", JSONB(astext_type=sa.Text()), nullable=False),
+    sa.Column("provider_selection_json", JSONB(astext_type=sa.Text()), nullable=True),
     sa.Column("priority", sa.Float(), nullable=False),
     sa.Column("available_at", sa.DateTime(timezone=True), nullable=False),
     sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),

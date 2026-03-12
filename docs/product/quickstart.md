@@ -51,20 +51,35 @@ mind remember "hello from quickstart" --episode-id quickstart-001
 mind recall hello
 ```
 
-## 7. 打开一个会话
+## 7. 向记忆提问
+
+```bash
+mind ask "what did I say in quickstart?"
+```
+
+CLI 会显示 capability layer 生成的最终 answer，以及本次 access 的上下文摘要。
+
+## 8. 查看最近记忆
+
+```bash
+mind history --limit 5
+```
+
+## 9. 打开一个会话
 
 ```bash
 mind session open --principal-id quickstart-user --session-id quickstart-session
 ```
 
-## 8. 查看系统状态
+## 10. 查看系统状态
 
 ```bash
 mind status
 mind config
+mind config --provider openai --model gpt-4.1-mini
 ```
 
-## 9. 调 API
+## 11. 调 API
 
 ```bash
 curl \
@@ -72,7 +87,7 @@ curl \
   http://127.0.0.1:18600/v1/system/health
 ```
 
-## 10. 用远程模式走 CLI
+## 12. 用远程模式走 CLI
 
 ```bash
 mind --remote http://127.0.0.1:18600 --api-key dev-key status

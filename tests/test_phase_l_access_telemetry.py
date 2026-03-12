@@ -66,6 +66,10 @@ def test_access_flash_run_emits_access_events_in_dev_mode(tmp_path: Path) -> Non
     assert access_events[2].payload["context_kind"] == "raw_topk"
     assert access_events[2].payload["context_object_ids"] == result.context_object_ids
     assert access_events[3].payload["resolved_mode"] == "flash"
+    assert access_events[3].payload["answer_text"] == result.answer_text
+    assert access_events[3].payload["answer_support_ids"] == result.answer_support_ids
+    assert access_events[3].payload["answer_trace"]["provider_family"] == "deterministic"
+    assert access_events[3].debug_fields["answer_length"] >= 1
     primitive_related = [
         event
         for event in recorder.iter_events()

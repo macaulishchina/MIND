@@ -49,6 +49,8 @@ MIND 是一套面向长期记忆工作流的产品化系统。当前基线已经
 - health / readiness / config summary
 - compose + migration entrypoint
 - PostgreSQL-only 产品运行时
+- product-readiness gate（跨 transport 一致性审计 + 聚合报告）
+- CI product-readiness workflow（`.github/workflows/product-readiness.yml`）
 
 ## 入口选择
 
@@ -63,10 +65,9 @@ MIND 是一套面向长期记忆工作流的产品化系统。当前基线已经
 
 ## 不在本轮范围内
 
-本轮产品化完成到 `WP-6`。以下能力仍属于后续阶段：
+当前主基线完成到 `WP-6`；`WP-7`（capability/provider）已进入补充落地，`WP-8`（telemetry/frontend）已收口。以下能力仍不应被误读为已经完全冻结的稳定承诺：
 
-- provider capability layer 的正式产品接入
-- telemetry / frontend-ready 体系
+- provider capability layer 的完整多 provider 生产验证
 - 更重的 reshape / persona projection
 
 这些设计仍保留在历史和架构文档中，但不应当被误读为当前产品承诺。

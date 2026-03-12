@@ -131,12 +131,25 @@ class CapabilityService:
         }
 
     def invoke(self, request: CapabilityRequest) -> CapabilityResponse:
-        primary = self._adapters.get(self.provider_config.provider_family)
+        return self._invoke(request, provider_config=None)
+
+    def _invoke(
+        self,
+        request: CapabilityRequest,
+        *,
+        provider_config: CapabilityProviderConfig | None,
+    ) -> CapabilityResponse:
+        active_provider_config = provider_config or self.provider_config
+        primary = self._resolve_primary_adapter(active_provider_config)
         if primary is not None:
             try:
                 return invoke_capability(primary, request)
             except (CapabilityAdapterError, OSError, TimeoutError, ValueError) as exc:
-                return self._handle_primary_failure(request, exc)
+                return self._handle_primary_failure(
+                    request,
+                    exc,
+                    provider_config=active_provider_config,
+                )
 
         if request.fallback_policy is CapabilityFallbackPolicy.ALLOW_DETERMINISTIC:
             fallback = self._adapters[CapabilityProviderFamily.DETERMINISTIC]
@@ -148,7 +161,7 @@ class CapabilityService:
                             "fallback_used": True,
                             "fallback_reason": (
                                 "primary adapter unavailable for "
-                                f"{self.provider_config.provider_family.value}"
+                                f"{active_provider_config.provider_family.value}"
                             ),
                         }
                     )
@@ -157,17 +170,19 @@ class CapabilityService:
 
         raise CapabilityServiceError(
             "primary capability adapter unavailable for "
-            f"{self.provider_config.provider_family.value}"
+            f"{active_provider_config.provider_family.value}"
         )
 
     def _handle_primary_failure(
         self,
         request: CapabilityRequest,
         exc: Exception,
+        *,
+        provider_config: CapabilityProviderConfig,
     ) -> CapabilityResponse:
         if (
             request.fallback_policy is CapabilityFallbackPolicy.ALLOW_DETERMINISTIC
-            and self.provider_config.provider_family is not CapabilityProviderFamily.DETERMINISTIC
+            and provider_config.provider_family is not CapabilityProviderFamily.DETERMINISTIC
         ):
             fallback = self._adapters[CapabilityProviderFamily.DETERMINISTIC]
             response = invoke_capability(fallback, request)
@@ -178,7 +193,7 @@ class CapabilityService:
                             "fallback_used": True,
                             "fallback_reason": (
                                 "primary adapter failed for "
-                                f"{self.provider_config.provider_family.value}: {exc}"
+                                f"{provider_config.provider_family.value}: {exc}"
                             ),
                         }
                     )
@@ -186,23 +201,38 @@ class CapabilityService:
             )
         raise CapabilityServiceError(
             "primary capability adapter failed for "
-            f"{self.provider_config.provider_family.value}: {exc}"
+            f"{provider_config.provider_family.value}: {exc}"
         ) from exc
 
-    def summarize(self, request: SummarizeRequest) -> SummarizeResponse:
-        response = self.invoke(request)
+    def summarize(
+        self,
+        request: SummarizeRequest,
+        *,
+        provider_config: CapabilityProviderConfig | None = None,
+    ) -> SummarizeResponse:
+        response = self._invoke(request, provider_config=provider_config)
         if not isinstance(response, SummarizeResponse):
             raise CapabilityServiceError("summarize returned unexpected response type")
         return response
 
-    def reflect(self, request: ReflectRequest) -> ReflectResponse:
-        response = self.invoke(request)
+    def reflect(
+        self,
+        request: ReflectRequest,
+        *,
+        provider_config: CapabilityProviderConfig | None = None,
+    ) -> ReflectResponse:
+        response = self._invoke(request, provider_config=provider_config)
         if not isinstance(response, ReflectResponse):
             raise CapabilityServiceError("reflect returned unexpected response type")
         return response
 
-    def answer(self, request: AnswerRequest) -> AnswerResponse:
-        response = self.invoke(request)
+    def answer(
+        self,
+        request: AnswerRequest,
+        *,
+        provider_config: CapabilityProviderConfig | None = None,
+    ) -> AnswerResponse:
+        response = self._invoke(request, provider_config=provider_config)
         if not isinstance(response, AnswerResponse):
             raise CapabilityServiceError("answer returned unexpected response type")
         return response
@@ -210,13 +240,25 @@ class CapabilityService:
     def offline_reconstruct(
         self,
         request: OfflineReconstructRequest,
+        *,
+        provider_config: CapabilityProviderConfig | None = None,
     ) -> OfflineReconstructResponse:
-        response = self.invoke(request)
+        response = self._invoke(request, provider_config=provider_config)
         if not isinstance(response, OfflineReconstructResponse):
             raise CapabilityServiceError(
                 "offline_reconstruct returned unexpected response type"
             )
         return response
+
+    def _resolve_primary_adapter(
+        self,
+        provider_config: CapabilityProviderConfig,
+    ) -> CapabilityAdapter | None:
+        if provider_config.provider_family is CapabilityProviderFamily.DETERMINISTIC:
+            return self._adapters.get(CapabilityProviderFamily.DETERMINISTIC)
+        if provider_config.model_dump(mode="json") == self.provider_config.model_dump(mode="json"):
+            return self._adapters.get(provider_config.provider_family)
+        return _build_primary_adapter(provider_config, clock=self._clock)
 
 
 def build_capability_adapters_from_environment(
@@ -294,22 +336,31 @@ def _default_provider_adapters(
     *,
     clock: Callable[[], datetime],
 ) -> list[CapabilityAdapter]:
+    primary = _build_primary_adapter(provider_config, clock=clock)
+    return [primary] if primary is not None else []
+
+
+def _build_primary_adapter(
+    provider_config: CapabilityProviderConfig,
+    *,
+    clock: Callable[[], datetime],
+) -> CapabilityAdapter | None:
     if (
         provider_config.provider_family is CapabilityProviderFamily.OPENAI
         and provider_config.auth.is_configured()
     ):
-        return [OpenAICapabilityAdapter(provider_config, clock=clock)]
+        return OpenAICapabilityAdapter(provider_config, clock=clock)
     if (
         provider_config.provider_family is CapabilityProviderFamily.CLAUDE
         and provider_config.auth.is_configured()
     ):
-        return [ClaudeCapabilityAdapter(provider_config, clock=clock)]
+        return ClaudeCapabilityAdapter(provider_config, clock=clock)
     if (
         provider_config.provider_family is CapabilityProviderFamily.GEMINI
         and provider_config.auth.is_configured()
     ):
-        return [GeminiCapabilityAdapter(provider_config, clock=clock)]
-    return []
+        return GeminiCapabilityAdapter(provider_config, clock=clock)
+    return None
 
 
 def _external_provider_families() -> tuple[CapabilityProviderFamily, ...]:

@@ -112,6 +112,12 @@ def test_frontend_access_result_aliases_recall_to_focus() -> None:
                     "content_preview": "remember me",
                 }
             ],
+            "answer_text": "remember me",
+            "answer_support_ids": ["obj-1"],
+            "answer_trace": {
+                "provider_family": "deterministic",
+                "fallback_used": False,
+            },
             "trace": {"events": [{"summary": "recall completed with 1 candidate"}]},
         }
     )
@@ -119,6 +125,12 @@ def test_frontend_access_result_aliases_recall_to_focus() -> None:
     assert result.resolved_depth == "focus"
     assert result.candidate_count == 1
     assert result.selected_count == 1
+    assert result.summary == "remember me"
+    assert result.answer is not None
+    assert result.answer.text == "remember me"
+    assert result.answer.support_ids == ["obj-1"]
+    assert result.answer.trace is not None
+    assert result.answer.trace.provider_family == "deterministic"
 
 
 def test_frontend_experience_projections_use_real_app_services(tmp_path: Path) -> None:
@@ -192,6 +204,9 @@ def test_frontend_experience_projections_use_real_app_services(tmp_path: Path) -
 
     assert access_view.resolved_depth in {"flash", "focus", "reconstruct", "reflective_access"}
     assert access_view.candidate_count >= 1
+    assert access_view.answer is not None
+    assert access_view.answer.text
+    assert access_view.answer.support_ids
     assert any(item.object_id == ingest_view.object_id for item in access_view.candidate_objects)
     assert access_view.trace_ref is not None
 

@@ -14,6 +14,7 @@ from mind.capabilities import (
     CapabilityService,
     ReflectRequest as CapabilityReflectRequest,
     SummarizeRequest as CapabilitySummarizeRequest,
+    resolve_capability_provider_config,
 )
 from mind.kernel.provenance import build_direct_provenance_record, build_provenance_summary
 from mind.kernel.retrieval import build_query_embedding
@@ -593,13 +594,15 @@ class PrimitiveService:
 
         source_objects = self._read_existing_objects(request.input_refs, transaction)
         combined_text = " ".join(self._object_text(obj) for obj in source_objects)
+        provider_config = self._capability_provider_config(context)
         summary_text = self._capability_service.summarize(
             CapabilitySummarizeRequest(
                 request_id=f"primitive-summarize-{uuid4().hex[:8]}",
                 source_text=combined_text,
                 source_refs=list(request.input_refs),
                 instruction=f"summary_scope={request.summary_scope};target_kind={request.target_kind}",
-            )
+            ),
+            provider_config=provider_config,
         ).summary_text
         costs = [
             BudgetCost(category=PrimitiveCostCategory.GENERATION, amount=2.0),
@@ -745,6 +748,7 @@ class PrimitiveService:
         success = bool(episode_object.get("metadata", {}).get("success"))
         source_refs = [request.episode_id] + [record["id"] for record in raw_records[-2:]]
         evidence_text = " ".join(self._object_text(record) for record in raw_records[-2:])
+        provider_config = self._capability_provider_config(context)
         reflection_summary = self._capability_service.reflect(
             CapabilityReflectRequest(
                 request_id=f"primitive-reflect-{uuid4().hex[:8]}",
@@ -753,7 +757,8 @@ class PrimitiveService:
                 episode_id=request.episode_id,
                 outcome_hint="success" if success else "failure",
                 evidence_refs=source_refs,
-            )
+            ),
+            provider_config=provider_config,
         ).reflection_text
         reflection_object = {
             "id": reflection_object_id,
@@ -1083,6 +1088,21 @@ class PrimitiveService:
             return text[:77] + "..." if len(text) > 80 else text
         text = " ".join(str(content).split())
         return text[:77] + "..." if len(text) > 80 else text
+
+    def _capability_provider_config(
+        self,
+        context: PrimitiveExecutionContext,
+    ) -> Any:
+        if not context.provider_selection:
+            return None
+        try:
+            return resolve_capability_provider_config(selection=context.provider_selection)
+        except RuntimeError as exc:
+            raise self._reject(
+                PrimitiveErrorCode.UNSUPPORTED_OPERATION,
+                str(exc),
+                details={"provider_selection": dict(context.provider_selection)},
+            ) from exc
 
     @staticmethod
     def _summarize_text(text: str) -> str:

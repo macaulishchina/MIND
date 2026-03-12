@@ -46,6 +46,15 @@ class MindAPIClient:
     def config_summary(self) -> dict[str, Any]:
         return self._request_json("GET", "v1/system/config")
 
+    def provider_status(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        if payload:
+            return self._request_json(
+                "POST",
+                "v1/system/provider-status:resolve",
+                payload=payload,
+            )
+        return self._request_json("GET", "v1/system/provider-status")
+
     def _request_json(
         self,
         method: str,

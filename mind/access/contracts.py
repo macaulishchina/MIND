@@ -190,6 +190,9 @@ class AccessRunResponse(AccessModel):
     expanded_object_ids: list[str] = Field(default_factory=list)
     selected_object_ids: list[str] = Field(default_factory=list)
     selected_summaries: list[dict[str, Any]] = Field(default_factory=list)
+    answer_text: str | None = None
+    answer_support_ids: list[str] = Field(default_factory=list)
+    answer_trace: dict[str, Any] | None = None
     verification_notes: list[str] = Field(default_factory=list)
     trace: AccessRunTrace
 
@@ -217,5 +220,9 @@ class AccessRunResponse(AccessModel):
             raise ValueError("candidate_summaries cannot exceed candidate_ids")
         if self.selected_summaries and len(self.selected_summaries) != len(self.selected_object_ids):
             raise ValueError("selected_summaries must match selected_object_ids")
+        if self.answer_trace is not None and not self.answer_text:
+            raise ValueError("answer_trace requires answer_text")
+        if self.answer_support_ids and not self.answer_text:
+            raise ValueError("answer_support_ids require answer_text")
 
         return self

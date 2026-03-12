@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -14,6 +15,12 @@ from mind.access import (
     AccessSwitchKind,
     AccessTraceKind,
 )
+from mind.capabilities import (
+    AnswerRequest,
+    AnswerResponse,
+    CapabilityInvocationTrace,
+    CapabilityProviderFamily,
+)
 from mind.fixtures.retrieval_benchmark import build_canonical_seed_objects
 from mind.kernel.store import SQLiteMemoryStore
 from mind.primitives.contracts import Capability, PrimitiveExecutionContext
@@ -25,12 +32,14 @@ def _context(
     *,
     actor: str = "phase-i-runner",
     budget_limit: float = 50.0,
+    provider_selection: dict[str, Any] | None = None,
 ) -> PrimitiveExecutionContext:
     return PrimitiveExecutionContext(
         actor=actor,
         budget_scope_id=f"phase-i::{actor}",
         budget_limit=budget_limit,
         capabilities=[Capability.MEMORY_READ],
+        provider_selection=provider_selection,
     )
 
 
@@ -54,6 +63,7 @@ def test_flash_mode_returns_raw_topk_context_and_minimal_trace(tmp_path: Path) -
     assert result.context_kind is AccessContextKind.RAW_TOPK
     assert len(result.context_object_ids) == 1
     assert result.selected_object_ids == []
+    assert result.answer_text
     assert [event.event_kind for event in result.trace.events] == [
         AccessTraceKind.SELECT_MODE,
         AccessTraceKind.RETRIEVE,
@@ -86,6 +96,8 @@ def test_recall_mode_builds_workspace_context(tmp_path: Path) -> None:
     assert "content_preview" in result.candidate_summaries[0]
     assert result.selected_summaries
     assert result.selected_summaries[0]["object_id"] == result.selected_object_ids[0]
+    assert result.answer_text
+    assert result.answer_support_ids == result.selected_object_ids
     assert any(event.event_kind is AccessTraceKind.WORKSPACE for event in result.trace.events)
 
 
@@ -396,5 +408,75 @@ def test_all_trace_events_carry_non_auto_mode(tmp_path: Path) -> None:
                 )
 
 
+def test_access_answer_generation_delegates_to_capability_service_and_honors_provider_selection(
+    tmp_path: Path,
+) -> None:
+    captured: dict[str, Any] = {}
+
+    class _FakeCapabilityService:
+        def answer(
+            self,
+            request: AnswerRequest,
+            *,
+            provider_config: Any = None,
+        ) -> AnswerResponse:
+            captured["request"] = request
+            captured["provider_config"] = provider_config
+            return AnswerResponse(
+                answer_text="delegated access answer",
+                support_ids=list(request.support_ids),
+                trace=_trace(),
+            )
+
+    with SQLiteMemoryStore(tmp_path / "phase_i_answer_override.sqlite3") as store:
+        _seed_store(store)
+        service = AccessService(
+            store,
+            clock=lambda: FIXED_TIMESTAMP,
+            capability_service=_FakeCapabilityService(),  # type: ignore[arg-type]
+        )
+
+        result = service.run(
+            {
+                "requested_mode": "recall",
+                "task_id": "task-004",
+                "query": "Episode 4 revised corrected replay hints",
+                "query_modes": ["keyword"],
+                "filters": {"object_types": ["SummaryNote", "TaskEpisode"]},
+            },
+            _context(
+                actor="phase-i-answer-override",
+                provider_selection={
+                    "provider": "openai",
+                    "model": "gpt-4.1-mini",
+                    "endpoint": "https://api.openai.com/v1/responses",
+                    "timeout_ms": 12_000,
+                    "retry_policy": "none",
+                },
+            ),
+        )
+
+    assert result.answer_text == "delegated access answer"
+    assert result.answer_support_ids == result.selected_object_ids
+    assert result.answer_trace is not None
+    assert captured["request"].question == "Episode 4 revised corrected replay hints"
+    assert captured["request"].support_ids == result.selected_object_ids
+    assert captured["provider_config"] is not None
+    assert captured["provider_config"].provider_family is CapabilityProviderFamily.OPENAI
+    assert captured["provider_config"].model == "gpt-4.1-mini"
+
+
 def _seed_store(store: SQLiteMemoryStore) -> None:
     store.insert_objects(build_canonical_seed_objects())
+
+
+def _trace() -> CapabilityInvocationTrace:
+    return CapabilityInvocationTrace(
+        provider_family=CapabilityProviderFamily.DETERMINISTIC,
+        model="deterministic",
+        endpoint="local://deterministic",
+        version="deterministic-v1",
+        started_at=FIXED_TIMESTAMP,
+        completed_at=FIXED_TIMESTAMP,
+        duration_ms=0,
+    )

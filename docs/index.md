@@ -55,7 +55,7 @@ source $HOME/.local/bin/env
 ## 版本与来源
 
 - 当前仓库版本：`0.2.0`
-- 当前文档覆盖范围：`WP-0 ~ WP-6` 已完成的产品化基线，外加 `Phase K / L / M` 的 capability-layer、telemetry 和 frontend 实现基线
+- 当前文档覆盖范围：`WP-0 ~ WP-8` 的产品化与补充落地基线，外加 `Phase K / L / M` 的 capability-layer、telemetry 和 frontend 实现基线
 - 历史 Phase B ~ J 的规范、gate、审计和报告继续保留在 `docs/foundation/`、`docs/design/`、`docs/reports/`
 
 ## 本地预览

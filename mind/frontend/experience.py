@@ -127,6 +127,28 @@ class FrontendAccessEvidenceView(FrontendModel):
     preview: str | None = None
 
 
+class FrontendAccessAnswerTraceView(FrontendModel):
+    """Stable frontend-facing answer trace subset."""
+
+    provider_family: str | None = None
+    fallback_used: bool = False
+    fallback_reason: str | None = None
+
+    @model_validator(mode="after")
+    def enforce_fallback_reason(self) -> FrontendAccessAnswerTraceView:
+        if self.fallback_reason and not self.fallback_used:
+            raise ValueError("fallback_reason requires fallback_used")
+        return self
+
+
+class FrontendAccessAnswerView(FrontendModel):
+    """Stable frontend-facing answer projection."""
+
+    text: str = Field(min_length=1)
+    support_ids: list[str] = Field(default_factory=list)
+    trace: FrontendAccessAnswerTraceView | None = None
+
+
 class FrontendAccessResult(FrontendModel):
     """Frontend-facing access result projection."""
 
@@ -136,6 +158,7 @@ class FrontendAccessResult(FrontendModel):
     candidate_count: int = Field(ge=0)
     selected_count: int = Field(ge=0)
     summary: str = Field(min_length=1)
+    answer: FrontendAccessAnswerView | None = None
     candidate_objects: list[FrontendAccessEvidenceView] = Field(default_factory=list)
     selected_objects: list[FrontendAccessEvidenceView] = Field(default_factory=list)
     trace_ref: str | None = None
@@ -275,8 +298,11 @@ def build_frontend_access_result(
     context_object_ids = [str(item) for item in payload.get("context_object_ids") or ()]
     trace = payload.get("trace") or {}
     events = trace.get("events") or ()
+    answer = _project_access_answer(payload, fallback_support_ids=selected_ids)
     summary = "access completed"
-    if events:
+    if answer is not None:
+        summary = answer.text
+    elif events:
         last_event = events[-1]
         if isinstance(last_event, Mapping) and last_event.get("summary"):
             summary = str(last_event["summary"])
@@ -287,6 +313,7 @@ def build_frontend_access_result(
         candidate_count=len(candidate_objects),
         selected_count=len(selected_objects),
         summary=summary,
+        answer=answer,
         candidate_objects=candidate_objects,
         selected_objects=selected_objects,
         trace_ref=trace_ref,
@@ -519,6 +546,41 @@ def _project_evidence_collection(
             )
         )
     return views
+
+
+def _project_access_answer(
+    payload: Mapping[str, Any],
+    *,
+    fallback_support_ids: list[str],
+) -> FrontendAccessAnswerView | None:
+    raw_text = payload.get("answer_text")
+    if not isinstance(raw_text, str) or not raw_text.strip():
+        return None
+
+    raw_trace = payload.get("answer_trace")
+    answer_trace: FrontendAccessAnswerTraceView | None = None
+    if isinstance(raw_trace, Mapping):
+        fallback_reason = raw_trace.get("fallback_reason")
+        answer_trace = FrontendAccessAnswerTraceView(
+            provider_family=(
+                str(raw_trace["provider_family"])
+                if raw_trace.get("provider_family") is not None
+                else None
+            ),
+            fallback_used=bool(raw_trace.get("fallback_used")),
+            fallback_reason=(
+                str(fallback_reason)
+                if isinstance(fallback_reason, str) and fallback_reason.strip()
+                else None
+            ),
+        )
+
+    raw_support_ids = payload.get("answer_support_ids") or fallback_support_ids
+    return FrontendAccessAnswerView(
+        text=raw_text,
+        support_ids=[str(item) for item in raw_support_ids],
+        trace=answer_trace,
+    )
 
 
 def _project_retrieve_candidates(

@@ -277,11 +277,53 @@ def test_frontend_debug_timeline_projects_context_and_evidence_views() -> None:
     assert len(response.context_views) == 1
     assert response.context_views[0].context_kind == "workspace"
     assert response.context_views[0].selected_object_ids == ["obj-001"]
-
     assert len(response.evidence_views) == 3
-    retrieval_evidence = next(view for view in response.evidence_views if view.event_id == "retrieve-result-001" and view.object_id == "obj-001")
-    workspace_evidence = next(view for view in response.evidence_views if view.event_id == "workspace-result-001")
+    retrieval_evidence = next(
+        view
+        for view in response.evidence_views
+        if view.event_id == "retrieve-result-001" and view.object_id == "obj-001"
+    )
+    workspace_evidence = next(
+        view for view in response.evidence_views if view.event_id == "workspace-result-001"
+    )
     assert retrieval_evidence.selected is True
     assert retrieval_evidence.score == 0.91
     assert workspace_evidence.evidence_refs == ["raw-ep-1"]
     assert workspace_evidence.reason_selected == "retrieval_score=0.9100"
+
+
+def test_frontend_debug_timeline_surfaces_access_answer_result_summary() -> None:
+    events = (
+        TelemetryEvent(
+            event_id="access-result-001",
+            scope=TelemetryScope.ACCESS,
+            kind=TelemetryEventKind.ACTION_RESULT,
+            occurred_at=FIXED_TIMESTAMP,
+            run_id="run-debug-answer-001",
+            operation_id="access-task-answer",
+            payload={
+                "resolved_mode": "recall",
+                "answer_text": "episode four required a corrected replay hint",
+                "answer_support_ids": ["obj-001"],
+                "answer_trace": {
+                    "provider_family": "deterministic",
+                    "model": "deterministic",
+                },
+                "summary": "recall answer: episode four required a corrected replay hint",
+            },
+            debug_fields={"answer_length": 43},
+        ),
+    )
+
+    response = build_frontend_debug_timeline(
+        events,
+        {"run_id": "run-debug-answer-001", "include_payload": True, "include_debug_fields": True},
+        dev_mode=True,
+    )
+
+    assert response.returned_event_count == 1
+    assert response.timeline[0].summary == "recall answer: episode four required a corrected replay hint"
+    assert response.timeline[0].payload["answer_text"] == (
+        "episode four required a corrected replay hint"
+    )
+    assert response.timeline[0].debug_fields["answer_length"] == 43

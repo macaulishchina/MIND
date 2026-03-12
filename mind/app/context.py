@@ -108,7 +108,7 @@ class ExecutionPolicy(BaseModel):
 
 
 class ProviderSelection(BaseModel):
-    """LLM/embedding provider routing info (reserved for WP-7)."""
+    """LLM/embedding provider routing info."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -127,6 +127,7 @@ def resolve_execution_context(
     principal: PrincipalContext | None = None,
     session: SessionContext | None = None,
     policy: ExecutionPolicy | None = None,
+    provider_selection: ProviderSelection | None = None,
 ) -> PrimitiveExecutionContext:
     """Project product contexts into the existing domain execution context."""
 
@@ -154,6 +155,11 @@ def resolve_execution_context(
         budget_limit=budget_limit,
         capabilities=capabilities,
         dev_mode=dev_mode,
+        provider_selection=(
+            provider_selection.model_dump(mode="json")
+            if provider_selection is not None
+            else None
+        ),
         telemetry_run_id=(
             session.request_id
             if session is not None and session.request_id

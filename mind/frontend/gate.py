@@ -9,6 +9,10 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
 
+from mind.fixtures import (
+    ProductTransportAuditReport,
+    evaluate_runtime_product_transport_audit_report,
+)
 from mind.kernel.store import SQLiteMemoryStore
 from mind.primitives.contracts import PrimitiveExecutionContext
 from mind.primitives.service import PrimitiveService
@@ -54,12 +58,13 @@ class FrontendGateResult:
     """Formal gate result for the lightweight frontend experience layer."""
 
     flow_report: FrontendFlowReport
+    product_transport_audit: ProductTransportAuditReport
     responsive_audit: FrontendResponsiveAuditResult
     dev_mode_audit: FrontendDevModeAuditResult
 
     @property
     def m1_pass(self) -> bool:
-        return self.flow_report.experience_flow_pass
+        return self.flow_report.experience_flow_pass and self.flow_report.contract_audit_pass
 
     @property
     def m2_pass(self) -> bool:
@@ -71,7 +76,7 @@ class FrontendGateResult:
 
     @property
     def m4_pass(self) -> bool:
-        return self.flow_report.transport_surface_present
+        return self.flow_report.transport_surface_present and self.product_transport_audit.passed
 
     @property
     def m5_pass(self) -> bool:
@@ -167,6 +172,7 @@ def evaluate_frontend_gate(
     _ = generated_at
     return FrontendGateResult(
         flow_report=evaluate_frontend_flow_report(frontend_root=frontend_root),
+        product_transport_audit=evaluate_runtime_product_transport_audit_report(),
         responsive_audit=evaluate_frontend_responsive_audit(frontend_root),
         dev_mode_audit=evaluate_frontend_dev_mode_audit(),
     )
@@ -174,13 +180,15 @@ def evaluate_frontend_gate(
 
 def assert_frontend_gate(result: FrontendGateResult) -> None:
     if not result.m1_pass:
-        raise RuntimeError("M-1 failed: frontend experience flow coverage is incomplete")
+        raise RuntimeError("M-1 failed: frontend experience flow or contract coverage is incomplete")
     if not result.m2_pass:
         raise RuntimeError("M-2 failed: config surface coverage regressed")
     if not result.m3_pass:
         raise RuntimeError("M-3 failed: debug visualization coverage regressed")
     if not result.m4_pass:
-        raise RuntimeError("M-4 failed: frontend transport contract surface regressed")
+        raise RuntimeError(
+            "M-4 failed: frontend transport contract surface or runtime transport audit regressed"
+        )
     if not result.m5_pass:
         raise RuntimeError("M-5 failed: responsive audit regressed")
     if not result.m6_pass:
@@ -229,11 +237,27 @@ def _report_to_dict(result: FrontendGateResult) -> dict[str, Any]:
             "passed_count": result.flow_report.passed_count,
             "coverage": result.flow_report.coverage,
             "experience_flow_pass": result.flow_report.experience_flow_pass,
+            "contract_audit_pass": result.flow_report.contract_audit_pass,
             "config_audit_pass": result.flow_report.config_audit_pass,
             "debug_ui_audit_pass": result.flow_report.debug_ui_audit_pass,
             "transport_surface_present": result.flow_report.transport_surface_present,
             "dev_mode_guard_pass": result.flow_report.dev_mode_guard_pass,
             "failure_ids": list(result.flow_report.failure_ids),
+        },
+        "product_transport_audit": {
+            "schema_version": result.product_transport_audit.schema_version,
+            "bench_version": result.product_transport_audit.bench_version,
+            "scenario_count": result.product_transport_audit.scenario_count,
+            "passed_count": result.product_transport_audit.passed_count,
+            "coverage": result.product_transport_audit.coverage,
+            "rest_mcp_pair_count": result.product_transport_audit.rest_mcp_pair_count,
+            "rest_mcp_match_count": result.product_transport_audit.rest_mcp_match_count,
+            "rest_mcp_pass_rate": result.product_transport_audit.rest_mcp_pass_rate,
+            "rest_cli_pair_count": result.product_transport_audit.rest_cli_pair_count,
+            "rest_cli_match_count": result.product_transport_audit.rest_cli_match_count,
+            "rest_cli_pass_rate": result.product_transport_audit.rest_cli_pass_rate,
+            "failure_ids": list(result.product_transport_audit.failure_ids),
+            "passed": result.product_transport_audit.passed,
         },
         "responsive_audit": {
             "scenario_count": result.responsive_audit.scenario_count,

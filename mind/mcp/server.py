@@ -9,7 +9,13 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import uuid4
 
-from mind.app.context import ExecutionPolicy, NamespaceContext, PrincipalContext, SessionContext
+from mind.app.context import (
+    ExecutionPolicy,
+    NamespaceContext,
+    PrincipalContext,
+    ProviderSelection,
+    SessionContext,
+)
 from mind.app.contracts import AppRequest, AppResponse
 from mind.app.registry import AppServiceRegistry, build_app_registry
 from mind.cli_config import ResolvedCliConfig
@@ -23,7 +29,15 @@ except ImportError:  # pragma: no cover - optional runtime dependency
 ToolHandler = Callable[[AppServiceRegistry, AppRequest], AppResponse]
 
 _APP_ENVELOPE_KEYS = frozenset(
-    {"idempotency_key", "input", "namespace", "policy", "request_id", "session"}
+    {
+        "idempotency_key",
+        "input",
+        "namespace",
+        "policy",
+        "provider_selection",
+        "request_id",
+        "session",
+    }
 )
 
 
@@ -184,6 +198,11 @@ def _build_app_request(
         if isinstance(arguments.get("policy"), dict)
         else None
     )
+    provider_selection = (
+        ProviderSelection.model_validate(arguments["provider_selection"])
+        if isinstance(arguments.get("provider_selection"), dict)
+        else None
+    )
     input_payload = (
         dict(arguments["input"])
         if isinstance(arguments.get("input"), dict)
@@ -200,6 +219,7 @@ def _build_app_request(
         namespace=namespace,
         session=SessionContext.model_validate(session_payload),
         policy=policy,
+        provider_selection=provider_selection,
         input=input_payload,
     )
 

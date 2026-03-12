@@ -36,7 +36,12 @@ class GovernanceAppService:
 
     def _call_governance(self, req: AppRequest, method: str) -> AppResponse:
         resp = new_response(req)
-        ctx = resolve_execution_context(req.principal, req.session, req.policy)
+        ctx = resolve_execution_context(
+            req.principal,
+            req.session,
+            req.policy,
+            req.provider_selection,
+        )
         payload = _governance_payload(method, req.input)
 
         try:

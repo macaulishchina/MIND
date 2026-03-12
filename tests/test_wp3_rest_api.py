@@ -68,15 +68,18 @@ async def test_rest_endpoint_workflow_and_error_envelope(
     health = await api_client.get("/v1/system/health", headers=headers)
     readiness = await api_client.get("/v1/system/readiness", headers=headers)
     config = await api_client.get("/v1/system/config", headers=headers)
+    provider_status = await api_client.get("/v1/system/provider-status", headers=headers)
     frontend_catalog = await api_client.get("/v1/frontend/catalog", headers=headers)
     frontend_settings = await api_client.get("/v1/frontend/settings", headers=headers)
     assert health.status_code == 200
     assert readiness.status_code == 200
     assert config.status_code == 200
+    assert provider_status.status_code == 200
     assert frontend_catalog.status_code == 200
     assert frontend_settings.status_code == 200
     assert frontend_catalog.json()["result"]["bench_version"] == "FrontendExperienceBench v1"
     assert frontend_settings.json()["result"]["runtime"]["backend"] == "sqlite"
+    assert provider_status.json()["result"]["provider_family"] == "deterministic"
 
     get_memory = await api_client.get(f"/v1/memories/{state['memory_id']}", headers=headers)
     list_memories = await api_client.get("/v1/memories", headers=headers)
@@ -108,6 +111,7 @@ async def test_rest_endpoint_workflow_and_error_envelope(
         json={"query": "gamma", "mode": "recall"},
     )
     assert ask.status_code == 200
+    assert ask.json()["result"]["answer_text"]
     assert run.status_code == 200
     assert explain.status_code == 200
 
@@ -224,6 +228,117 @@ async def test_frontend_settings_preview_route_returns_preview(
 
 
 @pytest.mark.anyio
+async def test_provider_status_resolve_route_honors_request_level_selection(
+    api_client: httpx.AsyncClient,
+) -> None:
+    response = await api_client.post(
+        "/v1/system/provider-status:resolve",
+        headers=_auth_headers(),
+        json={
+            "provider_selection": {
+                "provider": "claude",
+                "model": "claude-3-7-sonnet-custom",
+                "endpoint": "https://claude.example/v1/messages",
+                "timeout_ms": 12_000,
+                "retry_policy": "none",
+            }
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["result"]["provider"] == "claude"
+    assert payload["result"]["provider_family"] == "claude"
+    assert payload["result"]["model"] == "claude-3-7-sonnet-custom"
+    assert payload["result"]["endpoint"] == "https://claude.example/v1/messages"
+    assert payload["result"]["timeout_ms"] == 12_000
+    assert payload["result"]["retry_policy"] == "none"
+
+
+@pytest.mark.anyio
+async def test_provider_status_resolve_route_returns_validation_error_for_invalid_provider(
+    api_client: httpx.AsyncClient,
+) -> None:
+    response = await api_client.post(
+        "/v1/system/provider-status:resolve",
+        headers=_auth_headers(),
+        json={
+            "provider_selection": {
+                "provider": "unknown-provider",
+                "model": "mystery-model",
+            }
+        },
+    )
+
+    assert response.status_code == 400
+    payload = response.json()
+    assert payload["status"] == "error"
+    assert payload["error"]["code"] == "validation_error"
+    assert payload["error"]["details"]["provider_selection"]["provider"] == "unknown-provider"
+
+
+@pytest.mark.anyio
+async def test_job_submit_route_persists_request_level_provider_selection(
+    api_client: httpx.AsyncClient,
+) -> None:
+    submit = await api_client.post(
+        "/v1/jobs",
+        headers=_auth_headers(),
+        json={
+            "job_kind": "reflect_episode",
+            "payload": {
+                "episode_id": "rest-job-provider-selection",
+                "focus": "persist provider override",
+            },
+            "provider_selection": {
+                "provider": "claude",
+                "model": "claude-3-7-sonnet",
+                "endpoint": "https://api.anthropic.com/v1/messages",
+                "timeout_ms": 8_000,
+                "retry_policy": "none",
+            },
+        },
+    )
+
+    assert submit.status_code == 200
+    submit_payload = submit.json()
+    assert submit_payload["result"]["provider_selection"]["provider"] == "claude"
+
+    get_job = await api_client.get(
+        f"/v1/jobs/{submit_payload['result']['job_id']}",
+        headers=_auth_headers(),
+    )
+
+    assert get_job.status_code == 200
+    get_job_payload = get_job.json()
+    assert get_job_payload["result"]["provider_selection"]["provider"] == "claude"
+    assert get_job_payload["result"]["provider_selection"]["model"] == "claude-3-7-sonnet"
+
+
+@pytest.mark.anyio
+async def test_access_ask_route_returns_validation_error_for_invalid_provider_selection(
+    api_client: httpx.AsyncClient,
+) -> None:
+    response = await api_client.post(
+        "/v1/access:ask",
+        headers=_auth_headers(),
+        json={
+            "query": "alpha",
+            "provider_selection": {
+                "provider": "unknown-provider",
+                "model": "mystery-model",
+            },
+        },
+    )
+
+    assert response.status_code == 400
+    payload = response.json()
+    assert payload["status"] == "error"
+    assert payload["error"]["code"] == "validation_error"
+    assert payload["error"]["details"]["provider_selection"]["provider"] == "unknown-provider"
+
+
+@pytest.mark.anyio
 async def test_frontend_settings_apply_and_restore_routes_persist_snapshots(
     api_client: httpx.AsyncClient,
 ) -> None:
@@ -318,6 +433,8 @@ async def test_frontend_experience_routes_project_product_flows(
     access_result = access.json()["result"]
     assert access_result["resolved_depth"] == "focus"
     assert access_result["candidate_count"] >= 1
+    assert access_result["answer"]["text"]
+    assert access_result["answer"]["support_ids"]
 
     offline = await api_client.post(
         "/v1/frontend/offline",
@@ -426,15 +543,35 @@ async def test_product_transport_scenario_set_v1_pass_rate(
     for scenario in scenarios:
         response = await _run_scenario(api_client, scenario)
         body = response.json()
-        if (
-            response.status_code == scenario.expected_http_status
-            and body["status"] == scenario.expected_app_status
-        ):
+        if _scenario_matches(response, body, scenario):
             passed += 1
 
     pass_rate = passed / len(scenarios)
     assert len(scenarios) >= 40
     assert pass_rate >= 0.95
+
+
+def test_product_transport_scenario_set_v1_includes_frontend_contract_checks() -> None:
+    scenarios = build_product_transport_scenarios_v1(
+        memory_id="memory-1",
+        second_memory_id="memory-2",
+        operation_id="op-1",
+        pending_job_id="job-1",
+        cancel_job_id="job-2",
+        session_id="session-1",
+        principal_id="user-1",
+    )
+    by_name = {scenario.name: scenario for scenario in scenarios}
+
+    frontend_access = by_name["frontend_access_focus"]
+    assert frontend_access.expected_json_values["result.resolved_depth"] == "focus"
+    assert "result.answer.text" in frontend_access.required_nonempty_json_paths
+    assert "result.answer.support_ids" in frontend_access.required_nonempty_json_paths
+
+    access_ask = by_name["access_ask_ok"]
+    assert "result.answer_text" in access_ask.required_nonempty_json_paths
+    assert "result.answer_support_ids" in access_ask.required_nonempty_json_paths
+    assert "result.answer_trace.provider_family" in access_ask.required_nonempty_json_paths
 
 
 async def _seed_rest_state(client: httpx.AsyncClient) -> dict[str, str]:
@@ -522,3 +659,55 @@ async def _run_scenario(
         json=scenario.json_body,
         params=scenario.params,
     )
+
+
+def _scenario_matches(
+    response: Any,
+    body: dict[str, Any],
+    scenario: ProductTransportScenario,
+) -> bool:
+    if response.status_code != scenario.expected_http_status:
+        return False
+    if body.get("status") != scenario.expected_app_status:
+        return False
+    for path in scenario.required_json_paths:
+        found, _ = _json_path_lookup(body, path)
+        if not found:
+            return False
+    for path in scenario.required_nonempty_json_paths:
+        found, value = _json_path_lookup(body, path)
+        if not found or _is_empty_value(value):
+            return False
+    for path, expected in scenario.expected_json_values.items():
+        found, value = _json_path_lookup(body, path)
+        if not found or value != expected:
+            return False
+    return True
+
+
+def _json_path_lookup(payload: Any, path: str) -> tuple[bool, Any]:
+    current = payload
+    for segment in path.split("."):
+        if isinstance(current, dict):
+            if segment not in current:
+                return False, None
+            current = current[segment]
+            continue
+        if isinstance(current, list) and segment.isdigit():
+            index = int(segment)
+            if index >= len(current):
+                return False, None
+            current = current[index]
+            continue
+        return False, None
+    return True, current
+
+
+def _is_empty_value(value: Any) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, str):
+        return not value.strip()
+    if isinstance(value, (list, tuple, set, dict)):
+        return len(value) == 0
+    return False

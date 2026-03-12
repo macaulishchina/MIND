@@ -227,3 +227,57 @@ def test_offline_worker_marks_failed_jobs(tmp_path: Path) -> None:
         assert failed_job.status is OfflineJobStatus.FAILED
         assert failed_job.error is not None
         assert "cross-episode support" in str(failed_job.error["message"])
+
+
+def test_offline_worker_replays_job_provider_selection() -> None:
+    captured: dict[str, object] = {}
+
+    class _FakeMaintenanceService:
+        def process_job(
+            self,
+            job: OfflineJob,
+            *,
+            actor: str,
+            dev_mode: bool = False,
+            provider_selection: dict[str, object] | None = None,
+            telemetry_run_id: str | None = None,
+        ) -> dict[str, object]:
+            captured["job_id"] = job.job_id
+            captured["actor"] = actor
+            captured["provider_selection"] = provider_selection
+            return {"job_id": job.job_id, "ok": True}
+
+    job_store = FakeOfflineJobStore(
+        [
+            new_offline_job(
+                job_id="job-provider-selection",
+                job_kind=OfflineJobKind.REFLECT_EPISODE,
+                payload=ReflectEpisodeJobPayload(
+                    episode_id="episode-004",
+                    focus="worker provider replay",
+                ),
+                provider_selection={
+                    "provider": "openai",
+                    "model": "gpt-4.1-mini",
+                    "endpoint": "https://api.openai.com/v1/responses",
+                    "timeout_ms": 12_000,
+                    "retry_policy": "none",
+                },
+                now=FIXED_TIMESTAMP,
+            )
+        ]
+    )
+    worker = OfflineWorker(
+        job_store,
+        _FakeMaintenanceService(),  # type: ignore[arg-type]
+        worker_id="phase-e-worker",
+        clock=lambda: FIXED_TIMESTAMP,
+    )
+
+    run = worker.run_once(max_jobs=1)
+
+    assert run.succeeded_jobs == 1
+    assert captured["job_id"] == "job-provider-selection"
+    assert captured["actor"] == "phase-e-worker"
+    assert captured["provider_selection"] is not None
+    assert captured["provider_selection"]["provider"] == "openai"  # type: ignore[index]

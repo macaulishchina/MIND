@@ -51,6 +51,11 @@ class OfflineJobAppService:
             job = new_offline_job(
                 job_kind=job_kind,
                 payload=payload,
+                provider_selection=(
+                    req.provider_selection.model_dump(mode="json")
+                    if req.provider_selection is not None
+                    else None
+                ),
                 priority=priority,
             )
 
@@ -70,6 +75,8 @@ class OfflineJobAppService:
                 "job_id": job.job_id,
                 "status": job.status.value,
             }
+            if job.provider_selection is not None:
+                resp.result["provider_selection"] = dict(job.provider_selection)
         except Exception as exc:
             resp.status = AppStatus.ERROR
             resp.error = map_domain_error(exc)

@@ -12,6 +12,7 @@ from pydantic import ValidationError as PydanticValidationError
 from mind.app.context import (
     ExecutionPolicy,
     PrincipalContext,
+    ProviderSelection,
     SessionContext,
     resolve_execution_context,
 )
@@ -79,6 +80,22 @@ class TestContext:
         ctx = resolve_execution_context()
         assert ctx.actor == "system"
         assert ctx.budget_scope_id == "global"
+
+    def test_resolve_execution_context_projects_provider_selection(self) -> None:
+        ctx = resolve_execution_context(
+            provider_selection=ProviderSelection(
+                provider="openai",
+                model="gpt-4.1-mini",
+                endpoint="https://api.openai.com/v1/responses",
+                timeout_ms=12_000,
+                retry_policy="none",
+            )
+        )
+
+        assert ctx.provider_selection is not None
+        assert ctx.provider_selection["provider"] == "openai"
+        assert ctx.provider_selection["model"] == "gpt-4.1-mini"
+        assert ctx.provider_selection["timeout_ms"] == 12_000
 
     def test_resolve_execution_context_with_principal(self) -> None:
         principal = PrincipalContext(principal_id="user-42", tenant_id="acme")
@@ -400,7 +417,42 @@ class TestAccessServiceApp:
         req = _make_request(input={"query": "hello", "task_id": "t-1", "episode_id": "ep-a-1"})
         resp = svc.ask(req)
         assert resp.status == AppStatus.OK
+        assert resp.result is not None
+        assert resp.result["answer_text"]
         assert resp.trace_ref is not None
+
+    def test_ask_rejects_invalid_provider_selection(self, tmp_path: Path) -> None:
+        from mind.access.service import AccessService
+        from mind.app.services.access import MemoryAccessService
+        from mind.primitives.contracts import PrimitiveExecutionContext
+        from mind.primitives.service import PrimitiveService
+
+        store = _build_sqlite_store(tmp_path)
+        ps = PrimitiveService(store)
+        ps.write_raw(
+            {
+                "record_kind": "user_message",
+                "content": "hello",
+                "episode_id": "ep-a-invalid-1",
+                "timestamp_order": 1,
+            },
+            PrimitiveExecutionContext(actor="test"),
+        )
+
+        svc = MemoryAccessService(AccessService(store))
+        req = _make_request(
+            provider_selection=ProviderSelection(
+                provider="unknown-provider",
+                model="mystery-model",
+            ),
+            input={"query": "hello", "task_id": "t-invalid", "episode_id": "ep-a-invalid-1"},
+        )
+        resp = svc.ask(req)
+
+        assert resp.status == AppStatus.ERROR
+        assert resp.error is not None
+        assert resp.error.code is AppErrorCode.VALIDATION_ERROR
+        assert resp.error.details["provider_selection"]["provider"] == "unknown-provider"
 
 
 class TestGovernanceServiceApp:
@@ -437,6 +489,52 @@ class TestGovernanceServiceApp:
         resp = svc.plan_conceal(req)
         assert resp.status == AppStatus.OK
         assert resp.audit_ref is not None
+
+
+class TestOfflineJobService:
+    """OfflineJobAppService roundtrips."""
+
+    def test_submit_job_persists_request_level_provider_selection(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        from mind.app.services.jobs import OfflineJobAppService
+        from mind.offline.service import OfflineMaintenanceService
+
+        store = _build_sqlite_store(tmp_path)
+        svc = OfflineJobAppService(store, OfflineMaintenanceService(store))
+
+        submit = svc.submit_job(
+            _make_request(
+                provider_selection=ProviderSelection(
+                    provider="openai",
+                    model="gpt-4.1-mini",
+                    endpoint="https://api.openai.com/v1/responses",
+                    timeout_ms=12_000,
+                    retry_policy="none",
+                ),
+                input={
+                    "job_kind": "reflect_episode",
+                    "payload": {
+                        "episode_id": "ep-job-provider-selection",
+                        "focus": "persist provider override",
+                    },
+                },
+            )
+        )
+
+        assert submit.status == AppStatus.OK
+        assert submit.result is not None
+        assert submit.result["provider_selection"]["provider"] == "openai"
+
+        get_job = svc.get_job(
+            _make_request(input={"job_id": submit.result["job_id"]})
+        )
+
+        assert get_job.status == AppStatus.OK
+        assert get_job.result is not None
+        assert get_job.result["provider_selection"]["provider"] == "openai"
+        assert get_job.result["provider_selection"]["model"] == "gpt-4.1-mini"
 
 
 class TestUserStateService:
@@ -588,6 +686,63 @@ class TestSystemService:
         assert resp.result["status"] == "available"
         assert resp.result["execution"] == "claude_messages_adapter_ready"
         assert resp.result["auth"]["configured"] is True
+
+    def test_provider_status_honors_request_level_selection(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from mind.app.services.system import SystemStatusService
+
+        monkeypatch.setenv("MIND_PROVIDER", "openai")
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "test-secret")
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+        store = _build_sqlite_store(tmp_path)
+        svc = SystemStatusService(store)
+        resp = svc.provider_status(
+            _make_request(
+                provider_selection=ProviderSelection(
+                    provider="claude",
+                    model="claude-3-7-sonnet-custom",
+                    endpoint="https://claude.example/v1/messages",
+                    timeout_ms=12_000,
+                    retry_policy="none",
+                )
+            )
+        )
+
+        assert resp.status == AppStatus.OK
+        assert resp.result is not None
+        assert resp.result["provider"] == "claude"
+        assert resp.result["provider_family"] == "claude"
+        assert resp.result["model"] == "claude-3-7-sonnet-custom"
+        assert resp.result["endpoint"] == "https://claude.example/v1/messages"
+        assert resp.result["timeout_ms"] == 12_000
+        assert resp.result["retry_policy"] == "none"
+        assert resp.result["status"] == "available"
+
+    def test_provider_status_rejects_invalid_request_level_selection(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        from mind.app.services.system import SystemStatusService
+
+        store = _build_sqlite_store(tmp_path)
+        svc = SystemStatusService(store)
+        resp = svc.provider_status(
+            _make_request(
+                provider_selection=ProviderSelection(
+                    provider="unknown-provider",
+                    model="mystery-model",
+                )
+            )
+        )
+
+        assert resp.status == AppStatus.ERROR
+        assert resp.error is not None
+        assert resp.error.code is AppErrorCode.VALIDATION_ERROR
+        assert resp.error.details["provider_selection"]["provider"] == "unknown-provider"
 
 
 # ---------------------------------------------------------------------------

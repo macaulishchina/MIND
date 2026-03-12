@@ -32,6 +32,33 @@ Phase N 明确不做：
 4. `N4`：实现 `erase_scope`、artifact cleanup 与中断恢复
 5. `N5`：补 Phase N gate、验收报告和故障注入审计
 
+## 当前评估（`2026-03-12`）
+
+### 已完成的基础工作
+
+- `Phase H` 已完成最小 governance control plane：`plan / preview / execute(conceal)`、治理审计链、online / offline conceal 隔离、低权限阻断与 provenance foundation 已存在
+- governance 已暴露到正式 transport：当前仓库已有 REST、MCP 和统一 CLI 的 `plan_conceal / preview_conceal / execute_conceal`
+- `execute_conceal` 已具备最小幂等性：重复执行会进入 `already_concealed_object_ids`，不会因为重复 conceal 直接冲突
+- `Phase L / M / WP-8` 的 telemetry、frontend、product readiness 和 artifact bundle 已收口，因此 `Phase N` 当前不再受产品化入口或调试基线阻塞
+- 当前仓库全量回归结果为 `pytest -q -> 640 passed, 12 skipped`
+
+### 尚未完成的工作
+
+- 还没有 `ProvenanceGovernanceBench v1`，也没有 preview gold fixture、gold rewrite 或 expected cleanup scope
+- 现有治理语义仍然是 `conceal-only`；尚未实现 `erase(memory_world)`、`erase(memory_world_plus_artifacts)`、`erase(full)` 或 `approve(full)`
+- 还没有 `support unit` 级治理投影；`claim / facet / rule / slot` 的最小治理粒度尚未进入正式 contract
+- 还没有 mixed-source rewrite 执行路径，因此 `retained / rewritten / dropped` 的判定、版本更新和 dangling support refs 审计都未落地
+- 还没有 artifact cleanup、fault injection、interrupted resume、面向 `Phase N` 的 idempotent retry 体系
+- 还没有 `governance preview audit`、`rewrite correctness report`、`erase scope cleanup report`、`Phase N gate report`
+
+### 需要做的工作
+
+1. 先做 `N1`，冻结 `ProvenanceGovernanceBench v1` 与 preview gold fixture，把 `N-1 ~ N-8` 对应的基准样例先固定住
+2. 再做 `N2`，把现有 `conceal` preview 从“原始对象级”推进到“support unit 级”投影，并给出 approval/scope 语义
+3. 接着做 `N3`，实现 mixed-source rewrite、版本更新和 `retained / rewritten / dropped` 判定
+4. 然后做 `N4`，补 `erase_scope=memory_world_plus_artifacts`、artifact cleanup、恢复与重试；`full` scope 保持高风险路径
+5. 最后做 `N5`，把 preview audit、rewrite audit、cleanup audit 和 `Phase N gate` 组装成正式验收闭环
+
 ## 推荐推进顺序
 
 ### `N1` 治理 fixture 冻结

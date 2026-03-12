@@ -227,6 +227,14 @@ frontend_url() {
     printf '%s/frontend/\n' "$(api_url)"
 }
 
+product_readiness_gate_output() {
+    printf '%s/artifacts/product/product_readiness_gate.json\n' "$PROJECT_ROOT"
+}
+
+product_readiness_gate_markdown_output() {
+    printf '%s/artifacts/product/product_readiness_gate.md\n' "$PROJECT_ROOT"
+}
+
 build_docs_site() {
     check_uv
     info "构建静态文档站..."
@@ -262,6 +270,17 @@ smoke_check() {
                     info "readiness 检查通过"
                 else
                     warn "readiness 检查未通过 (服务可能仍在初始化)"
+                fi
+                check_uv
+                mkdir -p "$PROJECT_ROOT/artifacts/product"
+                info "执行 product-readiness gate..."
+                if uv run mindtest gate product-readiness \
+                    --output "$(product_readiness_gate_output)" \
+                    --markdown-output "$(product_readiness_gate_markdown_output)"; then
+                    info "product-readiness gate 通过"
+                else
+                    error "product-readiness gate 未通过，请检查工件: $(product_readiness_gate_output) / $(product_readiness_gate_markdown_output)"
+                    return 1
                 fi
                 return 0
             fi

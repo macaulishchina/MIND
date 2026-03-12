@@ -59,7 +59,7 @@ def build_frontend_experience_bench_v1() -> list[FrontendExperienceScenario]:
             "access",
             "desktop",
             False,
-            "Desktop ask/access flow runs auto depth and returns trace-backed context.",
+            "Desktop ask/access flow runs auto depth and returns answer details plus trace-backed context.",
         ),
         FrontendExperienceScenario(
             "access_explain_mobile",
@@ -67,7 +67,7 @@ def build_frontend_experience_bench_v1() -> list[FrontendExperienceScenario]:
             "access",
             "mobile",
             False,
-            "Mobile access explain flow surfaces resolved depth and selected evidence.",
+            "Mobile access explain flow surfaces resolved depth, selected evidence, and answer support details.",
         ),
         FrontendExperienceScenario(
             "offline_reflect_submit_desktop",

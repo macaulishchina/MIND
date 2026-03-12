@@ -15,12 +15,13 @@
 
 ---
 
-## 实施状态（2026-03-10）
+## 实施状态（2026-03-12）
 
-截至 `2026-03-10`，本轮产品化范围已经完成到 `WP-6`：
+截至 `2026-03-12`，产品化基线与后续补充落地状态如下：
 
 - `WP-0 ~ WP-6`：已实现并进入仓库基线
-- `WP-7 / WP-8`：保留为后续阶段，不属于本轮交付范围
+- `WP-7`：已进入补充落地，当前重点是 capability/provider 的产品化收口
+- `WP-8`：产品化收口已完成，后续转入 `Phase N`
 - `mindtest` / `mind` 已分离；`mind/app` 已成为产品边界；`REST API`、`MCP`、产品 CLI 与部署资产均已落地
 - 最终验收口径为：新增 `WP-0 ~ WP-6` 测试与历史 `Phase B ~ J` 回归一并通过
 
@@ -442,7 +443,7 @@ Provider（按需配置）：
 
 ## 8. 可执行工作包
 
-本轮实现按 `WP-0 ~ WP-6` 推进；`WP-7 / WP-8` 保留为后续阶段。
+最初的产品化基线按 `WP-0 ~ WP-6` 推进；截至 `2026-03-12`，`WP-7 / WP-8` 都已开始补充落地。
 
 ### 依赖顺序
 
@@ -463,7 +464,8 @@ WP-8 (Telemetry 与前端就绪) ← 依赖 WP-1
 - `WP-0` 必须最先完成，解除命名空间冲突
 - `WP-1` 是所有产品化 transport 和 CLI 的前置依赖
 - `WP-2` 在 `WP-3` 之前完成，确保 REST 入口启动时已有完整上下文
-- `WP-7 / WP-8` 不属于本轮交付范围，继续作为后续产品化阶段
+- `WP-7` 已从“后续阶段”转入补充落地，当前以 capability/provider 产品边界收口为主
+- `WP-8` 已完成 telemetry/frontend contract 的产品化收口；后续不再作为独立实现主线推进
 
 ### `WP-0` CLI 命名空间分离
 
@@ -631,9 +633,16 @@ MUST-PASS：
 2. `openai / claude / gemini` 兼容样例通过率 `>= 0.95`
 3. provider 不可用时 `fallback_success + structured_failure = 100%`
 
+当前进展（`2026-03-12`）：
+
+- provider config / status 已经产品化，CLI、REST、MCP 都能接收请求级 `provider_selection`
+- `provider_selection` 已投影到 execution context，并接入 `summarize / reflect / answer / offline_reconstruct`
+- offline job submission / worker execution 已能保留并回放请求级 `provider_selection`
+- 非法 provider 选择已收敛为结构化错误，不再依赖未捕获异常
+
 ### `WP-8` Dev Telemetry 与前端就绪
 
-状态：后续阶段
+状态：已收口（`2026-03-12`）
 
 目标：
 
@@ -651,6 +660,21 @@ MUST-PASS：
 2. debug 数据字段完备度 `>= 0.95`
 3. 前端 contract 与 telemetry contract 漂移率 `= 0`
 
+当前进展（`2026-03-12`）：
+
+- **telemetry & frontend contract**：access `ACTION_RESULT` telemetry 已补充 `answer_text / answer_support_ids / answer_trace`；frontend access experience contract 已冻结稳定 `answer` 视图（text / support / provider fallback）；frontend flow report / Phase M gate 已把 access answer contract 漂移纳入正式检查
+- **transport audit & shared scenario 框架**：`ProductTransportScenarioSet v1` 已冻结 shared consistency scenarios，驱动 `remember / recall / ask` 的 REST / MCP / CLI 一致性回归；已新增可序列化的 product transport audit report
+- **Phase M / deployment 集成**：Phase M gate `M-4` 已接入 runtime product transport audit；`DeploymentSmokeSuite v1` 的部署 smoke 检查也已整合 runtime transport audit
+- **readiness pipeline**：`mindtest report product-transport / deployment-smoke / product-readiness` 与 `mindtest gate product-readiness` 已全线落地；`scripts/deploy.sh` 默认执行 readiness gate 并固化工件；`.github/workflows/product-readiness.yml` 把 readiness gate 收口到 CI 基线
+- **Markdown 摘要与 artifact bundle**：三类 readiness 工件均已支持 Markdown 摘要输出；`scripts/product-readiness-artifacts.sh` 可一键生成完整 artifact bundle，CI 直接复用
+
+收口判断（`2026-03-12`）：
+
+- `Phase M` 已正式 `PASS`，并明确给出“`Phase N` 就绪”的阶段结论
+- `WP-8` 的三项 MUST-PASS 目标，当前已由 `Phase M gate`、`product transport audit`、`deployment smoke`、`product-readiness report/gate` 和 CI artifact bundle 共同覆盖
+- 当前仓库全量回归结果为 `pytest -q -> 640 passed, 12 skipped`
+- `WP-8` 现阶段剩余工作只保留 formal closeout：更新文档口径、保留验收工件、把主线切换到 `Phase N`
+
 ---
 
 ## 9. 统一验收工件
@@ -666,7 +690,7 @@ MUST-PASS：
 
 - `UserStateScenarioSet v1`：至少 `30` 个场景；覆盖 principal / tenant / session / conversation / policy
 - `ProductTransportScenarioSet v1`：至少 `40` 个场景；覆盖 REST / MCP / CLI 的核心行为一致性
-- `DeploymentSmokeSuite v1`：至少 `20` 个场景；覆盖 compose、迁移、health、worker、provider config
+- `DeploymentSmokeSuite v1`：至少 `20` 个场景；覆盖 compose、迁移、health、worker、provider config、runtime transport consistency
 - `ProductCliExperienceBench v1`：至少 `30` 个场景；覆盖 `remember / recall / ask / history / session / status / config`
 
 ---

@@ -73,6 +73,7 @@ async def test_static_frontend_assets_are_served(
     assert "submitRetrieve" in app_js.text
     assert "submitAccess" in app_js.text
     assert "submitOffline" in app_js.text
+    assert "回答详情" in app_js.text
     assert "status-chip" in app_js.text
     assert styles.status_code == 200
     assert ".workbench" in styles.text

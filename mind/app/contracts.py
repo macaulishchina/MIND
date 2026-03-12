@@ -12,6 +12,7 @@ from mind.app.context import (
     ExecutionPolicy,
     NamespaceContext,
     PrincipalContext,
+    ProviderSelection,
     SessionContext,
 )
 from mind.primitives.contracts import ContractModel
@@ -109,6 +110,7 @@ class AppRequest(ContractModel):
     namespace: NamespaceContext | None = None
     session: SessionContext | None = None
     policy: ExecutionPolicy | None = None
+    provider_selection: ProviderSelection | None = None
     input: dict[str, Any] = Field(default_factory=dict)  # noqa: A003
 
 

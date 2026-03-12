@@ -19,6 +19,7 @@ from mind.app import (
     ExecutionPolicy,
     NamespaceContext,
     PrincipalContext,
+    ProviderSelection,
     SessionContext,
     SourceChannel,
 )
@@ -33,6 +34,7 @@ _APP_ENVELOPE_KEYS = frozenset(
         "namespace",
         "policy",
         "principal",
+        "provider_selection",
         "session",
     }
 )
@@ -81,6 +83,10 @@ def build_app_request(
 
     namespace = _model_or_none(NamespaceContext, raw_payload.get("namespace"))
     policy = _model_or_none(ExecutionPolicy, raw_payload.get("policy"))
+    provider_selection = _model_or_none(
+        ProviderSelection,
+        raw_payload.get("provider_selection"),
+    )
     session = _build_session_context(request, raw_payload, request_id=request_id)
     idempotency_key = raw_payload.get("idempotency_key") or request.headers.get(
         "X-Idempotency-Key"
@@ -93,6 +99,7 @@ def build_app_request(
         namespace=namespace,
         session=session,
         policy=policy,
+        provider_selection=provider_selection,
         input=raw_input,
     )
 

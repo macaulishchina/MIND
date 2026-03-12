@@ -438,6 +438,7 @@ class SQLiteMemoryStore:
                 job_kind TEXT NOT NULL,
                 status TEXT NOT NULL,
                 payload_json TEXT NOT NULL,
+                provider_selection_json TEXT,
                 priority REAL NOT NULL,
                 available_at TEXT NOT NULL,
                 created_at TEXT NOT NULL,
@@ -464,7 +465,25 @@ class SQLiteMemoryStore:
             ON offline_jobs(job_kind)
             """
         )
+        self._ensure_sqlite_column(
+            "offline_jobs",
+            "provider_selection_json",
+            "TEXT",
+        )
         self.connection.commit()
+
+    def _ensure_sqlite_column(
+        self,
+        table_name: str,
+        column_name: str,
+        column_sql: str,
+    ) -> None:
+        rows = self.connection.execute(f"PRAGMA table_info({table_name})").fetchall()
+        if any(row["name"] == column_name for row in rows):
+            return
+        self.connection.execute(
+            f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_sql}"
+        )
 
     def insert_object(self, obj: dict[str, Any]) -> None:
         with self.transaction() as transaction:
@@ -861,6 +880,7 @@ class SQLiteMemoryStore:
                 job_kind,
                 status,
                 payload_json,
+                provider_selection_json,
                 priority,
                 available_at,
                 created_at,
@@ -872,13 +892,18 @@ class SQLiteMemoryStore:
                 completed_at,
                 result_json,
                 error_json
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 validated.job_id,
                 validated.job_kind.value,
                 validated.status.value,
                 json.dumps(validated.payload, ensure_ascii=True, sort_keys=True),
+                (
+                    json.dumps(validated.provider_selection, ensure_ascii=True, sort_keys=True)
+                    if validated.provider_selection is not None
+                    else None
+                ),
                 float(validated.priority),
                 validated.available_at.isoformat(),
                 validated.created_at.isoformat(),
@@ -1659,6 +1684,11 @@ class SQLiteMemoryStore:
             "job_kind": row["job_kind"],
             "status": row["status"],
             "payload": json.loads(row["payload_json"]),
+            "provider_selection": (
+                json.loads(row["provider_selection_json"])
+                if row["provider_selection_json"]
+                else None
+            ),
             "priority": float(row["priority"]),
             "available_at": row["available_at"],
             "created_at": row["created_at"],

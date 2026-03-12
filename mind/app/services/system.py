@@ -7,7 +7,7 @@ from typing import Any
 from collections.abc import Mapping
 
 from mind.app._service_utils import new_response
-from mind.app.contracts import AppRequest, AppResponse, AppStatus
+from mind.app.contracts import AppError, AppErrorCode, AppRequest, AppResponse, AppStatus
 from mind.capabilities import (
     CAPABILITY_CATALOG,
     CapabilityProviderConfig,
@@ -74,7 +74,19 @@ class SystemStatusService:
     def provider_status(self, req: AppRequest | None = None) -> AppResponse:
         """Return the resolved provider configuration summary."""
         resp = new_response(req, fallback_request_id="provider")
-        provider_config = resolve_capability_provider_config()
+        try:
+            provider_config = resolve_capability_provider_config(
+                selection=req.provider_selection if req is not None else None,
+            )
+        except RuntimeError as exc:
+            resp.status = AppStatus.ERROR
+            resp.error = AppError(
+                code=AppErrorCode.VALIDATION_ERROR,
+                message=str(exc),
+                details=_provider_selection_details(req),
+            )
+            return resp
+
         resp.status = AppStatus.OK
         resp.result = build_provider_status_payload(provider_config)
         return resp
@@ -146,6 +158,12 @@ def _provider_execution(
 
 def _enum_or_value(value: Any) -> Any:
     return getattr(value, "value", value)
+
+
+def _provider_selection_details(req: AppRequest | None) -> dict[str, Any]:
+    if req is None or req.provider_selection is None:
+        return {}
+    return {"provider_selection": req.provider_selection.model_dump(mode="json")}
 
 
 def _env_dev_mode(*, env: Mapping[str, str] | None = None) -> bool:

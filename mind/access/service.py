@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -9,6 +10,11 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from mind.capabilities import (
+    AnswerRequest as CapabilityAnswerRequest,
+    CapabilityService,
+    resolve_capability_provider_config,
+)
 from mind.kernel.store import MemoryStore, StoreError
 from mind.primitives.contracts import (
     PrimitiveExecutionContext,
@@ -135,11 +141,13 @@ class AccessService:
         clock: Callable[[], datetime] | None = None,
         vector_retriever: VectorRetriever | None = None,
         query_embedder: QueryEmbedder | None = None,
+        capability_service: CapabilityService | None = None,
         telemetry_recorder: TelemetryRecorder | None = None,
     ) -> None:
         self.store = store
         self._clock = clock or _utc_now
         self._telemetry_recorder = telemetry_recorder
+        self._capability_service = capability_service or CapabilityService(clock=self._clock)
         self._primitive_service = PrimitiveService(
             store,
             clock=self._clock,
@@ -245,7 +253,12 @@ class AccessService:
             hard_constraints=request.hard_constraints,
             events=events,
         )
-        return self._build_response(execution=execution, trace=trace)
+        return self._build_response(
+            execution=execution,
+            request=request,
+            context=context,
+            trace=trace,
+        )
 
     def _run_auto(
         self,
@@ -322,6 +335,8 @@ class AccessService:
         )
         return self._build_response(
             execution=final_execution,
+            request=request,
+            context=context,
             trace=trace,
             candidate_ids=aggregate_candidate_ids,
             candidate_summaries=aggregate_candidate_summaries,
@@ -580,10 +595,19 @@ class AccessService:
                 payload={
                     "resolved_mode": response.resolved_mode.value,
                     "trace_summary": response.trace.events[-1].summary,
+                    "answer_text": response.answer_text,
+                    "answer_support_ids": list(response.answer_support_ids),
+                    "answer_trace": dict(response.answer_trace or {}),
+                    "summary": _access_action_summary(
+                        response.resolved_mode.value,
+                        response.answer_text,
+                    ),
                 },
                 debug_fields={
                     "trace_event_count": len(response.trace.events),
                     "expanded_read_count": len(response.expanded_object_ids),
+                    "answer_length": len(response.answer_text or ""),
+                    "answer_support_count": len(response.answer_support_ids),
                 },
             ),
         )
@@ -929,12 +953,15 @@ class AccessService:
         self,
         *,
         execution: _ModeExecution,
+        request: AccessRunRequest,
+        context: PrimitiveExecutionContext,
         trace: AccessRunTrace,
         candidate_ids: list[str] | None = None,
         candidate_summaries: list[dict[str, Any]] | None = None,
         read_object_ids: list[str] | None = None,
         expanded_object_ids: list[str] | None = None,
     ) -> AccessRunResponse:
+        answer = self._answer(request=request, execution=execution, context=context)
         return AccessRunResponse(
             resolved_mode=execution.mode,
             context_kind=execution.context_kind,
@@ -957,9 +984,84 @@ class AccessService:
             ),
             selected_object_ids=list(execution.selected_object_ids),
             selected_summaries=list(execution.selected_summaries),
+            answer_text=answer["answer_text"],
+            answer_support_ids=answer["answer_support_ids"],
+            answer_trace=answer["answer_trace"],
             verification_notes=list(execution.verification_notes),
             trace=trace,
         )
+
+    def _answer(
+        self,
+        *,
+        request: AccessRunRequest,
+        execution: _ModeExecution,
+        context: PrimitiveExecutionContext,
+    ) -> dict[str, Any]:
+        draft_text = self._answer_draft_text(execution)
+        if not draft_text:
+            draft_text = execution.context_text
+        provider_config = self._capability_provider_config(context)
+        support_ids = self._answer_support_ids(execution)
+        answer = self._capability_service.answer(
+            CapabilityAnswerRequest(
+                request_id=f"access-answer-{request.task_id}-{execution.mode.value}",
+                question=_answer_question_text(request.query),
+                context_text=draft_text,
+                support_ids=support_ids,
+                hard_constraints=list(request.hard_constraints),
+            ),
+            provider_config=provider_config,
+        )
+        return {
+            "answer_text": answer.answer_text,
+            "answer_support_ids": list(answer.support_ids),
+            "answer_trace": answer.trace.model_dump(mode="json"),
+        }
+
+    @staticmethod
+    def _answer_support_ids(execution: _ModeExecution) -> list[str]:
+        if execution.context_kind is AccessContextKind.WORKSPACE:
+            return list(execution.selected_object_ids)
+        return list(execution.context_object_ids)
+
+    def _answer_draft_text(self, execution: _ModeExecution) -> str:
+        try:
+            payload = json.loads(execution.context_text)
+        except (TypeError, ValueError):
+            return execution.context_text
+
+        if execution.context_kind is AccessContextKind.RAW_TOPK:
+            objects = payload.get("objects")
+            if not isinstance(objects, list):
+                return execution.context_text
+            parts = [
+                _support_text_for_object_payload(obj)
+                for obj in objects
+                if isinstance(obj, dict)
+            ]
+            return " | ".join(part for part in parts if part)
+
+        slots = payload.get("slots")
+        if not isinstance(slots, list):
+            return execution.context_text
+        parts = [
+            str(slot.get("summary", "")).strip()
+            for slot in slots
+            if isinstance(slot, dict) and str(slot.get("summary", "")).strip()
+        ]
+        return " | ".join(parts)
+
+    @staticmethod
+    def _capability_provider_config(
+        context: PrimitiveExecutionContext,
+    ) -> Any:
+        if not context.provider_selection:
+            return None
+        try:
+            return resolve_capability_provider_config(selection=context.provider_selection)
+        except RuntimeError as exc:
+            raise AccessServiceError(str(exc)) from exc
 
     @staticmethod
     def _require_retrieve_success(
@@ -1030,6 +1132,32 @@ def _object_content_preview(content: Any) -> str | None:
     if not compact:
         return None
     return compact[:77] + "..." if len(compact) > 80 else compact
+
+
+def _support_text_for_object_payload(obj: dict[str, Any]) -> str:
+    content = obj.get("content")
+    if isinstance(content, dict):
+        for key in ("summary", "text", "result_summary"):
+            value = content.get(key)
+            if value is not None:
+                return str(value)
+    if content is not None:
+        return json.dumps(content, ensure_ascii=True, sort_keys=True)
+    return ""
+
+
+def _answer_question_text(query: str | dict[str, Any]) -> str:
+    if isinstance(query, str):
+        return query
+    return json.dumps(query, ensure_ascii=True, sort_keys=True)
+
+
+def _access_action_summary(resolved_mode: str, answer_text: str | None) -> str:
+    if not answer_text:
+        return f"{resolved_mode} access completed"
+    compact = " ".join(answer_text.split())
+    excerpt = compact[:69] + "..." if len(compact) > 72 else compact
+    return f"{resolved_mode} answer: {excerpt}"
 
 
 def _query_text(query: str | dict[str, Any]) -> str:

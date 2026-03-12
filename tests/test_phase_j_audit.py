@@ -250,6 +250,7 @@ class TestEntryPointConsistency:
             ("mind.cli", "cli_gate_main"),
             ("mind.cli", "benchmark_gate_main"),
             ("mind.cli", "strategy_gate_main"),
+            ("mind.cli", "product_readiness_gate_main"),
             ("mind.cli", "mind_main"),
         ]
         for module_path, func_name in gate_mains:

@@ -3,14 +3,23 @@
 from __future__ import annotations
 
 import os
+import json
 from pathlib import Path
 
+import pytest
+
+from mind.fixtures import ProductTransportAuditReport
 from mind.fixtures.deployment_smoke_suite import (
     build_deployment_smoke_suite_v1,
     evaluate_deployment_smoke_suite,
     parse_compose_file,
     parse_dockerfile,
+    read_deployment_smoke_report_json,
+    render_deployment_smoke_report_markdown,
+    write_deployment_smoke_report_markdown,
+    write_deployment_smoke_report_json,
 )
+from mind.cli import deployment_smoke_report_main
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -217,7 +226,12 @@ def test_env_prod_covers_required_vars() -> None:
 
 def test_scripts_exist_and_executable() -> None:
     """Shell scripts must exist and be executable."""
-    for script_name in ("dev.sh", "deploy.sh", "docs-release.sh"):
+    for script_name in (
+        "dev.sh",
+        "deploy.sh",
+        "docs-release.sh",
+        "product-readiness-artifacts.sh",
+    ):
         script_path = ROOT / "scripts" / script_name
         assert script_path.exists(), f"{script_name} does not exist"
         assert os.access(script_path, os.X_OK), f"{script_name} is not executable"
@@ -240,6 +254,9 @@ def test_scripts_use_isolated_env_files_and_projects() -> None:
     assert "build_docs_site" in deploy_script
     assert "--attach" in deploy_script
     assert "compose up --build -d" in deploy_script
+    assert "mindtest gate product-readiness" in deploy_script
+    assert "artifacts/product/product_readiness_gate.json" in deploy_script
+    assert "artifacts/product/product_readiness_gate.md" in deploy_script
     assert "API 文档" in deploy_script
     assert "api_docs_url" in deploy_script
 
@@ -252,6 +269,28 @@ def test_docs_release_script_builds_and_publishes_static_site() -> None:
     assert 'DOCS_BIND="${DOCS_BIND:-0.0.0.0:18604}"' in docs_release_script
     assert "mkdocs build --strict" in docs_release_script
     assert "publish-local" in docs_release_script
+
+
+def test_product_readiness_artifact_script_generates_full_bundle() -> None:
+    artifact_script = (
+        ROOT / "scripts" / "product-readiness-artifacts.sh"
+    ).read_text(encoding="utf-8")
+
+    assert "--output-dir" in artifact_script
+    assert "command -v mindtest" in artifact_script
+    assert "uv run mindtest" in artifact_script
+    assert "run_mindtest report product-transport" in artifact_script
+    assert "transport_audit_report.json" in artifact_script
+    assert "transport_audit_report.md" in artifact_script
+    assert "run_mindtest report deployment-smoke" in artifact_script
+    assert "deployment_smoke_report.json" in artifact_script
+    assert "deployment_smoke_report.md" in artifact_script
+    assert "run_mindtest report product-readiness" in artifact_script
+    assert "product_readiness_report.json" in artifact_script
+    assert "product_readiness_report.md" in artifact_script
+    assert "run_mindtest gate product-readiness" in artifact_script
+    assert "product_readiness_gate.json" in artifact_script
+    assert "product_readiness_gate.md" in artifact_script
 
 
 def test_api_dockerfile_bundles_frontend_assets() -> None:
@@ -281,5 +320,113 @@ def test_deployment_smoke_suite_v1() -> None:
 
     assert len(scenarios) >= 20
     assert len(report.results) == len(scenarios)
+    assert report.schema_version == "deployment_smoke_report_v1"
+    assert report.suite_version == "DeploymentSmokeSuite v1"
     assert report.pass_rate >= 0.95
     assert all(result.passed for result in report.results)
+
+
+def test_deployment_smoke_suite_includes_runtime_product_transport_checks() -> None:
+    scenario_names = {scenario.name for scenario in build_deployment_smoke_suite_v1()}
+
+    assert "runtime_product_transport_coverage" in scenario_names
+    assert "runtime_product_transport_rest_mcp" in scenario_names
+    assert "runtime_product_transport_rest_cli" in scenario_names
+
+
+def test_deployment_smoke_suite_marks_runtime_product_transport_regression(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "mind.fixtures.deployment_smoke_suite.evaluate_runtime_product_transport_audit_report",
+        lambda: ProductTransportAuditReport(
+            schema_version="product_transport_audit_v1",
+            generated_at="2026-03-12T00:00:00+00:00",
+            bench_version="ProductTransportConsistencyScenarios v1",
+            scenario_count=3,
+            passed_count=2,
+            rest_mcp_pair_count=3,
+            rest_mcp_match_count=3,
+            rest_cli_pair_count=3,
+            rest_cli_match_count=2,
+            failure_ids=("ask_cli",),
+            scenario_results=(),
+        ),
+    )
+
+    report = evaluate_deployment_smoke_suite(ROOT)
+    result_map = {result.name: result for result in report.results}
+
+    assert result_map["runtime_product_transport_coverage"].passed is False
+    assert result_map["runtime_product_transport_rest_mcp"].passed is True
+    assert result_map["runtime_product_transport_rest_cli"].passed is False
+
+
+def test_deployment_smoke_report_round_trips_json(tmp_path: Path) -> None:
+    report = evaluate_deployment_smoke_suite(ROOT)
+
+    output_path = write_deployment_smoke_report_json(
+        tmp_path / "deployment_smoke_report.json",
+        report,
+    )
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    restored = read_deployment_smoke_report_json(output_path)
+
+    assert payload["schema_version"] == "deployment_smoke_report_v1"
+    assert payload["suite_version"] == "DeploymentSmokeSuite v1"
+    assert payload["passed"] is True
+    assert payload["pass_rate"] >= 0.95
+    assert restored == report
+
+
+def test_deployment_smoke_report_markdown_renders_stable_summary() -> None:
+    report = evaluate_deployment_smoke_suite(ROOT)
+
+    markdown = render_deployment_smoke_report_markdown(
+        report,
+        title="Deployment Smoke Report",
+    )
+
+    assert markdown.startswith("# Deployment Smoke Report\n")
+    assert "| Scenario | Status | Description |" in markdown
+    assert "runtime_product_transport_coverage" in markdown
+
+
+def test_deployment_smoke_report_markdown_is_written_to_disk(tmp_path: Path) -> None:
+    report = evaluate_deployment_smoke_suite(ROOT)
+
+    output_path = write_deployment_smoke_report_markdown(
+        tmp_path / "deployment_smoke_report.md",
+        report,
+    )
+
+    markdown = output_path.read_text(encoding="utf-8")
+    assert output_path.exists()
+    assert markdown.startswith("# Deployment Smoke Report\n")
+    assert "- Status: `PASS`" in markdown
+
+
+def test_deployment_smoke_report_main_prints_summary(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    output_path = tmp_path / "deployment_smoke_report.json"
+    markdown_output_path = tmp_path / "deployment_smoke_report.md"
+
+    exit_code = deployment_smoke_report_main(
+        [
+            "--output",
+            str(output_path),
+            "--markdown-output",
+            str(markdown_output_path),
+        ]
+    )
+
+    assert exit_code == 0
+    assert output_path.exists()
+    assert markdown_output_path.exists()
+    output = capsys.readouterr().out
+    assert "Deployment smoke report" in output
+    assert f"markdown_path={markdown_output_path}" in output
+    assert "pass_rate=" in output
+    assert "deployment_smoke_report=PASS" in output

@@ -595,6 +595,7 @@ def test_gate_help_lists_real_gate_subcommands(capsys: pytest.CaptureFixture[str
     assert "phase-i" in output
     assert "phase-j" in output
     assert "phase-k" in output
+    assert "product-readiness" in output
     assert "postgres-regression" in output
 
 
@@ -692,6 +693,35 @@ def test_gate_phase_k_forwards_output_and_live_providers(
     ]
 
 
+def test_gate_product_readiness_forwards_output_and_markdown(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, Sequence[str] | None] = {"argv": None}
+
+    def fake_product_readiness_gate_main(argv: Sequence[str] | None = None) -> int:
+        captured["argv"] = argv
+        return 0
+
+    monkeypatch.setattr("mind.cli.product_readiness_gate_main", fake_product_readiness_gate_main)
+
+    exit_code = mind_main(
+        [
+            "gate",
+            "product-readiness",
+            "--output",
+            "/tmp/product_readiness_gate.json",
+            "--markdown-output",
+            "/tmp/product_readiness_gate.md",
+        ]
+    )
+
+    assert exit_code == 0
+    assert captured["argv"] == [
+        "--output",
+        "/tmp/product_readiness_gate.json",
+        "--markdown-output",
+        "/tmp/product_readiness_gate.md",
+    ]
+
+
 def test_gate_postgres_regression_forwards_dsn(monkeypatch: pytest.MonkeyPatch) -> None:
     captured: dict[str, Sequence[str] | None] = {"argv": None}
 
@@ -717,6 +747,9 @@ def test_report_help_lists_real_report_subcommands(capsys: pytest.CaptureFixture
     assert "phase-f-ci" in output
     assert "phase-g-cost" in output
     assert "phase-k-compatibility" in output
+    assert "product-transport" in output
+    assert "deployment-smoke" in output
+    assert "product-readiness" in output
     assert "acceptance" in output
 
 
@@ -813,6 +846,108 @@ def test_report_phase_k_compatibility_forwards_output_and_live_providers(
         "/tmp/phase_k_compatibility.json",
         "--live-provider",
         "gemini",
+    ]
+
+
+def test_report_product_transport_forwards_output_and_markdown(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Sequence[str] | None] = {"argv": None}
+
+    def fake_product_transport_report_main(argv: Sequence[str] | None = None) -> int:
+        captured["argv"] = argv
+        return 0
+
+    monkeypatch.setattr(
+        "mind.cli.product_transport_report_main",
+        fake_product_transport_report_main,
+    )
+
+    exit_code = mind_main(
+        [
+            "report",
+            "product-transport",
+            "--output",
+            "/tmp/product_transport_audit.json",
+            "--markdown-output",
+            "/tmp/product_transport_audit.md",
+        ]
+    )
+
+    assert exit_code == 0
+    assert captured["argv"] == [
+        "--output",
+        "/tmp/product_transport_audit.json",
+        "--markdown-output",
+        "/tmp/product_transport_audit.md",
+    ]
+
+
+def test_report_deployment_smoke_forwards_output_and_markdown(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Sequence[str] | None] = {"argv": None}
+
+    def fake_deployment_smoke_report_main(argv: Sequence[str] | None = None) -> int:
+        captured["argv"] = argv
+        return 0
+
+    monkeypatch.setattr(
+        "mind.cli.deployment_smoke_report_main",
+        fake_deployment_smoke_report_main,
+    )
+
+    exit_code = mind_main(
+        [
+            "report",
+            "deployment-smoke",
+            "--output",
+            "/tmp/deployment_smoke_report.json",
+            "--markdown-output",
+            "/tmp/deployment_smoke_report.md",
+        ]
+    )
+
+    assert exit_code == 0
+    assert captured["argv"] == [
+        "--output",
+        "/tmp/deployment_smoke_report.json",
+        "--markdown-output",
+        "/tmp/deployment_smoke_report.md",
+    ]
+
+
+def test_report_product_readiness_forwards_output_and_markdown(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Sequence[str] | None] = {"argv": None}
+
+    def fake_product_readiness_report_main(argv: Sequence[str] | None = None) -> int:
+        captured["argv"] = argv
+        return 0
+
+    monkeypatch.setattr(
+        "mind.cli.product_readiness_report_main",
+        fake_product_readiness_report_main,
+    )
+
+    exit_code = mind_main(
+        [
+            "report",
+            "product-readiness",
+            "--output",
+            "/tmp/product_readiness_report.json",
+            "--markdown-output",
+            "/tmp/product_readiness_report.md",
+        ]
+    )
+
+    assert exit_code == 0
+    assert captured["argv"] == [
+        "--output",
+        "/tmp/product_readiness_report.json",
+        "--markdown-output",
+        "/tmp/product_readiness_report.md",
     ]
 
 

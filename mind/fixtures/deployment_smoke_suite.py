@@ -2,11 +2,21 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import yaml  # type: ignore[import-untyped]
+
+from .product_transport_audit import (
+    ProductTransportAuditReport,
+    evaluate_runtime_product_transport_audit_report,
+)
+
+_SCHEMA_VERSION = "deployment_smoke_report_v1"
+_SUITE_VERSION = "DeploymentSmokeSuite v1"
 
 
 @dataclass(frozen=True)
@@ -22,6 +32,7 @@ class DeploymentSmokeResult:
     """Outcome of one smoke validation scenario."""
 
     name: str
+    description: str
     passed: bool
 
 
@@ -29,6 +40,9 @@ class DeploymentSmokeResult:
 class DeploymentSmokeReport:
     """Aggregated smoke suite report."""
 
+    schema_version: str
+    generated_at: str
+    suite_version: str
     results: tuple[DeploymentSmokeResult, ...]
 
     @property
@@ -37,6 +51,22 @@ class DeploymentSmokeReport:
             return 0.0
         passed = sum(1 for result in self.results if result.passed)
         return passed / len(self.results)
+
+    @property
+    def scenario_count(self) -> int:
+        return len(self.results)
+
+    @property
+    def passed_count(self) -> int:
+        return sum(1 for result in self.results if result.passed)
+
+    @property
+    def failure_ids(self) -> tuple[str, ...]:
+        return tuple(result.name for result in self.results if not result.passed)
+
+    @property
+    def passed(self) -> bool:
+        return self.passed_count == self.scenario_count
 
 
 def build_deployment_smoke_suite_v1() -> tuple[DeploymentSmokeScenario, ...]:
@@ -141,10 +171,27 @@ def build_deployment_smoke_suite_v1() -> tuple[DeploymentSmokeScenario, ...]:
             "deploy_script_includes_docs_overlay",
             "deploy script includes compose.docs.yaml in production deploy",
         ),
+        DeploymentSmokeScenario(
+            "runtime_product_transport_coverage",
+            "runtime product transport audit coverage satisfies the deployment floor",
+        ),
+        DeploymentSmokeScenario(
+            "runtime_product_transport_rest_mcp",
+            "runtime REST and MCP transports stay consistent in the frozen audit",
+        ),
+        DeploymentSmokeScenario(
+            "runtime_product_transport_rest_cli",
+            "runtime REST and product CLI transports stay consistent in the frozen audit",
+        ),
     )
 
 
-def evaluate_deployment_smoke_suite(root: Path) -> DeploymentSmokeReport:
+def evaluate_deployment_smoke_suite(
+    root: Path,
+    *,
+    runtime_product_transport_report: ProductTransportAuditReport | None = None,
+    generated_at: datetime | None = None,
+) -> DeploymentSmokeReport:
     """Evaluate the deployment smoke suite against the repository root."""
 
     compose_data = _load_yaml(root / "compose.yaml")
@@ -174,6 +221,9 @@ def evaluate_deployment_smoke_suite(root: Path) -> DeploymentSmokeReport:
     docs_dev_instructions = _parse_dockerfile_instructions(dockerfile_docs_dev)
     worker_instructions = _parse_dockerfile_instructions(dockerfile_worker)
     env_vars = _read_env_var_names(env_example)
+    runtime_product_transport_checks = _build_runtime_product_transport_checks(
+        runtime_product_transport_report
+    )
 
     checks: dict[str, bool] = {
         "compose_exists": (root / "compose.yaml").exists(),
@@ -267,13 +317,99 @@ def evaluate_deployment_smoke_suite(root: Path) -> DeploymentSmokeReport:
         "deploy_script_includes_docs_overlay": 'DOCS_FILE="compose.docs.yaml"' in _read_text(
             root / "scripts" / "deploy.sh"
         ),
+        **runtime_product_transport_checks,
     }
 
     results = tuple(
-        DeploymentSmokeResult(name=scenario.name, passed=checks.get(scenario.name, False))
+        DeploymentSmokeResult(
+            name=scenario.name,
+            description=scenario.description,
+            passed=checks.get(scenario.name, False),
+        )
         for scenario in build_deployment_smoke_suite_v1()
     )
-    return DeploymentSmokeReport(results=results)
+    return DeploymentSmokeReport(
+        schema_version=_SCHEMA_VERSION,
+        generated_at=(generated_at or datetime.now(UTC)).isoformat(),
+        suite_version=_SUITE_VERSION,
+        results=results,
+    )
+
+
+def write_deployment_smoke_report_json(path: str | Path, report: DeploymentSmokeReport) -> Path:
+    """Persist the full deployment smoke report as JSON."""
+
+    output_path = Path(path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(
+        json.dumps(_report_to_dict(report), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return output_path
+
+
+def render_deployment_smoke_report_markdown(
+    report: DeploymentSmokeReport,
+    *,
+    title: str = "Deployment Smoke Report",
+) -> str:
+    """Render the deployment smoke report as Markdown."""
+
+    lines = [
+        f"# {title}",
+        "",
+        f"- Generated at: `{report.generated_at}`",
+        f"- Suite version: `{report.suite_version}`",
+        f"- Status: `{'PASS' if report.passed else 'FAIL'}`",
+        f"- Pass rate: `{report.passed_count}/{report.scenario_count}` (`{report.pass_rate:.4f}`)",
+        "",
+        "| Scenario | Status | Description |",
+        "| --- | --- | --- |",
+    ]
+    for result in report.results:
+        lines.append(
+            "| "
+            f"{result.name} | "
+            f"{'PASS' if result.passed else 'FAIL'} | "
+            f"{result.description} |"
+        )
+    if report.failure_ids:
+        lines.extend(
+            [
+                "",
+                f"Failing scenarios: `{','.join(report.failure_ids)}`",
+            ]
+        )
+    return "\n".join(lines) + "\n"
+
+
+def write_deployment_smoke_report_markdown(
+    path: str | Path,
+    report: DeploymentSmokeReport,
+    *,
+    title: str = "Deployment Smoke Report",
+) -> Path:
+    """Persist the deployment smoke report as Markdown."""
+
+    output_path = Path(path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(
+        render_deployment_smoke_report_markdown(report, title=title),
+        encoding="utf-8",
+    )
+    return output_path
+
+
+def read_deployment_smoke_report_json(path: str | Path) -> DeploymentSmokeReport:
+    """Load a previously persisted deployment smoke report."""
+
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    if payload.get("schema_version") != _SCHEMA_VERSION:
+        raise ValueError(
+            "unexpected deployment smoke report schema_version "
+            f"({payload.get('schema_version')!r})"
+        )
+    return _report_from_dict(payload)
 
 
 def parse_compose_file(path: Path) -> dict[str, Any]:
@@ -343,6 +479,64 @@ def _read_env_var_names(path: Path) -> set[str]:
             continue
         env_vars.add(stripped.split("=", 1)[0])
     return env_vars
+
+
+def _build_runtime_product_transport_checks(
+    report: ProductTransportAuditReport | None = None,
+) -> dict[str, bool]:
+    runtime_report = report
+    if runtime_report is None:
+        try:
+            runtime_report = evaluate_runtime_product_transport_audit_report()
+        except Exception:
+            return {
+                "runtime_product_transport_coverage": False,
+                "runtime_product_transport_rest_mcp": False,
+                "runtime_product_transport_rest_cli": False,
+            }
+
+    return {
+        "runtime_product_transport_coverage": runtime_report.coverage >= 0.95,
+        "runtime_product_transport_rest_mcp": runtime_report.rest_mcp_pass_rate >= 0.95,
+        "runtime_product_transport_rest_cli": runtime_report.rest_cli_pass_rate >= 0.95,
+    }
+
+
+def _report_to_dict(report: DeploymentSmokeReport) -> dict[str, Any]:
+    return {
+        "schema_version": report.schema_version,
+        "generated_at": report.generated_at,
+        "suite_version": report.suite_version,
+        "scenario_count": report.scenario_count,
+        "passed_count": report.passed_count,
+        "pass_rate": report.pass_rate,
+        "passed": report.passed,
+        "failure_ids": list(report.failure_ids),
+        "results": [
+            {
+                "name": result.name,
+                "description": result.description,
+                "passed": result.passed,
+            }
+            for result in report.results
+        ],
+    }
+
+
+def _report_from_dict(payload: dict[str, Any]) -> DeploymentSmokeReport:
+    return DeploymentSmokeReport(
+        schema_version=str(payload["schema_version"]),
+        generated_at=str(payload["generated_at"]),
+        suite_version=str(payload["suite_version"]),
+        results=tuple(
+            DeploymentSmokeResult(
+                name=str(result["name"]),
+                description=str(result["description"]),
+                passed=bool(result["passed"]),
+            )
+            for result in payload.get("results", [])
+        ),
+    )
 
 
 def _depends_on_healthy(service: dict[str, Any], dependency: str) -> bool:

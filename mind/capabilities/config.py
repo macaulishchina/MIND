@@ -4,14 +4,11 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from os import environ
-from typing import Any, TYPE_CHECKING
+from typing import Any
 
 from pydantic import Field
 
 from .contracts import CapabilityModel, CapabilityProviderFamily
-
-if TYPE_CHECKING:
-    from mind.app.context import ProviderSelection
 
 
 class CapabilityAuthMode(str):
@@ -69,7 +66,7 @@ class CapabilityProviderConfig(CapabilityModel):
 
 def resolve_capability_provider_config(
     *,
-    selection: "ProviderSelection | None" = None,
+    selection: Any = None,
     env: Mapping[str, str] | None = None,
 ) -> CapabilityProviderConfig:
     """Resolve capability provider config from context overrides and environment."""
@@ -201,8 +198,12 @@ def _default_api_version_for_family(family: CapabilityProviderFamily) -> str | N
     return "v1beta"
 
 
-def _selection_value(selection: "ProviderSelection | None", field: str) -> Any:
-    return getattr(selection, field, None) if selection is not None else None
+def _selection_value(selection: Any, field: str) -> Any:
+    if selection is None:
+        return None
+    if isinstance(selection, Mapping):
+        return selection.get(field)
+    return getattr(selection, field, None)
 
 
 def _int_or_default(*values: Any) -> int:

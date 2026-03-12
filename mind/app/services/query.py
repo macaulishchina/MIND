@@ -31,7 +31,12 @@ class MemoryQueryService:
     def get_memory(self, req: AppRequest) -> AppResponse:
         """Get a single memory object by ID."""
         resp = new_response(req)
-        ctx = resolve_execution_context(req.principal, req.session, req.policy)
+        ctx = resolve_execution_context(
+            req.principal,
+            req.session,
+            req.policy,
+            req.provider_selection,
+        )
         object_id = req.input.get("object_id", "")
 
         if not object_id:
@@ -112,7 +117,12 @@ class MemoryQueryService:
     def recall(self, req: AppRequest) -> AppResponse:
         """Recall memories via retrieve primitive."""
         resp = new_response(req)
-        ctx = resolve_execution_context(req.principal, req.session, req.policy)
+        ctx = resolve_execution_context(
+            req.principal,
+            req.session,
+            req.policy,
+            req.provider_selection,
+        )
 
         query = req.input.get("query", "")
         query_modes = req.input.get("query_modes", ["keyword"])

@@ -120,10 +120,12 @@ EOF
 }
 
 check_deps() {
-    if ! command -v docker >/dev/null 2>&1; then
-        error "未找到 docker，请先安装"
-        exit 1
-    fi
+    for cmd in docker curl; do
+        if ! command -v "$cmd" >/dev/null 2>&1; then
+            error "未找到 $cmd，请先安装"
+            exit 1
+        fi
+    done
     if ! docker compose version >/dev/null 2>&1; then
         error "未找到 docker compose 插件，请安装 Docker Compose V2"
         exit 1
@@ -212,7 +214,7 @@ compose() {
 show_detached_summary() {
     echo ""
     info "========================================="
-    info "  开发环境已在后台启动"
+    info "  开发环境已启动并通过可访问性检查"
     info "  API:      $(format_link "$(api_url)")"
     info "  项目页面: $(format_link "$(frontend_url)")"
     info "  API 文档: $(format_link "$(api_docs_url)")"
@@ -222,6 +224,38 @@ show_detached_summary() {
     info "  日志:     ./scripts/dev.sh --logs"
     info "  状态:     ./scripts/dev.sh --status"
     info "========================================="
+}
+
+wait_for_dev_ready() {
+    info "等待开发环境就绪..."
+    api_key="$(read_env_value "MIND_API_KEY" "$PROJECT_ROOT/$ENV_FILE")"
+    max_wait=90
+    elapsed=0
+
+    while [ "$elapsed" -lt "$max_wait" ]; do
+        if curl -sf -H "X-API-Key: $api_key" "$(api_health_url)" >/dev/null 2>&1 \
+            && curl -sf "$(frontend_url)" >/dev/null 2>&1 \
+            && curl -sf "$(docs_url)" >/dev/null 2>&1; then
+            info "health 检查通过"
+            info "frontend 检查通过"
+            info "docs 检查通过"
+
+            if curl -sf -H "X-API-Key: $api_key" "$(api_readiness_url)" >/dev/null 2>&1; then
+                info "readiness 检查通过"
+            else
+                warn "readiness 检查未通过 (服务可能仍在初始化)"
+            fi
+            return 0
+        fi
+
+        sleep 3
+        elapsed=$((elapsed + 3))
+        printf "."
+    done
+
+    echo ""
+    error "开发环境可访问性检查超时，请检查日志: ./scripts/dev.sh --logs"
+    return 1
 }
 
 ACTION="up"
@@ -295,6 +329,7 @@ case "$ACTION" in
             else
                 info "强制重建镜像并在后台启动开发环境..."
                 compose up --build --force-recreate -d
+                wait_for_dev_ready
                 show_detached_summary
             fi
         else
@@ -304,6 +339,7 @@ case "$ACTION" in
             else
                 info "在后台启动开发环境 (增量构建)..."
                 compose up --build -d
+                wait_for_dev_ready
                 show_detached_summary
             fi
         fi

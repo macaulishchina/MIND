@@ -185,6 +185,8 @@ def test_registry_exposes_frontend_experience_service(tmp_path: Path) -> None:
     assert access.result is not None
     assert access.result["resolved_depth"] == "focus"
     assert access.result["candidate_count"] >= 1
+    assert access.result["answer"]["text"]
+    assert access.result["answer"]["support_ids"]
 
     assert offline.status is AppStatus.OK
     assert offline.result == {"job_id": offline.result["job_id"], "status": "pending"}

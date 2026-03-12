@@ -348,6 +348,20 @@ def test_response_rejects_workspace_without_selected_ids() -> None:
         )
 
 
+def test_response_rejects_answer_trace_without_answer_text() -> None:
+    with pytest.raises(ValueError, match="answer_trace requires answer_text"):
+        AccessRunResponse(
+            resolved_mode=AccessMode.RECALL,
+            context_kind=AccessContextKind.WORKSPACE,
+            context_object_ids=["obj-1"],
+            context_text='{"slots": []}',
+            context_token_count=10,
+            selected_object_ids=["obj-1"],
+            answer_trace={"provider_family": "deterministic"},
+            trace=_locked_trace(mode=AccessMode.RECALL),
+        )
+
+
 def test_switch_event_rejects_same_from_and_target_mode() -> None:
     with pytest.raises(ValueError, match="mode switches must change the effective mode"):
         AccessModeTraceEvent(

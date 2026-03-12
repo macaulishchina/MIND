@@ -74,6 +74,9 @@ mind recall remember
 mind ask remember --mode auto
 ```
 
+`mind ask` 现在会显示 capability layer 生成的最终 answer，以及本次 access 的
+上下文/候选/选中对象摘要。
+
 ### history
 
 列最近记忆：
@@ -100,7 +103,27 @@ mind status
 
 ```bash
 mind config
+mind config --provider openai --model gpt-4.1-mini
 ```
+
+`mind config` 现在会同时显示 runtime 配置和 provider 状态。
+如果传 `--provider / --model / --endpoint / --timeout-ms / --retry-policy`，
+CLI 会走一次请求级 provider resolution 预览，不需要先修改环境变量。
+
+`--provider` 合法值：`stub`、`openai`、`claude`、`gemini`。
+
+## 各命令参数一览
+
+| 命令 | 参数 | 说明 |
+|---|---|---|
+| `remember` | `content`（必填）、`--episode-id`、`--timestamp-order`、`--principal-id`、`--session-id`、`--conversation-id` | 写入一条记忆 |
+| `recall` | `query`（必填）、`--query-mode`、`--max-candidates`、`--principal-id`、`--session-id` | 按 query 检索候选 |
+| `ask` | `query`（必填）、`--mode`、`--task-id`、`--episode-id`、`--principal-id`、`--session-id` | 向记忆提问，返回 answer |
+| `history` | `--limit`、`--offset`、`--episode-id`、`--principal-id` | 最近记忆列表 |
+| `session open` | `--principal-id`（必填）、`--session-id`（必填）、`--conversation-id`、`--channel`、`--client-id`、`--device-id` | 打开/更新会话 |
+| `session list` | `--principal-id` | 列出会话 |
+| `session show` | `session_id`（必填） | 查看单个会话 |
+| `config` | `--provider`、`--model`、`--endpoint`、`--timeout-ms` | 配置与 provider 预览 |
 
 ## 输出约定
 

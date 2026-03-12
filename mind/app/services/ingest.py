@@ -39,7 +39,12 @@ class MemoryIngestService:
 
     def _do_write(self, req: AppRequest, *, record_kind: str) -> AppResponse:
         resp = new_response(req)
-        ctx = resolve_execution_context(req.principal, req.session, req.policy)
+        ctx = resolve_execution_context(
+            req.principal,
+            req.session,
+            req.policy,
+            req.provider_selection,
+        )
         raw_episode_id = req.input.get("episode_id")
         episode_id = (
             raw_episode_id

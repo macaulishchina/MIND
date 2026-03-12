@@ -15,6 +15,10 @@ from mind.app.context import PrincipalContext, PrincipalKind, SourceChannel
 from mind.app.contracts import AppRequest, AppStatus
 from mind.app.registry import build_app_registry
 from mind.cli_config import ResolvedCliConfig, resolve_cli_config
+from mind.fixtures import (
+    build_product_transport_consistency_scenarios_v1,
+    normalize_product_transport_payload,
+)
 from mind.mcp.server import create_mcp_server
 from mind.mcp.session import map_mcp_session
 from mind.primitives.contracts import Capability
@@ -118,6 +122,78 @@ def test_mcp_tool_invocations_return_expected_shapes(tmp_path: Path) -> None:
     assert execute["status"] == "ok"
     assert submit_job["result"]["status"] == "pending"
     assert job_status["result"]["job_id"] == submit_job["result"]["job_id"]
+
+
+def test_mcp_submit_offline_job_persists_request_level_provider_selection(
+    tmp_path: Path,
+) -> None:
+    config = _sqlite_config(tmp_path, "job-provider-selection")
+    client_info = _mcp_client_info()
+
+    with create_mcp_server(config) as server:
+        submit_job = server.invoke_tool(
+            "submit_offline_job",
+            {
+                "job_kind": "reflect_episode",
+                "payload": {
+                    "episode_id": "mcp-job-provider-selection",
+                    "focus": "persist provider override",
+                },
+                "provider_selection": {
+                    "provider": "gemini",
+                    "model": "gemini-2.0-flash",
+                    "endpoint": "https://generativelanguage.googleapis.com/v1beta/models",
+                    "timeout_ms": 9_000,
+                    "retry_policy": "aggressive",
+                },
+            },
+            client_info=client_info,
+        )
+        job_status = server.invoke_tool(
+            "get_job_status",
+            {"job_id": submit_job["result"]["job_id"]},
+            client_info=client_info,
+        )
+
+    assert submit_job["status"] == "ok"
+    assert submit_job["result"]["provider_selection"]["provider"] == "gemini"
+    assert job_status["result"]["provider_selection"]["provider"] == "gemini"
+    assert job_status["result"]["provider_selection"]["model"] == "gemini-2.0-flash"
+
+
+def test_mcp_ask_memory_returns_validation_error_for_invalid_provider_selection(
+    tmp_path: Path,
+) -> None:
+    config = _sqlite_config(tmp_path, "ask-invalid-provider")
+    client_info = _mcp_client_info()
+
+    with create_mcp_server(config) as server:
+        remember = server.invoke_tool(
+            "remember",
+            {
+                "content": "mcp ask invalid provider seed",
+                "episode_id": "mcp-ask-invalid-provider",
+                "timestamp_order": 1,
+            },
+            client_info=client_info,
+        )
+        assert remember["status"] == "ok"
+
+        ask = server.invoke_tool(
+            "ask_memory",
+            {
+                "query": "mcp",
+                "provider_selection": {
+                    "provider": "unknown-provider",
+                    "model": "mystery-model",
+                },
+            },
+            client_info=client_info,
+        )
+
+    assert ask["status"] == "error"
+    assert ask["error"]["code"] == "validation_error"
+    assert ask["error"]["details"]["provider_selection"]["provider"] == "unknown-provider"
 
 
 @pytest.mark.anyio
@@ -258,6 +334,43 @@ async def test_rest_vs_mcp_semantic_consistency(
 
     pass_rate = matches / 11
     assert pass_rate >= 0.95
+
+
+@pytest.mark.anyio
+async def test_product_transport_consistency_scenarios_v1_rest_mcp_pass_rate(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("MIND_API_KEY", "test-api-key")
+    rest_config = _sqlite_config(tmp_path, "shared-rest")
+    mcp_config = _sqlite_config(tmp_path, "shared-mcp")
+    _seed_transport_state(rest_config)
+    _seed_transport_state(mcp_config)
+    scenarios = [
+        scenario
+        for scenario in build_product_transport_consistency_scenarios_v1()
+        if scenario.mcp_tool_name is not None
+    ]
+    matches = 0
+
+    async with _rest_client(rest_config) as rest_client:
+        with create_mcp_server(mcp_config) as mcp_server:
+            for scenario in scenarios:
+                matches += await _compare_semantics(
+                    rest_client=rest_client,
+                    rest_method=scenario.rest_method,
+                    rest_path=scenario.rest_path,
+                    rest_json=scenario.rest_json_body,
+                    mcp_server=mcp_server,
+                    tool_name=str(scenario.mcp_tool_name),
+                    mcp_args=dict(scenario.mcp_args),
+                    normalizer=lambda payload, family=scenario.command_family: (
+                        normalize_product_transport_payload(family, payload)
+                    ),
+                )
+
+    assert len(scenarios) >= 3
+    assert matches / len(scenarios) >= 0.95
 
 
 @pytest.mark.parametrize(

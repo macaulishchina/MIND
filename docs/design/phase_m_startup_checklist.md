@@ -9,6 +9,7 @@
 - `mind/frontend/contracts.py` 已冻结第一版 frontend-facing debug timeline query / response contract
 - `mind/frontend/debug.py` 已能把 raw telemetry 投影成前端可依赖的 timeline / object-delta 视图
 - `mind/frontend/experience.py` 已冻结第一版 frontend-facing experience contract 与 catalog projection
+- frontend access experience contract 已显式冻结 answer text / support / provider fallback 视图
 - `mind/frontend/settings.py` 已冻结第一版 frontend-facing settings contract
 - `mind/frontend/audit.py` 已提供第一版 responsive audit 与 JSON report 写出
 - `mind/frontend/reporting.py` 已提供第一版 frontend flow report 与 JSON report 写出
@@ -82,6 +83,7 @@ Phase M 明确不做：
   - telemetry / debug 查询
 - 当前已完成第一块前置：
   - experience contract 与 catalog projection
+  - access answer frontend contract 与 provider fallback projection
   - debug timeline query / response contract
   - raw telemetry -> frontend-facing projection helper
   - settings contract 与 config snapshot projection
@@ -117,6 +119,7 @@ Phase M 明确不做：
 
 - 产出：
   - frontend flow report
+  - runtime product transport audit
   - config audit
   - debug visualization audit
   - Phase M gate report

@@ -65,6 +65,7 @@ class OfflineWorker:
                     job,
                     actor=self.worker_id,
                     dev_mode=self._dev_mode,
+                    provider_selection=job.provider_selection,
                 )
             except Exception as exc:
                 failed_jobs += 1

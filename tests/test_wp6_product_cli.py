@@ -7,17 +7,25 @@ import io
 import json
 import sys
 import tomllib
+from collections.abc import AsyncIterator
 from argparse import Namespace
-from contextlib import redirect_stderr, redirect_stdout
+from contextlib import asynccontextmanager, redirect_stderr, redirect_stdout
 from pathlib import Path
 from typing import Any
 
+import httpx
 import pytest
 
+from mind.api.app import create_app
 from mind.api.client import MindAPIClient
 from mind.app.registry import build_app_registry
 from mind.cli_config import ResolvedCliConfig, resolve_cli_config
-from mind.fixtures import build_product_cli_bench_v1, build_user_state_scenarios_v1
+from mind.fixtures import (
+    build_product_cli_bench_v1,
+    build_product_transport_consistency_scenarios_v1,
+    build_user_state_scenarios_v1,
+    normalize_product_transport_payload,
+)
 from mind.product_cli import (
     LocalProductClient,
     _default_episode_id,
@@ -72,6 +80,33 @@ def test_product_cli_supports_color_flag() -> None:
     assert args.command == "status"
 
 
+def test_product_cli_config_supports_provider_preview_flags() -> None:
+    parser = build_product_parser()
+
+    args = parser.parse_args(
+        [
+            "config",
+            "--provider",
+            "openai",
+            "--model",
+            "gpt-4.1-mini",
+            "--endpoint",
+            "https://api.openai.com/v1/responses",
+            "--timeout-ms",
+            "12000",
+            "--retry-policy",
+            "none",
+        ]
+    )
+
+    assert args.command == "config"
+    assert args.provider == "openai"
+    assert args.model == "gpt-4.1-mini"
+    assert args.endpoint == "https://api.openai.com/v1/responses"
+    assert args.timeout_ms == 12000
+    assert args.retry_policy == "none"
+
+
 def test_pyproject_points_mind_to_product_cli_and_removes_deprecated_aliases() -> None:
     data = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     scripts = data["project"]["scripts"]
@@ -113,6 +148,46 @@ def test_mind_api_client_serializes_requests(
     assert request.headers["X-api-key"] == "secret"
     assert json.loads(request.data.decode("utf-8"))["content"] == "hello"
     assert response["status"] == "ok"
+
+
+def test_mind_api_client_provider_status_serializes_resolve_request(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Any] = {}
+
+    class _FakeResponse:
+        def __enter__(self) -> _FakeResponse:
+            return self
+
+        def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+            return None
+
+        def read(self) -> bytes:
+            return b'{"status":"ok","result":{"provider":"openai"}}'
+
+    def fake_urlopen(request: object, timeout: int) -> _FakeResponse:
+        captured["request"] = request
+        captured["timeout"] = timeout
+        return _FakeResponse()
+
+    monkeypatch.setattr("mind.api.client.urlopen", fake_urlopen)
+    client = MindAPIClient("http://example.test/api", api_key="secret")
+
+    response = client.provider_status(
+        {
+            "provider_selection": {
+                "provider": "openai",
+                "model": "gpt-4.1-mini",
+            }
+        }
+    )
+
+    request = captured["request"]
+    assert request.full_url == "http://example.test/api/v1/system/provider-status:resolve"
+    assert request.get_method() == "POST"
+    assert request.headers["X-api-key"] == "secret"
+    assert json.loads(request.data.decode("utf-8"))["provider_selection"]["provider"] == "openai"
+    assert response["result"]["provider"] == "openai"
 
 
 def test_mind_api_package_does_not_eagerly_import_server_module() -> None:
@@ -205,6 +280,51 @@ def test_local_vs_remote_cli_behavior_consistency(
     assert matches / len(comparable_commands) >= 0.95
 
 
+@pytest.mark.anyio
+async def test_product_transport_consistency_scenarios_v1_rest_cli_pass_rate(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("MIND_API_KEY", "test-api-key")
+    rest_path = tmp_path / "transport-rest-cli.sqlite3"
+    cli_path = tmp_path / "transport-cli.sqlite3"
+    _seed_cli_backend(rest_path)
+    _seed_cli_backend(cli_path)
+    scenarios = [
+        scenario
+        for scenario in build_product_transport_consistency_scenarios_v1()
+        if scenario.cli_argv is not None
+    ]
+    matches = 0
+
+    async with _rest_client(_sqlite_config(rest_path)) as rest_client:
+        for scenario in scenarios:
+            rest_response = await rest_client.request(
+                scenario.rest_method,
+                scenario.rest_path,
+                headers={"X-API-Key": "test-api-key"},
+                json=scenario.rest_json_body,
+            )
+            if rest_response.status_code != 200:
+                continue
+            exit_code, cli_payload = _run_product_cli(
+                ["--sqlite-path", str(cli_path), *scenario.cli_argv[1:]]
+            )
+            if exit_code != 0:
+                continue
+            if normalize_product_transport_payload(
+                scenario.command_family,
+                rest_response.json(),
+            ) == normalize_product_transport_payload(
+                scenario.command_family,
+                cli_payload,
+            ):
+                matches += 1
+
+    assert len(scenarios) >= 3
+    assert matches / len(scenarios) >= 0.95
+
+
 def test_product_cli_status_default_output_is_human_readable(tmp_path: Path) -> None:
     exit_code, output = _run_product_cli_text(["--sqlite-path", str(tmp_path / "status.sqlite3"), "status"])
 
@@ -213,6 +333,26 @@ def test_product_cli_status_default_output_is_human_readable(tmp_path: Path) -> 
     assert "Health" in output
     assert "Checks" in output
     assert "{" not in output
+
+
+def test_product_cli_config_json_includes_provider_section(tmp_path: Path) -> None:
+    exit_code, payload = _run_product_cli(
+        [
+            "--sqlite-path",
+            str(tmp_path / "config.sqlite3"),
+            "config",
+            "--provider",
+            "openai",
+            "--model",
+            "gpt-4.1-mini",
+        ]
+    )
+
+    assert exit_code == 0
+    assert payload["status"] == "ok"
+    assert payload["result"]["runtime"]["backend"] == "sqlite"
+    assert payload["result"]["provider"]["provider"] == "openai"
+    assert payload["result"]["provider"]["model"] == "gpt-4.1-mini"
 
 
 def test_product_cli_remember_default_output_is_human_readable(tmp_path: Path) -> None:
@@ -258,6 +398,7 @@ def test_product_cli_ask_shows_access_depth_and_object_details(tmp_path: Path) -
 
     assert exit_code == 0
     assert "Access Depth" in output
+    assert "Answer" in output
     assert "focus" in output
     assert "Selected Objects" in output
     assert "Episode" in output
@@ -440,6 +581,18 @@ def _run_product_cli_text(argv: list[str]) -> tuple[int, str]:
     return exit_code, output
 
 
+@asynccontextmanager
+async def _rest_client(config: ResolvedCliConfig) -> AsyncIterator[httpx.AsyncClient]:
+    app = create_app(config)
+    async with app.router.lifespan_context(app):
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(
+            transport=transport,
+            base_url="http://testserver",
+        ) as client:
+            yield client
+
+
 def _sqlite_config(path: Path) -> ResolvedCliConfig:
     return resolve_cli_config(backend="sqlite", sqlite_path=str(path))
 
@@ -522,7 +675,8 @@ def _normalize_cli_payload(command: str, payload: dict[str, Any]) -> dict[str, A
         result = payload["result"]
         return {
             "status": payload["status"],
-            "backend": result.get("backend"),
-            "profile": result.get("profile"),
+            "backend": (result.get("runtime") or {}).get("backend"),
+            "profile": (result.get("runtime") or {}).get("profile"),
+            "provider": (result.get("provider") or {}).get("provider"),
         }
     return payload

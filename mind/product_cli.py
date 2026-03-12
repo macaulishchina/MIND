@@ -16,7 +16,7 @@ from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-from mind.app.context import PrincipalContext, SessionContext, SourceChannel
+from mind.app.context import PrincipalContext, ProviderSelection, SessionContext, SourceChannel
 from mind.app.contracts import AppRequest, AppStatus
 from mind.app.registry import AppServiceRegistry, build_app_registry
 from mind.cli_config import CliBackend, CliProfile, resolve_cli_config
@@ -49,6 +49,8 @@ class ProductClient(Protocol):
     def readiness(self) -> dict[str, Any]: ...
 
     def config_summary(self) -> dict[str, Any]: ...
+
+    def provider_status(self, payload: dict[str, Any] | None = None) -> dict[str, Any]: ...
 
 
 @dataclass
@@ -96,6 +98,12 @@ class LocalProductClient:
             self._request({})
         ).model_dump(mode="json")
 
+    def provider_status(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        request_payload = payload or {}
+        return self.registry.system_status_service.provider_status(
+            self._request(request_payload)
+        ).model_dump(mode="json")
+
     def _invoke(self, func: Any, payload: dict[str, Any]) -> dict[str, Any]:
         response = func(self._request(payload))
         return response.model_dump(mode="json")
@@ -104,6 +112,7 @@ class LocalProductClient:
         principal_id = str(payload.get("principal_id") or self.principal_id)
         session_id = payload.get("session_id")
         conversation_id = payload.get("conversation_id")
+        provider_selection = _provider_selection_from_payload(payload)
         principal = PrincipalContext(
             principal_id=principal_id,
             tenant_id=str(payload.get("tenant_id") or "default"),
@@ -118,7 +127,17 @@ class LocalProductClient:
                 client_id=self.client_id,
                 device_id=str(payload.get("device_id")) if payload.get("device_id") else None,
             )
-        return AppRequest(principal=principal, session=session, input=dict(payload))
+        input_payload = {
+            key: value
+            for key, value in payload.items()
+            if key != "provider_selection"
+        }
+        return AppRequest(
+            principal=principal,
+            session=session,
+            provider_selection=provider_selection,
+            input=input_payload,
+        )
 
 
 def build_product_parser() -> argparse.ArgumentParser:
@@ -232,7 +251,26 @@ def build_product_parser() -> argparse.ArgumentParser:
     session_show.add_argument("session_id")
 
     subparsers.add_parser("status", help="Show system health and readiness.")
-    subparsers.add_parser("config", help="Show resolved configuration.")
+    config = subparsers.add_parser("config", help="Show resolved configuration.")
+    config.add_argument(
+        "--provider",
+        choices=["stub", "openai", "claude", "gemini"],
+        help="Preview provider resolution with a request-scoped provider override.",
+    )
+    config.add_argument("--model", help="Preview provider resolution with a model override.")
+    config.add_argument(
+        "--endpoint",
+        help="Preview provider resolution with an endpoint override.",
+    )
+    config.add_argument(
+        "--timeout-ms",
+        type=int,
+        help="Preview provider resolution with a timeout override.",
+    )
+    config.add_argument(
+        "--retry-policy",
+        help="Preview provider resolution with a retry-policy override.",
+    )
 
     return parser
 
@@ -329,8 +367,65 @@ def _dispatch_command(args: argparse.Namespace, client: ProductClient) -> dict[s
             },
         }
     if command == "config":
-        return client.config_summary()
+        config_summary = client.config_summary()
+        provider_payload = _provider_status_payload(args)
+        provider_status = client.provider_status(provider_payload)
+        status_value = (
+            AppStatus.OK.value
+            if config_summary.get("status") == AppStatus.OK.value
+            and provider_status.get("status") == AppStatus.OK.value
+            else AppStatus.ERROR.value
+        )
+        return {
+            "status": status_value,
+            "result": {
+                "runtime": config_summary.get("result"),
+                "provider": provider_status.get("result"),
+            },
+            "error": provider_status.get("error") if provider_status.get("status") != AppStatus.OK.value else config_summary.get("error"),
+            "request_id": provider_status.get("request_id") or config_summary.get("request_id"),
+            "trace_ref": provider_status.get("trace_ref") or config_summary.get("trace_ref"),
+        }
     raise SystemExit(f"unsupported command '{command}'")
+
+
+def _provider_status_payload(args: argparse.Namespace) -> dict[str, Any] | None:
+    selection = _provider_selection_from_namespace(args)
+    if selection is None:
+        return None
+    return {"provider_selection": selection.model_dump(mode="json")}
+
+
+def _provider_selection_from_namespace(
+    args: argparse.Namespace,
+) -> ProviderSelection | None:
+    values = {
+        "provider": getattr(args, "provider", None),
+        "model": getattr(args, "model", None),
+        "endpoint": getattr(args, "endpoint", None),
+        "timeout_ms": getattr(args, "timeout_ms", None),
+        "retry_policy": getattr(args, "retry_policy", None),
+    }
+    if all(value in (None, "") for value in values.values()):
+        return None
+
+    payload = {
+        key: value
+        for key, value in values.items()
+        if value not in (None, "")
+    }
+    return ProviderSelection.model_validate(payload)
+
+
+def _provider_selection_from_payload(
+    payload: dict[str, Any],
+) -> ProviderSelection | None:
+    raw_selection = payload.get("provider_selection")
+    if isinstance(raw_selection, ProviderSelection):
+        return raw_selection
+    if isinstance(raw_selection, dict):
+        return ProviderSelection.model_validate(raw_selection)
+    return None
 
 
 class _ClientContext(AbstractContextManager[ProductClient]):
@@ -648,6 +743,7 @@ def _format_ask_payload(payload: dict[str, Any], renderer: _CliRenderer) -> str:
         renderer.kv_block(
             [
                 ("Access Depth", _display_access_depth(result.get("resolved_mode"))),
+                ("Answer", _truncate(_stringify(result.get("answer_text")), 72)),
                 ("Selection Reason", _stringify(first_event.get("reason_code"))),
                 ("Context Shape", _stringify(result.get("context_kind"))),
                 ("Context Objects", _stringify(len(result.get("context_object_ids") or []))),
@@ -659,6 +755,11 @@ def _format_ask_payload(payload: dict[str, Any], renderer: _CliRenderer) -> str:
             ]
         )
     )
+
+    answer_text = result.get("answer_text")
+    if isinstance(answer_text, str) and answer_text.strip():
+        lines.extend(renderer.section("Answer"))
+        lines.extend(renderer.paragraph(answer_text))
 
     preview = _extract_context_preview(result.get("context_text"))
     if preview:
@@ -824,6 +925,25 @@ def _format_config_payload(payload: dict[str, Any], renderer: _CliRenderer) -> s
     lines = renderer.title("Resolved Config", status="ok")
     if not result:
         lines.extend(renderer.paragraph("No config data returned."))
+        return "\n".join(lines)
+    runtime = result.get("runtime")
+    provider = result.get("provider")
+    if isinstance(runtime, dict) or isinstance(provider, dict):
+        if isinstance(runtime, dict):
+            lines.extend(renderer.section("Runtime"))
+            lines.extend(
+                renderer.kv_block(
+                    [(_labelize(key), _stringify(runtime.get(key))) for key in sorted(runtime)]
+                )
+            )
+        if isinstance(provider, dict):
+            lines.extend(renderer.section("Provider"))
+            lines.extend(
+                renderer.kv_block(
+                    [(_labelize(key), _stringify(provider.get(key))) for key in sorted(provider)]
+                )
+            )
+        _append_meta_section(lines, payload, renderer)
         return "\n".join(lines)
     lines.extend(
         renderer.kv_block(
