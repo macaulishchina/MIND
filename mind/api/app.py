@@ -4,15 +4,15 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
+from mimetypes import guess_type
 from os import environ
 from pathlib import Path
 from uuid import uuid4
 
 import uvicorn
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import ValidationError as PydanticValidationError
 
 from mind import __version__
@@ -121,4 +121,35 @@ def _install_exception_handlers(app: FastAPI) -> None:
 def _install_frontend_mount(app: FastAPI) -> None:
     frontend_dir = Path(__file__).resolve().parents[2] / "frontend"
     if frontend_dir.exists():
-        app.mount("/frontend", StaticFiles(directory=frontend_dir, html=True), name="frontend")
+        frontend_root = frontend_dir.resolve()
+
+        @app.get("/frontend", include_in_schema=False)
+        async def frontend_index_redirect() -> RedirectResponse:
+            return RedirectResponse(url="/frontend/", status_code=307)
+
+        @app.get("/frontend/", include_in_schema=False)
+        async def frontend_index() -> Response:
+            return _frontend_asset_response(frontend_root, "index.html")
+
+        @app.get("/frontend/{asset_path:path}", include_in_schema=False)
+        async def frontend_asset(asset_path: str) -> Response:
+            return _frontend_asset_response(frontend_root, asset_path)
+
+
+def _frontend_asset_response(frontend_root: Path, asset_path: str) -> Response:
+    # `StaticFiles` currently hangs under the ASGITransport-based test client used here,
+    # so serve the small frontend bundle through explicit routes instead.
+    candidate = _resolve_frontend_asset(frontend_root, asset_path)
+    media_type, _ = guess_type(str(candidate))
+    return Response(content=candidate.read_bytes(), media_type=media_type or "application/octet-stream")
+
+
+def _resolve_frontend_asset(frontend_root: Path, asset_path: str) -> Path:
+    candidate = (frontend_root / asset_path).resolve()
+    try:
+        candidate.relative_to(frontend_root)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="frontend asset not found") from exc
+    if not candidate.is_file():
+        raise HTTPException(status_code=404, detail="frontend asset not found")
+    return candidate
