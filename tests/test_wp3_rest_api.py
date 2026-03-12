@@ -288,6 +288,7 @@ async def test_frontend_experience_routes_project_product_flows(
     assert ingest.status_code == 200
     ingest_result = ingest.json()["result"]
     assert ingest_result["object_id"].startswith("raw-")
+    assert ingest_result["episode_id"] == episode_id
 
     retrieve = await api_client.post(
         "/v1/frontend/retrieve",
@@ -331,6 +332,24 @@ async def test_frontend_experience_routes_project_product_flows(
     )
     assert offline.status_code == 200
     assert offline.json()["result"]["status"] == "pending"
+
+
+@pytest.mark.anyio
+async def test_frontend_ingest_route_accepts_missing_episode_id(
+    api_client: httpx.AsyncClient,
+) -> None:
+    response = await api_client.post(
+        "/v1/frontend/ingest",
+        headers=_auth_headers(),
+        json={
+            "content": "frontend route ingest without explicit episode",
+            "timestamp_order": 1,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["result"]["object_id"].startswith("raw-")
+    assert response.json()["result"]["episode_id"].startswith("ep-")
 
 
 @pytest.mark.anyio

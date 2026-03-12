@@ -190,6 +190,33 @@ def test_registry_exposes_frontend_experience_service(tmp_path: Path) -> None:
     assert offline.result == {"job_id": offline.result["job_id"], "status": "pending"}
 
 
+def test_frontend_experience_service_ingest_generates_episode_id_when_omitted(
+    tmp_path: Path,
+) -> None:
+    from mind.app.registry import build_app_registry
+    from mind.cli_config import resolve_cli_config
+
+    config = resolve_cli_config(
+        backend="sqlite",
+        sqlite_path=str(tmp_path / "frontend_experience_optional_episode.sqlite3"),
+        allow_sqlite=True,
+    )
+
+    with build_app_registry(config) as registry:
+        ingest = registry.frontend_experience_service.ingest(
+            _request(
+                {"content": "frontend service ingest without explicit episode"},
+                request_id="req-front-experience-ingest-no-episode",
+                dev_mode=False,
+            )
+        )
+
+    assert ingest.status is AppStatus.OK
+    assert ingest.result is not None
+    assert ingest.result["object_id"].startswith("raw-")
+    assert ingest.result["episode_id"].startswith("ep-")
+
+
 def test_frontend_experience_service_returns_validation_error_for_bad_payload(
     tmp_path: Path,
 ) -> None:

@@ -1,335 +1,494 @@
 <!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>MIND Frontend Workbench</title>
-    <link rel="stylesheet" href="./styles.css" />
-  </head>
-  <body>
-    <main class="workbench" id="app-shell">
-      <section class="hero">
-        <div class="eyebrow">Phase M lightweight frontend</div>
-        <h1>MIND Frontend Workbench</h1>
-        <p class="lede">
-          Static ES-module frontend over the existing FastAPI product surface.
-          No Python-rendered UI, no heavy build chain.
-        </p>
-        <form class="auth-panel" id="auth-form">
-          <label>
-            <span>API Key</span>
-            <input
-              id="api-key"
-              name="api_key"
-              type="password"
-              placeholder="Enter X-API-Key for /v1 calls"
-              autocomplete="off"
-            />
-          </label>
-          <div class="button-row">
-            <button type="submit" class="button">Save Key</button>
-            <button type="button" class="subtle-button" id="clear-key">Clear</button>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MIND 记忆控制台</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+
+<div id="app-shell" class="shell">
+
+  <!-- Mobile top bar -->
+  <header class="mob-bar">
+    <button class="mob-toggle" id="mob-toggle" type="button" aria-label="菜单">☰</button>
+    <span class="mob-title">MIND 记忆控制台</span>
+  </header>
+  <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+  <!-- ==================== SIDEBAR ==================== -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-brand">
+      <div class="sb-logo">M</div>
+      <div>
+        <strong>MIND</strong>
+        <small>记忆工作台</small>
+      </div>
+    </div>
+
+    <nav class="sb-nav" role="tablist" aria-label="主工作区">
+      <button class="sb-link is-active" role="tab" id="nav-overview"
+              data-workspace-target="workspace-overview" aria-selected="true">
+        <i class="ico ico-overview"></i>总览
+      </button>
+      <button class="sb-link" role="tab" id="nav-operations"
+              data-workspace-target="workspace-operations" aria-selected="false">
+        <i class="ico ico-ops"></i>操作
+      </button>
+      <button class="sb-link" role="tab" id="nav-settings"
+              data-workspace-target="workspace-settings" aria-selected="false">
+        <i class="ico ico-settings"></i>配置
+      </button>
+      <button class="sb-link" role="tab" id="nav-debug"
+              data-workspace-target="workspace-debug" aria-selected="false">
+        <i class="ico ico-audit"></i>排查
+      </button>
+    </nav>
+
+    <div class="sb-divider"></div>
+
+    <div class="sb-section">
+      <div class="sb-label">访问验证</div>
+      <form id="auth-form" class="sb-auth">
+        <input id="api-key" name="api_key" type="password"
+               placeholder="输入访问口令" autocomplete="off">
+        <div class="sb-auth-row">
+          <button type="submit" class="btn-sm btn-accent" id="auth-submit">连接工作台</button>
+          <button type="button" class="btn-sm btn-muted" id="clear-key">清除</button>
+        </div>
+        <p class="sb-hint" id="auth-status" aria-live="polite">当前还没有连接。</p>
+      </form>
+    </div>
+
+    <div class="sb-divider"></div>
+
+    <div class="sb-signals">
+      <div class="sb-signal">
+        <span class="sb-signal-dot" id="auth-state-chip"></span>
+        <span id="connection-summary">连接：未完成</span>
+      </div>
+      <div class="sb-signal">
+        <span id="catalog-summary">功能：未同步</span>
+      </div>
+      <div class="sb-signal">
+        <span id="runtime-summary">环境：未同步</span>
+      </div>
+      <div class="sb-signal">
+        <span id="workflow-summary">状态：待连接</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Toast notifications -->
+  <div class="toast-tray" id="toast-tray" aria-live="polite"></div>
+
+  <!-- ==================== MAIN CONTENT ==================== -->
+  <main class="content">
+
+    <!-- ========== OVERVIEW ========== -->
+    <section class="workspace-panel is-active" id="workspace-overview"
+             role="tabpanel" aria-labelledby="nav-overview">
+      <div class="pg-head">
+        <div>
+          <h1>系统总览</h1>
+          <p class="pg-sub">查看当前状态、可用功能和最近同步结果。连接后会自动更新。</p>
+        </div>
+        <div class="pg-actions">
+          <button class="btn btn-primary" id="reload-overview" type="button">同步工作台</button>
+          <button class="btn btn-outline" id="load-gate-demo" type="button">刷新示例摘要</button>
+        </div>
+      </div>
+
+      <div class="overview-grid" id="overview-grid">
+        <div class="empty-state">连接后可查看当前状态和可用功能。</div>
+      </div>
+
+      <section class="card" id="gate-demo-panel"
+               data-auth-required data-lock-message="需要访问口令"
+               data-ready-message="可查看示例说明">
+        <div class="card-head">
+          <div>
+            <h2>示例摘要</h2>
+            <p class="text-muted">常用演示、检查结果和说明内容会汇总显示在这里。</p>
           </div>
-          <p class="hint" id="auth-status">No API key stored.</p>
-        </form>
+          <span class="badge" data-gate-note>需要访问口令</span>
+        </div>
+        <div id="gate-demo-result">
+          <div class="empty-state">连接后可查看示例说明。</div>
+        </div>
       </section>
+    </section>
 
-      <section class="surface-grid">
-        <article class="panel">
-          <div class="panel-head">
-            <h2>Overview</h2>
-            <button class="subtle-button" id="reload-overview" type="button">Reload</button>
-          </div>
-          <div class="overview-grid" id="overview-grid">
-            <div class="empty-state">Save an API key to load catalog and runtime settings.</div>
-          </div>
-        </article>
+    <!-- ========== OPERATIONS ========== -->
+    <section class="workspace-panel" id="workspace-operations"
+             role="tabpanel" aria-labelledby="nav-operations">
+      <div class="pg-head">
+        <div>
+          <h1>核心操作</h1>
+          <p class="pg-sub">选择任务类型，逐步完成保存、查找、回答或后台整理。</p>
+        </div>
+      </div>
 
-        <article class="panel">
-          <div class="panel-head">
-            <h2>Settings Preview</h2>
-            <span class="panel-note">/v1/frontend/settings:preview</span>
+      <div class="ops-shell">
+        <nav class="ops-tabs" role="tablist" aria-label="操作模式">
+          <button class="ops-tab is-active" role="tab" id="tab-ingest"
+                  data-operation-target="module-ingest" aria-selected="true">
+            <strong>写入记忆</strong><span>保存重要内容，方便之后继续使用</span>
+          </button>
+          <button class="ops-tab" role="tab" id="tab-retrieve"
+                  data-operation-target="module-retrieve" aria-selected="false">
+            <strong>召回检索</strong><span>快速找回相关内容</span>
+          </button>
+          <button class="ops-tab" role="tab" id="tab-access"
+                  data-operation-target="module-access" aria-selected="false">
+            <strong>访问问答</strong><span>整理已保存内容，生成回答</span>
+          </button>
+          <button class="ops-tab" role="tab" id="tab-offline"
+                  data-operation-target="module-offline" aria-selected="false">
+            <strong>后台任务</strong><span>把整理任务交给系统后台完成</span>
+          </button>
+        </nav>
+
+        <div class="ops-stage">
+          <!-- Ingest -->
+          <article class="ops-panel is-active" id="module-ingest" data-operation-panel
+                   data-auth-required data-lock-message="需要访问口令"
+                   data-ready-message="已连接，可开始写入">
+            <div class="card">
+              <div class="card-head">
+                <div>
+                  <h2>写入记忆</h2>
+                  <p class="text-muted">把重要内容保存下来，便于后续继续查看和使用。</p>
+                </div>
+                <span class="badge" data-gate-note>需要访问口令</span>
+              </div>
+              <form id="ingest-form" class="form-grid">
+                <div class="field field-full">
+                  <label for="ingest-content"><span>内容</span></label>
+                  <textarea id="ingest-content" name="content" rows="4"
+                            placeholder="输入需要记忆的内容，例如偏好、结论、事实..."></textarea>
+                  <p class="field-help" id="ingest-content-help">聚焦后可在首行/末行使用上下键切换本地写入记录。</p>
+                </div>
+                <div class="field">
+                  <label for="ingest-episode-id"><span>记录分组</span></label>
+                  <input id="ingest-episode-id" name="episode_id" type="text" placeholder="可选：归到同一次会话或同一主题">
+                  <p class="field-help" id="ingest-episode-help">未填写时，系统会自动新建一个分组，并回填到这里。</p>
+                </div>
+                <div class="field">
+                  <label for="ingest-timestamp-order"><span>时间顺序</span></label>
+                  <input id="ingest-timestamp-order" name="timestamp_order" type="number" min="1" value="1">
+                  <p class="field-help" id="ingest-order-help">表示同一分组里的先后顺序；连续写入时会自动递增。</p>
+                </div>
+                <div class="form-actions">
+                  <button type="submit" class="btn btn-primary" id="ingest-submit">写入</button>
+                  <button type="button" class="btn btn-ghost" id="ingest-reset">重置</button>
+                </div>
+              </form>
+              <div class="result-zone" id="ingest-result">
+                <div class="empty-state">还没有执行写入。</div>
+              </div>
+            </div>
+          </article>
+
+          <!-- Retrieve -->
+          <article class="ops-panel" id="module-retrieve" data-operation-panel
+                   data-auth-required data-lock-message="需要访问口令"
+                   data-ready-message="已连接，可开始查找">
+            <div class="card">
+              <div class="card-head">
+                <div>
+                  <h2>召回检索</h2>
+                  <p class="text-muted">快速找回可能相关的内容，先确认系统里是否已经保存过。</p>
+                </div>
+                <span class="badge" data-gate-note>需要访问口令</span>
+              </div>
+              <form id="retrieve-form" class="form-grid">
+                <div class="field field-full">
+                  <label for="retrieve-query"><span>检索问题</span></label>
+                  <input id="retrieve-query" name="query" type="text"
+                         placeholder="输入要检索的问题...">
+                </div>
+                <div class="field">
+                  <label for="retrieve-episode-id"><span>记录分组</span></label>
+                  <input id="retrieve-episode-id" name="episode_id" type="text" placeholder="可选：只看某个分组">
+                </div>
+                <div class="field">
+                  <label for="retrieve-max-candidates"><span>最多显示</span></label>
+                  <input id="retrieve-max-candidates" name="max_candidates" type="number" min="1" max="50" value="10">
+                </div>
+                <div class="form-actions">
+                  <button type="submit" class="btn btn-primary" id="retrieve-submit">开始检索</button>
+                  <button type="button" class="btn btn-ghost" id="retrieve-reset">重置</button>
+                </div>
+              </form>
+              <div class="result-zone" id="retrieve-result">
+                <div class="empty-state">还没有查找结果。</div>
+              </div>
+            </div>
+          </article>
+
+          <!-- Access -->
+          <article class="ops-panel" id="module-access" data-operation-panel
+                   data-auth-required data-lock-message="需要访问口令"
+                   data-ready-message="已连接，可开始问答">
+            <div class="card">
+              <div class="card-head">
+                <div>
+                  <h2>访问问答</h2>
+                  <p class="text-muted">根据已保存内容整理信息，帮助你得到更完整的回答。</p>
+                </div>
+                <span class="badge" data-gate-note>需要访问口令</span>
+              </div>
+              <form id="access-form" class="form-grid">
+                <div class="field field-full">
+                  <label for="access-query"><span>你的问题</span></label>
+                  <textarea id="access-query" name="query" rows="3"
+                            placeholder="输入你想了解的问题..."></textarea>
+                </div>
+                <div class="field">
+                  <label for="access-depth"><span>回答方式</span></label>
+                  <select id="access-depth" name="depth">
+                    <option value="auto">自动选择</option>
+                    <option value="flash">快速回答</option>
+                    <option value="focus">聚焦回答</option>
+                    <option value="reconstruct">完整整理</option>
+                    <option value="reflective_access">深度整理</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="access-episode-id"><span>记录分组</span></label>
+                  <input id="access-episode-id" name="episode_id" type="text" placeholder="可选：只回答某个分组里的内容">
+                </div>
+                <div class="field">
+                  <label for="access-task-id"><span>任务编号</span></label>
+                  <input id="access-task-id" name="task_id" type="text" placeholder="可选：关联某个任务">
+                </div>
+                <div class="field field-check">
+                  <label>
+                    <input id="access-explain" name="explain" type="checkbox">
+                    <span>同时显示整理说明</span>
+                  </label>
+                </div>
+                <div class="form-actions">
+                  <button type="submit" class="btn btn-primary" id="access-submit">开始回答</button>
+                  <button type="button" class="btn btn-ghost" id="access-reset">重置</button>
+                </div>
+              </form>
+              <div class="result-zone" id="access-result">
+                <div class="empty-state">还没有回答结果。</div>
+              </div>
+            </div>
+          </article>
+
+          <!-- Offline -->
+          <article class="ops-panel" id="module-offline" data-operation-panel
+                   data-auth-required data-lock-message="需要访问口令"
+                   data-ready-message="已连接，可提交任务">
+            <div class="card">
+              <div class="card-head">
+                <div>
+                  <h2>后台任务</h2>
+                  <p class="text-muted" id="offline-mode-note">先选择任务类型，界面会显示当前任务需要填写的内容。</p>
+                </div>
+                <span class="badge" data-gate-note>需要访问口令</span>
+              </div>
+              <form id="offline-form" class="form-grid">
+                <div class="field">
+                  <label for="offline-job-kind"><span>任务类型</span></label>
+                  <select id="offline-job-kind" name="job_kind">
+                    <option value="reflect_episode">整理当前分组</option>
+                    <option value="promote_schema">提炼长期规则</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="offline-episode-id"><span>记录分组</span></label>
+                  <input id="offline-episode-id" name="episode_id" type="text" placeholder="整理当前分组时必填">
+                </div>
+                <div class="field">
+                  <label for="offline-focus"><span>聚焦主题</span></label>
+                  <input id="offline-focus" name="focus" type="text" placeholder="可选：说明你更关注什么">
+                </div>
+                <div class="field field-full">
+                  <label for="offline-target-refs"><span>目标内容编号</span></label>
+                  <input id="offline-target-refs" name="target_refs" type="text"
+                         placeholder="提炼长期规则时填写，多个编号用逗号分隔">
+                </div>
+                <div class="field field-full">
+                  <label for="offline-reason"><span>任务说明</span></label>
+                  <input id="offline-reason" name="reason" type="text" placeholder="说明为什么要整理这些内容">
+                </div>
+                <div class="field">
+                  <label for="offline-priority"><span>优先级</span></label>
+                  <input id="offline-priority" name="priority" type="number"
+                         min="0" max="1" step="0.1" value="0.5">
+                </div>
+                <div class="form-actions">
+                  <button type="submit" class="btn btn-primary" id="offline-submit">提交任务</button>
+                  <button type="button" class="btn btn-ghost" id="offline-reset">重置</button>
+                </div>
+              </form>
+              <div class="result-zone" id="offline-result">
+                <div class="empty-state">还没有提交后台任务。</div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== SETTINGS ========== -->
+    <section class="workspace-panel" id="workspace-settings"
+             role="tabpanel" aria-labelledby="nav-settings">
+      <div class="pg-head">
+        <div>
+          <h1>运行设置</h1>
+          <p class="pg-sub">调整运行环境与回答方式。建议先查看变化，再决定是否保存。</p>
+        </div>
+      </div>
+
+      <div class="settings-layout">
+        <div class="card" data-auth-required data-lock-message="需要访问口令"
+             data-ready-message="可查看和调整设置">
+          <div class="card-head">
+            <div>
+              <h2>设置管理</h2>
+              <p class="text-muted">先看看会发生什么，再决定是否保存这次调整。</p>
+            </div>
+            <span class="badge" data-gate-note>需要访问口令</span>
           </div>
-          <form class="settings-form" id="settings-form">
-            <label>
-              <span>Backend</span>
+
+          <div class="settings-steps">
+            <div class="step"><span class="step-num">1</span>选择要调整的项目</div>
+            <div class="step"><span class="step-num">2</span>查看变化</div>
+            <div class="step"><span class="step-num">3</span>保存或恢复</div>
+          </div>
+
+          <form id="settings-form" class="form-grid settings-form">
+            <div class="field">
+              <label for="settings-backend"><span>存储方式</span></label>
               <select id="settings-backend" name="backend">
-                <option value="">no change</option>
+                <option value="">保持不变</option>
               </select>
-            </label>
-            <label>
-              <span>Profile</span>
+            </div>
+            <div class="field">
+              <label for="settings-profile"><span>运行环境</span></label>
               <select id="settings-profile" name="profile">
-                <option value="">no change</option>
+                <option value="">保持不变</option>
               </select>
-            </label>
-            <label>
-              <span>Provider</span>
+            </div>
+            <div class="field">
+              <label for="settings-provider"><span>回答方式</span></label>
               <select id="settings-provider" name="provider">
-                <option value="">no change</option>
+                <option value="">保持不变</option>
               </select>
-            </label>
-            <label>
-              <span>Model</span>
-              <input id="settings-model" name="model" type="text" placeholder="leave blank for no change" />
-            </label>
-            <label>
-              <span>Dev Mode</span>
+            </div>
+            <div class="field">
+              <label for="settings-model"><span>模型名称</span></label>
+              <input id="settings-model" name="model" type="text" placeholder="留空保持不变">
+            </div>
+            <div class="field">
+              <label for="settings-dev-mode"><span>高级排查</span></label>
               <select id="settings-dev-mode" name="dev_mode">
-                <option value="">no change</option>
-                <option value="true">true</option>
-                <option value="false">false</option>
+                <option value="">保持不变</option>
+                <option value="true">开启</option>
+                <option value="false">关闭</option>
               </select>
-            </label>
-            <div class="button-row">
-              <button type="submit" class="button">Preview</button>
-              <button type="button" class="subtle-button" id="settings-apply">Apply</button>
-              <button type="button" class="subtle-button" id="settings-restore">Restore</button>
-              <button type="button" class="subtle-button" id="settings-reset">Reset</button>
+            </div>
+            <div class="form-actions form-actions-multi">
+              <button type="submit" class="btn btn-primary" id="settings-preview">预览</button>
+              <button type="button" class="btn btn-outline" id="settings-apply">应用</button>
+              <button type="button" class="btn btn-outline" id="settings-restore">恢复</button>
+              <button type="button" class="btn btn-ghost" id="settings-reset">重置</button>
             </div>
           </form>
-          <div class="result-panel" id="settings-result">
-            <div class="empty-state">No preview loaded.</div>
-          </div>
-        </article>
-      </section>
 
-      <section class="surface-grid">
-        <article class="panel" id="gate-demo-panel">
-          <div class="panel-head">
-            <h2>Gate / Demo</h2>
-            <button class="subtle-button" id="load-gate-demo" type="button">Load</button>
+          <div class="result-zone" id="settings-result">
+            <div class="empty-state">还没有设置变化预览。</div>
           </div>
-          <p class="panel-note">/v1/frontend/gate-demo</p>
-          <div class="result-panel" id="gate-demo-result">
-            <div class="empty-state">No gate or demo summary loaded.</div>
-          </div>
-        </article>
-      </section>
+        </div>
 
-      <section class="surface-grid">
-        <article class="panel">
-          <div class="panel-head">
-            <h2>Ingest</h2>
-            <span class="panel-note">/v1/frontend/ingest</span>
-          </div>
-          <form class="settings-form" id="ingest-form">
-            <label class="wide-field">
-              <span>Content</span>
-              <textarea
-                id="ingest-content"
-                name="content"
-                rows="4"
-                placeholder="Store one memory or note"
-              ></textarea>
-            </label>
-            <label>
-              <span>Episode ID</span>
-              <input id="ingest-episode-id" name="episode_id" type="text" placeholder="optional" />
-            </label>
-            <label>
-              <span>Timestamp Order</span>
-              <input
-                id="ingest-timestamp-order"
-                name="timestamp_order"
-                type="number"
-                min="1"
-                value="1"
-              />
-            </label>
-            <div class="button-row">
-              <button type="submit" class="button">Store</button>
-              <button type="button" class="subtle-button" id="ingest-reset">Reset</button>
-            </div>
-          </form>
-          <div class="result-panel" id="ingest-result">
-            <div class="empty-state">No ingest run yet.</div>
-          </div>
-        </article>
-
-        <article class="panel">
-          <div class="panel-head">
-            <h2>Retrieve</h2>
-            <span class="panel-note">/v1/frontend/retrieve</span>
-          </div>
-          <form class="settings-form" id="retrieve-form">
-            <label class="wide-field">
-              <span>Query</span>
-              <input id="retrieve-query" name="query" type="text" placeholder="Find related memories" />
-            </label>
-            <label>
-              <span>Episode ID</span>
-              <input id="retrieve-episode-id" name="episode_id" type="text" placeholder="optional" />
-            </label>
-            <label>
-              <span>Max Candidates</span>
-              <input
-                id="retrieve-max-candidates"
-                name="max_candidates"
-                type="number"
-                min="1"
-                max="50"
-                value="10"
-              />
-            </label>
-            <div class="button-row">
-              <button type="submit" class="button">Retrieve</button>
-              <button type="button" class="subtle-button" id="retrieve-reset">Reset</button>
-            </div>
-          </form>
-          <div class="result-panel" id="retrieve-result">
-            <div class="empty-state">No retrieval run yet.</div>
-          </div>
-        </article>
-      </section>
-
-      <section class="surface-grid">
-        <article class="panel">
-          <div class="panel-head">
-            <h2>Access</h2>
-            <span class="panel-note">/v1/frontend/access</span>
-          </div>
-          <form class="settings-form" id="access-form">
-            <label class="wide-field">
-              <span>Query</span>
-              <textarea
-                id="access-query"
-                name="query"
-                rows="3"
-                placeholder="Ask memory a question"
-              ></textarea>
-            </label>
-            <label>
-              <span>Depth</span>
-              <select id="access-depth" name="depth">
-                <option value="auto">auto</option>
-                <option value="flash">flash</option>
-                <option value="focus">focus</option>
-                <option value="reconstruct">reconstruct</option>
-                <option value="reflective_access">reflective_access</option>
-              </select>
-            </label>
-            <label>
-              <span>Episode ID</span>
-              <input id="access-episode-id" name="episode_id" type="text" placeholder="optional" />
-            </label>
-            <label>
-              <span>Task ID</span>
-              <input id="access-task-id" name="task_id" type="text" placeholder="optional" />
-            </label>
-            <label class="checkbox-field">
-              <span>Explain</span>
-              <input id="access-explain" name="explain" type="checkbox" />
-            </label>
-            <div class="button-row">
-              <button type="submit" class="button">Run Access</button>
-              <button type="button" class="subtle-button" id="access-reset">Reset</button>
-            </div>
-          </form>
-          <div class="result-panel" id="access-result">
-            <div class="empty-state">No access run yet.</div>
-          </div>
-        </article>
-
-        <article class="panel">
-          <div class="panel-head">
-            <h2>Offline</h2>
-            <span class="panel-note">/v1/frontend/offline</span>
-          </div>
-          <form class="settings-form" id="offline-form">
-            <label>
-              <span>Job Kind</span>
-              <select id="offline-job-kind" name="job_kind">
-                <option value="reflect_episode">reflect_episode</option>
-                <option value="promote_schema">promote_schema</option>
-              </select>
-            </label>
-            <label>
-              <span>Episode ID</span>
-              <input id="offline-episode-id" name="episode_id" type="text" placeholder="for reflect_episode" />
-            </label>
-            <label>
-              <span>Focus</span>
-              <input id="offline-focus" name="focus" type="text" placeholder="reflection focus" />
-            </label>
-            <label class="wide-field">
-              <span>Target Refs</span>
-              <input id="offline-target-refs" name="target_refs" type="text" placeholder="comma separated ids for promote_schema" />
-            </label>
-            <label class="wide-field">
-              <span>Reason</span>
-              <input id="offline-reason" name="reason" type="text" placeholder="promotion reason" />
-            </label>
-            <label>
-              <span>Priority</span>
-              <input
-                id="offline-priority"
-                name="priority"
-                type="number"
-                min="0"
-                max="1"
-                step="0.1"
-                value="0.5"
-              />
-            </label>
-            <div class="button-row">
-              <button type="submit" class="button">Submit Job</button>
-              <button type="button" class="subtle-button" id="offline-reset">Reset</button>
-            </div>
-          </form>
-          <div class="result-panel" id="offline-result">
-            <div class="empty-state">No offline submission yet.</div>
-          </div>
-        </article>
-      </section>
-
-      <section class="surface-grid">
-        <article class="panel">
-          <div class="panel-head">
-            <h2>Debug Timeline</h2>
-            <span class="panel-note">/v1/frontend/debug:timeline</span>
-          </div>
-          <form class="debug-form" id="debug-form">
-            <label>
-              <span>Run ID</span>
-              <input id="debug-run-id" name="run_id" type="text" placeholder="req-..." />
-            </label>
-            <label>
-              <span>Operation ID</span>
-              <input id="debug-operation-id" name="operation_id" type="text" placeholder="optional" />
-            </label>
-            <label>
-              <span>Object ID</span>
-              <input id="debug-object-id" name="object_id" type="text" placeholder="optional" />
-            </label>
-            <label>
-              <span>Limit</span>
-              <input id="debug-limit" name="limit" type="number" min="1" max="500" value="80" />
-            </label>
-            <div class="button-row">
-              <button type="submit" class="button">Load Timeline</button>
-              <button type="button" class="subtle-button" id="debug-reset">Reset</button>
-            </div>
-          </form>
-          <div class="result-panel" id="debug-result">
-            <div class="empty-state">No debug query loaded.</div>
-          </div>
-        </article>
-
-        <article class="panel">
-          <div class="panel-head">
-            <h2>Workbench Notes</h2>
-          </div>
-          <ul class="notes-list">
-            <li>This frontend is static and browser-native. The backend remains authoritative.</li>
-            <li>API key handling stays explicit in the UI; debug data is still gated by server-side dev mode.</li>
-            <li>Experience flows now run through frontend-facing transport instead of directly binding raw product endpoints.</li>
-            <li>Current next gap is gate/demo coverage and richer debug context or evidence visualization.</li>
+        <div class="card card-info">
+          <h3>使用建议</h3>
+          <ul class="info-list">
+            <li>调整前先在总览看看当前状态</li>
+            <li>预览只展示变化，不会立刻生效</li>
+            <li>保存后会留下一份可恢复的设置记录</li>
+            <li>恢复会回到上一份可用设置，不是清空表单</li>
+            <li>如果要进入问题排查，请先开启高级排查</li>
           </ul>
-        </article>
-      </section>
-    </main>
+        </div>
+      </div>
+    </section>
 
-    <script type="module" src="./app.js"></script>
-  </body>
+    <!-- ========== DEBUG / AUDIT ========== -->
+    <section class="workspace-panel" id="workspace-debug"
+             role="tabpanel" aria-labelledby="nav-debug">
+      <div class="pg-head">
+        <div>
+          <h1>问题排查</h1>
+          <p class="pg-sub">查看系统处理过程，帮助定位问题，不影响正常使用流程。</p>
+        </div>
+      </div>
+
+      <div class="debug-layout">
+        <div class="card" data-auth-required data-dev-required
+             data-lock-message="需要访问口令" data-ready-message="已连接"
+             data-dev-lock-message="需要先开启高级排查"
+             data-dev-ready-message="已开放问题排查">
+          <div class="card-head">
+            <div>
+              <h2>处理记录查询</h2>
+              <p class="text-muted">查看关键处理步骤、内容变化和参考依据。</p>
+            </div>
+            <span class="badge" data-gate-note>需要访问口令</span>
+          </div>
+          <div class="guard-notice" id="debug-guard-status">
+            如需查看处理过程，请先在设置中开启高级排查。
+          </div>
+          <form id="debug-form" class="form-grid debug-form">
+            <div class="field">
+              <label for="debug-run-id"><span>请求编号</span></label>
+              <input id="debug-run-id" name="run_id" type="text" placeholder="可选">
+            </div>
+            <div class="field">
+              <label for="debug-operation-id"><span>操作编号</span></label>
+              <input id="debug-operation-id" name="operation_id" type="text" placeholder="可选">
+            </div>
+            <div class="field">
+              <label for="debug-object-id"><span>内容编号</span></label>
+              <input id="debug-object-id" name="object_id" type="text" placeholder="可选">
+            </div>
+            <div class="field">
+              <label for="debug-limit"><span>最多显示</span></label>
+              <input id="debug-limit" name="limit" type="number" min="1" max="500" value="80">
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary" id="debug-submit">查看处理记录</button>
+              <button type="button" class="btn btn-ghost" id="debug-reset">重置</button>
+            </div>
+          </form>
+          <div class="result-zone" id="debug-result">
+            <div class="empty-state">还没有排查结果。</div>
+          </div>
+        </div>
+
+        <div class="card card-info">
+          <h3>怎么看这些记录</h3>
+          <ul class="info-list">
+            <li>处理记录会按时间顺序说明系统做了什么</li>
+            <li>内容变化会告诉你哪些内容被更新了</li>
+            <li>选择依据会解释系统为什么采用这组内容</li>
+            <li>参考依据会说明系统更看重哪些内容</li>
+            <li>这里主要用于定位问题，不替代正常操作页面</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script type="module" src="./app.js"></script>
+</body>
 </html>

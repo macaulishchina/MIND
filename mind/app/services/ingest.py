@@ -40,11 +40,17 @@ class MemoryIngestService:
     def _do_write(self, req: AppRequest, *, record_kind: str) -> AppResponse:
         resp = new_response(req)
         ctx = resolve_execution_context(req.principal, req.session, req.policy)
+        raw_episode_id = req.input.get("episode_id")
+        episode_id = (
+            raw_episode_id
+            if isinstance(raw_episode_id, str) and raw_episode_id.strip()
+            else f"ep-{uuid4().hex[:8]}"
+        )
 
         write_req: dict[str, Any] = {
             "record_kind": req.input.get("record_kind", record_kind),
             "content": req.input.get("content", ""),
-            "episode_id": req.input.get("episode_id", f"ep-{uuid4().hex[:8]}"),
+            "episode_id": episode_id,
             "timestamp_order": req.input.get("timestamp_order", 1),
         }
 
@@ -65,6 +71,7 @@ class MemoryIngestService:
                 "object_id": result.response.get("object_id"),
                 "version": result.response.get("version"),
                 "provenance_id": result.response.get("provenance_id"),
+                "episode_id": episode_id,
             }
             resp.trace_ref = latest_trace_ref(
                 self._primitive.store,

@@ -64,16 +64,16 @@ FRONTEND_ENTRYPOINT_MARKERS: dict[str, dict[str, tuple[str, ...]]] = {
     },
     "debug_object_delta": {
         "html": (),
-        "js": ("Object Deltas",),
+        "js": ("内容变化",),
         "css": (),
     },
     "debug_context": {
         "html": (),
-        "js": ("Context Selection", "Evidence Support"),
+        "js": ("选择依据", "参考依据"),
         "css": (),
     },
     "debug_guard": {
-        "html": ("server-side dev mode",),
+        "html": ("需要先开启高级排查",),
         "js": ("loadDebugTimeline",),
         "css": (),
     },

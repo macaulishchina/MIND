@@ -183,6 +183,7 @@ def test_frontend_experience_projections_use_real_app_services(tmp_path: Path) -
         offline_view = build_frontend_offline_submit_result(offline_response)
 
     assert ingest_view.object_id.startswith("raw-")
+    assert ingest_view.episode_id == episode_id
     assert ingest_view.trace_ref is not None
 
     assert retrieve_view.candidate_count >= 1

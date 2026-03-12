@@ -155,8 +155,8 @@ def evaluate_frontend_flow_report(
             missing_checks.extend(
                 f"responsive:{marker}" for marker in responsive_result.missing_markers
             )
-        if scenario.entrypoint == "debug_guard" and "server-side dev mode" not in index_html:
-            missing_checks.append("html:server-side dev mode")
+        if scenario.entrypoint == "debug_guard" and "需要先开启高级排查" not in index_html:
+            missing_checks.append("html:需要先开启高级排查")
 
         scenario_results.append(
             FrontendFlowScenarioResult(

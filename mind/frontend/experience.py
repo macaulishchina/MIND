@@ -50,6 +50,7 @@ class FrontendIngestResult(FrontendModel):
     """Frontend-facing ingest result projection."""
 
     object_id: str = Field(min_length=1)
+    episode_id: str = Field(min_length=1)
     version: int = Field(ge=1)
     provenance_id: str | None = None
     trace_ref: str | None = None
@@ -224,6 +225,7 @@ def build_frontend_ingest_result(
     payload, trace_ref = _coerce_ok_payload(response_or_payload)
     return FrontendIngestResult(
         object_id=str(payload["object_id"]),
+        episode_id=str(payload["episode_id"]),
         version=int(payload["version"]),
         provenance_id=(
             str(payload["provenance_id"]) if payload.get("provenance_id") is not None else None

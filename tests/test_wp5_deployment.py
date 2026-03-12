@@ -91,6 +91,7 @@ def test_compose_dev_yaml_exists_and_valid() -> None:
     api_svc = compose_dev["services"]["api"]
     assert "volumes" in api_svc
     assert any("mind" in v for v in api_svc["volumes"])
+    assert any("frontend" in v for v in api_svc["volumes"])
 
     docs_svc = compose_dev["services"]["docs"]
     assert docs_svc["build"]["dockerfile"] == "Dockerfile.docs.dev"
@@ -251,6 +252,27 @@ def test_docs_release_script_builds_and_publishes_static_site() -> None:
     assert 'DOCS_BIND="${DOCS_BIND:-0.0.0.0:18604}"' in docs_release_script
     assert "mkdocs build --strict" in docs_release_script
     assert "publish-local" in docs_release_script
+
+
+def test_api_dockerfile_bundles_frontend_assets() -> None:
+    dockerfile_api = (ROOT / "Dockerfile.api").read_text(encoding="utf-8")
+
+    assert "COPY frontend /app/frontend" in dockerfile_api
+
+
+def test_python_dockerfiles_enable_cached_dependency_installs() -> None:
+    dockerfile_api = (ROOT / "Dockerfile.api").read_text(encoding="utf-8")
+    dockerfile_worker = (ROOT / "Dockerfile.worker").read_text(encoding="utf-8")
+    dockerfile_docs_dev = (ROOT / "Dockerfile.docs.dev").read_text(encoding="utf-8")
+
+    for dockerfile in (dockerfile_api, dockerfile_worker, dockerfile_docs_dev):
+        assert "# syntax=docker/dockerfile:1.7" in dockerfile
+        assert "--mount=type=cache,target=/root/.cache/pip" in dockerfile
+        assert "pip install --no-build-isolation --no-deps ." in dockerfile
+
+    assert 'COPY pyproject.toml /app/' in dockerfile_api
+    assert 'COPY pyproject.toml /app/' in dockerfile_worker
+    assert 'COPY pyproject.toml /app/' in dockerfile_docs_dev
 
 
 def test_deployment_smoke_suite_v1() -> None:

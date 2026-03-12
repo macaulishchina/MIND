@@ -41,7 +41,7 @@ async def test_static_frontend_index_is_mounted(
     response = await static_frontend_client.get("/frontend/")
 
     assert response.status_code == 200
-    assert "MIND Frontend Workbench" in response.text
+    assert "MIND 记忆控制台" in response.text
     assert "./app.js" in response.text
     assert "./styles.css" in response.text
     assert 'id="gate-demo-panel"' in response.text
@@ -68,12 +68,14 @@ async def test_static_frontend_assets_are_served(
     assert "applySettings" in app_js.text
     assert "restoreSettings" in app_js.text
     assert "submitIngest" in app_js.text
-    assert "Context Selection" in app_js.text
-    assert "Evidence Support" in app_js.text
+    assert "选择依据" in app_js.text
+    assert "参考依据" in app_js.text
     assert "submitRetrieve" in app_js.text
     assert "submitAccess" in app_js.text
     assert "submitOffline" in app_js.text
+    assert "status-chip" in app_js.text
     assert styles.status_code == 200
     assert ".workbench" in styles.text
     assert ".auth-panel" in styles.text
     assert ".wide-field" in styles.text
+    assert ".overview-card" in styles.text

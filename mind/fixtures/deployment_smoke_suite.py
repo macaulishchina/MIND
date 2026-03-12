@@ -77,6 +77,7 @@ def build_deployment_smoke_suite_v1() -> tuple[DeploymentSmokeScenario, ...]:
         DeploymentSmokeScenario("api_builds_dockerfile_api", "api uses Dockerfile.api"),
         DeploymentSmokeScenario("worker_builds_dockerfile_worker", "worker uses Dockerfile.worker"),
         DeploymentSmokeScenario("api_exposes_18600", "api publishes port 18600"),
+        DeploymentSmokeScenario("dev_api_mounts_frontend", "dev api mounts frontend assets"),
         DeploymentSmokeScenario("worker_runs_loop", "worker command loops the offline worker"),
         DeploymentSmokeScenario("docs_healthcheck", "docs service has healthcheck"),
         DeploymentSmokeScenario("docs_builds_dockerfile_docs", "docs uses Dockerfile.docs"),
@@ -88,7 +89,18 @@ def build_deployment_smoke_suite_v1() -> tuple[DeploymentSmokeScenario, ...]:
             "dev api publishes debugpy host port 18606",
         ),
         DeploymentSmokeScenario("dockerfile_api_exists", "Dockerfile.api exists"),
-        DeploymentSmokeScenario("dockerfile_api_installs_api", "Dockerfile.api installs .[api]"),
+        DeploymentSmokeScenario(
+            "dockerfile_api_installs_api",
+            "Dockerfile.api installs the api dependency set",
+        ),
+        DeploymentSmokeScenario(
+            "dockerfile_api_bundles_frontend",
+            "Dockerfile.api copies frontend static assets into the image",
+        ),
+        DeploymentSmokeScenario(
+            "dockerfile_api_uses_pip_cache_mount",
+            "Dockerfile.api uses a BuildKit pip cache mount",
+        ),
         DeploymentSmokeScenario(
             "dockerfile_api_entrypoint",
             "Dockerfile.api uses entrypoint script",
@@ -104,6 +116,14 @@ def build_deployment_smoke_suite_v1() -> tuple[DeploymentSmokeScenario, ...]:
         DeploymentSmokeScenario(
             "dockerfile_worker_installs_project",
             "Dockerfile.worker installs project",
+        ),
+        DeploymentSmokeScenario(
+            "dockerfile_worker_uses_pip_cache_mount",
+            "Dockerfile.worker uses a BuildKit pip cache mount",
+        ),
+        DeploymentSmokeScenario(
+            "dockerfile_docs_dev_uses_pip_cache_mount",
+            "Dockerfile.docs.dev uses a BuildKit pip cache mount",
         ),
         DeploymentSmokeScenario("env_example_exists", ".env.example exists"),
         DeploymentSmokeScenario("env_example_required_vars", ".env.example contains required vars"),
@@ -179,6 +199,9 @@ def evaluate_deployment_smoke_suite(root: Path) -> DeploymentSmokeReport:
         "docs_builds_dockerfile_docs": _dockerfile_ref(docs) == "Dockerfile.docs",
         "worker_builds_dockerfile_worker": _dockerfile_ref(worker) == "Dockerfile.worker",
         "api_exposes_18600": "18600:18600" in list(api.get("ports", [])),
+        "dev_api_mounts_frontend": any(
+            "frontend" in str(volume) for volume in list(compose_dev_services.get("api", {}).get("volumes", []))
+        ),
         "docs_exposes_18601": any("18601" in str(port) for port in list(docs.get("ports", []))),
         "dev_docs_exposes_18602": any(
             "18602" in str(port) for port in list(dev_docs.get("ports", []))
@@ -193,7 +216,14 @@ def evaluate_deployment_smoke_suite(root: Path) -> DeploymentSmokeReport:
         ),
         "worker_runs_loop": "mindtest-offline-worker-once" in _worker_command(worker),
         "dockerfile_api_exists": dockerfile_api.exists(),
-        "dockerfile_api_installs_api": any(".[api]" in line for line in api_instructions),
+        "dockerfile_api_installs_api": "requirements-api.txt" in _read_text(dockerfile_api)
+        and "optional-dependencies" in _read_text(dockerfile_api)
+        and ".get(\"api\", [])" in _read_text(dockerfile_api),
+        "dockerfile_api_bundles_frontend": any(
+            line.startswith("COPY frontend ") for line in api_instructions
+        ),
+        "dockerfile_api_uses_pip_cache_mount": "--mount=type=cache,target=/root/.cache/pip"
+        in _read_text(dockerfile_api),
         "dockerfile_api_entrypoint": any(
             "entrypoint-api.sh" in line.lower() for line in api_instructions
         ),
@@ -207,9 +237,12 @@ def evaluate_deployment_smoke_suite(root: Path) -> DeploymentSmokeReport:
             "mkdocs" in line.lower() and "serve" in line.lower() for line in docs_dev_instructions
         ),
         "dockerfile_worker_exists": dockerfile_worker.exists(),
-        "dockerfile_worker_installs_project": any(
-            "pip install ." in line for line in worker_instructions
-        ),
+        "dockerfile_worker_installs_project": "pip install --no-build-isolation --no-deps ."
+        in _read_text(dockerfile_worker),
+        "dockerfile_worker_uses_pip_cache_mount": "--mount=type=cache,target=/root/.cache/pip"
+        in _read_text(dockerfile_worker),
+        "dockerfile_docs_dev_uses_pip_cache_mount": "--mount=type=cache,target=/root/.cache/pip"
+        in _read_text(dockerfile_docs_dev),
         "env_example_exists": env_example.exists(),
         "env_example_required_vars": {
             "MIND_POSTGRES_USER",
@@ -268,11 +301,35 @@ def _parse_dockerfile_instructions(path: Path) -> list[str]:
     if not path.exists():
         return []
     instructions: list[str] = []
+    buffer = ""
+    heredoc_terminator: str | None = None
     for raw_line in path.read_text(encoding="utf-8").splitlines():
         stripped = raw_line.strip()
+        if heredoc_terminator is not None:
+            if stripped == heredoc_terminator:
+                heredoc_terminator = None
+            continue
         if not stripped or stripped.startswith("#"):
             continue
-        instructions.append(stripped)
+
+        if buffer:
+            buffer = f"{buffer} {stripped}"
+        else:
+            buffer = stripped
+
+        if "<<" in stripped:
+            marker = stripped.split("<<", 1)[1].strip()
+            heredoc_terminator = marker.strip("'\"")
+
+        if buffer.endswith("\\"):
+            buffer = buffer[:-1].rstrip()
+            continue
+
+        instructions.append(buffer)
+        buffer = ""
+
+    if buffer:
+        instructions.append(buffer)
     return instructions
 
 

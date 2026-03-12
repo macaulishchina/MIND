@@ -18,6 +18,7 @@ services:
       # 源码热更新: 本地修改即时生效, 无需重新构建镜像
       - ./mind:/app/mind:ro
       - ./alembic:/app/alembic:ro
+      - ./frontend:/app/frontend:ro
     environment:
       MIND_LOG_LEVEL: DEBUG
       MIND_DEV_MODE: "true"
