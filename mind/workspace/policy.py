@@ -189,9 +189,8 @@ def _enforce_episode_diversity(
     if not non_none:
         return selected
 
-    from collections import Counter as _Counter  # local import to avoid name clash
-
-    dominant = _Counter(non_none).most_common(1)[0][0]
+    episode_counts = Counter(non_none)
+    dominant = episode_counts.most_common(1)[0][0]
 
     # Count how many selected objects differ from dominant episode.
     diverse_count = sum(
