@@ -53,6 +53,7 @@ VALID_RECORD_KIND = {
 }
 VALID_REFLECTION_KIND = {"success", "failure", "mixed"}
 VALID_SCHEMA_KIND = {"semantic", "procedural"}
+VALID_PROPOSAL_STATUS = {"proposed", "verified", "committed", "rejected"}
 RESERVED_CONTROL_PLANE_METADATA_FIELDS = frozenset(
     {
         "conceal",
@@ -290,6 +291,12 @@ def validate_object(obj: dict[str, Any]) -> list[str]:
             metadata["promotion_source_refs"], list
         ):
             errors.append("SchemaNote metadata.promotion_source_refs must be a list")
+        proposal_status = metadata.get("proposal_status")
+        if proposal_status is not None and proposal_status not in VALID_PROPOSAL_STATUS:
+            errors.append(
+                f"SchemaNote metadata.proposal_status must be one of "
+                f"{sorted(VALID_PROPOSAL_STATUS)}"
+            )
 
     if object_type == "EntityNode":
         alias = metadata.get("alias")

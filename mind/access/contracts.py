@@ -16,6 +16,15 @@ class AccessModel(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
 
 
+class EvidenceSummaryItem(AccessModel):
+    """A single item in the evidence summary returned with an access response (Phase β-S1)."""
+
+    object_id: str = Field(min_length=1)
+    object_type: str = Field(min_length=1)
+    brief: str = Field(min_length=1)
+    relevance_score: float = Field(ge=0.0, le=1.0)
+
+
 class AccessMode(StrEnum):
     FLASH = "flash"
     RECALL = "recall"
@@ -198,6 +207,7 @@ class AccessRunResponse(AccessModel):
     trace: AccessRunTrace
     used_object_ids: list[str] = Field(default_factory=list)
     answer_quality_signal: float | None = Field(default=None, ge=-1.0, le=1.0)
+    evidence_summary: list[EvidenceSummaryItem] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def enforce_response_shape(self) -> AccessRunResponse:

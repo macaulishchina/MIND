@@ -17,6 +17,9 @@ class OfflineJobKind(StrEnum):
     REFLECT_EPISODE = "reflect_episode"
     PROMOTE_SCHEMA = "promote_schema"
     UPDATE_PRIORITY = "update_priority"
+    REFRESH_EMBEDDINGS = "refresh_embeddings"
+    RESOLVE_CONFLICT = "resolve_conflict"
+    VERIFY_PROPOSAL = "verify_proposal"
 
 
 class OfflineJobStatus(StrEnum):
@@ -47,6 +50,26 @@ class UpdatePriorityJobPayload(BaseModel):
 
     object_ids: list[str] = Field(default_factory=list)
     reason: str = Field(min_length=1, default="scheduled priority update")
+
+
+class RefreshEmbeddingsJobPayload(BaseModel):
+    """Payload for embedding refresh jobs (Phase β-1)."""
+
+    object_ids: list[str] = Field(default_factory=list)
+    reason: str = Field(min_length=1, default="refresh dense embeddings")
+
+
+class ResolveConflictJobPayload(BaseModel):
+    """Payload for conflict resolution jobs (Phase β-2)."""
+
+    object_id: str = Field(min_length=1)
+    conflict_candidates: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class VerifyProposalJobPayload(BaseModel):
+    """Payload for proposal verification jobs (Phase β-4)."""
+
+    schema_note_id: str = Field(min_length=1)
 
 
 class OfflineJob(BaseModel):

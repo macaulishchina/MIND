@@ -1,4 +1,4 @@
-"""Auto-trigger scheduler for offline maintenance jobs (Phase α-3)."""
+"""Auto-trigger scheduler for offline maintenance jobs (Phase α-3, β-2, β-4)."""
 
 from __future__ import annotations
 
@@ -8,7 +8,10 @@ from mind.offline_jobs import (
     OfflineJobKind,
     OfflineJobStore,
     ReflectEpisodeJobPayload,
+    RefreshEmbeddingsJobPayload,
+    ResolveConflictJobPayload,
     UpdatePriorityJobPayload,
+    VerifyProposalJobPayload,
     new_offline_job,
     utc_now,
 )
@@ -106,6 +109,74 @@ class OfflineJobScheduler:
         job = new_offline_job(
             job_kind=OfflineJobKind.UPDATE_PRIORITY,
             payload=UpdatePriorityJobPayload(
+                object_ids=object_ids or [],
+                reason=reason,
+            ),
+            priority=priority,
+            now=self._clock(),
+        )
+        self._job_store.enqueue_offline_job(job)
+        return job.job_id
+
+    def on_conflict_detected(
+        self,
+        object_id: str,
+        conflict_candidates: list[dict[str, Any]],
+    ) -> str | None:
+        """Auto-enqueue a RESOLVE_CONFLICT job when contradictions are found (Phase β-2).
+
+        Only enqueues when at least one candidate has relation == "contradict".
+
+        Returns the new job_id if a job was enqueued, else ``None``.
+        """
+        has_contradiction = any(
+            c.get("relation") == "contradict" for c in conflict_candidates
+        )
+        if not has_contradiction:
+            return None
+        job = new_offline_job(
+            job_kind=OfflineJobKind.RESOLVE_CONFLICT,
+            payload=ResolveConflictJobPayload(
+                object_id=object_id,
+                conflict_candidates=conflict_candidates,
+            ),
+            priority=0.7,
+            now=self._clock(),
+        )
+        self._job_store.enqueue_offline_job(job)
+        return job.job_id
+
+    def on_schema_promoted(
+        self,
+        schema_note_id: str,
+    ) -> str:
+        """Auto-enqueue a VERIFY_PROPOSAL job after a SchemaNote is promoted (Phase β-4).
+
+        Returns the new job_id.
+        """
+        job = new_offline_job(
+            job_kind=OfflineJobKind.VERIFY_PROPOSAL,
+            payload=VerifyProposalJobPayload(schema_note_id=schema_note_id),
+            priority=0.65,
+            now=self._clock(),
+        )
+        self._job_store.enqueue_offline_job(job)
+        return job.job_id
+
+    def schedule_refresh_embeddings(
+        self,
+        object_ids: list[str] | None = None,
+        *,
+        reason: str = "refresh dense embeddings",
+        priority: float = 0.3,
+    ) -> str:
+        """Enqueue a REFRESH_EMBEDDINGS job (Phase β-1).
+
+        Returns the new job_id.
+        """
+        job = new_offline_job(
+            job_kind=OfflineJobKind.REFRESH_EMBEDDINGS,
+            payload=RefreshEmbeddingsJobPayload(
                 object_ids=object_ids or [],
                 reason=reason,
             ),

@@ -24,6 +24,9 @@ from .jobs import (
     OfflineJobStore,
     PromoteSchemaJobPayload,
     ReflectEpisodeJobPayload,
+    RefreshEmbeddingsJobPayload,
+    ResolveConflictJobPayload,
+    VerifyProposalJobPayload,
     new_offline_job,
 )
 from .promotion import PromotionDecision, assess_schema_promotion
@@ -54,7 +57,10 @@ __all__ = [
     "PromotionDecision",
     "ReplayTarget",
     "ReflectEpisodeJobPayload",
+    "RefreshEmbeddingsJobPayload",
+    "ResolveConflictJobPayload",
     "SchemaEvidenceAudit",
+    "VerifyProposalJobPayload",
     "WorkerRunResult",
     "assess_schema_promotion",
     "audit_promotion_within_window",
