@@ -31,6 +31,7 @@ class PrimitiveName(StrEnum):
     LINK = "link"
     REFLECT = "reflect"
     REORGANIZE_SIMPLE = "reorganize_simple"
+    RECORD_FEEDBACK = "record_feedback"
 
 
 class PrimitiveOutcome(StrEnum):
@@ -262,6 +263,23 @@ class ReorganizeSimpleRequest(ContractModel):
 class ReorganizeSimpleResponse(ContractModel):
     updated_ids: list[str] = Field(default_factory=list)
     new_object_ids: list[str] = Field(default_factory=list)
+
+
+class RecordFeedbackRequest(ContractModel):
+    """Request to record post-query feedback for a set of memory objects."""
+
+    task_id: str = Field(min_length=1)
+    episode_id: str = Field(min_length=1)
+    query: str | dict[str, Any]
+    used_object_ids: list[str] = Field(default_factory=list)
+    helpful_object_ids: list[str] = Field(default_factory=list)
+    unhelpful_object_ids: list[str] = Field(default_factory=list)
+    quality_signal: float = Field(default=0.0, ge=-1.0, le=1.0)
+    cost: float = Field(default=0.0, ge=0.0)
+
+
+class RecordFeedbackResponse(ContractModel):
+    feedback_object_id: str = Field(min_length=1)
 
 
 class PrimitiveExecutionResult(ContractModel):

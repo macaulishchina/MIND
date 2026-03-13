@@ -14,6 +14,7 @@ CORE_OBJECT_TYPES = {
     "LinkEdge",
     "WorkspaceView",
     "SchemaNote",
+    "FeedbackRecord",
 }
 
 REQUIRED_FIELDS = (
@@ -38,6 +39,8 @@ REQUIRED_METADATA_FIELDS = {
     "LinkEdge": ("confidence", "evidence_refs"),
     "WorkspaceView": ("task_id", "slot_limit", "slots", "selection_policy"),
     "SchemaNote": ("kind", "evidence_refs", "stability_score", "promotion_source_refs"),
+    "FeedbackRecord": ("task_id", "episode_id", "query", "used_object_ids",
+                       "helpful_object_ids", "unhelpful_object_ids", "quality_signal"),
 }
 
 VALID_STATUS = {"active", "archived", "deprecated", "invalid"}
@@ -295,6 +298,17 @@ def validate_object(obj: dict[str, Any]) -> list[str]:
             or any(not isinstance(item, str) or not item for item in alias)
         ):
             errors.append("EntityNode metadata.alias must be a list of non-empty strings")
+
+    if object_type == "FeedbackRecord":
+        quality_signal = metadata.get("quality_signal")
+        if quality_signal is not None and (
+            not isinstance(quality_signal, int | float) or not -1 <= float(quality_signal) <= 1
+        ):
+            errors.append("FeedbackRecord metadata.quality_signal must be a float in [-1, 1]")
+        for list_field in ("used_object_ids", "helpful_object_ids", "unhelpful_object_ids"):
+            value = metadata.get(list_field)
+            if value is not None and not isinstance(value, list):
+                errors.append(f"FeedbackRecord metadata.{list_field} must be a list")
 
     return errors
 

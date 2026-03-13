@@ -196,6 +196,8 @@ class AccessRunResponse(AccessModel):
     answer_trace: dict[str, Any] | None = None
     verification_notes: list[str] = Field(default_factory=list)
     trace: AccessRunTrace
+    used_object_ids: list[str] = Field(default_factory=list)
+    answer_quality_signal: float | None = Field(default=None, ge=-1.0, le=1.0)
 
     @model_validator(mode="after")
     def enforce_response_shape(self) -> AccessRunResponse:

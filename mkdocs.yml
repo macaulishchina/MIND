@@ -5,6 +5,7 @@ site_dir: site
 exclude_docs: |
   design/**
   foundation/**
+  plans/**
   reports/**
   research/**
 

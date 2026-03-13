@@ -91,6 +91,23 @@ def _replay_score(obj: dict[str, Any]) -> float:
     claims = metadata.get("claims", [])
     if isinstance(claims, list) and "stale-memory" in claims:
         score += 0.10
+
+    # α-2: dynamic signal adjustments from access and feedback counters
+    access_count = metadata.get("access_count", 0)
+    if isinstance(access_count, int | float) and access_count > 0:
+        score += min(0.20, 0.02 * float(access_count))
+
+    feedback_positive = metadata.get("feedback_positive_count", 0)
+    feedback_negative = metadata.get("feedback_negative_count", 0)
+    if isinstance(feedback_positive, int | float) and feedback_positive > 0:
+        score += min(0.15, 0.05 * float(feedback_positive))
+    if isinstance(feedback_negative, int | float) and feedback_negative > 0:
+        score -= min(0.15, 0.05 * float(feedback_negative))
+
+    decay_score = metadata.get("decay_score")
+    if isinstance(decay_score, int | float):
+        score -= (1.0 - float(decay_score)) * 0.10
+
     return round(score, 4)
 
 

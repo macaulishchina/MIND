@@ -29,6 +29,19 @@ async def submit_job(
     return app_json_response(response)
 
 
+@router.post("/jobs/enqueue")
+async def enqueue_job(
+    request: Request,
+    principal: Annotated[PrincipalContext, Depends(require_api_key)],
+    payload: PayloadBody = None,
+) -> JSONResponse:
+    """Enqueue an offline maintenance job (alias for POST /jobs with explicit intent)."""
+    response = get_registry(request).offline_job_app_service.submit_job(
+        build_app_request(request, principal, payload=payload)
+    )
+    return app_json_response(response)
+
+
 @router.get("/jobs/{job_id}")
 async def get_job(
     job_id: str,

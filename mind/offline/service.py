@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 from typing import Any
@@ -22,6 +23,7 @@ from .jobs import (
     OfflineJobKind,
     PromoteSchemaJobPayload,
     ReflectEpisodeJobPayload,
+    UpdatePriorityJobPayload,
 )
 from .promotion import assess_schema_promotion
 
@@ -198,6 +200,31 @@ class OfflineMaintenanceService:
                     telemetry_operation_id=operation_id,
                     telemetry_parent_event_id=last_parent_event_id,
                 )
+            elif job.job_kind is OfflineJobKind.UPDATE_PRIORITY:
+                payload = UpdatePriorityJobPayload.model_validate(job.payload)
+                last_parent_event_id = f"{operation_id}-dispatch"
+                self._record_telemetry(
+                    enabled=dev_mode,
+                    event=TelemetryEvent(
+                        event_id=last_parent_event_id,
+                        scope=TelemetryScope.OFFLINE,
+                        kind=TelemetryEventKind.DECISION,
+                        occurred_at=self._clock(),
+                        run_id=run_id,
+                        operation_id=operation_id,
+                        parent_event_id=f"{operation_id}-entry",
+                        job_id=job.job_id,
+                        actor=actor,
+                        payload={
+                            "stage": "dispatch",
+                            "job_kind": job.job_kind.value,
+                            "handler": "update_priority",
+                            "object_count": len(payload.object_ids),
+                            "reason": payload.reason,
+                        },
+                    ),
+                )
+                result = self._process_update_priority(job, payload=payload)
             else:
                 raise OfflineMaintenanceError(
                     f"unsupported offline job kind '{job.job_kind.value}'"
@@ -349,6 +376,56 @@ class OfflineMaintenanceService:
     ) -> tuple[Any, list[dict[str, Any]]]:
         target_objects = [self.store.read_object(object_id) for object_id in payload.target_refs]
         return assess_schema_promotion(target_objects), target_objects
+
+    def _process_update_priority(
+        self,
+        job: OfflineJob,
+        *,
+        payload: UpdatePriorityJobPayload,
+    ) -> dict[str, Any]:
+        """Batch-refresh decay_score on a set of objects using recency signal."""
+        now = self._clock()
+        updated_ids: list[str] = []
+        object_ids = payload.object_ids or [
+            obj["id"] for obj in self.store.iter_latest_objects()
+        ]
+        for object_id in object_ids:
+            try:
+                obj = self.store.read_object(object_id)
+            except Exception:
+                continue
+            if obj.get("status") in ("archived", "deprecated", "invalid"):
+                continue
+            metadata = dict(obj.get("metadata", {}))
+            # Compute decay_score based on age since creation
+            try:
+                created_at = datetime.fromisoformat(
+                    str(obj.get("created_at", "")).replace("Z", "+00:00")
+                )
+                age_days = max(0.0, (now - created_at).total_seconds() / 86400.0)
+            except (ValueError, TypeError):
+                age_days = 0.0
+            # Exponential decay with 90-day half-life
+            decay_score = round(math.exp(-age_days / 90.0 * math.log(2)), 4)
+            if metadata.get("decay_score") == decay_score:
+                continue
+            metadata["decay_score"] = decay_score
+            updated_obj = dict(obj)
+            updated_obj["version"] = int(obj["version"]) + 1
+            updated_obj["updated_at"] = now.isoformat()
+            updated_obj["metadata"] = metadata
+            try:
+                self.store.insert_object(updated_obj)
+                updated_ids.append(object_id)
+            except Exception:
+                continue
+
+        return {
+            "job_kind": job.job_kind.value,
+            "updated_count": len(updated_ids),
+            "updated_ids": updated_ids,
+            "reason": payload.reason,
+        }
 
     @staticmethod
     def _context(

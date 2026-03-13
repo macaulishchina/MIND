@@ -16,6 +16,7 @@ class OfflineJobKind(StrEnum):
 
     REFLECT_EPISODE = "reflect_episode"
     PROMOTE_SCHEMA = "promote_schema"
+    UPDATE_PRIORITY = "update_priority"
 
 
 class OfflineJobStatus(StrEnum):
@@ -39,6 +40,13 @@ class PromoteSchemaJobPayload(BaseModel):
 
     target_refs: list[str] = Field(min_length=2)
     reason: str = Field(min_length=1)
+
+
+class UpdatePriorityJobPayload(BaseModel):
+    """Payload for batch priority update jobs."""
+
+    object_ids: list[str] = Field(default_factory=list)
+    reason: str = Field(min_length=1, default="scheduled priority update")
 
 
 class OfflineJob(BaseModel):
