@@ -7,6 +7,7 @@ from mind.offline_jobs import (
     OfflineJobStore,
     PromoteSchemaJobPayload,
     ReflectEpisodeJobPayload,
+    UpdatePriorityJobPayload,
     new_offline_job,
     utc_now,
 )
@@ -18,6 +19,7 @@ __all__ = [
     "OfflineJobStore",
     "PromoteSchemaJobPayload",
     "ReflectEpisodeJobPayload",
+    "UpdatePriorityJobPayload",
     "new_offline_job",
     "utc_now",
 ]

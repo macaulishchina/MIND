@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import copy
 import json
-import re
 from collections.abc import Callable, Iterable, Mapping
 from datetime import UTC, datetime
 from typing import Any
@@ -12,12 +11,21 @@ from uuid import uuid4
 
 from mind.capabilities import (
     CapabilityService,
-    ReflectRequest as CapabilityReflectRequest,
-    SummarizeRequest as CapabilitySummarizeRequest,
     resolve_capability_provider_config,
 )
+from mind.capabilities import (
+    ReflectRequest as CapabilityReflectRequest,
+)
+from mind.capabilities import (
+    SummarizeRequest as CapabilitySummarizeRequest,
+)
 from mind.kernel.provenance import build_direct_provenance_record, build_provenance_summary
-from mind.kernel.retrieval import build_query_embedding, build_search_text, canonical_query_text, tokenize
+from mind.kernel.retrieval import (
+    build_query_embedding,
+    build_search_text,
+    canonical_query_text,
+    tokenize,
+)
 from mind.kernel.schema import public_object_view
 from mind.kernel.store import MemoryStore, PrimitiveTransaction, StoreError
 from mind.telemetry import TelemetryEventKind, TelemetryRecorder, TelemetryScope
@@ -38,6 +46,8 @@ from .contracts import (
     PrimitiveOutcome,
     ReadRequest,
     ReadResponse,
+    RecordFeedbackRequest,
+    RecordFeedbackResponse,
     ReflectRequest,
     ReflectResponse,
     ReorganizeOperation,
@@ -281,6 +291,32 @@ class PrimitiveService:
             telemetry_parent_event_id=execution_context.telemetry_parent_event_id,
             request_model=ReorganizeSimpleRequest,
             response_model=ReorganizeSimpleResponse,
+            request_payload=request,
+            handler=handler,
+        )
+
+    def record_feedback(
+        self,
+        request: RecordFeedbackRequest | dict[str, Any],
+        context: PrimitiveExecutionContext | dict[str, Any],
+    ) -> PrimitiveExecutionResult:
+        execution_context = PrimitiveExecutionContext.model_validate(context)
+
+        def handler(
+            validated_request: RecordFeedbackRequest,
+            transaction: PrimitiveTransaction,
+        ) -> PrimitiveHandlerResult[RecordFeedbackResponse]:
+            return self._record_feedback(validated_request, execution_context, transaction)
+
+        return self._runtime.execute_write(
+            primitive=PrimitiveName.RECORD_FEEDBACK,
+            actor=execution_context.actor,
+            dev_mode=execution_context.dev_mode,
+            telemetry_run_id=execution_context.telemetry_run_id,
+            telemetry_operation_id=execution_context.telemetry_operation_id,
+            telemetry_parent_event_id=execution_context.telemetry_parent_event_id,
+            request_model=RecordFeedbackRequest,
+            response_model=RecordFeedbackResponse,
             request_payload=request,
             handler=handler,
         )
@@ -873,6 +909,111 @@ class PrimitiveService:
                 ),
             ),
         )
+
+    def _record_feedback(
+        self,
+        request: RecordFeedbackRequest,
+        context: PrimitiveExecutionContext,
+        transaction: PrimitiveTransaction,
+    ) -> PrimitiveHandlerResult[RecordFeedbackResponse]:
+        costs = [BudgetCost(category=PrimitiveCostCategory.WRITE, amount=0.5)]
+        self._enforce_budget(context, costs)
+
+        now = self._clock()
+        created_at = now.isoformat()
+        feedback_object_id = self._new_object_id(f"feedback-{request.episode_id}")
+        query_text = self._query_text(request.query)
+        feedback_object: dict[str, Any] = {
+            "id": feedback_object_id,
+            "type": "FeedbackRecord",
+            "content": {"query": query_text},
+            "source_refs": list(request.used_object_ids) if request.used_object_ids else [],
+            "created_at": created_at,
+            "updated_at": created_at,
+            "version": 1,
+            "status": "active",
+            "priority": max(0.0, min(1.0, 0.5 + 0.25 * request.quality_signal)),
+            "metadata": {
+                "task_id": request.task_id,
+                "episode_id": request.episode_id,
+                "query": query_text,
+                "used_object_ids": list(request.used_object_ids),
+                "helpful_object_ids": list(request.helpful_object_ids),
+                "unhelpful_object_ids": list(request.unhelpful_object_ids),
+                "quality_signal": request.quality_signal,
+                "cost": request.cost,
+            },
+        }
+        transaction.insert_object(feedback_object)
+
+        # Update dynamic signal counters on the referenced objects
+        all_used = set(request.used_object_ids)
+        helpful = set(request.helpful_object_ids)
+        unhelpful = set(request.unhelpful_object_ids)
+        mutated_ids = [feedback_object_id]
+
+        for object_id in all_used:
+            if not transaction.has_object(object_id):
+                continue
+            try:
+                target_obj = transaction.read_object(object_id)
+            except StoreError:
+                continue
+            updated_obj = self._apply_feedback_signals(
+                target_obj,
+                is_helpful=object_id in helpful,
+                is_unhelpful=object_id in unhelpful,
+                now_iso=created_at,
+            )
+            transaction.insert_object(updated_obj)
+            mutated_ids.append(object_id)
+
+        self._after_write_operation(PrimitiveName.RECORD_FEEDBACK)
+        return PrimitiveHandlerResult(
+            response=RecordFeedbackResponse(feedback_object_id=feedback_object_id),
+            target_ids=tuple(mutated_ids),
+            mutated_ids=tuple(mutated_ids),
+            budget_events=(
+                self._budget_event(
+                    context=context,
+                    primitive=PrimitiveName.RECORD_FEEDBACK,
+                    costs=costs,
+                    metadata={
+                        "episode_id": request.episode_id,
+                        "used_count": len(request.used_object_ids),
+                        "helpful_count": len(request.helpful_object_ids),
+                        "unhelpful_count": len(request.unhelpful_object_ids),
+                    },
+                ),
+            ),
+        )
+
+    @staticmethod
+    def _apply_feedback_signals(
+        obj: dict[str, Any],
+        *,
+        is_helpful: bool,
+        is_unhelpful: bool,
+        now_iso: str,
+    ) -> dict[str, Any]:
+        """Return a new version of the object with updated dynamic signal metadata."""
+        import copy as _copy
+        updated = _copy.deepcopy(obj)
+        updated["version"] = int(obj["version"]) + 1
+        updated["updated_at"] = now_iso
+        metadata = dict(updated.get("metadata", {}))
+        metadata["access_count"] = int(metadata.get("access_count", 0)) + 1
+        metadata["last_accessed_at"] = now_iso
+        if is_helpful:
+            metadata["feedback_positive_count"] = (
+                int(metadata.get("feedback_positive_count", 0)) + 1
+            )
+        if is_unhelpful:
+            metadata["feedback_negative_count"] = (
+                int(metadata.get("feedback_negative_count", 0)) + 1
+            )
+        updated["metadata"] = metadata
+        return updated
 
     def _read_existing_objects(
         self,
