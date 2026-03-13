@@ -246,3 +246,64 @@ def _collect_selected_ids(run: LongHorizonBenchmarkRun) -> list[list[str]]:
     ``GrowthLiftBenchmarkRunner`` rather than relying on this function.
     """
     return [[] for _ in run.sequence_results]
+
+
+@dataclass(frozen=True)
+class ArchiveReport:
+    """Report summarising automatic archive activity (Phase γ-5).
+
+    Attributes:
+        archived_count: Number of objects archived in the observed window.
+        unarchived_count: Number of objects restored (mis-archive corrections).
+        total_objects: Total object count (archived + active) at evaluation time.
+        archive_rate: Fraction of objects that were archived.
+        misarchive_rate: Fraction of archived objects that were later restored.
+    """
+
+    archived_count: int
+    unarchived_count: int
+    total_objects: int
+    archive_rate: float
+    misarchive_rate: float
+
+    @classmethod
+    def compute(
+        cls,
+        *,
+        archived_count: int,
+        unarchived_count: int,
+        total_objects: int,
+    ) -> ArchiveReport:
+        """Compute archive metrics from raw counts.
+
+        Args:
+            archived_count: Number of objects archived in the observed window.
+            unarchived_count: Number of objects restored after auto-archiving.
+            total_objects: Total object population (archived + active).
+        """
+        archive_rate = (
+            round(archived_count / float(total_objects), 4)
+            if total_objects > 0
+            else 0.0
+        )
+        misarchive_rate = (
+            round(unarchived_count / float(archived_count), 4)
+            if archived_count > 0
+            else 0.0
+        )
+        return cls(
+            archived_count=archived_count,
+            unarchived_count=unarchived_count,
+            total_objects=total_objects,
+            archive_rate=archive_rate,
+            misarchive_rate=misarchive_rate,
+        )
+
+    @property
+    def gamma_gate_pass(self) -> bool:
+        """Return True when the archive quality gate is met.
+
+        Gate: ``misarchive_rate <= 0.10`` (at most 10 % of archives are
+        reversed, indicating the auto-archive heuristic is reliable).
+        """
+        return self.misarchive_rate <= 0.10

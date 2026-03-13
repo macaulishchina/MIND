@@ -202,11 +202,16 @@ class TestBackwardCompatReExport:
         import mind.offline.jobs as compat_module
 
         expected = {
+            "AutoArchiveJobPayload",
+            "DiscoverLinksJobPayload",
             "OfflineJob",
             "OfflineJobKind",
             "OfflineJobStatus",
             "OfflineJobStore",
+            "PromotePolicyJobPayload",
+            "PromotePreferenceJobPayload",
             "PromoteSchemaJobPayload",
+            "RebuildArtifactIndexJobPayload",
             "ReflectEpisodeJobPayload",
             "RefreshEmbeddingsJobPayload",
             "ResolveConflictJobPayload",

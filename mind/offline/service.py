@@ -19,16 +19,21 @@ from mind.primitives.service import PrimitiveService
 from mind.telemetry import TelemetryEvent, TelemetryEventKind, TelemetryRecorder, TelemetryScope
 
 from .jobs import (
+    AutoArchiveJobPayload,
+    DiscoverLinksJobPayload,
     OfflineJob,
     OfflineJobKind,
+    PromotePolicyJobPayload,
+    PromotePreferenceJobPayload,
     PromoteSchemaJobPayload,
+    RebuildArtifactIndexJobPayload,
     ReflectEpisodeJobPayload,
     RefreshEmbeddingsJobPayload,
     ResolveConflictJobPayload,
     UpdatePriorityJobPayload,
     VerifyProposalJobPayload,
 )
-from .promotion import assess_schema_promotion
+from .promotion import assess_policy_promotion, assess_preference_promotion, assess_schema_promotion
 
 type ProviderEnvResolver = Callable[[], Mapping[str, str] | None]
 
@@ -237,6 +242,21 @@ class OfflineMaintenanceService:
             elif job.job_kind is OfflineJobKind.VERIFY_PROPOSAL:
                 payload = VerifyProposalJobPayload.model_validate(job.payload)
                 result = self._process_verify_proposal(job, payload=payload)
+            elif job.job_kind is OfflineJobKind.PROMOTE_POLICY:
+                payload = PromotePolicyJobPayload.model_validate(job.payload)
+                result = self._process_promote_policy(job, payload=payload)
+            elif job.job_kind is OfflineJobKind.PROMOTE_PREFERENCE:
+                payload = PromotePreferenceJobPayload.model_validate(job.payload)
+                result = self._process_promote_preference(job, payload=payload)
+            elif job.job_kind is OfflineJobKind.DISCOVER_LINKS:
+                payload = DiscoverLinksJobPayload.model_validate(job.payload)
+                result = self._process_discover_links(job, payload=payload)
+            elif job.job_kind is OfflineJobKind.REBUILD_ARTIFACT_INDEX:
+                payload = RebuildArtifactIndexJobPayload.model_validate(job.payload)
+                result = self._process_rebuild_artifact_index(job, payload=payload)
+            elif job.job_kind is OfflineJobKind.AUTO_ARCHIVE:
+                payload = AutoArchiveJobPayload.model_validate(job.payload)
+                result = self._process_auto_archive(job, payload=payload)
             else:
                 raise OfflineMaintenanceError(
                     f"unsupported offline job kind '{job.job_kind.value}'"
@@ -623,6 +643,290 @@ class OfflineMaintenanceService:
             "proposal_status": new_proposal_status,
             "supporting_episodes": sorted(supporting_episode_ids),
             "verified": verified,
+        }
+
+    def _process_promote_policy(
+        self,
+        job: OfflineJob,
+        *,
+        payload: PromotePolicyJobPayload,
+    ) -> dict[str, Any]:
+        """Promote a set of objects into a PolicyNote (Phase γ-1)."""
+        target_objects = [self.store.read_object(ref) for ref in payload.target_refs]
+        decision = assess_policy_promotion(target_objects)
+        if not decision.promote:
+            raise OfflineMaintenanceError(decision.reason)
+        now = self._clock()
+        ts = now.isoformat()
+        from uuid import uuid4
+        policy_id = f"policy-{uuid4().hex}"
+        policy_note = {
+            "id": policy_id,
+            "type": "PolicyNote",
+            "content": {
+                "summary": payload.reason,
+                "evidence_ids": list(decision.evidence_refs),
+            },
+            "source_refs": list(decision.evidence_refs),
+            "created_at": ts,
+            "updated_at": ts,
+            "version": 1,
+            "status": "active",
+            "priority": round(decision.stability_score, 4),
+            "metadata": {
+                "trigger_condition": "convergent_episodes",
+                "action_pattern": payload.reason,
+                "evidence_refs": list(decision.evidence_refs),
+                "confidence": decision.stability_score,
+                "applies_to_scope": "general",
+                "supporting_episode_ids": list(decision.supporting_episode_ids),
+                "proposal_status": "proposed",
+            },
+        }
+        self.store.insert_object(policy_note)
+        return {
+            "job_kind": job.job_kind.value,
+            "policy_note_id": policy_id,
+            "supporting_episode_ids": list(decision.supporting_episode_ids),
+            "stability_score": decision.stability_score,
+            "proposal_status": "proposed",
+        }
+
+    def _process_promote_preference(
+        self,
+        job: OfflineJob,
+        *,
+        payload: PromotePreferenceJobPayload,
+    ) -> dict[str, Any]:
+        """Promote a set of objects into a PreferenceNote (Phase γ-1)."""
+        target_objects = [self.store.read_object(ref) for ref in payload.target_refs]
+        decision = assess_preference_promotion(target_objects)
+        if not decision.promote:
+            raise OfflineMaintenanceError(decision.reason)
+        now = self._clock()
+        ts = now.isoformat()
+        from uuid import uuid4
+        pref_id = f"preference-{uuid4().hex}"
+        preference_note = {
+            "id": pref_id,
+            "type": "PreferenceNote",
+            "content": {
+                "summary": payload.reason,
+                "evidence_ids": list(decision.evidence_refs),
+            },
+            "source_refs": list(decision.evidence_refs),
+            "created_at": ts,
+            "updated_at": ts,
+            "version": 1,
+            "status": "active",
+            "priority": round(decision.stability_score, 4),
+            "metadata": {
+                "preference_key": payload.reason,
+                "preference_value": "inferred",
+                "strength": round(decision.stability_score, 4),
+                "evidence_refs": list(decision.evidence_refs),
+                "supporting_episode_ids": list(decision.supporting_episode_ids),
+            },
+        }
+        self.store.insert_object(preference_note)
+        return {
+            "job_kind": job.job_kind.value,
+            "preference_note_id": pref_id,
+            "supporting_episode_ids": list(decision.supporting_episode_ids),
+            "stability_score": decision.stability_score,
+        }
+
+    def _process_discover_links(
+        self,
+        job: OfflineJob,
+        *,
+        payload: DiscoverLinksJobPayload,
+    ) -> dict[str, Any]:
+        """Automatically discover and create proposed LinkEdge objects (Phase γ-2)."""
+        from mind.kernel.embedding import embed_objects
+        from uuid import uuid4
+        import math
+
+        now = self._clock()
+        ts = now.isoformat()
+        object_ids = payload.object_ids or [
+            obj["id"] for obj in self.store.iter_latest_objects(statuses=("active",))
+        ]
+        # Only process high-priority objects to keep cost low.
+        candidates: list[dict[str, Any]] = []
+        for oid in object_ids:
+            try:
+                obj = self.store.read_object(oid)
+            except Exception:
+                continue
+            if obj.get("status") != "active":
+                continue
+            if obj.get("type") in ("LinkEdge", "WorkspaceView", "FeedbackRecord"):
+                continue
+            candidates.append(obj)
+
+        embeddings = embed_objects(candidates)
+        # Compute cosine similarity between all pairs.
+        created_links: list[str] = []
+        obj_ids = [obj["id"] for obj in candidates]
+        for i, src_obj in enumerate(candidates):
+            src_vec = embeddings.get(src_obj["id"])
+            if src_vec is None:
+                continue
+            src_norm = math.sqrt(sum(v * v for v in src_vec))
+            if src_norm == 0:
+                continue
+            similarities: list[tuple[float, str]] = []
+            for j, dst_obj in enumerate(candidates):
+                if j <= i:
+                    continue
+                dst_vec = embeddings.get(dst_obj["id"])
+                if dst_vec is None:
+                    continue
+                dst_norm = math.sqrt(sum(v * v for v in dst_vec))
+                if dst_norm == 0:
+                    continue
+                dot = sum(a * b for a, b in zip(src_vec, dst_vec))
+                sim = dot / (src_norm * dst_norm)
+                if sim >= payload.min_similarity:
+                    similarities.append((sim, dst_obj["id"]))
+            similarities.sort(reverse=True)
+            for sim, dst_id in similarities[:payload.top_k]:
+                link_id = f"link-{src_obj['id']}-{dst_id}-{uuid4().hex[:8]}"
+                link = {
+                    "id": link_id,
+                    "type": "LinkEdge",
+                    "content": {
+                        "src_id": src_obj["id"],
+                        "dst_id": dst_id,
+                        "relation_type": "similar",
+                    },
+                    "source_refs": [src_obj["id"], dst_id],
+                    "created_at": ts,
+                    "updated_at": ts,
+                    "version": 1,
+                    "status": "active",
+                    "priority": round(sim, 4),
+                    "metadata": {
+                        "confidence": round(sim, 4),
+                        "evidence_refs": [src_obj["id"], dst_id],
+                        "discovery_method": "embedding_similarity",
+                        "proposal_status": "proposed",
+                    },
+                }
+                try:
+                    self.store.insert_object(link)
+                    created_links.append(link_id)
+                except Exception:
+                    continue
+
+        _ = obj_ids  # suppress unused variable warning
+        return {
+            "job_kind": job.job_kind.value,
+            "created_links": len(created_links),
+            "link_ids": created_links,
+            "candidate_count": len(candidates),
+        }
+
+    def _process_rebuild_artifact_index(
+        self,
+        job: OfflineJob,
+        *,
+        payload: RebuildArtifactIndexJobPayload,
+    ) -> dict[str, Any]:
+        """Rebuild the ArtifactIndex tree for long objects (Phase γ-4)."""
+        from .artifact_indexer import build_artifact_index
+
+        now = self._clock()
+        object_ids = payload.object_ids or [
+            obj["id"] for obj in self.store.iter_latest_objects(statuses=("active",))
+        ]
+        indexed_ids: list[str] = []
+        index_object_ids: list[str] = []
+        for oid in object_ids:
+            try:
+                obj = self.store.read_object(oid)
+            except Exception:
+                continue
+            if obj.get("status") != "active":
+                continue
+            if obj.get("type") in ("WorkspaceView", "ArtifactIndex", "LinkEdge"):
+                continue
+            artifact_objects = build_artifact_index(
+                obj,
+                min_content_length=payload.min_content_length,
+                now=now,
+            )
+            if not artifact_objects:
+                continue
+            for artifact in artifact_objects:
+                try:
+                    self.store.insert_object(artifact)
+                    index_object_ids.append(artifact["id"])
+                except Exception:
+                    continue
+            indexed_ids.append(oid)
+
+        return {
+            "job_kind": job.job_kind.value,
+            "indexed_count": len(indexed_ids),
+            "indexed_ids": indexed_ids,
+            "index_object_count": len(index_object_ids),
+            "reason": payload.reason,
+        }
+
+    def _process_auto_archive(
+        self,
+        job: OfflineJob,
+        *,
+        payload: AutoArchiveJobPayload,
+    ) -> dict[str, Any]:
+        """Archive stale objects that have had no positive feedback (Phase γ-5)."""
+        now = self._clock()
+        archived_ids: list[str] = []
+        eligible_types = {"RawRecord", "SummaryNote"}
+        all_objects = self.store.iter_latest_objects(statuses=("active",))
+        for obj in all_objects:
+            if obj.get("type") not in eligible_types:
+                continue
+            metadata = obj.get("metadata", {})
+            # Skip objects that have positive feedback.
+            if int(metadata.get("feedback_positive_count", 0)) > 0:
+                continue
+            # Compute age since creation.
+            try:
+                created_at = datetime.fromisoformat(
+                    str(obj.get("created_at", "")).replace("Z", "+00:00")
+                )
+                age_days = max(0.0, (now - created_at).total_seconds() / 86400.0)
+            except (ValueError, TypeError):
+                age_days = 0.0
+            if age_days < payload.stale_days:
+                continue
+            if payload.dry_run:
+                archived_ids.append(obj["id"])
+                continue
+            # Archive the object.
+            updated_metadata = dict(metadata)
+            updated_metadata["auto_archived_at"] = now.isoformat()
+            updated_metadata["auto_archive_reason"] = payload.reason
+            updated_obj = dict(obj)
+            updated_obj["status"] = "archived"
+            updated_obj["version"] = int(obj["version"]) + 1
+            updated_obj["updated_at"] = now.isoformat()
+            updated_obj["metadata"] = updated_metadata
+            try:
+                self.store.insert_object(updated_obj)
+                archived_ids.append(obj["id"])
+            except Exception:
+                continue
+
+        return {
+            "job_kind": job.job_kind.value,
+            "archived_count": len(archived_ids),
+            "archived_ids": archived_ids,
+            "dry_run": payload.dry_run,
+            "stale_days": payload.stale_days,
         }
 
     @staticmethod

@@ -20,6 +20,11 @@ class OfflineJobKind(StrEnum):
     REFRESH_EMBEDDINGS = "refresh_embeddings"
     RESOLVE_CONFLICT = "resolve_conflict"
     VERIFY_PROPOSAL = "verify_proposal"
+    PROMOTE_POLICY = "promote_policy"
+    PROMOTE_PREFERENCE = "promote_preference"
+    DISCOVER_LINKS = "discover_links"
+    REBUILD_ARTIFACT_INDEX = "rebuild_artifact_index"
+    AUTO_ARCHIVE = "auto_archive"
 
 
 class OfflineJobStatus(StrEnum):
@@ -70,6 +75,45 @@ class VerifyProposalJobPayload(BaseModel):
     """Payload for proposal verification jobs (Phase β-4)."""
 
     schema_note_id: str = Field(min_length=1)
+
+
+class PromotePolicyJobPayload(BaseModel):
+    """Payload for policy promotion jobs (Phase γ-1)."""
+
+    target_refs: list[str] = Field(min_length=2)
+    reason: str = Field(min_length=1)
+
+
+class PromotePreferenceJobPayload(BaseModel):
+    """Payload for preference promotion jobs (Phase γ-1)."""
+
+    target_refs: list[str] = Field(min_length=2)
+    reason: str = Field(min_length=1)
+
+
+class DiscoverLinksJobPayload(BaseModel):
+    """Payload for automatic link discovery jobs (Phase γ-2)."""
+
+    object_ids: list[str] = Field(default_factory=list)
+    top_k: int = Field(default=5, ge=1)
+    min_similarity: float = Field(default=0.7, ge=0.0, le=1.0)
+    reason: str = Field(min_length=1, default="discover links via embedding similarity")
+
+
+class RebuildArtifactIndexJobPayload(BaseModel):
+    """Payload for artifact index rebuild jobs (Phase γ-4)."""
+
+    object_ids: list[str] = Field(default_factory=list)
+    min_content_length: int = Field(default=500, ge=1)
+    reason: str = Field(min_length=1, default="rebuild artifact tree index")
+
+
+class AutoArchiveJobPayload(BaseModel):
+    """Payload for automatic archive jobs (Phase γ-5)."""
+
+    dry_run: bool = False
+    stale_days: int = Field(default=90, ge=1)
+    reason: str = Field(min_length=1, default="auto-archive stale objects")
 
 
 class OfflineJob(BaseModel):

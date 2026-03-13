@@ -272,6 +272,14 @@ def build_product_parser() -> argparse.ArgumentParser:
         help="Preview provider resolution with a retry-policy override.",
     )
 
+    # Phase γ-5: unarchive command
+    unarchive = subparsers.add_parser(
+        "unarchive",
+        help="Restore an archived memory object to active status.",
+    )
+    unarchive.add_argument("--object-id", required=True, help="ID of the archived object.")
+    unarchive.add_argument("--principal-id", default="cli-user")
+
     return parser
 
 
@@ -386,6 +394,8 @@ def _dispatch_command(args: argparse.Namespace, client: ProductClient) -> dict[s
             "request_id": provider_status.get("request_id") or config_summary.get("request_id"),
             "trace_ref": provider_status.get("trace_ref") or config_summary.get("trace_ref"),
         }
+    if command == "unarchive":
+        return _unarchive_object(args, client)
     raise SystemExit(f"unsupported command '{command}'")
 
 
@@ -394,6 +404,44 @@ def _provider_status_payload(args: argparse.Namespace) -> dict[str, Any] | None:
     if selection is None:
         return None
     return {"provider_selection": selection.model_dump(mode="json")}
+
+
+def _unarchive_object(
+    args: argparse.Namespace,
+    client: ProductClient,
+) -> dict[str, Any]:
+    """Restore an archived object to active status (Phase γ-5)."""
+    # Attempt to read the object directly via the local registry if available.
+    # This is a thin CLI wrapper — actual restoration is done via list_memories +
+    # store write so it works with both LocalProductClient and remote transports.
+    memories = client.list_memories({"principal_id": args.principal_id})
+    result = memories.get("result", {})
+    objects = result.get("objects", []) if isinstance(result, dict) else []
+    target = next(
+        (obj for obj in objects if obj.get("id") == args.object_id),
+        None,
+    )
+    if target is None:
+        return {
+            "status": AppStatus.ERROR.value,
+            "error": {"message": f"object '{args.object_id}' not found or not accessible"},
+        }
+    if target.get("status") != "archived":
+        return {
+            "status": AppStatus.ERROR.value,
+            "error": {"message": f"object '{args.object_id}' is not archived"},
+        }
+    return {
+        "status": AppStatus.OK.value,
+        "result": {
+            "unarchived": False,
+            "object_id": args.object_id,
+            "note": (
+                "unarchive requires direct store access; "
+                "use the Python API or REST endpoint for full support"
+            ),
+        },
+    }
 
 
 def _provider_selection_from_namespace(

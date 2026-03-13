@@ -15,6 +15,9 @@ CORE_OBJECT_TYPES = {
     "WorkspaceView",
     "SchemaNote",
     "FeedbackRecord",
+    "PolicyNote",
+    "PreferenceNote",
+    "ArtifactIndex",
 }
 
 REQUIRED_FIELDS = (
@@ -41,6 +44,11 @@ REQUIRED_METADATA_FIELDS = {
     "SchemaNote": ("kind", "evidence_refs", "stability_score", "promotion_source_refs"),
     "FeedbackRecord": ("task_id", "episode_id", "query", "used_object_ids",
                        "helpful_object_ids", "unhelpful_object_ids", "quality_signal"),
+    "PolicyNote": ("trigger_condition", "action_pattern", "evidence_refs",
+                   "confidence", "applies_to_scope"),
+    "PreferenceNote": ("preference_key", "preference_value", "strength", "evidence_refs"),
+    "ArtifactIndex": ("parent_object_id", "section_id", "heading", "summary",
+                      "depth", "content_range"),
 }
 
 VALID_STATUS = {"active", "archived", "deprecated", "invalid"}
@@ -316,6 +324,32 @@ def validate_object(obj: dict[str, Any]) -> list[str]:
             value = metadata.get(list_field)
             if value is not None and not isinstance(value, list):
                 errors.append(f"FeedbackRecord metadata.{list_field} must be a list")
+
+    if object_type == "PolicyNote":
+        confidence = metadata.get("confidence")
+        if confidence is not None and (
+            not isinstance(confidence, int | float) or not 0 <= float(confidence) <= 1
+        ):
+            errors.append("PolicyNote metadata.confidence must be a float in [0, 1]")
+        if "evidence_refs" in metadata and not isinstance(metadata["evidence_refs"], list):
+            errors.append("PolicyNote metadata.evidence_refs must be a list")
+
+    if object_type == "PreferenceNote":
+        strength = metadata.get("strength")
+        if strength is not None and (
+            not isinstance(strength, int | float) or not -1 <= float(strength) <= 1
+        ):
+            errors.append("PreferenceNote metadata.strength must be a float in [-1, 1]")
+        if "evidence_refs" in metadata and not isinstance(metadata["evidence_refs"], list):
+            errors.append("PreferenceNote metadata.evidence_refs must be a list")
+
+    if object_type == "ArtifactIndex":
+        depth = metadata.get("depth")
+        if depth is not None and (not isinstance(depth, int) or depth < 0):
+            errors.append("ArtifactIndex metadata.depth must be a non-negative integer")
+        content_range = metadata.get("content_range")
+        if content_range is not None and not isinstance(content_range, dict):
+            errors.append("ArtifactIndex metadata.content_range must be an object")
 
     return errors
 

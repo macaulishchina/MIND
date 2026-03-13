@@ -1,10 +1,12 @@
-"""Auto-trigger scheduler for offline maintenance jobs (Phase α-3, β-2, β-4)."""
+"""Auto-trigger scheduler for offline maintenance jobs (Phase α-3, β-2, β-4, γ-5)."""
 
 from __future__ import annotations
 
 from typing import Any
 
 from mind.offline_jobs import (
+    AutoArchiveJobPayload,
+    DiscoverLinksJobPayload,
     OfflineJobKind,
     OfflineJobStore,
     ReflectEpisodeJobPayload,
@@ -178,6 +180,61 @@ class OfflineJobScheduler:
             job_kind=OfflineJobKind.REFRESH_EMBEDDINGS,
             payload=RefreshEmbeddingsJobPayload(
                 object_ids=object_ids or [],
+                reason=reason,
+            ),
+            priority=priority,
+            now=self._clock(),
+        )
+        self._job_store.enqueue_offline_job(job)
+        return job.job_id
+
+    def schedule_auto_archive(
+        self,
+        *,
+        stale_days: int = 90,
+        dry_run: bool = False,
+        reason: str = "weekly auto-archive scan",
+        priority: float = 0.2,
+    ) -> str:
+        """Enqueue an AUTO_ARCHIVE scan job (Phase γ-5).
+
+        Intended to be called on a weekly cadence to archive stale objects that
+        have had no positive feedback for *stale_days* days.
+
+        Returns the new job_id.
+        """
+        job = new_offline_job(
+            job_kind=OfflineJobKind.AUTO_ARCHIVE,
+            payload=AutoArchiveJobPayload(
+                dry_run=dry_run,
+                stale_days=stale_days,
+                reason=reason,
+            ),
+            priority=priority,
+            now=self._clock(),
+        )
+        self._job_store.enqueue_offline_job(job)
+        return job.job_id
+
+    def schedule_discover_links(
+        self,
+        object_ids: list[str] | None = None,
+        *,
+        top_k: int = 5,
+        min_similarity: float = 0.7,
+        reason: str = "discover links via embedding similarity",
+        priority: float = 0.3,
+    ) -> str:
+        """Enqueue a DISCOVER_LINKS job (Phase γ-2).
+
+        Returns the new job_id.
+        """
+        job = new_offline_job(
+            job_kind=OfflineJobKind.DISCOVER_LINKS,
+            payload=DiscoverLinksJobPayload(
+                object_ids=object_ids or [],
+                top_k=top_k,
+                min_similarity=min_similarity,
                 reason=reason,
             ),
             priority=priority,
