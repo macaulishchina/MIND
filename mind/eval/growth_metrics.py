@@ -154,6 +154,11 @@ class GrowthLiftBenchmarkRunner:
 
     Then computes GrowthLift, MemoryEfficiency, and FeedbackCorrelation.
 
+    For accurate ``FeedbackCorrelation``, supply ``selected_ids_per_step`` to
+    ``run()`` directly.  If omitted, the correlation metric will be empty since
+    ``LongHorizonScoreCard`` aggregates step data and does not retain per-step
+    selections.
+
     Usage::
 
         runner = GrowthLiftBenchmarkRunner(
@@ -190,8 +195,19 @@ class GrowthLiftBenchmarkRunner:
         system_with_maintenance: LongHorizonSystemRunner,
         system_without_maintenance: LongHorizonSystemRunner,
         run_id: int = 1,
+        selected_ids_per_step: list[list[str]] | None = None,
     ) -> GrowthPhaseAlphaReport:
-        """Run both systems and compute Phase α growth metrics."""
+        """Run both systems and compute Phase α growth metrics.
+
+        Args:
+            system_with_maintenance: The system that uses offline maintenance.
+            system_without_maintenance: The baseline system without maintenance.
+            run_id: Benchmark run identifier passed to each system.
+            selected_ids_per_step: Optional list of per-step selected object ID
+                lists from the ``with_maintenance`` run. When provided, enables
+                accurate ``FeedbackCorrelation`` computation. When omitted, the
+                correlation metric defaults to zero (no per-step data available).
+        """
         run_with = self._runner.run_once(
             system_id="with_maintenance",
             system=system_with_maintenance,
@@ -204,10 +220,15 @@ class GrowthLiftBenchmarkRunner:
         )
         growth_lift = GrowthLiftResult.compute(run_with, run_without)
         memory_efficiency = MemoryEfficiencyResult.compute(run_with, self._total_objects)
+        effective_selected = (
+            selected_ids_per_step
+            if selected_ids_per_step is not None
+            else _collect_selected_ids(run_with)
+        )
         feedback_correlation = FeedbackCorrelationResult.compute(
             positive_object_ids=self._positive_object_ids,
             negative_object_ids=self._negative_object_ids,
-            selected_ids_per_step=_collect_selected_ids(run_with),
+            selected_ids_per_step=effective_selected,
         )
         return GrowthPhaseAlphaReport(
             growth_lift=growth_lift,
@@ -217,10 +238,11 @@ class GrowthLiftBenchmarkRunner:
 
 
 def _collect_selected_ids(run: LongHorizonBenchmarkRun) -> list[list[str]]:
-    """Extract per-step selected object IDs from a benchmark run's score cards."""
-    ids: list[list[str]] = []
-    for _ in run.sequence_results:
-        # The score card doesn't carry per-step selections by default, so we
-        # approximate using the reuse_rate as a signal (no data = empty list).
-        ids.append([])
-    return ids
+    """Extract per-step selected object IDs from a benchmark run.
+
+    NOTE: ``LongHorizonScoreCard`` aggregates step data into summary metrics but
+    does not retain per-step selections.  Callers that need accurate
+    ``FeedbackCorrelation`` should supply ``selected_ids_per_step`` directly to
+    ``GrowthLiftBenchmarkRunner`` rather than relying on this function.
+    """
+    return [[] for _ in run.sequence_results]

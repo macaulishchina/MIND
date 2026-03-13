@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 from typing import Any
@@ -383,8 +384,6 @@ class OfflineMaintenanceService:
         payload: UpdatePriorityJobPayload,
     ) -> dict[str, Any]:
         """Batch-refresh decay_score on a set of objects using recency signal."""
-        import math
-
         now = self._clock()
         updated_ids: list[str] = []
         object_ids = payload.object_ids or [
@@ -400,9 +399,7 @@ class OfflineMaintenanceService:
             metadata = dict(obj.get("metadata", {}))
             # Compute decay_score based on age since creation
             try:
-                from datetime import datetime as _dt
-
-                created_at = _dt.fromisoformat(
+                created_at = datetime.fromisoformat(
                     str(obj.get("created_at", "")).replace("Z", "+00:00")
                 )
                 age_days = max(0.0, (now - created_at).total_seconds() / 86400.0)

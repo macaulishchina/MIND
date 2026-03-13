@@ -997,8 +997,7 @@ class PrimitiveService:
         now_iso: str,
     ) -> dict[str, Any]:
         """Return a new version of the object with updated dynamic signal metadata."""
-        import copy as _copy
-        updated = _copy.deepcopy(obj)
+        updated = copy.deepcopy(obj)
         updated["version"] = int(obj["version"]) + 1
         updated["updated_at"] = now_iso
         metadata = dict(updated.get("metadata", {}))
