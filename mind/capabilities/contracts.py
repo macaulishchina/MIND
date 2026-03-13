@@ -146,6 +146,27 @@ CapabilityResponse: TypeAlias = (
 )
 
 
+class CapabilityRoutingConfig(CapabilityModel):
+    """Per-capability model routing overrides (Phase γ-3).
+
+    Maps individual :class:`CapabilityName` values to distinct
+    :class:`CapabilityProviderConfig` instances.  When a capability is invoked
+    via :meth:`CapabilityService.invoke`, the service first checks this routing
+    table; if a match is found the specified provider is used instead of the
+    global default.
+
+    Example::
+
+        routing = CapabilityRoutingConfig(routes={
+            CapabilityName.SUMMARIZE: small_model_config,
+            CapabilityName.ANSWER: large_model_config,
+        })
+        service = CapabilityService(routing_config=routing)
+    """
+
+    routes: dict[CapabilityName, Any] = Field(default_factory=dict)
+
+
 _REQUEST_MODELS = {
     CapabilityName.SUMMARIZE: SummarizeRequest,
     CapabilityName.REFLECT: ReflectRequest,

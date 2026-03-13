@@ -110,7 +110,14 @@ class WorkspaceBuilder:
                 skipped_ids.append(object_id)
                 continue
 
-            ranked_candidates.append((obj, score))
+            # Phase γ-1: Boost PolicyNote score when the purpose contains decision
+            # keywords so that policy guidance surfaces prominently in workspaces
+            # that require decision-making.
+            adjusted_score = score
+            if obj.get("type") == "PolicyNote" and _is_decision_purpose(purpose):
+                adjusted_score = min(1.0, score + 0.15)
+
+            ranked_candidates.append((obj, adjusted_score))
 
         if not ranked_candidates:
             raise WorkspaceBuildError("no accessible candidates available for workspace")
@@ -325,3 +332,27 @@ class WorkspaceBuilder:
         if not enabled or self._telemetry_recorder is None:
             return
         self._telemetry_recorder.record(event)
+
+
+#: Keywords in the workspace purpose string that signal a decision context.
+#: When the purpose contains any of these, PolicyNote objects receive a score
+#: boost so they surface prominently (Phase γ-1.4).
+_DECISION_KEYWORDS = frozenset(
+    {
+        "decision",
+        "decide",
+        "choose",
+        "policy",
+        "strategy",
+        "plan",
+        "action",
+        "select",
+        "evaluate",
+    }
+)
+
+
+def _is_decision_purpose(purpose: str) -> bool:
+    """Return True when *purpose* contains any decision-related keyword."""
+    lower = purpose.lower()
+    return any(kw in lower for kw in _DECISION_KEYWORDS)

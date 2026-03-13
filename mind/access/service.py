@@ -363,6 +363,18 @@ class AccessService:
             candidate_ids=list(retrieve_response.candidate_ids),
             candidate_scores=list(retrieve_response.scores),
         )
+
+        # Phase γ-2: Graph-augmented retrieval — expand candidate set via
+        # LinkEdge adjacency.  RECALL gets 1-hop, RECONSTRUCT / REFLECTIVE_ACCESS
+        # get 2-hop expansion.
+        graph_hops = _graph_hops_for_mode(mode)
+        if graph_hops > 0 and candidate_ids:
+            candidate_ids, candidate_scores = self._graph_expand(
+                candidate_ids=candidate_ids,
+                candidate_scores=candidate_scores,
+                hops=graph_hops,
+            )
+
         candidate_summaries = self._candidate_summaries(
             list(retrieve_response.candidate_summaries),
             candidate_ids,
@@ -847,6 +859,45 @@ class AccessService:
             return False
         return str(obj["status"]) != "invalid"
 
+    def _graph_expand(
+        self,
+        candidate_ids: list[str],
+        candidate_scores: list[float],
+        hops: int,
+    ) -> tuple[list[str], list[float]]:
+        """Expand candidate IDs via the LinkEdge adjacency graph (Phase γ-2).
+
+        New IDs receive a score slightly below the minimum seed score so they
+        do not displace high-quality retrieval results but are still considered.
+        Concealed objects are excluded via :meth:`_is_accessible`.
+        """
+        from mind.kernel.graph import build_adjacency_index, expand_by_graph
+
+        try:
+            adjacency = build_adjacency_index(self.store)
+        except Exception:
+            return candidate_ids, candidate_scores
+
+        new_ids = expand_by_graph(
+            candidate_ids,
+            adjacency,
+            hops=hops,
+            max_expand=10,
+        )
+        # Filter to accessible, non-duplicate IDs.
+        existing = set(candidate_ids)
+        min_score = min(candidate_scores, default=0.0)
+        graph_score = max(0.0, round(min_score - 0.05, 4))
+        for nid in new_ids:
+            if nid in existing:
+                continue
+            if not self._is_accessible(nid):
+                continue
+            candidate_ids.append(nid)
+            candidate_scores.append(graph_score)
+            existing.add(nid)
+        return candidate_ids, candidate_scores
+
     @staticmethod
     def _verification_notes(
         *,
@@ -1203,6 +1254,20 @@ def _constraints_require_deeper_context(hard_constraints: list[str]) -> bool:
             "failure or revalidation signal",
         )
     )
+
+
+def _graph_hops_for_mode(mode: AccessMode) -> int:
+    """Return the number of graph hops to perform for a given access mode.
+
+    FLASH — no expansion (latency sensitive).
+    RECALL — 1-hop expansion to surface direct neighbours.
+    RECONSTRUCT / REFLECTIVE_ACCESS — 2-hop expansion for richer context.
+    """
+    if mode is AccessMode.FLASH:
+        return 0
+    if mode is AccessMode.RECALL:
+        return 1
+    return 2
 
 
 def _utc_now() -> datetime:

@@ -24,6 +24,7 @@ from .contracts import (
     CapabilityProviderFamily,
     CapabilityRequest,
     CapabilityResponse,
+    CapabilityRoutingConfig,
     OfflineReconstructRequest,
     OfflineReconstructResponse,
     ReflectRequest,
@@ -116,9 +117,11 @@ class CapabilityService:
         provider_config: CapabilityProviderConfig | None = None,
         adapters: list[CapabilityAdapter] | None = None,
         clock: Callable[[], datetime] | None = None,
+        routing_config: CapabilityRoutingConfig | None = None,
     ) -> None:
         self._clock = clock or _utc_now
         self.provider_config = provider_config or resolve_capability_provider_config()
+        self._routing_config = routing_config
         deterministic_adapter = DeterministicCapabilityAdapter(clock=self._clock)
         adapter_list = [
             deterministic_adapter,
@@ -131,6 +134,12 @@ class CapabilityService:
         }
 
     def invoke(self, request: CapabilityRequest) -> CapabilityResponse:
+        # Check per-capability routing override (Phase γ-3).
+        if self._routing_config is not None:
+            capability = getattr(request, "capability", None)
+            if capability is not None and capability in self._routing_config.routes:
+                routed_config = self._routing_config.routes[capability]
+                return self._invoke(request, provider_config=routed_config)
         return self._invoke(request, provider_config=None)
 
     def _invoke(

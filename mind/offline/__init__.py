@@ -18,18 +18,28 @@ from .audit import (
     audit_schema_evidence,
 )
 from .jobs import (
+    AutoArchiveJobPayload,
+    DiscoverLinksJobPayload,
     OfflineJob,
     OfflineJobKind,
     OfflineJobStatus,
     OfflineJobStore,
+    PromotePolicyJobPayload,
+    PromotePreferenceJobPayload,
     PromoteSchemaJobPayload,
+    RebuildArtifactIndexJobPayload,
     ReflectEpisodeJobPayload,
     RefreshEmbeddingsJobPayload,
     ResolveConflictJobPayload,
     VerifyProposalJobPayload,
     new_offline_job,
 )
-from .promotion import PromotionDecision, assess_schema_promotion
+from .promotion import (
+    PromotionDecision,
+    assess_policy_promotion,
+    assess_preference_promotion,
+    assess_schema_promotion,
+)
 from .replay import (
     ReplayTarget,
     deterministic_random_decile,
@@ -40,6 +50,8 @@ from .service import OfflineMaintenanceError, OfflineMaintenanceService
 from .worker import OfflineWorker, WorkerRunResult
 
 __all__ = [
+    "AutoArchiveJobPayload",
+    "DiscoverLinksJobPayload",
     "OfflineJob",
     "OfflineJobKind",
     "OfflineJobStatus",
@@ -52,9 +64,12 @@ __all__ = [
     "OfflineDevEvalResult",
     "OfflineGateResult",
     "OfflineStartupResult",
+    "PromotePolicyJobPayload",
+    "PromotePreferenceJobPayload",
     "PromoteSchemaJobPayload",
     "PromotionAudit",
     "PromotionDecision",
+    "RebuildArtifactIndexJobPayload",
     "ReplayTarget",
     "ReflectEpisodeJobPayload",
     "RefreshEmbeddingsJobPayload",
@@ -62,6 +77,8 @@ __all__ = [
     "SchemaEvidenceAudit",
     "VerifyProposalJobPayload",
     "WorkerRunResult",
+    "assess_policy_promotion",
+    "assess_preference_promotion",
     "assess_schema_promotion",
     "audit_promotion_within_window",
     "audit_schema_evidence",

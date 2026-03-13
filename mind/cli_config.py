@@ -41,6 +41,7 @@ class ResolvedCliConfig:
     sqlite_path_source: str | None
     postgres_dsn: str | None
     postgres_dsn_source: str | None
+    model_routing: dict[str, str] | None = None
 
 
 @dataclass(frozen=True)
@@ -104,6 +105,7 @@ def resolve_cli_config(
     postgres_dsn: str | None = None,
     allow_sqlite: bool | None = None,
     env: Mapping[str, str] | None = None,
+    model_routing: dict[str, str] | None = None,
 ) -> ResolvedCliConfig:
     """Resolve the active CLI configuration from CLI overrides and environment."""
 
@@ -161,6 +163,17 @@ def resolve_cli_config(
             else:
                 postgres_dsn_source = f"missing:{dsn_env_var}"
 
+    # Phase γ-3: model_routing from env if not provided explicitly.
+    resolved_model_routing = model_routing
+    if resolved_model_routing is None:
+        env_routing_raw = active_env.get("MIND_MODEL_ROUTING")
+        if env_routing_raw:
+            import json as _json
+            try:
+                resolved_model_routing = _json.loads(env_routing_raw)
+            except (ValueError, TypeError):
+                resolved_model_routing = None
+
     return ResolvedCliConfig(
         requested_profile=requested_profile,
         requested_profile_source=requested_profile_source,
@@ -171,6 +184,7 @@ def resolve_cli_config(
         sqlite_path_source=sqlite_path_source,
         postgres_dsn=resolved_postgres_dsn,
         postgres_dsn_source=postgres_dsn_source,
+        model_routing=resolved_model_routing,
     )
 
 
