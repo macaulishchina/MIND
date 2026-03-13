@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from mind.fixtures.long_horizon_dev import LongHorizonStep
+from mind.kernel.priority import effective_priority_or_base
 from mind.kernel.store import MemoryStore
 
 
@@ -70,7 +71,8 @@ def future_reuse_rate(selected_ids: tuple[str, ...], steps: tuple[LongHorizonSte
 
 
 def _replay_score(obj: dict[str, Any]) -> float:
-    priority = float(obj["priority"])
+    # α-2.5: use effective_priority when available, else fall back to base
+    priority = effective_priority_or_base(obj)
     object_type = str(obj["type"])
     metadata = obj.get("metadata", {})
     score = priority

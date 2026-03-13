@@ -91,3 +91,15 @@ async def recall_memories(
         build_app_request(request, principal, payload=payload)
     )
     return app_json_response(response)
+
+
+@router.post("/memories/feedback")
+async def record_feedback(
+    request: Request,
+    principal: Annotated[PrincipalContext, Depends(require_api_key)],
+    payload: PayloadBody = None,
+) -> JSONResponse:
+    response = get_registry(request).feedback_service.record_feedback(
+        build_app_request(request, principal, payload=payload)
+    )
+    return app_json_response(response)

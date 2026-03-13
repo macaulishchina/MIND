@@ -281,6 +281,15 @@ def _tool_catalog() -> tuple[MCPToolDefinition, ...]:
             description="Get one offline maintenance job by id.",
             input_schema=_object_schema("job_id"),
         ),
+        MCPToolDefinition(
+            name="record_feedback",
+            description="Record post-query feedback on memory objects.",
+            input_schema=_object_schema(
+                "task_id", "episode_id", "query",
+                "used_object_ids", "helpful_object_ids",
+                "quality_signal",
+            ),
+        ),
     )
 
 
@@ -303,6 +312,7 @@ def _tool_handlers() -> dict[str, ToolHandler]:
             req
         ),
         "get_job_status": lambda registry, req: registry.offline_job_app_service.get_job(req),
+        "record_feedback": lambda registry, req: registry.feedback_service.record_feedback(req),
     }
 
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Body, Depends, Request
+from fastapi import APIRouter, Body, Depends, Query, Request
 from fastapi.responses import JSONResponse
 
 from mind.api._utils import app_json_response, build_app_request, get_registry
@@ -69,3 +69,23 @@ async def provider_status_resolve(
         build_app_request(request, principal, payload=payload)
     )
     return app_json_response(response)
+
+
+@router.get("/system/status")
+async def system_status(
+    request: Request,
+    principal: Annotated[PrincipalContext, Depends(require_api_key)],
+    detailed: Annotated[bool, Query()] = False,
+) -> JSONResponse:
+    """Return system status, optionally with a full health report."""
+    registry = get_registry(request)
+    app_req = build_app_request(request, principal)
+    if detailed:
+        from mind.kernel.health import compute_health_report
+
+        report = compute_health_report(registry.store)
+        response = registry.system_status_service.health(app_req)
+        if response.result is not None:
+            response.result["health_report"] = report.to_dict()
+        return app_json_response(response)
+    return app_json_response(registry.system_status_service.health(app_req))

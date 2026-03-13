@@ -43,6 +43,7 @@ from .contracts import (
     AccessSwitchKind,
     AccessTaskFamily,
     AccessTraceKind,
+    EvidenceSummaryItem,
 )
 
 type ProviderEnvResolver = Callable[[], Mapping[str, str] | None]
@@ -270,7 +271,22 @@ class AccessService:
         request: AccessRunRequest,
         context: PrimitiveExecutionContext,
     ) -> AccessRunResponse:
-        initial_mode, initial_reason = self._choose_initial_auto_mode(request)
+        # β-5.1: lightweight scouting retrieval (store-level, no budget cost)
+        try:
+            from mind.kernel.retrieval import keyword_score
+            scout_scored: list[tuple[str, float]] = []
+            for obj in self.store.iter_latest_objects(statuses=("active",)):
+                ks = keyword_score(request.query, obj)
+                if ks > 0:
+                    scout_scored.append((str(obj["id"]), ks))
+            scout_scored.sort(key=lambda t: t[1], reverse=True)
+            scout_ids = [sid for sid, _ in scout_scored[:3]]
+        except Exception:
+            scout_ids = []
+
+        initial_mode, initial_reason = self._choose_initial_auto_mode(
+            request, scout_ids=scout_ids,
+        )
         events = [
             self._select_event(
                 mode=initial_mode,
@@ -424,6 +440,28 @@ class AccessService:
                         mode=mode,
                         summary=f"expanded {len(expanded_object_ids)} supporting objects",
                         target_ids=expanded_object_ids,
+                    )
+                )
+
+        # γ-4.3: tree-guided retrieval — when ArtifactIndex objects are among
+        # candidates, drill down into their child sections for richer context.
+        if plan.expanded_read_limit > 0:
+            artifact_children = self._expand_artifact_index(
+                primary_objects,
+                limit=plan.expanded_read_limit,
+                exclude_ids=set(read_object_ids) | set(expanded_object_ids),
+            )
+            if artifact_children:
+                artifact_objects = self._read_objects(artifact_children, context)
+                primary_objects.extend(artifact_objects)
+                expanded_object_ids.extend(artifact_children)
+                read_object_ids.extend(artifact_children)
+                events.append(
+                    AccessModeTraceEvent(
+                        event_kind=AccessTraceKind.READ,
+                        mode=mode,
+                        summary=f"expanded {len(artifact_children)} ArtifactIndex children",
+                        target_ids=artifact_children,
                     )
                 )
 
@@ -642,7 +680,32 @@ class AccessService:
     def _choose_initial_auto_mode(
         self,
         request: AccessRunRequest,
+        *,
+        scout_ids: list[str] | None = None,
     ) -> tuple[AccessMode, AccessReasonCode]:
+        # β-5.2: scouting-driven decisions take priority over static rules
+        if scout_ids is not None:
+            if len(scout_ids) == 0:
+                return AccessMode.FLASH, AccessReasonCode.LATENCY_SENSITIVE
+            scout_objects = []
+            for oid in scout_ids[:3]:
+                if self.store.has_object(oid):
+                    scout_objects.append(self.store.read_object(oid))
+            episodes = {
+                obj.get("metadata", {}).get("episode_id")
+                for obj in scout_objects
+            }
+            episodes.discard(None)
+            has_conflict = any(
+                obj.get("metadata", {}).get("conflict_candidates")
+                for obj in scout_objects
+            )
+            if has_conflict:
+                return AccessMode.RECONSTRUCT, AccessReasonCode.EVIDENCE_CONFLICT
+            if len(episodes) > 1:
+                return AccessMode.RECONSTRUCT, AccessReasonCode.CONSTRAINT_RISK
+
+        # Existing static rules as fallback
         if request.task_family is AccessTaskFamily.HIGH_CORRECTNESS:
             return AccessMode.RECONSTRUCT, AccessReasonCode.HIGH_CORRECTNESS_REQUIRED
         if request.task_family is AccessTaskFamily.BALANCED:
@@ -898,6 +961,44 @@ class AccessService:
             existing.add(nid)
         return candidate_ids, candidate_scores
 
+    def _expand_artifact_index(
+        self,
+        objects: list[Any],
+        *,
+        limit: int,
+        exclude_ids: set[str],
+    ) -> list[str]:
+        """Drill down into ArtifactIndex children for tree-guided retrieval (Phase γ-4.3).
+
+        When a retrieved object is an ArtifactIndex, find child sections
+        (ArtifactIndex objects whose ``parent_object_id`` matches) and return
+        their IDs for expanded reading.
+        """
+        parent_ids: set[str] = set()
+        for obj in objects:
+            obj_type = getattr(obj, "type", None) or (obj.get("type") if isinstance(obj, dict) else None)
+            if obj_type == "ArtifactIndex":
+                oid = getattr(obj, "id", None) or (obj.get("id") if isinstance(obj, dict) else None)
+                if oid:
+                    parent_ids.add(oid)
+        if not parent_ids:
+            return []
+
+        child_ids: list[str] = []
+        try:
+            all_objects = self.store.iter_latest_objects(statuses=("active",))
+        except Exception:
+            return []
+        for obj in all_objects:
+            if obj.get("type") != "ArtifactIndex":
+                continue
+            parent = obj.get("metadata", {}).get("parent_object_id")
+            if parent in parent_ids and obj["id"] not in exclude_ids:
+                child_ids.append(obj["id"])
+                if len(child_ids) >= limit:
+                    break
+        return child_ids
+
     @staticmethod
     def _verification_notes(
         *,
@@ -1018,6 +1119,10 @@ class AccessService:
         expanded_object_ids: list[str] | None = None,
     ) -> AccessRunResponse:
         answer = self._answer(request=request, execution=execution, context=context)
+
+        # β-S1: build evidence_summary from selected objects (top-3)
+        evidence_summary = self._build_evidence_summary(execution)
+
         return AccessRunResponse(
             resolved_mode=execution.mode,
             context_kind=execution.context_kind,
@@ -1045,7 +1150,41 @@ class AccessService:
             answer_trace=answer["answer_trace"],
             verification_notes=list(execution.verification_notes),
             trace=trace,
+            evidence_summary=evidence_summary,
         )
+
+    def _build_evidence_summary(
+        self,
+        execution: _ModeExecution,
+    ) -> list[EvidenceSummaryItem]:
+        """Build evidence summary items from selected objects (Phase β-S1)."""
+        items: list[EvidenceSummaryItem] = []
+        score_map: dict[str, float] = {}
+        for summary in execution.candidate_summaries:
+            if isinstance(summary, dict) and "object_id" in summary:
+                score_map[summary["object_id"]] = float(summary.get("score", 0.0))
+
+        for oid in execution.selected_object_ids[:3]:
+            if not self.store.has_object(oid):
+                continue
+            obj = self.store.read_object(oid)
+            content = obj.get("content", "")
+            if isinstance(content, dict):
+                brief = str(content)[:120]
+            else:
+                brief = str(content)[:120]
+            if not brief:
+                brief = str(oid)
+            relevance = min(1.0, max(0.0, score_map.get(oid, 0.0)))
+            items.append(
+                EvidenceSummaryItem(
+                    object_id=oid,
+                    object_type=str(obj.get("type", "unknown")),
+                    brief=brief,
+                    relevance_score=round(relevance, 4),
+                )
+            )
+        return items
 
     def _answer(
         self,

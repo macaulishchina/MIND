@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
+from mind.kernel.priority import effective_priority_or_base
 from mind.kernel.schema import strip_control_plane_metadata
 from mind.primitives.contracts import RetrieveQueryMode
 
@@ -147,6 +148,12 @@ def matches_retrieval_filters(
     return episode_id in obj.get("source_refs", [])
 
 
+# β-1.5: default hybrid scoring weights.
+W_LEXICAL = 0.3
+W_DENSE = 0.5
+W_PRIORITY = 0.2
+
+
 def search_objects(
     objects: list[dict[str, Any]],
     *,
@@ -158,8 +165,17 @@ def search_objects(
     episode_id: str | None,
     task_id: str | None,
     query_embedding: tuple[float, ...] | None,
+    dense_embedding: tuple[float, ...] | None = None,
+    w_lexical: float = W_LEXICAL,
+    w_dense: float = W_DENSE,
+    w_priority: float = W_PRIORITY,
 ) -> list[RetrievalMatch]:
-    """Run fallback retrieval scoring over in-memory latest objects."""
+    """Run fallback retrieval scoring over in-memory latest objects.
+
+    When *dense_embedding* is provided (from a real embedding provider) it is
+    used for the dense channel; otherwise *query_embedding* (the legacy
+    deterministic hash) is used with reduced weight.
+    """
 
     filtered_objects = [
         obj
@@ -173,15 +189,25 @@ def search_objects(
         )
     ]
 
+    # Choose vector for dense scoring.
+    effective_dense = dense_embedding or query_embedding
+
     matches: list[RetrievalMatch] = []
     for obj in filtered_objects:
-        score = 0.0
+        lexical = 0.0
+        dense = 0.0
+
         if RetrieveQueryMode.KEYWORD in query_modes:
-            score += keyword_score(query, obj)
+            lexical = keyword_score(query, obj)
         if RetrieveQueryMode.TIME_WINDOW in query_modes:
-            score += time_window_score(query, obj)
+            lexical = max(lexical, time_window_score(query, obj))
         if RetrieveQueryMode.VECTOR in query_modes:
-            score += vector_score(query_embedding, obj)
+            dense = vector_score(effective_dense, obj)
+
+        # α-2.5 / β-1.5: blended hybrid scoring
+        priority_signal = effective_priority_or_base(obj)
+        score = w_lexical * lexical + w_dense * dense + w_priority * priority_signal
+
         if score > 0:
             matches.append(RetrievalMatch(object=obj, score=score))
 

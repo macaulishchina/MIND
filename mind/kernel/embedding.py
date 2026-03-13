@@ -93,6 +93,48 @@ class OpenAIEmbedding:
         return self._dimension
 
 
+class SentenceTransformerEmbedding:
+    """Local sentence-transformers embedding provider (Phase β-1).
+
+    Requires the ``sentence-transformers`` package.  Loads the model lazily
+    on first ``embed()`` call so import time is not penalised.
+    """
+
+    def __init__(self, model_name: str = "all-MiniLM-L6-v2") -> None:
+        self._model_name = model_name
+        self._model: Any = None
+        self._dim: int | None = None
+
+    def embed(self, texts: list[str]) -> list[tuple[float, ...]]:
+        model = self._load_model()
+        import numpy as np  # type: ignore[import-untyped]
+
+        embeddings: np.ndarray = model.encode(texts, convert_to_numpy=True, normalize_embeddings=True)
+        if self._dim is None:
+            self._dim = int(embeddings.shape[1])
+        return [tuple(float(v) for v in row) for row in embeddings]
+
+    @property
+    def dimension(self) -> int:
+        if self._dim is not None:
+            return self._dim
+        # Common default for all-MiniLM-L6-v2
+        return 384
+
+    def _load_model(self) -> Any:
+        if self._model is not None:
+            return self._model
+        try:
+            from sentence_transformers import SentenceTransformer  # type: ignore[import-untyped]
+        except ImportError as exc:
+            raise ImportError(
+                "sentence-transformers is required for SentenceTransformerEmbedding. "
+                "Install with: pip install 'mind[dense]'"
+            ) from exc
+        self._model = SentenceTransformer(self._model_name)
+        return self._model
+
+
 _DEFAULT_PROVIDER: EmbeddingProvider = LocalHashEmbedding()
 
 

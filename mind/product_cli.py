@@ -52,6 +52,8 @@ class ProductClient(Protocol):
 
     def provider_status(self, payload: dict[str, Any] | None = None) -> dict[str, Any]: ...
 
+    def record_feedback(self, payload: dict[str, Any]) -> dict[str, Any]: ...
+
 
 @dataclass
 class LocalProductClient:
@@ -103,6 +105,9 @@ class LocalProductClient:
         return self.registry.system_status_service.provider_status(
             self._request(request_payload)
         ).model_dump(mode="json")
+
+    def record_feedback(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return self._invoke(self.registry.feedback_service.record_feedback, payload)
 
     def _invoke(self, func: Any, payload: dict[str, Any]) -> dict[str, Any]:
         response = func(self._request(payload))
@@ -250,7 +255,8 @@ def build_product_parser() -> argparse.ArgumentParser:
     session_show = session_subparsers.add_parser("show", help="Show one session.")
     session_show.add_argument("session_id")
 
-    subparsers.add_parser("status", help="Show system health and readiness.")
+    status_parser = subparsers.add_parser("status", help="Show system health and readiness.")
+    status_parser.add_argument("--detailed", action="store_true", help="Include full health report.")
     config = subparsers.add_parser("config", help="Show resolved configuration.")
     config.add_argument(
         "--provider",
@@ -279,6 +285,22 @@ def build_product_parser() -> argparse.ArgumentParser:
     )
     unarchive.add_argument("--object-id", required=True, help="ID of the archived object.")
     unarchive.add_argument("--principal-id", default="cli-user")
+
+    # Phase α-1: feedback command
+    feedback = subparsers.add_parser(
+        "feedback",
+        help="Record post-query feedback on memory objects.",
+    )
+    feedback.add_argument("--task-id", required=True, help="Task ID of the original query.")
+    feedback.add_argument("--episode-id", required=True, help="Episode ID.")
+    feedback.add_argument("--query", default="", help="Original query text.")
+    feedback.add_argument("--helpful", nargs="*", default=[], help="Helpful object IDs.")
+    feedback.add_argument("--unhelpful", nargs="*", default=[], help="Unhelpful object IDs.")
+    feedback.add_argument(
+        "--quality-signal", type=float, default=0.0,
+        help="Quality score in [-1, 1].",
+    )
+    feedback.add_argument("--principal-id", default="cli-user")
 
     return parser
 
@@ -367,12 +389,18 @@ def _dispatch_command(args: argparse.Namespace, client: ProductClient) -> dict[s
             and readiness.get("status") == AppStatus.OK.value
             else AppStatus.ERROR.value
         )
+        result_data: dict[str, Any] = {
+            "health": health.get("result"),
+            "readiness": readiness.get("result"),
+        }
+        if getattr(args, "detailed", False):
+            from mind.kernel.health import compute_health_report
+
+            report = compute_health_report(client.registry.store)
+            result_data["health_report"] = report.to_dict()
         return {
             "status": status_value,
-            "result": {
-                "health": health.get("result"),
-                "readiness": readiness.get("result"),
-            },
+            "result": result_data,
         }
     if command == "config":
         config_summary = client.config_summary()
@@ -396,6 +424,19 @@ def _dispatch_command(args: argparse.Namespace, client: ProductClient) -> dict[s
         }
     if command == "unarchive":
         return _unarchive_object(args, client)
+    if command == "feedback":
+        return client.record_feedback(
+            {
+                "task_id": args.task_id,
+                "episode_id": args.episode_id,
+                "query": args.query,
+                "used_object_ids": list(args.helpful or []) + list(args.unhelpful or []),
+                "helpful_object_ids": list(args.helpful or []),
+                "unhelpful_object_ids": list(args.unhelpful or []),
+                "quality_signal": args.quality_signal,
+                "principal_id": args.principal_id,
+            }
+        )
     raise SystemExit(f"unsupported command '{command}'")
 
 
@@ -965,6 +1006,38 @@ def _format_status_payload(payload: dict[str, Any], renderer: _CliRenderer) -> s
                 [[str(name), str(status)] for name, status in checks.items()],
             )
         )
+    # α-S2: detailed health report
+    health_report = result.get("health_report")
+    if health_report:
+        lines.extend(renderer.section("Health Report"))
+        lines.extend(
+            renderer.kv_block(
+                [
+                    ("Total Objects", str(health_report.get("total_objects", 0))),
+                    ("Avg Priority", str(health_report.get("average_priority", "-"))),
+                    ("Pending Jobs", str(health_report.get("pending_jobs", 0))),
+                    ("Orphan Refs", str(len(health_report.get("orphan_refs", [])))),
+                ]
+            )
+        )
+        type_counts = health_report.get("type_counts", {})
+        if type_counts:
+            lines.extend(renderer.section("Object Types"))
+            lines.extend(
+                renderer.table(
+                    ["Type", "Count"],
+                    [[str(t), str(c)] for t, c in sorted(type_counts.items())],
+                )
+            )
+        status_counts = health_report.get("status_counts", {})
+        if status_counts:
+            lines.extend(renderer.section("Status Distribution"))
+            lines.extend(
+                renderer.table(
+                    ["Status", "Count"],
+                    [[str(s), str(c)] for s, c in sorted(status_counts.items())],
+                )
+            )
     return "\n".join(lines)
 
 

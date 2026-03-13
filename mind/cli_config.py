@@ -31,6 +31,22 @@ class CliProfileSpec:
 
 
 @dataclass(frozen=True)
+class SchedulerConfig:
+    """Scheduler tuning knobs (Phase α-3.6)."""
+    auto_reflect_enabled: bool = True
+    promote_threshold: int = 3
+    priority_refresh_days: int = 7
+
+
+@dataclass(frozen=True)
+class EmbeddingConfig:
+    """Dense-retrieval embedding settings (Phase β-1)."""
+    provider: str = "local"
+    model_name: str = "deterministic-sha256"
+    dimension: int = 64
+
+
+@dataclass(frozen=True)
 class ResolvedCliConfig:
     requested_profile: CliProfile
     requested_profile_source: str
@@ -42,6 +58,8 @@ class ResolvedCliConfig:
     postgres_dsn: str | None
     postgres_dsn_source: str | None
     model_routing: dict[str, str] | None = None
+    scheduler: SchedulerConfig = SchedulerConfig()
+    embedding: EmbeddingConfig = EmbeddingConfig()
 
 
 @dataclass(frozen=True)
@@ -174,6 +192,21 @@ def resolve_cli_config(
             except (ValueError, TypeError):
                 resolved_model_routing = None
 
+    # Phase α-3.6: scheduler config from env.
+    scheduler_cfg = SchedulerConfig(
+        auto_reflect_enabled=active_env.get("MIND_SCHEDULER_AUTO_REFLECT", "true").lower()
+        in {"1", "true", "yes", "on"},
+        promote_threshold=int(active_env.get("MIND_SCHEDULER_PROMOTE_THRESHOLD", "3")),
+        priority_refresh_days=int(active_env.get("MIND_SCHEDULER_PRIORITY_REFRESH_DAYS", "7")),
+    )
+
+    # Phase β-1: embedding config from env.
+    embedding_cfg = EmbeddingConfig(
+        provider=active_env.get("MIND_EMBEDDING_PROVIDER", "local"),
+        model_name=active_env.get("MIND_EMBEDDING_MODEL", "deterministic-sha256"),
+        dimension=int(active_env.get("MIND_EMBEDDING_DIMENSION", "64")),
+    )
+
     return ResolvedCliConfig(
         requested_profile=requested_profile,
         requested_profile_source=requested_profile_source,
@@ -185,6 +218,8 @@ def resolve_cli_config(
         postgres_dsn=resolved_postgres_dsn,
         postgres_dsn_source=postgres_dsn_source,
         model_routing=resolved_model_routing,
+        scheduler=scheduler_cfg,
+        embedding=embedding_cfg,
     )
 
 

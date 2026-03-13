@@ -16,6 +16,7 @@ from mind.app.services.frontend import (
     FrontendSettingsAppService,
 )
 from mind.app.services.governance import GovernanceAppService
+from mind.app.services.feedback import FeedbackService
 from mind.app.services.ingest import MemoryIngestService
 from mind.app.services.jobs import OfflineJobAppService
 from mind.app.services.query import MemoryQueryService
@@ -25,6 +26,7 @@ from mind.capabilities import CapabilityService, resolve_capability_provider_con
 from mind.cli_config import CliBackend, ResolvedCliConfig, resolve_cli_config
 from mind.governance.service import GovernanceService
 from mind.kernel.store import MemoryStore, SQLiteMemoryStore
+from mind.offline.scheduler import OfflineJobScheduler
 from mind.offline.service import OfflineMaintenanceService
 from mind.primitives.service import PrimitiveService
 from mind.telemetry import (
@@ -58,6 +60,7 @@ class AppServiceRegistry:
     frontend_settings_service: FrontendSettingsAppService = field(repr=False)
     frontend_debug_service: FrontendDebugAppService = field(repr=False)
     user_state_service: UserStateService = field(repr=False)
+    feedback_service: FeedbackService = field(repr=False)
     system_status_service: SystemStatusService = field(repr=False)
     runtime_manager: GlobalRuntimeManager = field(repr=False)
 
@@ -166,9 +169,16 @@ def build_app_registry(
         telemetry_recorder=effective_telemetry_recorder,
         provider_env_resolver=runtime_manager.current_provider_env,
     )
+    scheduler = OfflineJobScheduler(store)
+    feedback_service = FeedbackService(
+        primitive_service,
+        request_defaults_resolver=runtime_manager.apply_request_defaults,
+        scheduler=scheduler,
+    )
     memory_ingest_service = MemoryIngestService(
         primitive_service,
         request_defaults_resolver=runtime_manager.apply_request_defaults,
+        scheduler=scheduler,
     )
     memory_query_service = MemoryQueryService(
         primitive_service,
@@ -222,6 +232,7 @@ def build_app_registry(
         frontend_settings_service=frontend_settings_service,
         frontend_debug_service=frontend_debug_service,
         user_state_service=user_state_service,
+        feedback_service=feedback_service,
         system_status_service=system_status_service,
         runtime_manager=runtime_manager,
     )

@@ -402,4 +402,46 @@ def build_core_object_showcase() -> list[dict]:
             "promotion_source_refs": [summary["id"], reflection["id"]],
         },
     }
-    return [raw, episode, summary, reflection, entity, link, workspace, schema]
+    feedback_1 = {
+        "id": "showcase-feedback-1",
+        "type": "FeedbackRecord",
+        "content": {"query": "How does the calendar tool work?"},
+        "source_refs": [episode["id"]],
+        "created_at": updated_at,
+        "updated_at": updated_at,
+        "version": 1,
+        "status": "active",
+        "priority": 0.3,
+        "metadata": {
+            "task_id": "showcase-task",
+            "episode_id": "showcase-episode",
+            "query": "How does the calendar tool work?",
+            "query_hash": "a1b2c3d4e5f67890",
+            "used_object_ids": [raw["id"], summary["id"]],
+            "helpful_object_ids": [summary["id"]],
+            "unhelpful_object_ids": [],
+            "quality_signal": 0.8,
+        },
+    }
+    feedback_2 = {
+        "id": "showcase-feedback-2",
+        "type": "FeedbackRecord",
+        "content": {"query": "What was the task result?"},
+        "source_refs": [episode["id"]],
+        "created_at": updated_at,
+        "updated_at": updated_at,
+        "version": 1,
+        "status": "active",
+        "priority": 0.3,
+        "metadata": {
+            "task_id": "showcase-task",
+            "episode_id": "showcase-episode",
+            "query": "What was the task result?",
+            "query_hash": "f0e1d2c3b4a59687",
+            "used_object_ids": [raw["id"], reflection["id"]],
+            "helpful_object_ids": [raw["id"]],
+            "unhelpful_object_ids": [reflection["id"]],
+            "quality_signal": 0.5,
+        },
+    }
+    return [raw, episode, summary, reflection, entity, link, workspace, schema, feedback_1, feedback_2]

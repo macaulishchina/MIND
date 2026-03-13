@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 from uuid import uuid4
 
@@ -11,6 +12,8 @@ from mind.app.contracts import AppRequest, AppResponse, AppStatus
 from mind.app.errors import map_domain_error
 from mind.primitives.contracts import PrimitiveName, PrimitiveOutcome
 from mind.primitives.service import PrimitiveService
+
+_log = logging.getLogger(__name__)
 
 
 class MemoryIngestService:
@@ -24,9 +27,11 @@ class MemoryIngestService:
         primitive_service: PrimitiveService,
         *,
         request_defaults_resolver: Any = None,
+        scheduler: Any | None = None,
     ) -> None:
         self._primitive = primitive_service
         self._request_defaults_resolver = request_defaults_resolver
+        self._scheduler = scheduler
 
     def remember(self, req: AppRequest) -> AppResponse:
         """Store a memory from user input."""
@@ -94,6 +99,8 @@ class MemoryIngestService:
                 self._primitive.store,
                 primitive=PrimitiveName.WRITE_RAW,
             )
+            # α-3.2: auto-enqueue REFLECT_EPISODE when a TaskEpisode is completed
+            self._try_schedule_episode_completed(episode_id, result.response)
         else:
             resp.status = result_status(result.outcome)
             resp.error = result_error(result)
@@ -103,3 +110,19 @@ class MemoryIngestService:
             )
 
         return resp
+
+    # ------------------------------------------------------------------
+    # Scheduler integration
+
+    def _try_schedule_episode_completed(
+        self,
+        episode_id: str,
+        response: dict[str, Any],
+    ) -> None:
+        """Best-effort enqueue of REFLECT_EPISODE via the scheduler."""
+        if self._scheduler is None:
+            return
+        try:
+            self._scheduler.on_episode_completed(episode_id, response)
+        except Exception:
+            _log.warning("scheduler.on_episode_completed failed for %s", episode_id, exc_info=True)
