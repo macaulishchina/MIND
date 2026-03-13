@@ -64,7 +64,8 @@ class GeminiCapabilityAdapter:
     def invoke(self, request: CapabilityRequest) -> CapabilityResponse:
         started_at = self._clock()
         endpoint = _request_endpoint(self._config)
-        payload = _request_payload(request)
+        prompt = _prompt_for_request(request)
+        payload = _request_payload(request, prompt=prompt)
         response_payload = self._transport(
             endpoint,
             payload,
@@ -80,6 +81,11 @@ class GeminiCapabilityAdapter:
             started_at=started_at,
             completed_at=completed_at,
             duration_ms=max(0, int((completed_at - started_at).total_seconds() * 1000)),
+            request_text=(
+                prompt
+                if isinstance(request, AnswerRequest) and request.capture_raw_exchange
+                else None
+            ),
         )
         return _parse_response(request, response_payload, trace)
 
@@ -91,7 +97,7 @@ def _request_endpoint(config: CapabilityProviderConfig) -> str:
     return f"{endpoint}/{config.model}:generateContent"
 
 
-def _request_payload(request: CapabilityRequest) -> dict[str, Any]:
+def _request_payload(request: CapabilityRequest, *, prompt: str) -> dict[str, Any]:
     generation_config: dict[str, Any] = {
         "responseMimeType": "application/json",
     }
@@ -103,7 +109,7 @@ def _request_payload(request: CapabilityRequest) -> dict[str, Any]:
             {
                 "parts": [
                     {
-                        "text": _prompt_for_request(request),
+                        "text": prompt,
                     }
                 ]
             }
@@ -181,6 +187,8 @@ def _parse_response(
     trace: CapabilityInvocationTrace,
 ) -> CapabilityResponse:
     output_text = _extract_output_text(response_payload)
+    if isinstance(request, AnswerRequest) and request.capture_raw_exchange:
+        trace = trace.model_copy(update={"response_text": output_text})
     try:
         payload = json.loads(output_text)
     except json.JSONDecodeError as exc:

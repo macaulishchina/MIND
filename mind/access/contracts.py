@@ -78,6 +78,7 @@ class AccessRunRequest(AccessModeRequest):
 
     query: str | dict[str, Any]
     task_id: str = Field(min_length=1)
+    capture_raw_exchange: bool = False
     query_modes: list[RetrieveQueryMode] = Field(
         default_factory=lambda: [RetrieveQueryMode.KEYWORD],
         min_length=1,

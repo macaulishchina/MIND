@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -44,6 +44,8 @@ from .contracts import (
     AccessTaskFamily,
     AccessTraceKind,
 )
+
+type ProviderEnvResolver = Callable[[], Mapping[str, str] | None]
 
 
 class AccessServiceError(RuntimeError):
@@ -143,17 +145,20 @@ class AccessService:
         query_embedder: QueryEmbedder | None = None,
         capability_service: CapabilityService | None = None,
         telemetry_recorder: TelemetryRecorder | None = None,
+        provider_env_resolver: ProviderEnvResolver | None = None,
     ) -> None:
         self.store = store
         self._clock = clock or _utc_now
         self._telemetry_recorder = telemetry_recorder
         self._capability_service = capability_service or CapabilityService(clock=self._clock)
+        self._provider_env_resolver = provider_env_resolver
         self._primitive_service = PrimitiveService(
             store,
             clock=self._clock,
             vector_retriever=vector_retriever,
             query_embedder=query_embedder,
             telemetry_recorder=telemetry_recorder,
+            provider_env_resolver=provider_env_resolver,
         )
         self._workspace_builder = WorkspaceBuilder(
             store,
@@ -1010,6 +1015,7 @@ class AccessService:
                 context_text=draft_text,
                 support_ids=support_ids,
                 hard_constraints=list(request.hard_constraints),
+                capture_raw_exchange=request.capture_raw_exchange,
             ),
             provider_config=provider_config,
         )
@@ -1052,14 +1058,21 @@ class AccessService:
         ]
         return " | ".join(parts)
 
-    @staticmethod
     def _capability_provider_config(
+        self,
         context: PrimitiveExecutionContext,
     ) -> Any:
         if not context.provider_selection:
             return None
         try:
-            return resolve_capability_provider_config(selection=context.provider_selection)
+            return resolve_capability_provider_config(
+                selection=context.provider_selection,
+                env=(
+                    self._provider_env_resolver()
+                    if self._provider_env_resolver is not None
+                    else None
+                ),
+            )
         except RuntimeError as exc:
             raise AccessServiceError(str(exc)) from exc
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 import copy
 import json
 import re
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
 from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
@@ -17,8 +17,8 @@ from mind.capabilities import (
     resolve_capability_provider_config,
 )
 from mind.kernel.provenance import build_direct_provenance_record, build_provenance_summary
-from mind.kernel.retrieval import build_query_embedding
-from mind.kernel.schema import public_object_view, strip_control_plane_metadata
+from mind.kernel.retrieval import build_query_embedding, build_search_text, canonical_query_text, tokenize
+from mind.kernel.schema import public_object_view
 from mind.kernel.store import MemoryStore, PrimitiveTransaction, StoreError
 from mind.telemetry import TelemetryEventKind, TelemetryRecorder, TelemetryScope
 
@@ -63,6 +63,7 @@ InaccessibleStatuses = {"invalid"}
 PositiveReasonHints = ("boost", "increase", "raise", "up", "urgent")
 type VectorRetriever = Callable[[str | dict[str, Any], list[dict[str, Any]]], dict[str, float]]
 type QueryEmbedder = Callable[[str | dict[str, Any]], tuple[float, ...]]
+type ProviderEnvResolver = Callable[[], Mapping[str, str] | None]
 
 
 class PrimitiveService:
@@ -77,6 +78,7 @@ class PrimitiveService:
         query_embedder: QueryEmbedder | None = None,
         capability_service: CapabilityService | None = None,
         telemetry_recorder: TelemetryRecorder | None = None,
+        provider_env_resolver: ProviderEnvResolver | None = None,
     ) -> None:
         self.store = store
         self._clock = clock or _utc_now
@@ -88,6 +90,7 @@ class PrimitiveService:
         self._vector_retriever = vector_retriever
         self._query_embedder = query_embedder
         self._capability_service = capability_service or CapabilityService(clock=self._clock)
+        self._provider_env_resolver = provider_env_resolver
 
     def write_raw(
         self,
@@ -1040,24 +1043,11 @@ class PrimitiveService:
 
     @staticmethod
     def _query_text(query: str | dict[str, Any]) -> str:
-        return (
-            query
-            if isinstance(query, str)
-            else json.dumps(query, ensure_ascii=True, sort_keys=True)
-        )
+        return canonical_query_text(query)
 
     @staticmethod
     def _object_text(obj: dict[str, Any]) -> str:
-        return json.dumps(
-            {
-                "id": obj["id"],
-                "type": obj["type"],
-                "content": obj["content"],
-                "metadata": strip_control_plane_metadata(obj["metadata"]),
-            },
-            ensure_ascii=True,
-            sort_keys=True,
-        ).lower()
+        return build_search_text(obj)
 
     @staticmethod
     def _object_summary(obj: dict[str, Any], *, score: float | None = None) -> dict[str, Any]:
@@ -1096,7 +1086,10 @@ class PrimitiveService:
         if not context.provider_selection:
             return None
         try:
-            return resolve_capability_provider_config(selection=context.provider_selection)
+            return resolve_capability_provider_config(
+                selection=context.provider_selection,
+                env=self._provider_env_resolver() if self._provider_env_resolver is not None else None,
+            )
         except RuntimeError as exc:
             raise self._reject(
                 PrimitiveErrorCode.UNSUPPORTED_OPERATION,
@@ -1209,7 +1202,7 @@ class PrimitiveService:
 
 
 def _tokenize(text: str) -> set[str]:
-    return set(re.findall(r"[a-z0-9_]+", text.lower()))
+    return tokenize(text)
 
 
 def _effective_budget_limit(

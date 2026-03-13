@@ -63,7 +63,8 @@ class ClaudeCapabilityAdapter:
 
     def invoke(self, request: CapabilityRequest) -> CapabilityResponse:
         started_at = self._clock()
-        payload = _request_payload(request, self._config.model)
+        prompt = _prompt_for_request(request)
+        payload = _request_payload(request, self._config.model, prompt=prompt)
         response_payload = self._transport(
             self._config.endpoint,
             payload,
@@ -79,18 +80,23 @@ class ClaudeCapabilityAdapter:
             started_at=started_at,
             completed_at=completed_at,
             duration_ms=max(0, int((completed_at - started_at).total_seconds() * 1000)),
+            request_text=(
+                prompt
+                if isinstance(request, AnswerRequest) and request.capture_raw_exchange
+                else None
+            ),
         )
         return _parse_response(request, response_payload, trace)
 
 
-def _request_payload(request: CapabilityRequest, model: str) -> dict[str, Any]:
+def _request_payload(request: CapabilityRequest, model: str, *, prompt: str) -> dict[str, Any]:
     return {
         "model": model,
         "max_tokens": _max_tokens_for_request(request),
         "messages": [
             {
                 "role": "user",
-                "content": _prompt_for_request(request),
+                "content": prompt,
             }
         ],
     }
@@ -166,6 +172,8 @@ def _parse_response(
     trace: CapabilityInvocationTrace,
 ) -> CapabilityResponse:
     output_text = _extract_output_text(response_payload)
+    if isinstance(request, AnswerRequest) and request.capture_raw_exchange:
+        trace = trace.model_copy(update={"response_text": output_text})
     try:
         payload = json.loads(output_text)
     except json.JSONDecodeError as exc:

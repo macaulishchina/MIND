@@ -14,6 +14,8 @@ from mind.kernel.schema import strip_control_plane_metadata
 from mind.primitives.contracts import RetrieveQueryMode
 
 EMBEDDING_DIM = 64
+_CJK_BLOCK = r"\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff"
+_TOKEN_PATTERN = re.compile(rf"[a-z0-9_]+|[{_CJK_BLOCK}]+", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -34,8 +36,8 @@ def build_search_text(obj: dict[str, Any]) -> str:
             object_id,
             object_id.replace("-", " "),
             str(obj["type"]).lower(),
-            json.dumps(obj["content"], ensure_ascii=True, sort_keys=True).lower(),
-            json.dumps(public_metadata, ensure_ascii=True, sort_keys=True).lower(),
+            json.dumps(obj["content"], ensure_ascii=False, sort_keys=True).lower(),
+            json.dumps(public_metadata, ensure_ascii=False, sort_keys=True).lower(),
         ]
     ).strip()
 
@@ -88,7 +90,7 @@ def canonical_query_text(query: str | dict[str, Any]) -> str:
     return (
         query.lower()
         if isinstance(query, str)
-        else json.dumps(query, ensure_ascii=True, sort_keys=True).lower()
+        else json.dumps(query, ensure_ascii=False, sort_keys=True).lower()
     )
 
 
@@ -266,7 +268,7 @@ def _parse_iso_datetime(value: str) -> datetime:
 
 def tokenize(text: str) -> set[str]:
     """Return the canonical token set for keyword matching."""
-    return {token for token in re.findall(r"[a-z0-9]+", text.lower()) if token}
+    return set(_tokenize_sequence(text))
 
 
 # Keep underscore alias for existing internal callers.
@@ -274,7 +276,15 @@ _tokenize = tokenize
 
 
 def _tokenize_sequence(text: str) -> list[str]:
-    return [token for token in re.findall(r"[a-z0-9]+", text.lower()) if token]
+    normalized = text.lower()
+    tokens: list[str] = []
+    for token in _TOKEN_PATTERN.findall(normalized):
+        if not token:
+            continue
+        tokens.append(token)
+        if _contains_cjk(token):
+            tokens.extend(_char_ngrams(token, size=2))
+    return [token for token in tokens if token]
 
 
 def _structured_text(value: Any) -> str:
@@ -318,3 +328,7 @@ def _char_ngrams(text: str, size: int = 3) -> list[str]:
     if len(normalized) < size:
         return [normalized] if normalized else []
     return [normalized[index : index + size] for index in range(len(normalized) - size + 1)]
+
+
+def _contains_cjk(text: str) -> bool:
+    return bool(re.search(rf"[{_CJK_BLOCK}]", text))

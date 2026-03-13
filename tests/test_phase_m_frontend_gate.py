@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 from pathlib import Path
+import shutil
 
 import pytest
 
@@ -50,15 +51,17 @@ def test_frontend_gate_fails_when_transport_surface_regresses(tmp_path: Path) ->
     broken_root = tmp_path / "frontend"
     broken_root.mkdir()
 
-    for name in ("index.html", "app.js", "styles.css"):
+    for name in ("index.html", "app.js"):
         (broken_root / name).write_text(
             (frontend_root / name).read_text(encoding="utf-8"),
             encoding="utf-8",
         )
+    shutil.copytree(frontend_root / "app", broken_root / "app")
+    shutil.copytree(frontend_root / "styles", broken_root / "styles")
     (broken_root / "api.js").write_text(
         (frontend_root / "api.js")
         .read_text(encoding="utf-8")
-        .replace('"/v1/frontend/settings:restore"', '"/v1/frontend/settings:noop"'),
+        .replace('"/v1/frontend/settings:apply"', '"/v1/frontend/settings:noop"'),
         encoding="utf-8",
     )
 
@@ -75,13 +78,21 @@ def test_frontend_gate_fails_when_access_answer_contract_regresses(tmp_path: Pat
     broken_root = tmp_path / "frontend"
     broken_root.mkdir()
 
-    for name in ("index.html", "styles.css", "api.js"):
+    for name in ("index.html", "api.js"):
         (broken_root / name).write_text(
             (frontend_root / name).read_text(encoding="utf-8"),
             encoding="utf-8",
         )
+    shutil.copytree(frontend_root / "app", broken_root / "app")
+    shutil.copytree(frontend_root / "styles", broken_root / "styles")
     (broken_root / "app.js").write_text(
         (frontend_root / "app.js")
+        .read_text(encoding="utf-8")
+        .replace("const answer = result.answer || null;", "const answer = null;"),
+        encoding="utf-8",
+    )
+    (broken_root / "app" / "operation-chain.js").write_text(
+        (frontend_root / "app" / "operation-chain.js")
         .read_text(encoding="utf-8")
         .replace("const answer = result.answer || null;", "const answer = null;"),
         encoding="utf-8",

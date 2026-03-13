@@ -131,6 +131,100 @@ def test_frontend_access_result_aliases_recall_to_focus() -> None:
     assert result.answer.support_ids == ["obj-1"]
     assert result.answer.trace is not None
     assert result.answer.trace.provider_family == "deterministic"
+    assert result.answer.trace.request_text is None
+
+
+def test_frontend_access_projection_includes_llm_request_text_for_web_access() -> None:
+    result = build_frontend_access_result(
+        {
+            "resolved_mode": "recall",
+            "context_kind": "workspace",
+            "context_object_ids": ["obj-1"],
+            "context_text": "{\"kind\":\"workspace\",\"slots\":[{\"summary\":\"\\u4f60\\u597d\\uff0c\\u4eca\\u5929\\u4e0b\\u96e8\\uff0c\\u8bb0\\u5f97\\u5e26\\u4f1e\\u3002\"}]}",
+            "candidate_ids": ["obj-1"],
+            "candidate_summaries": [
+                {
+                    "object_id": "obj-1",
+                    "type": "RawRecord",
+                    "episode_id": "ep-1",
+                    "content_preview": "你好，今天下雨，记得带伞。",
+                    "score": 0.91,
+                }
+            ],
+            "selected_object_ids": ["obj-1"],
+            "selected_summaries": [
+                {
+                    "object_id": "obj-1",
+                    "type": "RawRecord",
+                    "episode_id": "ep-1",
+                    "content_preview": "你好，今天下雨，记得带伞。",
+                }
+            ],
+            "answer_text": "你好，今天记得带伞。",
+            "answer_support_ids": ["obj-1"],
+            "answer_trace": {
+                "provider_family": "openai",
+                "endpoint": "https://api.deepseek.com/v1/chat/completions",
+                "fallback_used": False,
+                "response_text": "{\"answer_text\":\"你好，今天记得带伞。\"}",
+            },
+            "trace": {"events": [{"summary": "recall completed with 1 candidate"}]},
+        },
+        frontend_request=FrontendAccessRequest(query="你好", depth="focus"),
+        runtime_provider="openai",
+    )
+
+    assert result.answer is not None
+    assert result.answer.trace is not None
+    assert result.answer.trace.request_text is not None
+    assert "You are the MIND answer capability." in result.answer.trace.request_text
+    assert "Question: 你好" in result.answer.trace.request_text
+    assert '"obj-1"' in result.answer.trace.request_text
+    assert "你好，今天下雨，记得带伞。" in result.answer.trace.request_text
+    assert "\\u4f60\\u597d" not in result.answer.trace.request_text
+    assert result.answer.trace.response_text is not None
+    assert "你好，今天记得带伞。" in result.answer.trace.response_text
+    assert result.answer.trace.exchanges[0].order == 1
+    assert result.answer.trace.exchanges[0].request_text is not None
+    assert result.answer.trace.exchanges[0].response_text is not None
+
+
+def test_frontend_access_projection_preserves_llm_exchange_order() -> None:
+    result = build_frontend_access_result(
+        {
+            "resolved_mode": "recall",
+            "context_kind": "workspace",
+            "context_object_ids": ["obj-1"],
+            "candidate_ids": ["obj-1"],
+            "selected_object_ids": ["obj-1"],
+            "answer_text": "最终回答",
+            "answer_support_ids": ["obj-1"],
+            "answer_trace": {
+                "provider_family": "openai",
+                "endpoint": "https://api.deepseek.com/v1/chat/completions",
+                "fallback_used": False,
+                "exchanges": [
+                    {
+                        "request_text": "第一轮请求",
+                        "response_text": "第一轮回答",
+                    },
+                    {
+                        "request_text": "第二轮请求",
+                        "response_text": "第二轮回答",
+                    },
+                ],
+            },
+            "trace": {"events": [{"summary": "recall completed with 1 candidate"}]},
+        },
+        frontend_request=FrontendAccessRequest(query="你好", depth="focus"),
+        runtime_provider="openai",
+    )
+
+    assert result.answer is not None
+    assert result.answer.trace is not None
+    assert [item.order for item in result.answer.trace.exchanges] == [1, 2]
+    assert result.answer.trace.exchanges[0].request_text == "第一轮请求"
+    assert result.answer.trace.exchanges[1].response_text == "第二轮回答"
 
 
 def test_frontend_experience_projections_use_real_app_services(tmp_path: Path) -> None:

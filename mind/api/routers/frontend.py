@@ -124,6 +124,54 @@ async def frontend_settings_apply(
     return app_json_response(response)
 
 
+@router.post("/frontend/llm/services:upsert")
+async def frontend_llm_service_upsert(
+    request: Request,
+    principal: Annotated[PrincipalContext, Depends(require_api_key)],
+    payload: PayloadBody = None,
+) -> JSONResponse:
+    response = get_registry(request).frontend_settings_service.upsert_llm_service(
+        build_app_request(request, principal, payload=payload)
+    )
+    return app_json_response(response)
+
+
+@router.post("/frontend/llm/services:discover-models")
+async def frontend_llm_service_discover_models(
+    request: Request,
+    principal: Annotated[PrincipalContext, Depends(require_api_key)],
+    payload: PayloadBody = None,
+) -> JSONResponse:
+    response = get_registry(request).frontend_settings_service.discover_llm_models(
+        build_app_request(request, principal, payload=payload)
+    )
+    return app_json_response(response)
+
+
+@router.post("/frontend/llm/services:activate")
+async def frontend_llm_service_activate(
+    request: Request,
+    principal: Annotated[PrincipalContext, Depends(require_api_key)],
+    payload: PayloadBody = None,
+) -> JSONResponse:
+    response = get_registry(request).frontend_settings_service.activate_llm_service(
+        build_app_request(request, principal, payload=payload)
+    )
+    return app_json_response(response)
+
+
+@router.post("/frontend/llm/services:delete")
+async def frontend_llm_service_delete(
+    request: Request,
+    principal: Annotated[PrincipalContext, Depends(require_api_key)],
+    payload: PayloadBody = None,
+) -> JSONResponse:
+    response = get_registry(request).frontend_settings_service.delete_llm_service(
+        build_app_request(request, principal, payload=payload)
+    )
+    return app_json_response(response)
+
+
 @router.post("/frontend/settings:restore")
 async def frontend_settings_restore(
     request: Request,

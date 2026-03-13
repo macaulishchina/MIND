@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 from typing import Any
 
@@ -25,6 +25,8 @@ from .jobs import (
 )
 from .promotion import assess_schema_promotion
 
+type ProviderEnvResolver = Callable[[], Mapping[str, str] | None]
+
 
 class OfflineMaintenanceError(RuntimeError):
     """Raised when an offline maintenance job cannot be completed safely."""
@@ -40,17 +42,20 @@ class OfflineMaintenanceService:
         clock: Callable[[], datetime] | None = None,
         capability_service: CapabilityService | None = None,
         telemetry_recorder: TelemetryRecorder | None = None,
+        provider_env_resolver: ProviderEnvResolver | None = None,
     ) -> None:
         self.store = store
         self._clock = clock or _utc_now
         self._telemetry_recorder = telemetry_recorder
         self._capability_service = capability_service or CapabilityService(clock=self._clock)
+        self._provider_env_resolver = provider_env_resolver
         self._primitive_service = PrimitiveService(
             store,
             clock=self._clock,
             query_embedder=build_query_embedding,
             capability_service=self._capability_service,
             telemetry_recorder=telemetry_recorder,
+            provider_env_resolver=provider_env_resolver,
         )
 
     def process_job(
@@ -376,14 +381,21 @@ class OfflineMaintenanceService:
         if enabled and self._telemetry_recorder is not None:
             self._telemetry_recorder.record(event)
 
-    @staticmethod
     def _capability_provider_config(
+        self,
         provider_selection: dict[str, Any] | None,
     ) -> Any:
         if not provider_selection:
             return None
         try:
-            return resolve_capability_provider_config(selection=provider_selection)
+            return resolve_capability_provider_config(
+                selection=provider_selection,
+                env=(
+                    self._provider_env_resolver()
+                    if self._provider_env_resolver is not None
+                    else None
+                ),
+            )
         except RuntimeError as exc:
             raise OfflineMaintenanceError(str(exc)) from exc
 

@@ -19,8 +19,14 @@ class MemoryIngestService:
     Methods: ``remember``, ``import_raw``, ``append_turn``.
     """
 
-    def __init__(self, primitive_service: PrimitiveService) -> None:
+    def __init__(
+        self,
+        primitive_service: PrimitiveService,
+        *,
+        request_defaults_resolver: Any = None,
+    ) -> None:
         self._primitive = primitive_service
+        self._request_defaults_resolver = request_defaults_resolver
 
     def remember(self, req: AppRequest) -> AppResponse:
         """Store a memory from user input."""
@@ -38,6 +44,12 @@ class MemoryIngestService:
     # ------------------------------------------------------------------
 
     def _do_write(self, req: AppRequest, *, record_kind: str) -> AppResponse:
+        if self._request_defaults_resolver is not None:
+            req = self._request_defaults_resolver(
+                req,
+                include_provider_selection=False,
+                respect_request_policy=True,
+            )
         resp = new_response(req)
         ctx = resolve_execution_context(
             req.principal,

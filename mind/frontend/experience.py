@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from collections import defaultdict
 from collections.abc import Mapping
 from enum import StrEnum
@@ -127,12 +128,24 @@ class FrontendAccessEvidenceView(FrontendModel):
     preview: str | None = None
 
 
+class FrontendAccessLlmExchangeView(FrontendModel):
+    """One ordered request/response exchange projected for the web frontend."""
+
+    order: int = Field(ge=1)
+    request_text: str | None = None
+    response_text: str | None = None
+
+
 class FrontendAccessAnswerTraceView(FrontendModel):
     """Stable frontend-facing answer trace subset."""
 
     provider_family: str | None = None
+    endpoint: str | None = None
     fallback_used: bool = False
     fallback_reason: str | None = None
+    request_text: str | None = None
+    response_text: str | None = None
+    exchanges: list[FrontendAccessLlmExchangeView] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def enforce_fallback_reason(self) -> FrontendAccessAnswerTraceView:
@@ -281,6 +294,9 @@ def build_frontend_retrieve_result(
 
 def build_frontend_access_result(
     response_or_payload: AppResponse | Mapping[str, Any],
+    *,
+    frontend_request: FrontendAccessRequest | None = None,
+    runtime_provider: str | None = None,
 ) -> FrontendAccessResult:
     """Project an access app response into the frontend-facing view."""
 
@@ -298,7 +314,12 @@ def build_frontend_access_result(
     context_object_ids = [str(item) for item in payload.get("context_object_ids") or ()]
     trace = payload.get("trace") or {}
     events = trace.get("events") or ()
-    answer = _project_access_answer(payload, fallback_support_ids=selected_ids)
+    answer = _project_access_answer(
+        payload,
+        fallback_support_ids=selected_ids,
+        frontend_request=frontend_request,
+        runtime_provider=runtime_provider,
+    )
     summary = "access completed"
     if answer is not None:
         summary = answer.text
@@ -552,6 +573,8 @@ def _project_access_answer(
     payload: Mapping[str, Any],
     *,
     fallback_support_ids: list[str],
+    frontend_request: FrontendAccessRequest | None = None,
+    runtime_provider: str | None = None,
 ) -> FrontendAccessAnswerView | None:
     raw_text = payload.get("answer_text")
     if not isinstance(raw_text, str) or not raw_text.strip():
@@ -559,6 +582,30 @@ def _project_access_answer(
 
     raw_trace = payload.get("answer_trace")
     answer_trace: FrontendAccessAnswerTraceView | None = None
+    provider_family = _resolve_frontend_access_provider_family(
+        raw_trace if isinstance(raw_trace, Mapping) else None,
+        runtime_provider=runtime_provider,
+    )
+    request_text = (
+        _format_frontend_access_trace_text(raw_trace.get("request_text"))
+        if isinstance(raw_trace, Mapping)
+        else None
+    ) or _build_frontend_access_llm_request_text(
+        provider_family=provider_family,
+        frontend_request=frontend_request,
+        payload=payload,
+        fallback_support_ids=fallback_support_ids,
+    )
+    response_text = (
+        _format_frontend_access_trace_text(raw_trace.get("response_text"))
+        if isinstance(raw_trace, Mapping)
+        else None
+    )
+    exchanges = _build_frontend_access_llm_exchanges(
+        raw_trace if isinstance(raw_trace, Mapping) else None,
+        request_text=request_text,
+        response_text=response_text,
+    )
     if isinstance(raw_trace, Mapping):
         fallback_reason = raw_trace.get("fallback_reason")
         answer_trace = FrontendAccessAnswerTraceView(
@@ -567,12 +614,27 @@ def _project_access_answer(
                 if raw_trace.get("provider_family") is not None
                 else None
             ),
+            endpoint=(
+                str(raw_trace["endpoint"])
+                if raw_trace.get("endpoint") is not None
+                else None
+            ),
             fallback_used=bool(raw_trace.get("fallback_used")),
             fallback_reason=(
                 str(fallback_reason)
                 if isinstance(fallback_reason, str) and fallback_reason.strip()
                 else None
             ),
+            request_text=request_text,
+            response_text=response_text,
+            exchanges=exchanges,
+        )
+    elif request_text is not None or response_text is not None:
+        answer_trace = FrontendAccessAnswerTraceView(
+            provider_family=provider_family,
+            request_text=request_text,
+            response_text=response_text,
+            exchanges=exchanges,
         )
 
     raw_support_ids = payload.get("answer_support_ids") or fallback_support_ids
@@ -581,6 +643,119 @@ def _project_access_answer(
         support_ids=[str(item) for item in raw_support_ids],
         trace=answer_trace,
     )
+
+
+def _resolve_frontend_access_provider_family(
+    raw_trace: Mapping[str, Any] | None,
+    *,
+    runtime_provider: str | None,
+) -> str | None:
+    if raw_trace is not None and raw_trace.get("provider_family") is not None:
+        raw_family = str(raw_trace["provider_family"]).strip()
+        if raw_family in {"openai", "claude", "gemini"}:
+            return raw_family
+    provider = str(runtime_provider or "").strip().lower()
+    aliases = {
+        "openai": "openai",
+        "claude": "claude",
+        "anthropic": "claude",
+        "gemini": "gemini",
+        "google": "gemini",
+    }
+    return aliases.get(provider)
+
+
+def _build_frontend_access_llm_request_text(
+    *,
+    provider_family: str | None,
+    frontend_request: FrontendAccessRequest | None,
+    payload: Mapping[str, Any],
+    fallback_support_ids: list[str],
+) -> str | None:
+    if provider_family not in {"openai", "claude", "gemini"} or frontend_request is None:
+        return None
+    context_text = str(payload.get("context_text") or "").strip()
+    if not context_text:
+        return None
+    support_ids = [
+        str(item)
+        for item in (payload.get("answer_support_ids") or fallback_support_ids or ())
+    ]
+    if provider_family == "openai":
+        response_line = "Return JSON only."
+    else:
+        response_line = "Return JSON only with key answer_text."
+    return (
+        "You are the MIND answer capability.\n"
+        f"{response_line}\n"
+        f"Question: {frontend_request.query}\n"
+        f"Hard constraints: {json.dumps([], ensure_ascii=False)}\n"
+        f"Support ids: {json.dumps(support_ids, ensure_ascii=False)}\n"
+        "Context text:\n"
+        f"{_format_frontend_access_request_text(context_text)}"
+    )
+
+
+def _build_frontend_access_llm_exchanges(
+    raw_trace: Mapping[str, Any] | None,
+    *,
+    request_text: str | None,
+    response_text: str | None,
+) -> list[FrontendAccessLlmExchangeView]:
+    if isinstance(raw_trace, Mapping):
+        raw_exchanges = raw_trace.get("exchanges")
+        if isinstance(raw_exchanges, list):
+            exchanges: list[FrontendAccessLlmExchangeView] = []
+            for index, item in enumerate(raw_exchanges, start=1):
+                if not isinstance(item, Mapping):
+                    continue
+                exchange_request = _format_frontend_access_trace_text(item.get("request_text"))
+                exchange_response = _format_frontend_access_trace_text(item.get("response_text"))
+                if not exchange_request and not exchange_response:
+                    continue
+                exchanges.append(
+                    FrontendAccessLlmExchangeView(
+                        order=index,
+                        request_text=exchange_request,
+                        response_text=exchange_response,
+                    )
+                )
+            if exchanges:
+                return exchanges
+    if request_text is None and response_text is None:
+        return []
+    return [
+        FrontendAccessLlmExchangeView(
+            order=1,
+            request_text=request_text,
+            response_text=response_text,
+        )
+    ]
+
+
+def _format_frontend_access_trace_text(raw_text: Any) -> str | None:
+    if not isinstance(raw_text, str):
+        return None
+    text = raw_text.strip()
+    if not text:
+        return None
+    try:
+        parsed = json.loads(text)
+    except (TypeError, ValueError):
+        return text
+    if isinstance(parsed, (dict, list)):
+        return json.dumps(parsed, ensure_ascii=False, indent=2)
+    if isinstance(parsed, str):
+        return parsed
+    return str(parsed)
+
+
+def _format_frontend_access_request_text(context_text: str) -> str:
+    try:
+        parsed = json.loads(context_text)
+    except (TypeError, ValueError):
+        return context_text
+    return json.dumps(parsed, ensure_ascii=False, indent=2)
 
 
 def _project_retrieve_candidates(

@@ -54,6 +54,8 @@ class CapabilityInvocationTrace(CapabilityModel):
     duration_ms: int = Field(ge=0)
     fallback_used: bool = False
     fallback_reason: str | None = None
+    request_text: str | None = None
+    response_text: str | None = None
 
     @model_validator(mode="after")
     def require_fallback_reason(self) -> CapabilityInvocationTrace:
@@ -108,6 +110,7 @@ class AnswerRequest(CapabilityRequestBase):
     support_ids: list[str] = Field(default_factory=list)
     hard_constraints: list[str] = Field(default_factory=list)
     max_answer_tokens: int | None = Field(default=None, ge=1)
+    capture_raw_exchange: bool = False
 
 
 class AnswerResponse(CapabilityResponseBase):

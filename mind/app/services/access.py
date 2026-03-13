@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping
 from typing import Any
 
 from mind.access.service import AccessService
@@ -18,8 +19,16 @@ class MemoryAccessService:
     Methods: ``ask``, ``run_access``, ``explain_access``.
     """
 
-    def __init__(self, access_service: AccessService) -> None:
+    def __init__(
+        self,
+        access_service: AccessService,
+        *,
+        provider_env_resolver: Callable[[], Mapping[str, str] | None] | None = None,
+        request_defaults_resolver: Callable[[AppRequest], AppRequest] | None = None,
+    ) -> None:
         self._access = access_service
+        self._provider_env_resolver = provider_env_resolver
+        self._request_defaults_resolver = request_defaults_resolver
 
     def ask(self, req: AppRequest) -> AppResponse:
         """Ask a question against stored memories (auto mode)."""
@@ -40,10 +49,23 @@ class MemoryAccessService:
     # ------------------------------------------------------------------
 
     def _do_run(self, req: AppRequest, *, mode: str) -> AppResponse:
+        if self._request_defaults_resolver is not None:
+            req = self._request_defaults_resolver(
+                req,
+                include_provider_selection=True,
+                respect_request_policy=True,
+            )
         resp = new_response(req)
         if req.provider_selection is not None:
             try:
-                resolve_capability_provider_config(selection=req.provider_selection)
+                resolve_capability_provider_config(
+                    selection=req.provider_selection,
+                    env=(
+                        self._provider_env_resolver()
+                        if self._provider_env_resolver is not None
+                        else None
+                    ),
+                )
             except RuntimeError as exc:
                 resp.status = AppStatus.ERROR
                 resp.error = AppError(
@@ -77,7 +99,7 @@ class MemoryAccessService:
         }
         if filters:
             access_req["filters"] = filters
-        for field in ("task_family", "time_budget_ms", "hard_constraints"):
+        for field in ("task_family", "time_budget_ms", "hard_constraints", "capture_raw_exchange"):
             if field in req.input:
                 access_req[field] = req.input[field]
 

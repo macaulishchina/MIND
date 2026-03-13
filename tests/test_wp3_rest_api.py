@@ -219,12 +219,21 @@ async def test_frontend_settings_preview_route_returns_preview(
     response = await api_client.post(
         "/v1/frontend/settings:preview",
         headers=_auth_headers(),
-        json={"provider": "openai", "model": "gpt-4.1-mini", "dev_mode": True},
+        json={
+            "provider": "openai",
+            "model": "gpt-4.1-mini",
+            "endpoint": "https://proxy.example/v1/responses",
+            "api_key": "openai-preview-key",
+            "dev_mode": True,
+        },
     )
 
     assert response.status_code == 200
     assert response.json()["result"]["preview"]["provider"]["provider"] == "openai"
+    assert response.json()["result"]["preview"]["provider"]["endpoint"] == "https://proxy.example/v1/chat/completions"
     assert "dev_mode" in response.json()["result"]["changed_keys"]
+    assert "endpoint" in response.json()["result"]["changed_keys"]
+    assert response.json()["result"]["applied_env_overrides"]["OPENAI_API_KEY"] == "***redacted***"
 
 
 @pytest.mark.anyio
@@ -339,35 +348,229 @@ async def test_access_ask_route_returns_validation_error_for_invalid_provider_se
 
 
 @pytest.mark.anyio
-async def test_frontend_settings_apply_and_restore_routes_persist_snapshots(
+async def test_frontend_settings_apply_route_updates_live_frontend_runtime(
     api_client: httpx.AsyncClient,
 ) -> None:
     headers = _auth_headers()
 
-    first_apply = await api_client.post(
-        "/v1/frontend/settings:apply",
+    initial_debug = await api_client.post(
+        "/v1/frontend/debug:timeline",
         headers=headers,
-        json={"provider": "openai", "model": "gpt-4.1-mini"},
+        json={"run_id": "req-front-debug-before"},
     )
-    second_apply = await api_client.post(
+    apply_response = await api_client.post(
         "/v1/frontend/settings:apply",
         headers=headers,
-        json={"profile": "postgres_main", "dev_mode": True},
+        json={"provider": "openai", "model": "gpt-4.1-mini", "dev_mode": True},
     )
     page = await api_client.get("/v1/frontend/settings", headers=headers)
-    restore = await api_client.post(
-        "/v1/frontend/settings:restore",
+    debug_after = await api_client.post(
+        "/v1/frontend/debug:timeline",
         headers=headers,
-        json={},
+        json={"run_id": "req-front-debug-after"},
     )
 
-    assert first_apply.status_code == 200
-    assert second_apply.status_code == 200
+    assert initial_debug.status_code == 400
+    assert apply_response.status_code == 200
     assert page.status_code == 200
-    assert page.json()["result"]["snapshot_state"]["restore_available"] is True
-    assert restore.status_code == 200
-    assert restore.json()["result"]["action"] == "restore"
-    assert restore.json()["result"]["current_snapshot"]["request"]["provider"] == "openai"
+    assert page.json()["result"]["provider"]["provider"] == "openai"
+    assert page.json()["result"]["runtime"]["dev_mode"] is True
+    assert debug_after.status_code == 200
+
+
+@pytest.mark.anyio
+async def test_frontend_settings_apply_route_persists_llm_overrides(
+    api_client: httpx.AsyncClient,
+) -> None:
+    response = await api_client.post(
+        "/v1/frontend/settings:apply",
+        headers=_auth_headers(),
+        json={
+            "provider": "gemini",
+            "model": "gemini-2.0-flash-lite",
+            "endpoint": "https://proxy.example/v1beta/models",
+            "api_key": "gemini-live-key",
+        },
+    )
+    page = await api_client.get("/v1/frontend/settings", headers=_auth_headers())
+
+    assert response.status_code == 200
+    assert page.status_code == 200
+    payload = page.json()["result"]
+    assert payload["provider"]["provider"] == "gemini"
+    assert payload["provider"]["endpoint"] == "https://proxy.example/v1beta/models"
+    service_view = next(item for item in payload["llm"]["services"] if item["protocol"] == "gemini")
+    assert service_view["service_id"] == "managed-gemini"
+    assert service_view["active_model"] == "gemini-2.0-flash-lite"
+    assert service_view["endpoint"] == "https://proxy.example/v1beta"
+    assert service_view["uses_official_endpoint"] is False
+    assert service_view["api_key_saved"] is True
+    assert service_view["api_key_masked"] == "gemi***-key"
+
+
+@pytest.mark.anyio
+async def test_frontend_llm_service_routes_manage_services(
+    api_client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import json
+
+    class _FakeResponse:
+        def __init__(self, payload: dict[str, object]) -> None:
+            self._payload = payload
+
+        def read(self) -> bytes:
+            return json.dumps(self._payload).encode("utf-8")
+
+        def __enter__(self) -> _FakeResponse:
+            return self
+
+        def __exit__(self, exc_type: object, exc: object, tb: object) -> bool:
+            return False
+
+    def _fake_urlopen(request: object, timeout: float = 10.0) -> _FakeResponse:
+        assert getattr(request, "full_url") == "https://proxy.example/v1/models"
+        assert timeout == 10.0
+        return _FakeResponse({"data": [{"id": "gpt-4.1-mini"}, {"id": "gpt-4o-mini"}]})
+
+    monkeypatch.setattr("mind.frontend.settings.urlopen", _fake_urlopen)
+
+    upsert = await api_client.post(
+        "/v1/frontend/llm/services:upsert",
+        headers=_auth_headers(),
+        json={
+            "protocol": "openai",
+            "name": "公司代理",
+            "endpoint": "https://proxy.example/v1/responses",
+            "api_key": "proxy-key",
+        },
+    )
+    assert upsert.status_code == 200
+    service_id = upsert.json()["result"]["service_id"]
+
+    discover = await api_client.post(
+        "/v1/frontend/llm/services:discover-models",
+        headers=_auth_headers(),
+        json={"service_id": service_id},
+    )
+    activate = await api_client.post(
+        "/v1/frontend/llm/services:activate",
+        headers=_auth_headers(),
+        json={"service_id": service_id, "model": "gpt-4o-mini"},
+    )
+    page = await api_client.get("/v1/frontend/settings", headers=_auth_headers())
+
+    assert discover.status_code == 200
+    assert discover.json()["result"]["models"] == ["gpt-4.1-mini", "gpt-4o-mini"]
+    assert activate.status_code == 200
+    assert activate.json()["result"] == {
+        "service_id": service_id,
+        "protocol": "openai",
+        "model": "gpt-4o-mini",
+    }
+    assert page.status_code == 200
+    payload = page.json()["result"]
+    assert payload["provider"]["provider"] == "openai"
+    assert payload["llm"]["active_service_id"] == service_id
+    service_view = next(item for item in payload["llm"]["services"] if item["service_id"] == service_id)
+    assert service_view["name"] == "公司代理"
+    assert service_view["active_model"] == "gpt-4o-mini"
+    assert service_view["endpoint"] == "https://proxy.example/v1"
+    assert service_view["model_options"] == ["gpt-4.1-mini", "gpt-4o-mini"]
+
+
+@pytest.mark.anyio
+async def test_frontend_llm_service_delete_route_removes_active_service(
+    api_client: httpx.AsyncClient,
+) -> None:
+    upsert = await api_client.post(
+        "/v1/frontend/llm/services:upsert",
+        headers=_auth_headers(),
+        json={
+            "protocol": "openai",
+            "name": "DeepSeek",
+            "endpoint": "https://api.deepseek.com",
+            "model": "deepseek-chat",
+        },
+    )
+    assert upsert.status_code == 200
+    service_id = upsert.json()["result"]["service_id"]
+
+    activate = await api_client.post(
+        "/v1/frontend/llm/services:activate",
+        headers=_auth_headers(),
+        json={"service_id": service_id, "model": "deepseek-chat"},
+    )
+    assert activate.status_code == 200
+
+    deleted = await api_client.post(
+        "/v1/frontend/llm/services:delete",
+        headers=_auth_headers(),
+        json={"service_id": service_id},
+    )
+    page = await api_client.get("/v1/frontend/settings", headers=_auth_headers())
+
+    assert deleted.status_code == 200
+    assert deleted.json()["result"] == {
+        "action": "deleted",
+        "service_id": service_id,
+    }
+    assert page.status_code == 200
+    payload = page.json()["result"]
+    assert payload["provider"]["provider"] == "deterministic"
+    assert payload["llm"]["active_service_id"] is None
+    assert payload["llm"]["services"] == []
+
+
+@pytest.mark.anyio
+async def test_editing_active_frontend_llm_service_updates_live_runtime(
+    api_client: httpx.AsyncClient,
+) -> None:
+    initial = await api_client.post(
+        "/v1/frontend/llm/services:upsert",
+        headers=_auth_headers(),
+        json={
+            "protocol": "openai",
+            "name": "OpenAI 官方",
+            "endpoint": "https://api.openai.com/v1",
+            "api_key": "openai-old-key",
+            "model": "gpt-4.1-mini",
+        },
+    )
+    assert initial.status_code == 200
+    service_id = initial.json()["result"]["service_id"]
+
+    activate = await api_client.post(
+        "/v1/frontend/llm/services:activate",
+        headers=_auth_headers(),
+        json={"service_id": service_id, "model": "gpt-4.1-mini"},
+    )
+    assert activate.status_code == 200
+
+    edited = await api_client.post(
+        "/v1/frontend/llm/services:upsert",
+        headers=_auth_headers(),
+        json={
+            "service_id": service_id,
+            "protocol": "openai",
+            "name": "OpenAI 官方",
+            "endpoint": "https://api.deepseek.com/v1",
+            "api_key": "deepseek-live-key",
+            "model": "deepseek-chat",
+        },
+    )
+    page = await api_client.get("/v1/frontend/settings", headers=_auth_headers())
+
+    assert edited.status_code == 200
+    assert page.status_code == 200
+    payload = page.json()["result"]
+    assert payload["llm"]["active_service_id"] == service_id
+    assert payload["provider"]["provider"] == "openai"
+    assert payload["provider"]["endpoint"] == "https://api.deepseek.com/v1/chat/completions"
+    service_view = next(item for item in payload["llm"]["services"] if item["service_id"] == service_id)
+    assert service_view["endpoint"] == "https://api.deepseek.com/v1"
+    assert service_view["active_model"] == "deepseek-chat"
+    assert service_view["is_active"] is True
 
 
 @pytest.mark.anyio

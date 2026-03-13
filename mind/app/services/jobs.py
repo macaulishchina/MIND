@@ -25,12 +25,21 @@ class OfflineJobAppService:
         self,
         store: MemoryStore,
         offline_service: OfflineMaintenanceService,
+        *,
+        request_defaults_resolver: object = None,
     ) -> None:
         self._store = store
         self._offline = offline_service
+        self._request_defaults_resolver = request_defaults_resolver
 
     def submit_job(self, req: AppRequest) -> AppResponse:
         """Submit a new offline job."""
+        if self._request_defaults_resolver is not None:
+            req = self._request_defaults_resolver(
+                req,
+                include_provider_selection=True,
+                respect_request_policy=True,
+            )
         resp = new_response(req)
 
         try:

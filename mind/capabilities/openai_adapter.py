@@ -6,6 +6,7 @@ import json
 from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -34,7 +35,7 @@ type ResponseTransport = Callable[
 
 
 class OpenAICapabilityAdapter:
-    """Execute capability calls through the OpenAI Responses API."""
+    """Execute capability calls through an OpenAI-compatible API surface."""
 
     def __init__(
         self,
@@ -52,50 +53,87 @@ class OpenAICapabilityAdapter:
         self._config = config
         self._clock = clock or _utc_now
         self._transport = transport or _default_transport
+        self._resolved_endpoint, self._api_style = _resolve_openai_endpoint(config.endpoint)
         self.descriptor = CapabilityAdapterDescriptor(
             adapter_name="openai-capability-adapter",
             provider_family=CapabilityProviderFamily.OPENAI,
             model=config.model,
             version=config.api_version or "v1",
-            api_style="responses",
+            api_style=self._api_style,
             supported_capabilities=list(CapabilityName),
         )
 
     def invoke(self, request: CapabilityRequest) -> CapabilityResponse:
         started_at = self._clock()
-        payload = _request_payload(request, self._config.model)
+        prompt = _prompt_for_request(request)
+        payload = _request_payload(
+            request,
+            self._config.model,
+            api_style=self._api_style,
+            prompt=prompt,
+        )
         response_payload = self._transport(
-            self._config.endpoint,
+            self._resolved_endpoint,
             payload,
             _headers(self._config),
             self._config.timeout_ms / 1000.0,
         )
         completed_at = self._clock()
-        _ensure_completed(response_payload)
+        _ensure_completed(response_payload, api_style=self._api_style)
         trace = CapabilityInvocationTrace(
             provider_family=CapabilityProviderFamily.OPENAI,
             model=str(response_payload.get("model", self._config.model)),
-            endpoint=self._config.endpoint,
+            endpoint=self._resolved_endpoint,
             version=self.descriptor.version,
             started_at=started_at,
             completed_at=completed_at,
             duration_ms=max(0, int((completed_at - started_at).total_seconds() * 1000)),
+            request_text=(
+                prompt
+                if isinstance(request, AnswerRequest) and request.capture_raw_exchange
+                else None
+            ),
         )
-        return _parse_response(request, response_payload, trace)
+        return _parse_response(
+            request,
+            response_payload,
+            trace,
+            api_style=self._api_style,
+        )
 
 
-def _request_payload(request: CapabilityRequest, model: str) -> dict[str, Any]:
+def _request_payload(
+    request: CapabilityRequest,
+    model: str,
+    *,
+    api_style: str,
+    prompt: str,
+) -> dict[str, Any]:
+    max_output_tokens = _max_output_tokens(request)
+    if api_style == "responses":
+        payload = {
+            "model": model,
+            "input": prompt,
+            "store": False,
+            "text": {
+                "format": _response_format_for_request(request),
+            },
+        }
+        if max_output_tokens is not None:
+            payload["max_output_tokens"] = max_output_tokens
+        return payload
+
     payload = {
         "model": model,
-        "input": _prompt_for_request(request),
-        "store": False,
-        "text": {
-            "format": _response_format_for_request(request),
-        },
+        "messages": [
+            {
+                "role": "user",
+                "content": prompt,
+            }
+        ],
     }
-    max_output_tokens = _max_output_tokens(request)
     if max_output_tokens is not None:
-        payload["max_output_tokens"] = max_output_tokens
+        payload["max_tokens"] = max_output_tokens
     return payload
 
 
@@ -215,7 +253,11 @@ def _max_output_tokens(request: CapabilityRequest) -> int | None:
     return None
 
 
-def _ensure_completed(response_payload: dict[str, Any]) -> None:
+def _ensure_completed(response_payload: dict[str, Any], *, api_style: str) -> None:
+    if api_style == "chat_completions":
+        if isinstance(response_payload.get("choices"), list) and response_payload["choices"]:
+            return
+        raise CapabilityAdapterError("openai-compatible response did not contain choices")
     status = response_payload.get("status")
     if status in (None, "completed"):
         return
@@ -228,36 +270,37 @@ def _parse_response(
     request: CapabilityRequest,
     response_payload: dict[str, Any],
     trace: CapabilityInvocationTrace,
+    *,
+    api_style: str,
 ) -> CapabilityResponse:
-    output_text = _extract_output_text(response_payload)
-    try:
-        payload = json.loads(output_text)
-    except json.JSONDecodeError as exc:
-        raise CapabilityAdapterError("openai response did not contain valid JSON output") from exc
+    output_text = _extract_output_text(response_payload, api_style=api_style)
+    if isinstance(request, AnswerRequest) and request.capture_raw_exchange:
+        trace = trace.model_copy(update={"response_text": output_text})
+    payload = _coerce_output_payload(request, output_text)
 
     if isinstance(request, SummarizeRequest):
         return SummarizeResponse(
-            summary_text=str(payload["summary_text"]),
+            summary_text=_required_payload_text(payload, "summary_text"),
             source_refs=list(request.source_refs),
             trace=trace,
         )
     if isinstance(request, ReflectRequest):
         claims = [str(item) for item in payload.get("claims", [])]
         return ReflectResponse(
-            reflection_text=str(payload["reflection_text"]),
+            reflection_text=_required_payload_text(payload, "reflection_text"),
             claims=claims,
             evidence_refs=list(request.evidence_refs),
             trace=trace,
         )
     if isinstance(request, AnswerRequest):
         return AnswerResponse(
-            answer_text=str(payload["answer_text"]),
+            answer_text=_required_payload_text(payload, "answer_text"),
             support_ids=list(request.support_ids),
             trace=trace,
         )
     if isinstance(request, OfflineReconstructRequest):
         return OfflineReconstructResponse(
-            reconstruction_text=str(payload["reconstruction_text"]),
+            reconstruction_text=_required_payload_text(payload, "reconstruction_text"),
             supporting_episode_ids=list(request.episode_ids),
             evidence_refs=list(request.evidence_refs),
             trace=trace,
@@ -265,7 +308,186 @@ def _parse_response(
     raise CapabilityAdapterError(f"unsupported request type {type(request).__name__}")
 
 
-def _extract_output_text(response_payload: dict[str, Any]) -> str:
+def _coerce_output_payload(
+    request: CapabilityRequest,
+    output_text: str,
+) -> dict[str, Any]:
+    for candidate in _iter_json_candidates(output_text):
+        try:
+            parsed = json.loads(candidate)
+        except json.JSONDecodeError:
+            continue
+        payload = _payload_from_parsed_json(request, parsed)
+        if payload is not None:
+            return payload
+
+    decoder = json.JSONDecoder()
+    stripped = output_text.strip()
+    for index, char in enumerate(stripped):
+        if char not in {'{', '[', '"'}:
+            continue
+        try:
+            parsed, _end = decoder.raw_decode(stripped[index:])
+        except json.JSONDecodeError:
+            continue
+        payload = _payload_from_parsed_json(request, parsed)
+        if payload is not None:
+            return payload
+
+    payload = _payload_from_plain_text(request, output_text)
+    if payload is not None:
+        return payload
+    raise CapabilityAdapterError("openai response did not contain valid JSON output")
+
+
+def _iter_json_candidates(output_text: str) -> list[str]:
+    stripped = output_text.strip()
+    if not stripped:
+        return []
+    candidates: list[str] = [stripped]
+    if "```" in stripped:
+        parts = stripped.split("```")
+        for index in range(1, len(parts), 2):
+            block = parts[index].strip()
+            if not block:
+                continue
+            if "\n" in block:
+                first_line, remainder = block.split("\n", 1)
+                if first_line.strip().lower() == "json":
+                    block = remainder.strip()
+            candidates.append(block)
+    deduped: list[str] = []
+    for candidate in candidates:
+        if candidate and candidate not in deduped:
+            deduped.append(candidate)
+    return deduped
+
+
+def _payload_from_parsed_json(
+    request: CapabilityRequest,
+    parsed: Any,
+) -> dict[str, Any] | None:
+    if isinstance(parsed, dict):
+        return _normalize_payload_mapping(request, parsed)
+    if isinstance(parsed, str):
+        return _payload_from_plain_text(request, parsed)
+    return None
+
+
+def _payload_from_plain_text(
+    request: CapabilityRequest,
+    output_text: str,
+) -> dict[str, Any] | None:
+    text = _strip_markdown_fence(output_text)
+    if not text:
+        return None
+    if isinstance(request, SummarizeRequest):
+        return {"summary_text": text}
+    if isinstance(request, ReflectRequest):
+        return {"reflection_text": text, "claims": []}
+    if isinstance(request, AnswerRequest):
+        return {"answer_text": text}
+    if isinstance(request, OfflineReconstructRequest):
+        return {"reconstruction_text": text}
+    return None
+
+
+def _normalize_payload_mapping(
+    request: CapabilityRequest,
+    payload: dict[str, Any],
+) -> dict[str, Any] | None:
+    if isinstance(request, SummarizeRequest):
+        text = _coerce_mapping_text(
+            payload,
+            ("summary_text", "summary", "answer_text", "answer", "response", "content", "output", "text", "message"),
+        )
+        return {"summary_text": text} if text else None
+    if isinstance(request, ReflectRequest):
+        text = _coerce_mapping_text(
+            payload,
+            ("reflection_text", "reflection", "answer_text", "answer", "response", "content", "output", "text", "message"),
+        )
+        if not text:
+            return None
+        claims = payload.get("claims")
+        normalized_claims = [str(item) for item in claims] if isinstance(claims, list) else []
+        return {"reflection_text": text, "claims": normalized_claims}
+    if isinstance(request, AnswerRequest):
+        text = _coerce_mapping_text(
+            payload,
+            ("answer_text", "answer", "response", "content", "output", "text", "message"),
+        )
+        return {"answer_text": text} if text else None
+    if isinstance(request, OfflineReconstructRequest):
+        text = _coerce_mapping_text(
+            payload,
+            ("reconstruction_text", "reconstruction", "answer_text", "answer", "response", "content", "output", "text", "message"),
+        )
+        return {"reconstruction_text": text} if text else None
+    return None
+
+
+def _coerce_mapping_text(
+    payload: dict[str, Any],
+    keys: tuple[str, ...],
+) -> str | None:
+    for key in keys:
+        if key not in payload:
+            continue
+        text = _stringify_field_value(payload[key])
+        if text:
+            return text
+    return None
+
+
+def _stringify_field_value(value: Any) -> str | None:
+    if isinstance(value, str):
+        text = value.strip()
+        return text or None
+    if isinstance(value, list):
+        fragments = [
+            text
+            for item in value
+            for text in [_stringify_field_value(item)]
+            if text
+        ]
+        if fragments:
+            return " ".join(fragments)
+        return None
+    if isinstance(value, dict):
+        for nested_key in ("text", "content", "message", "answer", "output", "response"):
+            if nested_key in value:
+                text = _stringify_field_value(value[nested_key])
+                if text:
+                    return text
+        return None
+    return None
+
+
+def _required_payload_text(payload: dict[str, Any], key: str) -> str:
+    value = payload.get(key)
+    if isinstance(value, str) and value.strip():
+        return value
+    raise CapabilityAdapterError(f"openai response did not provide required field '{key}'")
+
+
+def _strip_markdown_fence(output_text: str) -> str:
+    stripped = output_text.strip()
+    if stripped.startswith("```") and stripped.endswith("```"):
+        parts = stripped.split("```")
+        if len(parts) >= 3:
+            block = parts[1].strip()
+            if "\n" in block:
+                first_line, remainder = block.split("\n", 1)
+                if first_line.strip().lower() == "json":
+                    return remainder.strip()
+            return block.strip()
+    return stripped
+
+
+def _extract_output_text(response_payload: dict[str, Any], *, api_style: str) -> str:
+    if api_style == "chat_completions":
+        return _extract_chat_completion_text(response_payload)
     output_text = response_payload.get("output_text")
     if isinstance(output_text, str) and output_text:
         return output_text
@@ -279,6 +501,48 @@ def _extract_output_text(response_payload: dict[str, Any]) -> str:
                 if isinstance(text, str) and text:
                     return text
     raise CapabilityAdapterError("openai response did not contain output text")
+
+
+def _extract_chat_completion_text(response_payload: dict[str, Any]) -> str:
+    choices = response_payload.get("choices")
+    if not isinstance(choices, list):
+        raise CapabilityAdapterError("openai-compatible response did not contain choices")
+    for choice in choices:
+        if not isinstance(choice, dict):
+            continue
+        message = choice.get("message")
+        if not isinstance(message, dict):
+            continue
+        content = message.get("content")
+        if isinstance(content, str) and content:
+            return content
+        if isinstance(content, list):
+            fragments: list[str] = []
+            for item in content:
+                if not isinstance(item, dict):
+                    continue
+                text = item.get("text")
+                if isinstance(text, str) and text:
+                    fragments.append(text)
+            if fragments:
+                return "".join(fragments)
+    raise CapabilityAdapterError("openai-compatible response did not contain message content")
+
+
+def _resolve_openai_endpoint(endpoint: str) -> tuple[str, str]:
+    parts = urlsplit(endpoint.strip())
+    path = parts.path.rstrip("/")
+    if path.endswith("/responses"):
+        return endpoint.strip(), "responses"
+    if path.endswith("/chat/completions"):
+        return endpoint.strip(), "chat_completions"
+    if not path:
+        resolved_path = "/chat/completions"
+    elif path.endswith("/v1"):
+        resolved_path = f"{path}/chat/completions"
+    else:
+        resolved_path = f"{path}/chat/completions"
+    return urlunsplit((parts.scheme, parts.netloc, resolved_path, "", "")), "chat_completions"
 
 
 def _default_transport(

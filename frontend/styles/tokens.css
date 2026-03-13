@@ -1,0 +1,116 @@
+/* ================================================================
+   MIND 记忆系统控制台 — Complete Design System
+   ================================================================ */
+
+/* ---- Design Tokens ---- */
+:root {
+  /* Sidebar */
+  --sb-w: 16rem;
+  --sb-bg: #080d19;
+  --sb-bg-subtle: rgba(255, 255, 255, 0.03);
+  --sb-bg-hover: rgba(255, 255, 255, 0.06);
+  --sb-bg-active: rgba(99, 102, 241, 0.15);
+  --sb-text: rgba(148, 163, 184, 0.85);
+  --sb-text-bright: #e2e8f0;
+  --sb-text-active: #a5b4fc;
+  --sb-border: rgba(255, 255, 255, 0.06);
+
+  /* Page */
+  --pg-bg: #f1f5f9;
+  --pg-bg-subtle: #f8fafc;
+
+  /* Cards */
+  --card-bg: #ffffff;
+  --card-border: rgba(15, 23, 42, 0.07);
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.03);
+  --card-shadow-hover: 0 2px 4px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.05);
+
+  /* Text */
+  --text-1: #0f172a;
+  --text-2: #475569;
+  --text-3: #94a3b8;
+
+  /* Accent */
+  --ac: #6366f1;
+  --ac-hover: #4f46e5;
+  --ac-soft: rgba(99, 102, 241, 0.08);
+  --ac-ring: rgba(99, 102, 241, 0.25);
+
+  /* Semantic */
+  --ok: #059669;
+  --ok-soft: rgba(5, 150, 105, 0.08);
+  --warn: #d97706;
+  --warn-soft: rgba(217, 119, 6, 0.08);
+  --err: #dc2626;
+  --err-soft: rgba(220, 38, 38, 0.08);
+
+  /* Borders */
+  --border: rgba(15, 23, 42, 0.08);
+  --border-strong: rgba(15, 23, 42, 0.15);
+
+  /* Radius */
+  --r-sm: 0.375rem;
+  --r: 0.5rem;
+  --r-lg: 0.75rem;
+  --r-xl: 1rem;
+  --r-2xl: 1.25rem;
+
+  /* Font stacks */
+  --font: "PingFang SC", "Noto Sans SC", "Hiragino Sans GB",
+    "Microsoft YaHei", -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", "Fira Code", "SF Mono", ui-monospace, monospace;
+
+  /* Spacing scale */
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-5: 1.25rem;
+  --sp-6: 1.5rem;
+  --sp-8: 2rem;
+  --sp-10: 2.5rem;
+  --sp-12: 3rem;
+}
+
+/* ---- Reset ---- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--text-1);
+  background: var(--pg-bg);
+  min-height: 100vh;
+}
+
+h1, h2, h3, h4, p, ul, ol {
+  margin: 0;
+}
+
+ul, ol {
+  padding: 0;
+  list-style: none;
+}
+
+button, input, textarea, select {
+  font: inherit;
+}
+
+a {
+  color: var(--ac);
+  text-decoration: none;
+}
+
+

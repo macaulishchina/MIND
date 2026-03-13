@@ -1199,29 +1199,49 @@ class PostgresMemoryStore:
         score_terms: list[sa.ColumnElement[float]] = []
 
         if RetrieveQueryMode.KEYWORD in query_modes:
-            if isinstance(query, str):
-                keyword_value = query.lower()
-            else:
-                keyword_value = json.dumps(query, ensure_ascii=True, sort_keys=True).lower()
-            similarity = sa.func.similarity(
-                latest_objects.c.search_text,
-                sa.bindparam("keyword_query", value=keyword_value, type_=sa.Text()),
-            )
-            exact_phrase_boost = sa.case(
-                (
-                    latest_objects.c.search_text.like(
+            keyword_variants = _keyword_query_variants(query)
+            similarity_terms = [
+                sa.func.greatest(
+                    sa.func.similarity(
+                        latest_objects.c.search_text,
                         sa.bindparam(
-                            "keyword_pattern",
-                            value=_like_pattern(keyword_value),
+                            f"keyword_query_{index}",
+                            value=keyword_value,
                             type_=sa.Text(),
                         ),
-                        escape="\\",
                     ),
-                    1.0,
-                ),
-                else_=0.0,
+                    0.0,
+                )
+                for index, keyword_value in enumerate(keyword_variants)
+            ]
+            exact_phrase_terms = [
+                sa.case(
+                    (
+                        latest_objects.c.search_text.like(
+                            sa.bindparam(
+                                f"keyword_pattern_{index}",
+                                value=_like_pattern(keyword_value),
+                                type_=sa.Text(),
+                            ),
+                            escape="\\",
+                        ),
+                        1.0,
+                    ),
+                    else_=0.0,
+                )
+                for index, keyword_value in enumerate(keyword_variants)
+            ]
+            similarity = (
+                sa.func.greatest(*similarity_terms)
+                if len(similarity_terms) > 1
+                else similarity_terms[0]
             )
-            score_terms.append(exact_phrase_boost + sa.func.greatest(similarity, 0.0))
+            exact_phrase_boost = (
+                sa.func.greatest(*exact_phrase_terms)
+                if len(exact_phrase_terms) > 1
+                else exact_phrase_terms[0]
+            )
+            score_terms.append(exact_phrase_boost + similarity)
 
         if RetrieveQueryMode.TIME_WINDOW in query_modes and isinstance(query, dict):
             created_at = sa.cast(latest_objects.c.created_at, sa.DateTime(timezone=True))
@@ -1637,3 +1657,19 @@ def _admin_url_for(base_url: URL) -> URL:
 def _like_pattern(value: str) -> str:
     escaped = value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
     return f"%{escaped}%"
+
+
+def _keyword_query_variants(query: str | dict[str, Any]) -> list[str]:
+    if isinstance(query, str):
+        raw = query.lower()
+    else:
+        raw = json.dumps(query, ensure_ascii=False, sort_keys=True).lower()
+    ascii_escaped = json.dumps(query, ensure_ascii=True, sort_keys=True).lower()
+    if isinstance(query, str):
+        ascii_escaped = ascii_escaped.strip('"')
+    variants: list[str] = []
+    for candidate in (raw, ascii_escaped):
+        candidate = candidate.strip()
+        if candidate and candidate not in variants:
+            variants.append(candidate)
+    return variants

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import shutil
 
 from mind.fixtures import build_frontend_experience_bench_v1
 from mind.frontend import (
@@ -48,7 +49,7 @@ def test_frontend_responsive_audit_fails_when_mobile_markers_are_missing(
     frontend_root = Path(__file__).resolve().parents[1] / "frontend"
     html = (frontend_root / "index.html").read_text(encoding="utf-8")
     js = (frontend_root / "app.js").read_text(encoding="utf-8")
-    css = (frontend_root / "styles.css").read_text(encoding="utf-8")
+    css = (frontend_root / "styles" / "workspaces.css").read_text(encoding="utf-8")
 
     broken_root = tmp_path / "frontend"
     broken_root.mkdir()
@@ -57,7 +58,9 @@ def test_frontend_responsive_audit_fails_when_mobile_markers_are_missing(
         encoding="utf-8",
     )
     (broken_root / "app.js").write_text(js, encoding="utf-8")
-    (broken_root / "styles.css").write_text(
+    shutil.copytree(frontend_root / "app", broken_root / "app")
+    shutil.copytree(frontend_root / "styles", broken_root / "styles")
+    (broken_root / "styles" / "workspaces.css").write_text(
         css.replace("repeat(auto-fit, minmax(20rem, 1fr))", "repeat(1, minmax(20rem, 1fr))"),
         encoding="utf-8",
     )

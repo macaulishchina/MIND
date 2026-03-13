@@ -24,12 +24,21 @@ class MemoryQueryService:
         self,
         primitive_service: PrimitiveService,
         store: MemoryStore,
+        *,
+        request_defaults_resolver: Any = None,
     ) -> None:
         self._primitive = primitive_service
         self._store = store
+        self._request_defaults_resolver = request_defaults_resolver
 
     def get_memory(self, req: AppRequest) -> AppResponse:
         """Get a single memory object by ID."""
+        if self._request_defaults_resolver is not None:
+            req = self._request_defaults_resolver(
+                req,
+                include_provider_selection=False,
+                respect_request_policy=True,
+            )
         resp = new_response(req)
         ctx = resolve_execution_context(
             req.principal,
@@ -82,6 +91,12 @@ class MemoryQueryService:
 
     def list_memories(self, req: AppRequest) -> AppResponse:
         """List recent memory objects with optional filters."""
+        if self._request_defaults_resolver is not None:
+            req = self._request_defaults_resolver(
+                req,
+                include_provider_selection=False,
+                respect_request_policy=True,
+            )
         resp = new_response(req)
 
         try:
@@ -116,6 +131,12 @@ class MemoryQueryService:
 
     def recall(self, req: AppRequest) -> AppResponse:
         """Recall memories via retrieve primitive."""
+        if self._request_defaults_resolver is not None:
+            req = self._request_defaults_resolver(
+                req,
+                include_provider_selection=False,
+                respect_request_policy=True,
+            )
         resp = new_response(req)
         ctx = resolve_execution_context(
             req.principal,
@@ -157,6 +178,12 @@ class MemoryQueryService:
 
     def search(self, req: AppRequest) -> AppResponse:
         """Search memories using store search."""
+        if self._request_defaults_resolver is not None:
+            req = self._request_defaults_resolver(
+                req,
+                include_provider_selection=False,
+                respect_request_policy=True,
+            )
         resp = new_response(req)
 
         try:

@@ -10,6 +10,7 @@ from typing import Any
 
 from mind.fixtures import FrontendExperienceScenario, build_frontend_experience_bench_v1
 
+from ._assets import load_frontend_javascript, load_frontend_stylesheets
 from .audit import FRONTEND_ENTRYPOINT_MARKERS, evaluate_frontend_responsive_audit
 from .experience import (
     FrontendAccessAnswerTraceView,
@@ -32,10 +33,17 @@ _TRANSPORT_MARKERS: dict[str, tuple[str, ...]] = {
     "access": ('"/v1/frontend/access"', "submitAccess"),
     "offline": ('"/v1/frontend/offline"', "submitOffline"),
     "gate_demo": ('"/v1/frontend/gate-demo"', "loadGateDemo"),
-    "config_backend": ('"/v1/frontend/settings"', '"/v1/frontend/settings:preview"', "loadSettings"),
-    "config_provider": ('"/v1/frontend/settings"', '"/v1/frontend/settings:preview"', "previewSettings"),
+    "config_backend": ('"/v1/frontend/settings"', "loadSettings"),
+    "config_provider": ('"/v1/frontend/settings"', '"/v1/frontend/settings:apply"', "applySettings"),
     "config_dev_mode": ('"/v1/frontend/settings:apply"', "applySettings"),
-    "config_restore": ('"/v1/frontend/settings:restore"', "restoreSettings"),
+    "config_llm": (
+        '"/v1/frontend/llm/services:upsert"',
+        '"/v1/frontend/llm/services:discover-models"',
+        '"/v1/frontend/llm/services:activate"',
+        "upsertLlmService",
+        "discoverLlmModels",
+        "activateLlmService",
+    ),
     "debug_timeline": ('"/v1/frontend/debug:timeline"', "loadDebugTimeline"),
     "debug_object_delta": ('"/v1/frontend/debug:timeline"', "loadDebugTimeline"),
     "debug_context": ('"/v1/frontend/debug:timeline"', "loadDebugTimeline"),
@@ -130,9 +138,9 @@ def evaluate_frontend_flow_report(
 
     root = Path(frontend_root) if frontend_root is not None else _DEFAULT_FRONTEND_ROOT
     index_html = (root / "index.html").read_text(encoding="utf-8")
-    app_js = (root / "app.js").read_text(encoding="utf-8")
+    app_js = load_frontend_javascript(root)
     api_js = (root / "api.js").read_text(encoding="utf-8")
-    styles_css = (root / "styles.css").read_text(encoding="utf-8")
+    styles_css = load_frontend_stylesheets(root, index_html)
 
     frozen_scenarios = scenarios or build_frontend_experience_bench_v1()
     responsive_audit = evaluate_frontend_responsive_audit(root, scenarios=frozen_scenarios)

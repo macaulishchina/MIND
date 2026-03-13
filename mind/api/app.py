@@ -123,6 +123,10 @@ def _install_frontend_mount(app: FastAPI) -> None:
     if frontend_dir.exists():
         frontend_root = frontend_dir.resolve()
 
+        @app.get("/favicon.ico", include_in_schema=False)
+        async def frontend_favicon() -> Response:
+            return _frontend_asset_response(frontend_root, "favicon.svg")
+
         @app.get("/frontend", include_in_schema=False)
         async def frontend_index_redirect() -> RedirectResponse:
             return RedirectResponse(url="/frontend/", status_code=307)

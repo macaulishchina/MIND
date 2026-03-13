@@ -4,7 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MIND 记忆控制台</title>
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="stylesheet" href="./styles/tokens.css">
+  <link rel="stylesheet" href="./styles/layout.css">
+  <link rel="stylesheet" href="./styles/components.css">
+  <link rel="stylesheet" href="./styles/workspaces.css">
+  <link rel="stylesheet" href="./styles/modals.css">
 </head>
 <body>
 
@@ -57,25 +62,21 @@
           <button type="submit" class="btn-sm btn-accent" id="auth-submit">连接工作台</button>
           <button type="button" class="btn-sm btn-muted" id="clear-key">清除</button>
         </div>
-        <p class="sb-hint" id="auth-status" aria-live="polite">当前还没有连接。</p>
+        <div class="sb-auth-state" aria-live="polite">
+          <span class="sb-auth-message" id="auth-status">输入访问口令后即可连接工作台。</span>
+        </div>
       </form>
-    </div>
 
-    <div class="sb-divider"></div>
-
-    <div class="sb-signals">
-      <div class="sb-signal">
-        <span class="sb-signal-dot" id="auth-state-chip"></span>
-        <span id="connection-summary">连接：未完成</span>
-      </div>
-      <div class="sb-signal">
-        <span id="catalog-summary">功能：未同步</span>
-      </div>
-      <div class="sb-signal">
-        <span id="runtime-summary">环境：未同步</span>
-      </div>
-      <div class="sb-signal">
-        <span id="workflow-summary">状态：待连接</span>
+      <div class="sb-signals">
+        <div class="sb-signal">
+          <span id="catalog-summary">功能：未同步</span>
+        </div>
+        <div class="sb-signal">
+          <span id="runtime-summary">环境：未同步</span>
+        </div>
+        <div class="sb-signal">
+          <span id="workflow-summary">状态：待连接</span>
+        </div>
       </div>
     </div>
   </aside>
@@ -92,31 +93,38 @@
       <div class="pg-head">
         <div>
           <h1>系统总览</h1>
-          <p class="pg-sub">查看当前状态、可用功能和最近同步结果。连接后会自动更新。</p>
+          <p class="pg-sub">查看连接状态、当前工作方式和可开始的主要操作。</p>
         </div>
         <div class="pg-actions">
-          <button class="btn btn-primary" id="reload-overview" type="button">同步工作台</button>
-          <button class="btn btn-outline" id="load-gate-demo" type="button">刷新示例摘要</button>
+          <button class="btn btn-primary" id="reload-overview" type="button">刷新首页</button>
         </div>
       </div>
 
       <div class="overview-grid" id="overview-grid">
-        <div class="empty-state">连接后可查看当前状态和可用功能。</div>
+        <div class="empty-state">连接后可查看当前状态和主要入口。</div>
       </div>
 
-      <section class="card" id="gate-demo-panel"
+      <section class="overview-support" id="gate-demo-panel"
                data-auth-required data-lock-message="需要访问口令"
-               data-ready-message="可查看示例说明">
-        <div class="card-head">
-          <div>
-            <h2>示例摘要</h2>
-            <p class="text-muted">常用演示、检查结果和说明内容会汇总显示在这里。</p>
+               data-ready-message="可按需查看补充信息">
+        <details class="overview-notes" id="overview-notes">
+          <summary class="overview-notes-summary">
+            <div class="overview-notes-copy">
+              <strong>补充信息</strong>
+              <p class="text-muted">一般不需要，只有核对说明或排查时再看。</p>
+            </div>
+            <span class="badge" data-gate-note>需要访问口令</span>
+          </summary>
+          <div class="overview-notes-body">
+            <div class="overview-notes-toolbar">
+              <p class="text-muted">这里汇总当前工作台的附加说明。</p>
+              <button class="btn btn-outline" id="load-gate-demo" type="button">同步</button>
+            </div>
+            <div id="gate-demo-result">
+              <div class="empty-state">连接后可查看补充说明。</div>
+            </div>
           </div>
-          <span class="badge" data-gate-note>需要访问口令</span>
-        </div>
-        <div id="gate-demo-result">
-          <div class="empty-state">连接后可查看示例说明。</div>
-        </div>
+        </details>
       </section>
     </section>
 
@@ -161,7 +169,10 @@
                   <h2>写入记忆</h2>
                   <p class="text-muted">把重要内容保存下来，便于后续继续查看和使用。</p>
                 </div>
-                <span class="badge" data-gate-note>需要访问口令</span>
+                <div class="ops-card-actions">
+                  <button class="btn btn-ghost ops-chain-toggle" data-open-chain="module-ingest" type="button">查看链路</button>
+                  <span class="badge" data-gate-note>需要访问口令</span>
+                </div>
               </div>
               <form id="ingest-form" class="form-grid">
                 <div class="field field-full">
@@ -201,7 +212,10 @@
                   <h2>召回检索</h2>
                   <p class="text-muted">快速找回可能相关的内容，先确认系统里是否已经保存过。</p>
                 </div>
-                <span class="badge" data-gate-note>需要访问口令</span>
+                <div class="ops-card-actions">
+                  <button class="btn btn-ghost ops-chain-toggle" data-open-chain="module-retrieve" type="button">查看链路</button>
+                  <span class="badge" data-gate-note>需要访问口令</span>
+                </div>
               </div>
               <form id="retrieve-form" class="form-grid">
                 <div class="field field-full">
@@ -238,7 +252,10 @@
                   <h2>访问问答</h2>
                   <p class="text-muted">根据已保存内容整理信息，帮助你得到更完整的回答。</p>
                 </div>
-                <span class="badge" data-gate-note>需要访问口令</span>
+                <div class="ops-card-actions">
+                  <button class="btn btn-ghost ops-chain-toggle" data-open-chain="module-access" type="button">查看链路</button>
+                  <span class="badge" data-gate-note>需要访问口令</span>
+                </div>
               </div>
               <form id="access-form" class="form-grid">
                 <div class="field field-full">
@@ -291,7 +308,10 @@
                   <h2>后台任务</h2>
                   <p class="text-muted" id="offline-mode-note">先选择任务类型，界面会显示当前任务需要填写的内容。</p>
                 </div>
-                <span class="badge" data-gate-note>需要访问口令</span>
+                <div class="ops-card-actions">
+                  <button class="btn btn-ghost ops-chain-toggle" data-open-chain="module-offline" type="button">查看链路</button>
+                  <span class="badge" data-gate-note>需要访问口令</span>
+                </div>
               </div>
               <form id="offline-form" class="form-grid">
                 <div class="field">
@@ -334,7 +354,21 @@
             </div>
           </article>
         </div>
+
+        <aside class="ops-chain-shell" id="ops-chain-shell" aria-live="polite">
+          <div class="ops-chain-head" id="ops-chain-head">
+            <div class="ops-chain-head-copy">
+              <div class="panel-kicker">实现链路</div>
+              <h2 id="ops-chain-title">写入记忆</h2>
+              <div class="ops-chain-meta" id="ops-chain-meta">待执行</div>
+            </div>
+            <button class="btn btn-ghost ops-chain-close" id="ops-chain-close" type="button">收起</button>
+          </div>
+          <div class="ops-chain-body" id="ops-chain-body"></div>
+        </aside>
+        <button class="btn btn-ghost ops-chain-restore" id="ops-chain-restore" type="button" hidden>展开链路</button>
       </div>
+      <div class="ops-chain-backdrop" id="ops-chain-backdrop" hidden></div>
     </section>
 
     <!-- ========== SETTINGS ========== -->
@@ -342,84 +376,203 @@
              role="tabpanel" aria-labelledby="nav-settings">
       <div class="pg-head">
         <div>
-          <h1>运行设置</h1>
-          <p class="pg-sub">调整运行环境与回答方式。建议先查看变化，再决定是否保存。</p>
+          <h1>工作设置</h1>
+          <p class="pg-sub">在这里调整工作方式、LLM 服务和排查开关。</p>
         </div>
       </div>
 
-      <div class="settings-layout">
-        <div class="card" data-auth-required data-lock-message="需要访问口令"
-             data-ready-message="可查看和调整设置">
-          <div class="card-head">
-            <div>
-              <h2>设置管理</h2>
-              <p class="text-muted">先看看会发生什么，再决定是否保存这次调整。</p>
-            </div>
-            <span class="badge" data-gate-note>需要访问口令</span>
-          </div>
+      <div class="settings-shell">
+        <nav class="settings-tabs" role="tablist" aria-label="配置菜单" id="settings-tabs">
+          <button class="settings-tab is-active" role="tab" id="settings-tab-general"
+                  data-settings-target="settings-panel-general" aria-selected="true">
+            <strong>工作方式</strong><span>调整回答方式和排查开关</span>
+          </button>
+          <button class="settings-tab" role="tab" id="settings-tab-llm"
+                  data-settings-target="settings-panel-llm" aria-selected="false">
+            <strong>LLM 服务</strong><span>管理协议模板、服务实例和活跃模型</span>
+          </button>
+        </nav>
 
-          <div class="settings-steps">
-            <div class="step"><span class="step-num">1</span>选择要调整的项目</div>
-            <div class="step"><span class="step-num">2</span>查看变化</div>
-            <div class="step"><span class="step-num">3</span>保存或恢复</div>
-          </div>
+        <div class="settings-stage">
+          <article class="settings-panel is-active" id="settings-panel-general" data-settings-panel
+                   data-auth-required data-lock-message="需要访问口令"
+                   data-ready-message="已连接，可立即调整">
+            <div class="card">
+              <div class="card-head">
+                <div>
+                  <h2>工作方式</h2>
+                  <p class="text-muted">运行环境只读显示；回答方式和排查开关会立即生效。</p>
+                </div>
+                <span class="badge" data-gate-note>需要访问口令</span>
+              </div>
 
-          <form id="settings-form" class="form-grid settings-form">
-            <div class="field">
-              <label for="settings-backend"><span>存储方式</span></label>
-              <select id="settings-backend" name="backend">
-                <option value="">保持不变</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="settings-profile"><span>运行环境</span></label>
-              <select id="settings-profile" name="profile">
-                <option value="">保持不变</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="settings-provider"><span>回答方式</span></label>
-              <select id="settings-provider" name="provider">
-                <option value="">保持不变</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="settings-model"><span>模型名称</span></label>
-              <input id="settings-model" name="model" type="text" placeholder="留空保持不变">
-            </div>
-            <div class="field">
-              <label for="settings-dev-mode"><span>高级排查</span></label>
-              <select id="settings-dev-mode" name="dev_mode">
-                <option value="">保持不变</option>
-                <option value="true">开启</option>
-                <option value="false">关闭</option>
-              </select>
-            </div>
-            <div class="form-actions form-actions-multi">
-              <button type="submit" class="btn btn-primary" id="settings-preview">预览</button>
-              <button type="button" class="btn btn-outline" id="settings-apply">应用</button>
-              <button type="button" class="btn btn-outline" id="settings-restore">恢复</button>
-              <button type="button" class="btn btn-ghost" id="settings-reset">重置</button>
-            </div>
-          </form>
+              <form id="settings-form" class="form-grid settings-form">
+                <div class="field">
+                  <label for="settings-profile"><span>运行环境</span></label>
+                  <input id="settings-profile" name="profile" type="text" readonly>
+                  <p class="field-help">这里只用于查看。</p>
+                </div>
+                <div class="field">
+                  <label for="settings-provider"><span>回答方式</span></label>
+                  <select id="settings-provider" name="provider">
+                    <option value="builtin">内建模式</option>
+                    <option value="llm">LLM</option>
+                  </select>
+                  <p class="field-help">会立即影响问答和后台整理。</p>
+                </div>
+                <div class="field field-full field-check">
+                  <label for="settings-dev-mode">
+                    <input id="settings-dev-mode" name="dev_mode" type="checkbox">
+                    <span>开启高级排查</span>
+                  </label>
+                  <p class="field-help">打开后可进入问题排查页面。</p>
+                </div>
+              </form>
 
-          <div class="result-zone" id="settings-result">
-            <div class="empty-state">还没有设置变化预览。</div>
-          </div>
-        </div>
+              <div class="result-zone" id="settings-result">
+                <div class="empty-state">连接后会在这里显示当前工作方式和即时生效状态。</div>
+              </div>
+            </div>
+          </article>
 
-        <div class="card card-info">
-          <h3>使用建议</h3>
-          <ul class="info-list">
-            <li>调整前先在总览看看当前状态</li>
-            <li>预览只展示变化，不会立刻生效</li>
-            <li>保存后会留下一份可恢复的设置记录</li>
-            <li>恢复会回到上一份可用设置，不是清空表单</li>
-            <li>如果要进入问题排查，请先开启高级排查</li>
-          </ul>
+          <article class="settings-panel" id="settings-panel-llm" data-settings-panel
+                   data-auth-required data-lock-message="需要访问口令"
+                   data-ready-message="已连接，可调整 LLM 细节">
+            <div class="card">
+              <div class="card-head">
+                <div>
+                  <h2>LLM 服务</h2>
+                  <p class="text-muted">协议模板在上方，具体服务在下方保存和启用。</p>
+                </div>
+                <span class="badge" id="llm-mode-badge">需要访问口令</span>
+              </div>
+
+              <div class="llm-summary-grid" id="llm-summary-grid">
+                <div class="empty-state">连接后会显示当前工作方式和正在编辑的服务。</div>
+              </div>
+
+              <div class="llm-inline-status" id="llm-inline-status">
+                <div class="empty-state">连接后可管理服务地址、密钥和活跃模型。</div>
+              </div>
+
+              <div class="llm-protocol-shell">
+                <div class="llm-section-head">
+                  <div>
+                    <h3>协议模板</h3>
+                    <p>先选协议，再新建对应服务。</p>
+                  </div>
+                  <button type="button" class="btn btn-primary" id="llm-create-service">新增服务</button>
+                </div>
+                <div class="llm-protocol-grid" id="llm-protocol-grid">
+                  <div class="empty-state">连接后可选择协议模板。</div>
+                </div>
+              </div>
+
+              <div class="llm-service-shell">
+                <div class="llm-section-head">
+                  <div>
+                    <h3>已保存的服务</h3>
+                    <p>当前激活的服务会明显标出；编辑不会改变当前激活项。</p>
+                  </div>
+                </div>
+                <div class="llm-service-list" id="llm-service-list">
+                  <div class="empty-state">这里还没有保存的服务。</div>
+                </div>
+              </div>
+            </div>
+          </article>
         </div>
       </div>
     </section>
+
+    <div class="modal-shell" id="llm-service-modal" hidden aria-hidden="true">
+      <div class="modal-backdrop" data-llm-modal-close></div>
+      <div class="modal-card llm-modal-card" role="dialog" aria-modal="true" aria-labelledby="llm-editor-title">
+        <div class="llm-section-head">
+          <div>
+            <h3 id="llm-editor-title">新建服务</h3>
+            <p id="llm-editor-caption">会先带入官方默认值，你也可以改成兼容协议的第三方服务。</p>
+          </div>
+          <div class="modal-head-actions">
+            <span class="badge" id="llm-editor-mode">官方模板</span>
+            <button type="button" class="btn btn-ghost" id="llm-editor-close">关闭</button>
+          </div>
+        </div>
+
+        <form id="llm-service-form" class="form-grid llm-service-form">
+          <input id="llm-service-id" name="service_id" type="hidden">
+
+          <div class="field">
+            <label for="llm-service-name"><span>服务名称</span></label>
+            <input id="llm-service-name" name="service_name" type="text"
+                   placeholder="例如：OpenAI 官方 / 公司代理 / 个人中转">
+          </div>
+
+          <div class="field">
+            <label><span>图标</span></label>
+            <input id="llm-service-icon" name="service_icon" type="hidden">
+            <input id="llm-service-icon-file" name="service_icon_file" type="file"
+                   accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif" hidden>
+            <div class="llm-icon-editor">
+              <div class="llm-icon-preview" id="llm-icon-preview" aria-live="polite"></div>
+              <div class="llm-icon-actions">
+                <button type="button" class="btn btn-outline" id="llm-icon-upload">上传图片</button>
+                <button type="button" class="btn btn-ghost" id="llm-icon-remove">移除图片</button>
+              </div>
+            </div>
+            <p class="field-help" id="llm-icon-help">未上传图片时，会使用服务名称首字母。</p>
+          </div>
+
+          <div class="field field-full">
+            <label for="llm-service-endpoint"><span>服务地址</span></label>
+            <input id="llm-service-endpoint" name="service_endpoint" type="text"
+                   placeholder="例如：https://api.deepseek.com 或官方默认地址">
+            <p class="field-help">只填写服务基址，协议对应的接口后缀会自动补齐。</p>
+          </div>
+
+          <div class="field field-full">
+            <label for="llm-service-api-key"><span>API Key</span></label>
+            <input id="llm-service-api-key" name="service_api_key" type="password"
+                   placeholder="保存后会持久化到后端，优先覆盖环境变量">
+            <p class="field-help" id="llm-service-api-key-help">保存后会持久化到后端，优先覆盖环境变量。</p>
+          </div>
+
+          <div class="field field-full">
+            <label for="llm-active-model"><span>活跃模型</span></label>
+            <select id="llm-active-model" name="active_model">
+              <option value="">先获取模型列表</option>
+            </select>
+            <p class="field-help" id="llm-model-help">保存服务后，可通过接口拉取这项服务当前可用的模型。</p>
+          </div>
+        </form>
+
+        <div class="form-actions form-actions-multi">
+          <button type="button" class="btn btn-primary" id="llm-service-save">保存服务</button>
+          <button type="button" class="btn btn-outline" id="llm-service-discover">获取模型</button>
+          <button type="button" class="btn btn-danger" id="llm-service-delete">删除服务</button>
+          <button type="button" class="btn btn-ghost" id="llm-editor-reset">按模板新建</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-shell" id="llm-trace-modal" hidden aria-hidden="true">
+      <div class="modal-backdrop" data-llm-trace-modal-close></div>
+      <div class="modal-card llm-trace-modal-card" role="dialog" aria-modal="true" aria-labelledby="llm-trace-title">
+        <div class="llm-section-head">
+          <div>
+            <h3 id="llm-trace-title">LLM 调用详情</h3>
+            <p id="llm-trace-caption">这里会显示本轮提交，以及发送给 AI 和 AI 返回的完整原文。</p>
+          </div>
+          <div class="modal-head-actions">
+            <span class="badge" id="llm-trace-mode">本轮详情</span>
+            <button type="button" class="btn btn-ghost" id="llm-trace-close">关闭</button>
+          </div>
+        </div>
+        <div class="llm-trace-modal-body" id="llm-trace-body">
+          <div class="empty-state">完成一次 LLM 问答后，可在这里查看完整详情。</div>
+        </div>
+      </div>
+    </div>
 
     <!-- ========== DEBUG / AUDIT ========== -->
     <section class="workspace-panel" id="workspace-debug"

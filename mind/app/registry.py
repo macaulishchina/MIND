@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Mapping
 
 from mind.access.service import AccessService
 from mind.app.services.access import MemoryAccessService
+from mind.app.runtime import GlobalRuntimeManager
 from mind.app.services.frontend import (
     FrontendDebugAppService,
     FrontendExperienceAppService,
@@ -58,6 +59,7 @@ class AppServiceRegistry:
     frontend_debug_service: FrontendDebugAppService = field(repr=False)
     user_state_service: UserStateService = field(repr=False)
     system_status_service: SystemStatusService = field(repr=False)
+    runtime_manager: GlobalRuntimeManager = field(repr=False)
 
     @property
     def ingest_service(self) -> MemoryIngestService:
@@ -123,44 +125,73 @@ def build_app_registry(
     else:
         effective_telemetry_recorder = telemetry_recorder or persistent_telemetry_recorder
 
+    user_state_service = UserStateService(store)
+    system_status_service = SystemStatusService(store, config=config)
+    runtime_manager = GlobalRuntimeManager(
+        user_state_service=user_state_service,
+        current_config=config,
+        env=env,
+    )
+    runtime_manager.bootstrap()
+    frontend_settings_service = FrontendSettingsAppService(
+        system_status_service=system_status_service,
+        user_state_service=user_state_service,
+        current_config=config,
+        runtime_manager=runtime_manager,
+    )
+
     # Build domain services
     capability_service = CapabilityService(
-        provider_config=resolve_capability_provider_config(),
+        provider_config=resolve_capability_provider_config(
+            selection=runtime_manager.current_provider_selection(),
+            env=runtime_manager.current_provider_env(),
+        ),
     )
     primitive_service = PrimitiveService(
         store,
         capability_service=capability_service,
         telemetry_recorder=effective_telemetry_recorder,
+        provider_env_resolver=runtime_manager.current_provider_env,
     )
     access_service = AccessService(
         store,
         capability_service=capability_service,
         telemetry_recorder=effective_telemetry_recorder,
+        provider_env_resolver=runtime_manager.current_provider_env,
     )
     governance_service = GovernanceService(store, telemetry_recorder=effective_telemetry_recorder)
     offline_service = OfflineMaintenanceService(
         store,
         capability_service=capability_service,
         telemetry_recorder=effective_telemetry_recorder,
+        provider_env_resolver=runtime_manager.current_provider_env,
     )
-    memory_ingest_service = MemoryIngestService(primitive_service)
-    memory_query_service = MemoryQueryService(primitive_service, store)
-    memory_access_service = MemoryAccessService(access_service)
+    memory_ingest_service = MemoryIngestService(
+        primitive_service,
+        request_defaults_resolver=runtime_manager.apply_request_defaults,
+    )
+    memory_query_service = MemoryQueryService(
+        primitive_service,
+        store,
+        request_defaults_resolver=runtime_manager.apply_request_defaults,
+    )
+    memory_access_service = MemoryAccessService(
+        access_service,
+        provider_env_resolver=runtime_manager.current_provider_env,
+        request_defaults_resolver=runtime_manager.apply_request_defaults,
+    )
     governance_app_service = GovernanceAppService(governance_service)
-    offline_job_app_service = OfflineJobAppService(store, offline_service)
-    user_state_service = UserStateService(store)
-    system_status_service = SystemStatusService(store, config=config)
+    offline_job_app_service = OfflineJobAppService(
+        store,
+        offline_service,
+        request_defaults_resolver=runtime_manager.apply_request_defaults,
+    )
     frontend_experience_service = FrontendExperienceAppService(
         memory_ingest_service=memory_ingest_service,
         memory_query_service=memory_query_service,
         memory_access_service=memory_access_service,
         offline_job_app_service=offline_job_app_service,
-    )
-    frontend_settings_service = FrontendSettingsAppService(
-        system_status_service=system_status_service,
-        user_state_service=user_state_service,
-        current_config=config,
-        env=env,
+        request_defaults_resolver=runtime_manager.apply_request_defaults,
     )
     frontend_debug_service = FrontendDebugAppService(
         telemetry_source=(
@@ -170,6 +201,7 @@ def build_app_registry(
         ),
         telemetry_path=telemetry_path,
         env=env,
+        dev_mode_resolver=runtime_manager.current_dev_mode,
     )
 
     registry = AppServiceRegistry(
@@ -191,6 +223,7 @@ def build_app_registry(
         frontend_debug_service=frontend_debug_service,
         user_state_service=user_state_service,
         system_status_service=system_status_service,
+        runtime_manager=runtime_manager,
     )
 
     try:

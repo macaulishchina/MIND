@@ -37,7 +37,7 @@ def test_frontend_experience_bench_v1_covers_phase_m_required_entrypoints() -> N
         "config_backend",
         "config_provider",
         "config_dev_mode",
-        "config_restore",
+        "config_llm",
     }
 
 

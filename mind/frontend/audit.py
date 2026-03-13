@@ -9,6 +9,8 @@ from pathlib import Path
 
 from mind.fixtures import FrontendExperienceScenario, build_frontend_experience_bench_v1
 
+from ._assets import load_frontend_javascript, load_frontend_stylesheets
+
 _SCHEMA_VERSION = "frontend_responsive_audit_v1"
 _DEFAULT_FRONTEND_ROOT = Path(__file__).resolve().parents[2] / "frontend"
 FRONTEND_ENTRYPOINT_MARKERS: dict[str, dict[str, tuple[str, ...]]] = {
@@ -38,23 +40,31 @@ FRONTEND_ENTRYPOINT_MARKERS: dict[str, dict[str, tuple[str, ...]]] = {
         "css": (),
     },
     "config_backend": {
-        "html": ('id="settings-form"', 'id="settings-backend"', 'id="settings-profile"'),
-        "js": ("previewSettings", "applySettings"),
+        "html": ('id="settings-form"', 'id="settings-profile"'),
+        "js": ("loadSettings",),
         "css": (),
     },
     "config_provider": {
-        "html": ('id="settings-provider"', 'id="settings-model"'),
-        "js": ("previewSettings", "applySettings"),
+        "html": ('id="settings-provider"', 'id="settings-tab-general"'),
+        "js": ("settingsProvider", "applySettings"),
         "css": (),
     },
     "config_dev_mode": {
-        "html": ('id="settings-dev-mode"', 'id="settings-apply"'),
+        "html": ('id="settings-dev-mode"',),
         "js": ("applySettings",),
         "css": (),
     },
-    "config_restore": {
-        "html": ('id="settings-restore"',),
-        "js": ("restoreSettings",),
+    "config_llm": {
+        "html": (
+            'id="workspace-settings"',
+            'id="settings-tab-llm"',
+            'id="settings-panel-llm"',
+            'id="llm-protocol-grid"',
+            'id="llm-service-form"',
+            'id="llm-service-list"',
+            'id="llm-service-save"',
+        ),
+        "js": ("settings-panel-llm", "upsertLlmService", "discoverLlmModels", "activateLlmService"),
         "css": (),
     },
     "debug_timeline": {
@@ -136,11 +146,13 @@ def evaluate_frontend_responsive_audit(
 
     root = Path(frontend_root) if frontend_root is not None else _DEFAULT_FRONTEND_ROOT
     index_html = (root / "index.html").read_text(encoding="utf-8")
-    app_js = (root / "app.js").read_text(encoding="utf-8")
-    styles_css = (root / "styles.css").read_text(encoding="utf-8")
+    app_js = load_frontend_javascript(root)
+    styles_css = load_frontend_stylesheets(root, index_html)
 
     static_shell_present = (
-        'id="app-shell"' in index_html and "./app.js" in index_html and "./styles.css" in index_html
+        'id="app-shell"' in index_html
+        and "./app.js" in index_html
+        and "./styles/" in index_html
     )
     viewport_meta_present = 'name="viewport"' in index_html and "width=device-width" in index_html
     fluid_shell_present = "width: min(1180px, calc(100vw - 2rem));" in styles_css

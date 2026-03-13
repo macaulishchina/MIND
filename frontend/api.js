@@ -92,6 +92,46 @@ export async function applySettings(apiKey, body) {
   });
 }
 
+export async function upsertLlmService(apiKey, body) {
+  return fetchJson("/v1/frontend/llm/services:upsert", {
+    method: "POST",
+    headers: authHeaders(apiKey),
+    body: JSON.stringify(body),
+  });
+}
+
+export async function discoverLlmModels(apiKey, body) {
+  return fetchJson("/v1/frontend/llm/services:discover-models", {
+    method: "POST",
+    headers: authHeaders(apiKey),
+    body: JSON.stringify(body),
+  });
+}
+
+export async function activateLlmService(apiKey, body) {
+  return fetchJson("/v1/frontend/llm/services:activate", {
+    method: "POST",
+    headers: authHeaders(apiKey),
+    body: JSON.stringify(body),
+  });
+}
+
+export async function deleteLlmService(apiKey, body) {
+  return fetchJson("/v1/frontend/llm/services:delete", {
+    method: "POST",
+    headers: authHeaders(apiKey),
+    body: JSON.stringify(body),
+  });
+}
+
+export async function resolveProviderStatus(apiKey, providerSelection) {
+  return fetchJson("/v1/system/provider-status:resolve", {
+    method: "POST",
+    headers: authHeaders(apiKey),
+    body: JSON.stringify({ provider_selection: providerSelection }),
+  });
+}
+
 export async function restoreSettings(apiKey) {
   return fetchJson("/v1/frontend/settings:restore", {
     method: "POST",

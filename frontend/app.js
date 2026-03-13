@@ -1,216 +1,259 @@
 import {
+  activateLlmService,
   applySettings,
+  deleteLlmService,
+  discoverLlmModels,
   loadCatalog,
   loadDebugTimeline,
   loadGateDemo,
   loadSettings,
-  previewSettings,
-  restoreSettings,
   submitAccess,
   submitIngest,
   submitOffline,
   submitRetrieve,
-} from "./api.js";
+  upsertLlmService,
+} from "./app/core/api-client.js";
+import {
+  DEFAULTS,
+  GATE_KIND_LABELS,
+  INGEST_HISTORY_KEY,
+  INGEST_PAGE_SIZE,
+  LLM_PROTOCOL_LIBRARY,
+  MIN_BUSY_MS,
+  STORAGE_KEY,
+} from "./app/core/constants.js";
+import { createUiActionRunner } from "./app/core/actions.js";
+import { elements } from "./app/core/dom.js";
+import { createWorkbenchRouter } from "./app/core/router.js";
+import { createStore } from "./app/core/store.js";
+import { resolveInitialWorkbenchContext } from "./app/core/ui-context.js";
+import { createOverviewFeature } from "./app/features/overview.js";
+import { createOperationChainManager } from "./app/features/operation-chain.js";
+import { createSettingsGeneralFeature } from "./app/features/settings-general.js";
+import { createSettingsLlmFeature } from "./app/features/settings-llm.js";
+import {
+  buildLlmAvatar,
+  clamp,
+  compressLlmServiceIconFile,
+  delay,
+  escapeHtml,
+  formatDateTime,
+  formatValue,
+  getAnswerModeFromSettings,
+  isPositiveInteger,
+  localizeAccessDepth,
+  localizeAnswerMode,
+  localizeAuthMode,
+  localizeContentType,
+  localizeEntrypoint,
+  localizeGateEntry,
+  localizeOfflineJobKind,
+  localizeProviderExecution,
+  localizeProviderFamily,
+  localizeProviderStatus,
+  localizeRetryPolicy,
+  localizeSettingKey,
+  normalizeLlmIconValue,
+  renderLlmServiceAvatar,
+  renderMetricList,
+  truncateText,
+} from "./app/utils.js";
 
-const STORAGE_KEY = "mind.frontend.apiKey";
-const INGEST_HISTORY_KEY = "mind.frontend.ingestHistory.v1";
-const INGEST_PAGE_SIZE = 10;
-const MIN_BUSY_MS = {
-  submit: 1000,
-  mutate: 1000,
-  refresh: 700,
-  reset: 450,
-  auth: 650,
-};
-const DEFAULTS = {
-  ingestTimestampOrder: "1",
-  retrieveMaxCandidates: "10",
-  offlinePriority: "0.5",
-  debugLimit: "80",
-  workspace: "workspace-overview",
-  operation: "module-ingest",
-};
+const initialWorkbenchContext = resolveInitialWorkbenchContext(
+  window.location.hash,
+  window.localStorage,
+  {
+    workspaceIds: elements.workspacePanels.map((panel) => panel.id),
+    operationIds: elements.operationPanels.map((panel) => panel.id),
+    settingsSectionIds: elements.settingsPanels.map((panel) => panel.id),
+  },
+  DEFAULTS,
+);
 
-const ENTRYPOINT_LABELS = {
-  ingest: { title: "写入记忆", mode: "保存", summary: "把重要内容保存下来，便于后续继续使用。" },
-  retrieve: { title: "召回检索", mode: "查找", summary: "快速找回可能相关的已保存内容。" },
-  access: { title: "访问问答", mode: "整理", summary: "整合已有内容，生成更完整的回答。" },
-  offline: { title: "后台任务", mode: "整理", summary: "把整理任务交给系统在后台慢慢完成。" },
-  gate_demo: { title: "示例摘要", mode: "查看", summary: "集中查看常用示例、检查结果和说明内容。" },
-};
-
-const GATE_ENTRY_LABELS = {
-  demo_memory_flow: "记忆流演示",
-  demo_access_flow: "访问流演示",
-  demo_offline_flow: "离线流演示",
-  gate_capability_readiness: "可用性检查",
-  gate_telemetry_readiness: "记录完整性检查",
-  report_provider_compatibility: "兼容性说明",
-  report_telemetry_audit: "记录说明",
-};
-
-const GATE_KIND_LABELS = {
-  demo: "演示",
-  gate: "检查",
-  report: "说明",
-};
-
-const VIEWPORT_LABELS = {
-  desktop: "桌面端",
-  mobile: "移动端",
-};
-
-const SETTING_LABELS = {
-  backend: "存储方式",
-  profile: "运行环境",
-  provider: "回答方式",
-  model: "模型名称",
-  dev_mode: "高级排查",
-};
-
-const ACCESS_DEPTH_LABELS = {
-  auto: "自动选择",
-  flash: "快速回答",
-  focus: "聚焦回答",
-  reconstruct: "完整整理",
-  reflective_access: "深度整理",
-};
-
-const PROVIDER_FAMILY_LABELS = {
-  deterministic: "确定性回退",
-  openai: "OpenAI",
-  claude: "Claude",
-  gemini: "Gemini",
-};
-
-const elements = {
-  authForm: document.querySelector("#auth-form"),
-  authSubmit: document.querySelector("#auth-submit"),
-  apiKey: document.querySelector("#api-key"),
-  authStatus: document.querySelector("#auth-status"),
-  authStateChip: document.querySelector("#auth-state-chip"),
-  clearKey: document.querySelector("#clear-key"),
-  connectionSummary: document.querySelector("#connection-summary"),
-  catalogSummary: document.querySelector("#catalog-summary"),
-  runtimeSummary: document.querySelector("#runtime-summary"),
-  workflowSummary: document.querySelector("#workflow-summary"),
-  reloadOverview: document.querySelector("#reload-overview"),
-  loadGateDemo: document.querySelector("#load-gate-demo"),
-  overviewGrid: document.querySelector("#overview-grid"),
-  gateDemoResult: document.querySelector("#gate-demo-result"),
-  workspaceTabs: [...document.querySelectorAll("[data-workspace-target]")],
-  workspacePanels: [...document.querySelectorAll(".workspace-panel")],
-  operationTabs: [...document.querySelectorAll("[data-operation-target]")],
-  operationPanels: [...document.querySelectorAll("[data-operation-panel]")],
-  ingestForm: document.querySelector("#ingest-form"),
-  ingestSubmit: document.querySelector("#ingest-submit"),
-  ingestContent: document.querySelector("#ingest-content"),
-  ingestContentHelp: document.querySelector("#ingest-content-help"),
-  ingestEpisodeId: document.querySelector("#ingest-episode-id"),
-  ingestEpisodeHelp: document.querySelector("#ingest-episode-help"),
-  ingestTimestampOrder: document.querySelector("#ingest-timestamp-order"),
-  ingestOrderHelp: document.querySelector("#ingest-order-help"),
-  ingestReset: document.querySelector("#ingest-reset"),
-  ingestResult: document.querySelector("#ingest-result"),
-  retrieveForm: document.querySelector("#retrieve-form"),
-  retrieveSubmit: document.querySelector("#retrieve-submit"),
-  retrieveQuery: document.querySelector("#retrieve-query"),
-  retrieveEpisodeId: document.querySelector("#retrieve-episode-id"),
-  retrieveMaxCandidates: document.querySelector("#retrieve-max-candidates"),
-  retrieveReset: document.querySelector("#retrieve-reset"),
-  retrieveResult: document.querySelector("#retrieve-result"),
-  accessForm: document.querySelector("#access-form"),
-  accessSubmit: document.querySelector("#access-submit"),
-  accessQuery: document.querySelector("#access-query"),
-  accessDepth: document.querySelector("#access-depth"),
-  accessEpisodeId: document.querySelector("#access-episode-id"),
-  accessTaskId: document.querySelector("#access-task-id"),
-  accessExplain: document.querySelector("#access-explain"),
-  accessReset: document.querySelector("#access-reset"),
-  accessResult: document.querySelector("#access-result"),
-  offlineForm: document.querySelector("#offline-form"),
-  offlineSubmit: document.querySelector("#offline-submit"),
-  offlineJobKind: document.querySelector("#offline-job-kind"),
-  offlineEpisodeId: document.querySelector("#offline-episode-id"),
-  offlineFocus: document.querySelector("#offline-focus"),
-  offlineTargetRefs: document.querySelector("#offline-target-refs"),
-  offlineReason: document.querySelector("#offline-reason"),
-  offlinePriority: document.querySelector("#offline-priority"),
-  offlineModeNote: document.querySelector("#offline-mode-note"),
-  offlineReset: document.querySelector("#offline-reset"),
-  offlineResult: document.querySelector("#offline-result"),
-  settingsForm: document.querySelector("#settings-form"),
-  settingsPreview: document.querySelector("#settings-preview"),
-  settingsBackend: document.querySelector("#settings-backend"),
-  settingsProfile: document.querySelector("#settings-profile"),
-  settingsProvider: document.querySelector("#settings-provider"),
-  settingsModel: document.querySelector("#settings-model"),
-  settingsDevMode: document.querySelector("#settings-dev-mode"),
-  settingsApply: document.querySelector("#settings-apply"),
-  settingsRestore: document.querySelector("#settings-restore"),
-  settingsReset: document.querySelector("#settings-reset"),
-  settingsResult: document.querySelector("#settings-result"),
-  debugForm: document.querySelector("#debug-form"),
-  debugSubmit: document.querySelector("#debug-submit"),
-  debugRunId: document.querySelector("#debug-run-id"),
-  debugOperationId: document.querySelector("#debug-operation-id"),
-  debugObjectId: document.querySelector("#debug-object-id"),
-  debugLimit: document.querySelector("#debug-limit"),
-  debugGuardStatus: document.querySelector("#debug-guard-status"),
-  debugReset: document.querySelector("#debug-reset"),
-  debugResult: document.querySelector("#debug-result"),
-  authRequiredPanels: [...document.querySelectorAll("[data-auth-required]")],
-  devRequiredPanels: [...document.querySelectorAll("[data-dev-required]")],
-};
-
-const state = {
+const store = createStore({
   apiKey: window.localStorage.getItem(STORAGE_KEY) || "",
   catalogPage: null,
   gateDemoPage: null,
   settingsPage: null,
+  llmEditorDraft: null,
+  llmServiceModelSelections: {},
+  llmNotice: null,
+  llmModalOpen: false,
+  llmTraceModalOpen: false,
+  llmTraceModalPayload: null,
   ingestSubmissionHistory: loadStoredIngestHistory(),
   ingestHistoryPage: 1,
   ingestHistoryCursor: -1,
   ingestDraftSnapshot: "",
   busyActions: new Set(),
-  activeWorkspace: DEFAULTS.workspace,
-  activeOperation: DEFAULTS.operation,
-};
+  operationChainSnapshots: {
+    "module-ingest": null,
+    "module-retrieve": null,
+    "module-access": null,
+    "module-offline": null,
+  },
+  operationChainDrawerOpen: false,
+  operationChainHidden: false,
+  activeWorkspace: initialWorkbenchContext.activeWorkspace,
+  activeOperation: initialWorkbenchContext.activeOperation,
+  activeSettingsSection: initialWorkbenchContext.activeSettingsSection,
+});
+const state = store.getState();
+let llmFeature;
+
+const operationChain = createOperationChainManager({
+  elements,
+  state,
+  defaults: DEFAULTS,
+  getAnswerModeFromSettings,
+  getLlmActiveService: (...args) => llmFeature.getLlmActiveService(...args),
+  syncModalOpenState,
+});
+
+const {
+  buildErrorOperationChain,
+  buildRunningOperationChain,
+  buildSuccessfulOperationChain,
+  closeLlmTraceModal,
+  focusOperationChainShell,
+  handleBodyClick: handleOperationChainBodyClick,
+  handleEscape: handleOperationChainEscape,
+  handleOpenButton: handleOperationChainOpenButton,
+  renderOperationChain,
+  reset: resetOperationChain,
+  setOperationChainDrawerOpen,
+  setOperationChainHidden,
+  setOperationChainSnapshot,
+  syncOperationChainVisibility,
+} = operationChain;
+
+const workbenchRouter = createWorkbenchRouter({
+  windowRef: window,
+  storage: window.localStorage,
+  elements,
+  state,
+  defaults: DEFAULTS,
+  renderOperationChain,
+  setOperationChainDrawerOpen,
+});
+
+const {
+  navigate,
+  setActiveWorkspace,
+  setActiveOperation,
+  setActiveSettingsSection,
+} = workbenchRouter;
 
 function setStatus(message) {
   elements.authStatus.textContent = message;
 }
 
-function delay(ms) {
-  return new Promise((resolve) => {
-    window.setTimeout(resolve, ms);
-  });
+function syncModalOpenState() {
+  document.body.classList.toggle(
+    "modal-open",
+    Boolean(state.llmModalOpen || state.llmTraceModalOpen),
+  );
 }
 
-function clamp(value, min, max) {
-  return Math.min(Math.max(value, min), max);
-}
+const overviewFeature = createOverviewFeature({
+  documentRef: document,
+  elements,
+  navigate,
+  state,
+  getAnswerModeFromSettings,
+  getLlmActiveService: (...args) => llmFeature.getLlmActiveService(...args),
+  localizeAnswerMode,
+  localizeEntrypoint,
+  localizeProviderFamily,
+  localizeGateEntry,
+  GATE_KIND_LABELS,
+  escapeHtml,
+});
 
-function isPositiveInteger(value) {
-  const parsed = Number.parseInt(String(value), 10);
-  return Number.isInteger(parsed) && parsed > 0;
-}
+const settingsGeneralFeature = createSettingsGeneralFeature({
+  elements,
+  getAnswerModeFromSettings,
+  getLlmActiveService: (...args) => llmFeature.getLlmActiveService(...args),
+  localizeAnswerMode,
+  localizeProviderFamily,
+  localizeSettingKey,
+  formatValue,
+  renderMetricList,
+  escapeHtml,
+});
+
+llmFeature = createSettingsLlmFeature({
+  windowRef: window,
+  state,
+  elements,
+  llmProtocolLibrary: LLM_PROTOCOL_LIBRARY,
+  syncModalOpenState,
+  syncActionAvailability,
+  getAnswerModeFromSettings,
+  localizeAnswerMode,
+  localizeProviderFamily,
+  normalizeLlmIconValue,
+  buildLlmAvatar,
+  renderLlmServiceAvatar,
+  compressLlmServiceIconFile,
+  escapeHtml,
+  loadSettings,
+  upsertLlmService,
+  discoverLlmModels,
+  activateLlmService,
+  deleteLlmService,
+  renderSettingsOptions: settingsGeneralFeature.renderSettingsOptions,
+  renderSettingsPage: settingsGeneralFeature.renderSettingsPage,
+  renderOverview: overviewFeature.renderOverview,
+  updateShellSignals,
+  syncPanelGuards,
+  renderOperationChain,
+});
+
+const {
+  getUserFacingCatalogEntries,
+  jumpToOverviewEntrypoint,
+  renderOverviewEmpty,
+  renderGateDemoEmpty,
+  renderOverview,
+  renderGateDemo,
+} = overviewFeature;
+
+const {
+  renderSettingsOptions,
+  renderSettingsPage,
+  renderSettingsMutation,
+} = settingsGeneralFeature;
+
+const {
+  getLlmServiceById,
+  getLlmActiveService,
+  getLlmSelectedService,
+  getSelectedLlmDraft,
+  primeLlmEditorFromSettings,
+  setLlmModalOpen,
+  openLlmEditor,
+  closeLlmEditor,
+  updateLlmEditorDraft,
+  syncLlmEditorDraftUi,
+  renderLlmIconPreview,
+  buildSelectedLlmApplyRequest,
+  confirmDeleteLlmService,
+  renderLlmStatus,
+  renderLlmPage,
+  saveCurrentLlmService,
+  discoverModelsForService,
+  discoverModelsFromEditor,
+  activateSavedLlmService,
+  deleteSavedLlmService,
+  updateDraftIconFromFile,
+} = llmFeature;
 
 function getOfflineTargetRefs() {
   return elements.offlineTargetRefs.value
     .split(",")
     .map((value) => value.trim())
     .filter(Boolean);
-}
-
-function hasSettingsDraftSelection() {
-  return Boolean(
-    elements.settingsBackend.value
-    || elements.settingsProfile.value
-    || elements.settingsProvider.value
-    || elements.settingsModel.value.trim()
-    || elements.settingsDevMode.value,
-  );
 }
 
 function hasDebugFilters() {
@@ -232,6 +275,22 @@ function applyButtonDisabledState(button) {
   button.disabled = lockedByPanel || lockedByRule || busy;
 }
 
+function syncAuthSubmitLabel() {
+  if (!elements.authSubmit || elements.authSubmit.dataset.busy === "true") {
+    return;
+  }
+
+  const inputValue = elements.apiKey.value.trim();
+  const matchesCurrent = Boolean(state.apiKey && inputValue && inputValue === state.apiKey);
+  const label = matchesCurrent
+    ? "已连接"
+    : (state.apiKey && inputValue ? "重新连接" : "连接工作台");
+
+  elements.authSubmit.textContent = label;
+  elements.authSubmit.dataset.defaultLabel = label;
+  elements.authSubmit.dataset.connected = matchesCurrent ? "true" : "false";
+}
+
 function setButtonRuleDisabled(button, disabled) {
   if (!button) {
     return;
@@ -241,12 +300,26 @@ function setButtonRuleDisabled(button, disabled) {
 }
 
 function syncActionAvailability() {
+  const authInput = elements.apiKey.value.trim();
+  const authMatchesCurrent = Boolean(state.apiKey && authInput && authInput === state.apiKey);
   const offlineNeedsEpisode = elements.offlineJobKind.value === "reflect_episode";
   const offlineSubmitDisabled = offlineNeedsEpisode
     ? !elements.offlineEpisodeId.value.trim()
     : getOfflineTargetRefs().length < 2 || !elements.offlineReason.value.trim();
+  const llmDraft = getSelectedLlmDraft();
+  const llmCanSave = Boolean(
+    state.apiKey
+    && llmDraft.protocol
+    && llmDraft.name.trim()
+    && llmDraft.endpoint.trim(),
+  );
+  const llmHasSavedKey = Boolean(llmDraft.serviceId && getLlmServiceById(llmDraft.serviceId)?.api_key_saved);
+  const llmCanDiscover = Boolean(llmCanSave && (llmDraft.apiKey.trim() || llmHasSavedKey));
+  const llmSwitchTarget = getLlmActiveService(state.settingsPage) || getLlmSelectedService(state.settingsPage);
+  const canSwitchToLlm = Boolean(llmSwitchTarget?.active_model);
 
-  setButtonRuleDisabled(elements.authSubmit, !elements.apiKey.value.trim());
+  setButtonRuleDisabled(elements.authSubmit, !authInput || authMatchesCurrent);
+  syncAuthSubmitLabel();
   setButtonRuleDisabled(elements.clearKey, !state.apiKey && !elements.apiKey.value.trim());
   setButtonRuleDisabled(
     elements.ingestSubmit,
@@ -258,41 +331,32 @@ function syncActionAvailability() {
   );
   setButtonRuleDisabled(elements.accessSubmit, !elements.accessQuery.value.trim());
   setButtonRuleDisabled(elements.offlineSubmit, offlineSubmitDisabled);
-  setButtonRuleDisabled(elements.settingsPreview, !hasSettingsDraftSelection());
-  setButtonRuleDisabled(elements.settingsApply, !hasSettingsDraftSelection());
   setButtonRuleDisabled(
-    elements.settingsRestore,
-    !state.settingsPage?.snapshot_state?.previous_snapshot,
+    elements.settingsProvider,
+    !state.apiKey || (elements.settingsProvider.value === "llm" && !canSwitchToLlm),
   );
+  setButtonRuleDisabled(elements.llmCreateService, !state.apiKey);
+  setButtonRuleDisabled(elements.llmServiceSave, !llmCanSave);
+  setButtonRuleDisabled(elements.llmServiceDiscover, !llmCanDiscover);
+  setButtonRuleDisabled(elements.llmServiceDelete, !state.apiKey || !llmDraft.serviceId);
+  setButtonRuleDisabled(elements.llmEditorReset, !state.apiKey);
   setButtonRuleDisabled(elements.debugSubmit, !hasDebugFilters());
 }
 
-function measureBusyButtonWidth(button, label) {
-  const computed = window.getComputedStyle(button);
-  const probe = document.createElement("span");
-  const rootFontSize = Number.parseFloat(
-    window.getComputedStyle(document.documentElement).fontSize,
-  ) || 16;
-  const gap = Number.parseFloat(computed.columnGap || computed.gap || "0");
-  const padding =
-    (Number.parseFloat(computed.paddingLeft) || 0)
-    + (Number.parseFloat(computed.paddingRight) || 0)
-    + (Number.parseFloat(computed.borderLeftWidth) || 0)
-    + (Number.parseFloat(computed.borderRightWidth) || 0);
+const uiActions = createUiActionRunner({
+  state,
+  setStatus,
+  syncActionAvailability,
+  applyButtonDisabledState,
+  delay,
+});
 
-  probe.textContent = label;
-  probe.style.position = "absolute";
-  probe.style.visibility = "hidden";
-  probe.style.whiteSpace = "nowrap";
-  probe.style.font = computed.font;
-  probe.style.fontWeight = computed.fontWeight;
-  probe.style.letterSpacing = computed.letterSpacing;
-  document.body.append(probe);
-  const labelWidth = probe.getBoundingClientRect().width;
-  probe.remove();
-
-  return Math.ceil(labelWidth + padding + (rootFontSize * 0.85) + gap + 2);
-}
+const {
+  bindClickAction,
+  bindFormAction,
+  runUiAction,
+  setButtonBusy,
+} = uiActions;
 
 function loadStoredIngestHistory() {
   try {
@@ -345,324 +409,34 @@ function getIngestInputHistory() {
   return state.ingestSubmissionHistory.map((item) => item.content);
 }
 
-function formatDateTime(value) {
-  try {
-    return new Date(value).toLocaleString("zh-CN", { hour12: false });
-  } catch {
-    return String(value);
-  }
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
-function formatValue(value) {
-  if (value === null || value === undefined) {
-    return "暂无";
-  }
-  if (typeof value === "object") {
-    return JSON.stringify(value);
-  }
-  return String(value);
-}
-
-function renderMetricList(items) {
-  return `
-    <ul class="metric-list">
-      ${items
-        .map(
-          ({ label, value }) => `
-            <li>
-              <span>${escapeHtml(label)}</span>
-              <strong>${escapeHtml(formatValue(value))}</strong>
-            </li>
-          `,
-        )
-        .join("")}
-    </ul>
-  `;
-}
-
-function localizeViewport(value) {
-  return VIEWPORT_LABELS[value] || value;
-}
-
-function localizeSettingKey(key) {
-  return SETTING_LABELS[key] || key;
-}
-
-function localizeAccessDepth(value) {
-  return ACCESS_DEPTH_LABELS[value] || value;
-}
-
-function localizeProviderFamily(value) {
-  return PROVIDER_FAMILY_LABELS[value] || value || "未注明";
-}
-
-function localizeContentType(value) {
-  return value || "未注明";
-}
-
-function localizeEntrypoint(entrypoint) {
-  return ENTRYPOINT_LABELS[entrypoint] || {
-    title: entrypoint,
-    mode: "可用",
-    summary: "这里显示一个已启用的功能入口。",
-  };
-}
-
-function localizeGateEntry(entry) {
-  return GATE_ENTRY_LABELS[entry.entry_id] || entry.title;
-}
-
-function renderOverviewEmpty(message) {
-  elements.overviewGrid.innerHTML = `<div class="empty-state">${escapeHtml(message)}</div>`;
-}
-
-function renderGateDemoEmpty(message) {
-  elements.gateDemoResult.innerHTML = `<div class="empty-state">${escapeHtml(message)}</div>`;
-}
-
-function renderSettingsSnapshot(snapshot, emptyMessage) {
-  if (!snapshot) {
-    return `<div class="empty-state">${escapeHtml(emptyMessage)}</div>`;
-  }
-  const changedKeys = (snapshot.changed_keys || []).map(localizeSettingKey).join("、") || "无";
-  return `
-    <ul class="notes-list">
-      <li>记录编号：${escapeHtml(snapshot.snapshot_id)}</li>
-      <li>操作类型：${escapeHtml(snapshot.action === "restore" ? "恢复" : "保存")}</li>
-      <li>涉及项目：${escapeHtml(changedKeys)}</li>
-    </ul>
-  `;
-}
-
 function updateShellSignals() {
   const hasApiKey = Boolean(state.apiKey);
-  const catalogEntries = state.catalogPage?.entries || [];
-  const gateEntries = state.gateDemoPage?.entries || [];
+  const catalogEntries = getUserFacingCatalogEntries(state.catalogPage);
   const runtime = state.settingsPage?.runtime || null;
   const devModeEnabled = Boolean(runtime?.dev_mode);
+  const answerMode = state.settingsPage ? getAnswerModeFromSettings(state.settingsPage) : null;
 
-  elements.connectionSummary.textContent = hasApiKey
-    ? "连接：已完成"
-    : "连接：未完成";
+  elements.authStatus.textContent = hasApiKey
+    ? (
+      state.catalogPage || state.settingsPage
+        ? "可以继续操作。"
+        : "正在同步工作台。"
+    )
+    : "输入访问口令后即可连接工作台。";
   elements.catalogSummary.textContent = hasApiKey
     ? catalogEntries.length
-      ? `功能：${catalogEntries.length} 个入口 / ${gateEntries.length} 条摘要`
-      : "功能：等待同步"
+      ? `功能：${catalogEntries.length} 个入口已就绪`
+      : "正在同步功能列表"
     : "功能：未同步";
   elements.runtimeSummary.textContent = runtime
-    ? `环境：${runtime.profile}`
+    ? `环境：${runtime.profile} / ${localizeAnswerMode(answerMode)}`
     : "环境：未同步";
   elements.workflowSummary.textContent = !hasApiKey
-    ? "状态：待连接"
+    ? "工作状态：待连接"
     : devModeEnabled
-      ? "状态：可排查"
-      : "状态：可使用";
-  elements.authStateChip.textContent = hasApiKey ? "已连接" : "未连接";
-  elements.authStateChip.className = `status-chip ${hasApiKey ? "status-ok" : "status-warn"}`;
-}
-
-function renderOverview(catalog, settings) {
-  const entries = catalog.entries || [];
-  const snapshotState = settings.snapshot_state || {};
-  const currentSnapshot = snapshotState.current_snapshot;
-  const previousSnapshot = snapshotState.previous_snapshot;
-
-  const entryCards = entries
-    .map((entry) => {
-      const meta = localizeEntrypoint(entry.entrypoint);
-      return `
-        <article class="overview-card">
-          <div class="panel-kicker">${escapeHtml(meta.mode)}</div>
-          <h3>${escapeHtml(meta.title)}</h3>
-          <p class="meta">${escapeHtml(meta.summary)}</p>
-          ${renderMetricList([
-            {
-              label: "适用设备",
-              value: (entry.supported_viewports || []).map(localizeViewport).join(" / ") || "暂无",
-            },
-            { label: "示例数", value: (entry.scenario_ids || []).length },
-            { label: "使用条件", value: entry.requires_dev_mode ? "需先开启高级排查" : "连接后即可使用" },
-          ])}
-        </article>
-      `;
-    })
-    .join("");
-
-  elements.overviewGrid.innerHTML = `
-    <article class="overview-card">
-      <div class="panel-kicker">当前环境</div>
-      <h3>${escapeHtml(settings.runtime.profile)}</h3>
-      <p class="meta">这里显示当前使用的环境、回答方式和排查状态。</p>
-      ${renderMetricList([
-        { label: "存储方式", value: settings.runtime.backend },
-        { label: "回答方式", value: settings.provider.provider },
-        { label: "当前模型", value: settings.provider.model },
-        { label: "高级排查", value: settings.runtime.dev_mode ? "已开启" : "未开启" },
-      ])}
-    </article>
-    <article class="overview-card">
-      <div class="panel-kicker">设置记录</div>
-      <h3>最近保存情况</h3>
-      <p class="meta">保存设置后，系统会留下最近一次和上一次的记录，方便恢复。</p>
-      ${renderMetricList([
-        { label: "当前记录", value: currentSnapshot?.snapshot_id || "暂无" },
-        { label: "上一次记录", value: previousSnapshot?.snapshot_id || "暂无" },
-        { label: "摘要版本", value: catalog.bench_version || "暂无" },
-      ])}
-    </article>
-    <article class="overview-card">
-      <div class="panel-kicker">常用功能</div>
-      <h3>${entries.length} 个入口已准备好</h3>
-      <p class="meta">这里列出当前页面已经准备好的主要功能入口。</p>
-      <ul class="pill-row">
-        ${entries.map((entry) => `<li>${escapeHtml(localizeEntrypoint(entry.entrypoint).title)}</li>`).join("")}
-      </ul>
-    </article>
-    ${entryCards || '<div class="empty-state">当前还没有可显示的功能入口。</div>'}
-  `;
-}
-
-function renderSettingsOptions(settings) {
-  fillSelect(elements.settingsBackend, settings.options.backends);
-  fillSelect(elements.settingsProfile, settings.options.profiles);
-  fillSelect(elements.settingsProvider, settings.options.provider_families);
-  elements.settingsModel.placeholder = settings.provider.model;
-}
-
-function renderSettingsPage(settings) {
-  const snapshotState = settings.snapshot_state || {};
-  const currentSnapshot = snapshotState.current_snapshot;
-  const previousSnapshot = snapshotState.previous_snapshot;
-  elements.settingsResult.innerHTML = `
-    <div class="status ${currentSnapshot ? "status-ok" : "status-warn"}">
-      ${currentSnapshot ? "当前已有保存的设置记录" : "当前还没有保存过设置"}
-    </div>
-    <div class="result-grid">
-      <div class="result-block">
-        <h3>当前设置</h3>
-        ${renderMetricList([
-          { label: "存储方式", value: settings.runtime.backend },
-          { label: "运行环境", value: settings.runtime.profile },
-          { label: "回答方式", value: settings.provider.provider },
-          { label: "模型名称", value: settings.provider.model },
-          { label: "高级排查", value: settings.runtime.dev_mode ? "已开启" : "未开启" },
-        ])}
-      </div>
-      <div class="result-block">
-        <h3>当前记录</h3>
-        ${renderSettingsSnapshot(currentSnapshot, "当前还没有已保存记录。")}
-      </div>
-      <div class="result-block">
-        <h3>上一份记录</h3>
-        ${renderSettingsSnapshot(previousSnapshot, "当前没有更早的记录可恢复。")}
-      </div>
-    </div>
-  `;
-}
-
-function renderSettingsPreview(preview) {
-  const changes = preview.changes || [];
-  const envOverrides = Object.entries(preview.applied_env_overrides || {});
-  elements.settingsResult.innerHTML = `
-    <div class="status ${changes.length ? "status-ok" : "status-warn"}">
-      ${changes.length ? `这次会调整 ${changes.length} 项设置` : "这次预览不会带来实际变化"}
-    </div>
-    <div class="result-grid">
-      <div class="result-block">
-        <h3>将要变化的项目</h3>
-        <ul class="change-list">
-          ${changes
-            .map(
-              (change) => `
-                <li>
-                  <strong>${escapeHtml(localizeSettingKey(change.key))}</strong>
-                  <span>${escapeHtml(formatValue(change.before))} -> ${escapeHtml(formatValue(change.after))}</span>
-                </li>
-              `,
-            )
-            .join("") || "<li><span>当前设置与预览内容完全一致。</span></li>"}
-        </ul>
-      </div>
-      <div class="result-block">
-        <h3>补充说明</h3>
-        <ul class="notes-list">
-          <li>${envOverrides.length ? `系统还会同步调整 ${envOverrides.length} 项内部参数。` : "本次预览不需要额外补充项。"}</li>
-        </ul>
-      </div>
-    </div>
-  `;
-}
-
-function renderSettingsMutation(result) {
-  const preview = result.preview || {};
-  const currentSnapshot = result.current_snapshot;
-  const previousSnapshot = result.previous_snapshot;
-  const envOverrides = Object.entries(currentSnapshot?.applied_env_overrides || {});
-  elements.settingsResult.innerHTML = `
-    <div class="status status-ok">
-      ${escapeHtml(result.action === "restore" ? "已恢复上一份设置" : "已保存当前设置")}
-    </div>
-    <div class="result-grid">
-      <div class="result-block">
-        <h3>当前记录</h3>
-        ${renderSettingsSnapshot(currentSnapshot, "还没有当前记录。")}
-      </div>
-      <div class="result-block">
-        <h3>上一份记录</h3>
-        ${renderSettingsSnapshot(previousSnapshot, "当前没有更早的记录。")}
-      </div>
-      <div class="result-block">
-        <h3>使用提示</h3>
-        <ul class="notes-list">
-          <li>${preview.restart_required ? "需要重启服务后，这次调整才会完全生效。" : "这次调整不需要重启，可直接生效。"}</li>
-          <li>${envOverrides.length ? `系统还同步调整了 ${envOverrides.length} 项内部参数。` : "这次调整不需要额外补充项。"}</li>
-        </ul>
-      </div>
-    </div>
-  `;
-}
-
-function renderGateDemo(page) {
-  const entries = page.entries || [];
-  elements.gateDemoResult.innerHTML = `
-    <div class="status ${entries.length ? "status-ok" : "status-warn"}">
-      共整理出 ${entries.length} 条示例说明
-    </div>
-    <div class="result-grid">
-      <div class="result-block">
-        <h3>摘要列表</h3>
-        <ul class="stack-list">
-          ${entries
-            .map(
-              (entry) => `
-                <li>
-                  <div class="list-head">
-                    <strong>${escapeHtml(localizeGateEntry(entry))}</strong>
-                    <span class="mini-badge">${escapeHtml(GATE_KIND_LABELS[entry.kind] || entry.kind)}</span>
-                  </div>
-                  <div>${escapeHtml(entry.summary)}</div>
-                  <div class="meta">
-                    ${(entry.supported_viewports || []).map(localizeViewport).join(" / ") || "暂无"}
-                    / ${(entry.scenario_ids || []).length} 个示例
-                    / ${entry.requires_dev_mode ? "需先开启高级排查" : "已在当前页展示"}
-                  </div>
-                </li>
-              `,
-            )
-            .join("") || "<li>当前还没有可显示的示例说明。</li>"}
-        </ul>
-      </div>
-    </div>
-  `;
+      ? "工作状态：可排查"
+      : "工作状态：可使用";
+  syncAuthSubmitLabel();
 }
 
 function resetIngestHistoryNavigation() {
@@ -1003,44 +777,14 @@ function renderDebugTimeline(result) {
   `;
 }
 
-function fillSelect(select, values) {
-  const current = select.value;
-  select.innerHTML = ['<option value="">保持不变</option>']
-    .concat(
-      (values || []).map(
-        (value) =>
-          `<option value="${escapeHtml(value)}"${value === current ? " selected" : ""}>${escapeHtml(value)}</option>`,
-      ),
-    )
+function fillSelect(select, values, selectedValue) {
+  select.innerHTML = (values || [])
+    .map((item) => {
+      const value = typeof item === "string" ? item : item.value;
+      const label = typeof item === "string" ? item : item.label;
+      return `<option value="${escapeHtml(value)}"${value === selectedValue ? " selected" : ""}>${escapeHtml(label)}</option>`;
+    })
     .join("");
-}
-
-function setActiveWorkspace(targetId) {
-  state.activeWorkspace = targetId;
-  elements.workspaceTabs.forEach((tab) => {
-    const active = tab.dataset.workspaceTarget === targetId;
-    tab.classList.toggle("is-active", active);
-    tab.setAttribute("aria-selected", active ? "true" : "false");
-  });
-  elements.workspacePanels.forEach((panel) => {
-    const active = panel.id === targetId;
-    panel.classList.toggle("is-active", active);
-    panel.setAttribute("aria-hidden", active ? "false" : "true");
-  });
-}
-
-function setActiveOperation(targetId) {
-  state.activeOperation = targetId;
-  elements.operationTabs.forEach((tab) => {
-    const active = tab.dataset.operationTarget === targetId;
-    tab.classList.toggle("is-active", active);
-    tab.setAttribute("aria-selected", active ? "true" : "false");
-  });
-  elements.operationPanels.forEach((panel) => {
-    const active = panel.id === targetId;
-    panel.classList.toggle("is-active", active);
-    panel.setAttribute("aria-hidden", active ? "false" : "true");
-  });
 }
 
 function setPanelLocked(panel, locked, message) {
@@ -1142,10 +886,12 @@ function resetSettingsForm() {
   elements.settingsForm.reset();
   elements.settingsResult.innerHTML = state.settingsPage
     ? ""
-    : '<div class="empty-state">还没有设置变化预览。</div>';
+    : '<div class="empty-state">连接后会在这里显示当前工作方式和即时生效状态。</div>';
   if (state.settingsPage) {
+    renderSettingsOptions(state.settingsPage);
     renderSettingsPage(state.settingsPage);
   }
+  renderLlmPage();
   syncActionAvailability();
 }
 
@@ -1160,8 +906,13 @@ function clearLoadedState() {
   state.catalogPage = null;
   state.gateDemoPage = null;
   state.settingsPage = null;
-  renderOverviewEmpty("连接后可查看当前状态和可用功能。");
-  renderGateDemoEmpty("连接后可查看示例说明。");
+  state.llmEditorDraft = null;
+  state.llmServiceModelSelections = {};
+  state.llmNotice = null;
+  setLlmModalOpen(false);
+  resetOperationChain();
+  renderOverviewEmpty("连接后可查看当前状态和主要入口。");
+  renderGateDemoEmpty("连接后可查看补充说明。");
   resetIngestForm();
   resetRetrieveForm();
   resetAccessForm();
@@ -1170,8 +921,7 @@ function clearLoadedState() {
   resetDebugForm();
   updateShellSignals();
   syncPanelGuards();
-  setActiveWorkspace(DEFAULTS.workspace);
-  setActiveOperation(DEFAULTS.operation);
+  renderOperationChain(state.activeOperation);
 }
 
 function collectIngestRequest() {
@@ -1265,24 +1015,20 @@ function collectOfflineRequest() {
   return body;
 }
 
-function collectSettingsPreviewRequest() {
-  const body = {};
-  if (elements.settingsBackend.value) {
-    body.backend = elements.settingsBackend.value;
+function collectSettingsApplyRequest() {
+  const answerMode = elements.settingsProvider.value || "builtin";
+  if (answerMode === "builtin") {
+    return {
+      provider: "stub",
+      model: "deterministic",
+      dev_mode: Boolean(elements.settingsDevMode.checked),
+    };
   }
-  if (elements.settingsProfile.value) {
-    body.profile = elements.settingsProfile.value;
+  const llmRequest = buildSelectedLlmApplyRequest({ includeDevMode: true });
+  if (!llmRequest) {
+    throw new Error("请先在 LLM 配置里保存一项服务，并获取可用模型。");
   }
-  if (elements.settingsProvider.value) {
-    body.provider = elements.settingsProvider.value;
-  }
-  if (elements.settingsModel.value.trim()) {
-    body.model = elements.settingsModel.value.trim();
-  }
-  if (elements.settingsDevMode.value) {
-    body.dev_mode = elements.settingsDevMode.value === "true";
-  }
-  return body;
+  return llmRequest;
 }
 
 function collectDebugRequest() {
@@ -1306,10 +1052,12 @@ async function refreshOverview() {
   if (!state.apiKey) {
     state.catalogPage = null;
     state.settingsPage = null;
-    renderOverviewEmpty("连接后可查看当前状态和可用功能。");
+    state.llmNotice = null;
+    renderOverviewEmpty("连接后可查看当前状态和主要入口。");
     resetSettingsForm();
     updateShellSignals();
     syncPanelGuards();
+    renderOperationChain(state.activeOperation);
     return;
   }
 
@@ -1322,14 +1070,16 @@ async function refreshOverview() {
   renderOverview(catalog, settings);
   renderSettingsOptions(settings);
   renderSettingsPage(settings);
+  renderLlmPage();
   updateShellSignals();
   syncPanelGuards();
+  renderOperationChain(state.activeOperation);
 }
 
 async function refreshGateDemo() {
   if (!state.apiKey) {
     state.gateDemoPage = null;
-    renderGateDemoEmpty("连接后可查看示例说明。");
+    renderGateDemoEmpty("连接后可查看补充说明。");
     updateShellSignals();
     return;
   }
@@ -1342,130 +1092,13 @@ async function refreshGateDemo() {
 
 async function refreshWorkspaceData() {
   if (!state.apiKey) {
-    renderOverviewEmpty("连接后可查看当前状态和可用功能。");
-    renderGateDemoEmpty("连接后可查看示例说明。");
+    renderOverviewEmpty("连接后可查看当前状态和主要入口。");
+    renderGateDemoEmpty("连接后可查看补充说明。");
     updateShellSignals();
     syncPanelGuards();
     return;
   }
   await Promise.all([refreshOverview(), refreshGateDemo()]);
-}
-
-function setButtonBusy(button, busyLabel) {
-  if (!button) {
-    return () => {};
-  }
-
-  const defaultLabel = button.dataset.defaultLabel || button.textContent.trim();
-  const originalWidth = button.getBoundingClientRect().width;
-  const busyWidth = measureBusyButtonWidth(button, busyLabel);
-  button.dataset.defaultLabel = defaultLabel;
-  button.dataset.busy = "true";
-  button.classList.add("is-busy");
-  applyButtonDisabledState(button);
-  button.setAttribute("aria-busy", "true");
-  button.textContent = busyLabel;
-  button.style.minWidth = `${Math.ceil(Math.max(originalWidth, busyWidth))}px`;
-
-  return () => {
-    delete button.dataset.busy;
-    button.classList.remove("is-busy");
-    button.removeAttribute("aria-busy");
-    button.textContent = defaultLabel;
-    button.style.minWidth = "";
-    applyButtonDisabledState(button);
-  };
-}
-
-async function runUiAction(
-  actionKey,
-  {
-    button = null,
-    busyLabel = "处理中",
-    minBusyMs = MIN_BUSY_MS.submit,
-    work,
-    readyMessage,
-  },
-) {
-  if (state.busyActions.has(actionKey)) {
-    return null;
-  }
-
-  state.busyActions.add(actionKey);
-  const restoreButton = setButtonBusy(button, busyLabel);
-  const startedAt = Date.now();
-
-  try {
-    setStatus(state.apiKey ? "正在处理中..." : "当前还没有连接。");
-    const result = await work();
-    await delay(Math.max(0, minBusyMs - (Date.now() - startedAt)));
-    setStatus(readyMessage || (state.apiKey ? "可以继续操作。" : "当前还没有连接。"));
-    return result;
-  } catch (error) {
-    await delay(Math.max(0, minBusyMs - (Date.now() - startedAt)));
-    setStatus(error instanceof Error ? error.message : "页面暂时没有完成这次操作，请稍后重试。");
-    return null;
-  } finally {
-    restoreButton();
-    state.busyActions.delete(actionKey);
-    syncActionAvailability();
-  }
-}
-
-function bindClickAction(
-  button,
-  actionKey,
-  {
-    before = null,
-    work,
-    busyLabel,
-    minBusyMs,
-    readyMessage,
-  },
-) {
-  button.addEventListener("click", () => {
-    if (typeof before === "function") {
-      before();
-    }
-    void runUiAction(actionKey, {
-      button,
-      busyLabel,
-      minBusyMs,
-      readyMessage,
-      work,
-    });
-  });
-}
-
-function bindFormAction(
-  form,
-  actionKey,
-  {
-    button,
-    before = null,
-    work,
-    busyLabel,
-    minBusyMs,
-    readyMessage,
-  },
-) {
-  form.addEventListener("submit", (event) => {
-    event.preventDefault();
-    const submitter = event.submitter instanceof HTMLButtonElement ? event.submitter : button;
-    if ((submitter || button)?.disabled) {
-      return;
-    }
-    if (typeof before === "function") {
-      before();
-    }
-    void runUiAction(actionKey, {
-      button: submitter || button,
-      busyLabel,
-      minBusyMs,
-      readyMessage,
-      work,
-    });
-  });
 }
 
 elements.workspaceTabs.forEach((tab) => {
@@ -1474,11 +1107,56 @@ elements.workspaceTabs.forEach((tab) => {
   });
 });
 
+elements.overviewGrid.addEventListener("click", (event) => {
+  const target = event.target instanceof Element
+    ? event.target.closest("[data-overview-entrypoint]")
+    : null;
+  if (!(target instanceof HTMLButtonElement)) {
+    return;
+  }
+  jumpToOverviewEntrypoint(target.dataset.overviewEntrypoint || "");
+});
+
 elements.operationTabs.forEach((tab) => {
   tab.addEventListener("click", () => {
     setActiveOperation(tab.dataset.operationTarget || DEFAULTS.operation);
   });
 });
+
+elements.opsChainOpenButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    const operationId = button.dataset.openChain || DEFAULTS.operation;
+    handleOperationChainOpenButton(operationId, setActiveWorkspace, setActiveOperation);
+  });
+});
+
+elements.opsChainBody.addEventListener("click", (event) => {
+  handleOperationChainBodyClick(event);
+});
+
+if (elements.opsChainClose) {
+  elements.opsChainClose.addEventListener("click", () => {
+    if (window.innerWidth <= 1024) {
+      setOperationChainDrawerOpen(false);
+      return;
+    }
+    setOperationChainHidden(true);
+  });
+}
+
+if (elements.opsChainBackdrop) {
+  elements.opsChainBackdrop.addEventListener("click", () => {
+    setOperationChainDrawerOpen(false);
+  });
+}
+
+if (elements.opsChainRestore) {
+  elements.opsChainRestore.addEventListener("click", () => {
+    setOperationChainHidden(false);
+    renderOperationChain(state.activeOperation);
+    focusOperationChainShell();
+  });
+}
 
 bindFormAction(elements.authForm, "auth-connect", {
   button: elements.authSubmit,
@@ -1495,6 +1173,14 @@ bindFormAction(elements.authForm, "auth-connect", {
     }
     window.localStorage.removeItem(STORAGE_KEY);
     clearLoadedState();
+    navigate(
+      {
+        activeWorkspace: DEFAULTS.workspace,
+        activeOperation: DEFAULTS.operation,
+        activeSettingsSection: DEFAULTS.settingsSection,
+      },
+      { replace: true },
+    );
     setStatus("当前还没有连接。");
   },
 });
@@ -1507,6 +1193,14 @@ bindClickAction(elements.clearKey, "auth-clear", {
     elements.apiKey.value = "";
     window.localStorage.removeItem(STORAGE_KEY);
     clearLoadedState();
+    navigate(
+      {
+        activeWorkspace: DEFAULTS.workspace,
+        activeOperation: DEFAULTS.operation,
+        activeSettingsSection: DEFAULTS.settingsSection,
+      },
+      { replace: true },
+    );
     setStatus("当前还没有连接。");
   },
 });
@@ -1532,18 +1226,28 @@ bindClickAction(elements.loadGateDemo, "gate-demo-refresh", {
 bindFormAction(elements.ingestForm, "ingest-submit", {
   button: elements.ingestSubmit,
   before: () => {
-    setActiveWorkspace("workspace-operations");
-    setActiveOperation("module-ingest");
+    navigate({
+      activeWorkspace: "workspace-operations",
+      activeOperation: "module-ingest",
+    });
   },
   busyLabel: "写入中",
   minBusyMs: MIN_BUSY_MS.submit,
   readyMessage: "写入完成，已保存到本地历史。",
   work: async () => {
     const request = collectIngestRequest();
-    const result = await submitIngest(state.apiKey, request);
-    rememberIngestSubmission(result, request);
-    renderIngestHistory();
-    applySuccessfulIngestState(result, request);
+    const submittedAt = new Date().toISOString();
+    setOperationChainSnapshot("module-ingest", buildRunningOperationChain("module-ingest", request, submittedAt));
+    try {
+      const result = await submitIngest(state.apiKey, request);
+      rememberIngestSubmission(result, request);
+      renderIngestHistory();
+      applySuccessfulIngestState(result, request);
+      setOperationChainSnapshot("module-ingest", buildSuccessfulOperationChain("module-ingest", request, result, submittedAt));
+    } catch (error) {
+      setOperationChainSnapshot("module-ingest", buildErrorOperationChain("module-ingest", request, error, submittedAt));
+      throw error;
+    }
   },
 });
 
@@ -1558,14 +1262,25 @@ bindClickAction(elements.ingestReset, "ingest-reset", {
 bindFormAction(elements.retrieveForm, "retrieve-submit", {
   button: elements.retrieveSubmit,
   before: () => {
-    setActiveWorkspace("workspace-operations");
-    setActiveOperation("module-retrieve");
+    navigate({
+      activeWorkspace: "workspace-operations",
+      activeOperation: "module-retrieve",
+    });
   },
   busyLabel: "检索中",
   minBusyMs: MIN_BUSY_MS.submit,
   work: async () => {
-    const result = await submitRetrieve(state.apiKey, collectRetrieveRequest());
-    renderRetrieveResult(result);
+    const request = collectRetrieveRequest();
+    const submittedAt = new Date().toISOString();
+    setOperationChainSnapshot("module-retrieve", buildRunningOperationChain("module-retrieve", request, submittedAt));
+    try {
+      const result = await submitRetrieve(state.apiKey, request);
+      renderRetrieveResult(result);
+      setOperationChainSnapshot("module-retrieve", buildSuccessfulOperationChain("module-retrieve", request, result, submittedAt));
+    } catch (error) {
+      setOperationChainSnapshot("module-retrieve", buildErrorOperationChain("module-retrieve", request, error, submittedAt));
+      throw error;
+    }
   },
 });
 
@@ -1580,14 +1295,25 @@ bindClickAction(elements.retrieveReset, "retrieve-reset", {
 bindFormAction(elements.accessForm, "access-submit", {
   button: elements.accessSubmit,
   before: () => {
-    setActiveWorkspace("workspace-operations");
-    setActiveOperation("module-access");
+    navigate({
+      activeWorkspace: "workspace-operations",
+      activeOperation: "module-access",
+    });
   },
   busyLabel: "访问中",
   minBusyMs: MIN_BUSY_MS.submit,
   work: async () => {
-    const result = await submitAccess(state.apiKey, collectAccessRequest());
-    renderAccessResult(result);
+    const request = collectAccessRequest();
+    const submittedAt = new Date().toISOString();
+    setOperationChainSnapshot("module-access", buildRunningOperationChain("module-access", request, submittedAt));
+    try {
+      const result = await submitAccess(state.apiKey, request);
+      renderAccessResult(result);
+      setOperationChainSnapshot("module-access", buildSuccessfulOperationChain("module-access", request, result, submittedAt));
+    } catch (error) {
+      setOperationChainSnapshot("module-access", buildErrorOperationChain("module-access", request, error, submittedAt));
+      throw error;
+    }
   },
 });
 
@@ -1602,14 +1328,25 @@ bindClickAction(elements.accessReset, "access-reset", {
 bindFormAction(elements.offlineForm, "offline-submit", {
   button: elements.offlineSubmit,
   before: () => {
-    setActiveWorkspace("workspace-operations");
-    setActiveOperation("module-offline");
+    navigate({
+      activeWorkspace: "workspace-operations",
+      activeOperation: "module-offline",
+    });
   },
   busyLabel: "提交中",
   minBusyMs: MIN_BUSY_MS.submit,
   work: async () => {
-    const result = await submitOffline(state.apiKey, collectOfflineRequest());
-    renderOfflineResult(result);
+    const request = collectOfflineRequest();
+    const submittedAt = new Date().toISOString();
+    setOperationChainSnapshot("module-offline", buildRunningOperationChain("module-offline", request, submittedAt));
+    try {
+      const result = await submitOffline(state.apiKey, request);
+      renderOfflineResult(result);
+      setOperationChainSnapshot("module-offline", buildSuccessfulOperationChain("module-offline", request, result, submittedAt));
+    } catch (error) {
+      setOperationChainSnapshot("module-offline", buildErrorOperationChain("module-offline", request, error, submittedAt));
+      throw error;
+    }
   },
 });
 
@@ -1622,75 +1359,329 @@ bindClickAction(elements.offlineReset, "offline-reset", {
 });
 elements.offlineJobKind.addEventListener("change", syncOfflineMode);
 
-bindFormAction(elements.settingsForm, "settings-preview", {
-  button: elements.settingsPreview,
-  before: () => {
-    setActiveWorkspace("workspace-settings");
-  },
-  busyLabel: "预览中",
-  minBusyMs: MIN_BUSY_MS.submit,
-  work: async () => {
-    const body = collectSettingsPreviewRequest();
-    if (!Object.keys(body).length) {
-      throw new Error("请至少选择一个设置项再预览");
-    }
-    const result = await previewSettings(state.apiKey, body);
-    renderSettingsPreview(result);
-  },
+function setSettingsControlsBusy(busy) {
+  const locked = busy || !state.apiKey;
+  elements.settingsProvider.disabled = locked;
+  elements.settingsDevMode.disabled = locked;
+}
+
+async function applySettingsLive() {
+  if (!state.apiKey || !state.settingsPage) {
+    return;
+  }
+  setActiveWorkspace("workspace-settings");
+  setSettingsControlsBusy(true);
+  const result = await runUiAction("settings-apply-live", {
+    busyLabel: "应用中",
+    minBusyMs: MIN_BUSY_MS.mutate,
+    readyMessage: "设置已立即生效。",
+    work: async () => {
+      const body = collectSettingsApplyRequest();
+      const mutation = await applySettings(state.apiKey, body);
+      const refreshedSettings = await loadSettings(state.apiKey);
+      state.settingsPage = refreshedSettings;
+      renderSettingsOptions(refreshedSettings);
+      if (state.catalogPage) {
+        renderOverview(state.catalogPage, refreshedSettings);
+      }
+      renderSettingsMutation(mutation, refreshedSettings);
+      updateShellSignals();
+      syncPanelGuards();
+      renderOperationChain(state.activeOperation);
+    },
+  });
+  setSettingsControlsBusy(false);
+  renderLlmPage();
+  syncPanelGuards();
+  return result;
+}
+
+elements.settingsForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+});
+elements.settingsProvider.addEventListener("change", () => {
+  if (elements.settingsProvider.value === "llm" && !buildSelectedLlmApplyRequest()) {
+    elements.settingsProvider.value = getAnswerModeFromSettings(state.settingsPage);
+    renderSettingsPage(state.settingsPage, "请先在 LLM 配置里保存服务，并获取可用模型。", "status-warn");
+    navigate({
+      activeWorkspace: "workspace-settings",
+      activeSettingsSection: "settings-panel-llm",
+    });
+    syncActionAvailability();
+    return;
+  }
+  void applySettingsLive();
+});
+elements.settingsDevMode.addEventListener("change", () => {
+  void applySettingsLive();
 });
 
-bindClickAction(elements.settingsApply, "settings-apply", {
-  before: () => {
-    setActiveWorkspace("workspace-settings");
-  },
-  busyLabel: "应用中",
-  minBusyMs: MIN_BUSY_MS.mutate,
-  work: async () => {
-    const body = collectSettingsPreviewRequest();
-    if (!Object.keys(body).length) {
-      throw new Error("请至少选择一个设置项再应用");
-    }
-    const result = await applySettings(state.apiKey, body);
-    const refreshedSettings = await loadSettings(state.apiKey);
-    state.settingsPage = refreshedSettings;
-    renderSettingsOptions(refreshedSettings);
-    renderSettingsPage(refreshedSettings);
-    if (state.catalogPage) {
-      renderOverview(state.catalogPage, refreshedSettings);
-    }
-    renderSettingsMutation(result);
-    updateShellSignals();
-    syncPanelGuards();
-  },
+elements.settingsTabs.forEach((tab) => {
+  tab.addEventListener("click", () => {
+    setActiveSettingsSection(tab.dataset.settingsTarget || DEFAULTS.settingsSection);
+  });
 });
 
-bindClickAction(elements.settingsRestore, "settings-restore", {
+bindClickAction(elements.llmCreateService, "llm-editor-open", {
   before: () => {
-    setActiveWorkspace("workspace-settings");
+    navigate({
+      activeWorkspace: "workspace-settings",
+      activeSettingsSection: "settings-panel-llm",
+    });
   },
-  busyLabel: "恢复中",
-  minBusyMs: MIN_BUSY_MS.mutate,
-  work: async () => {
-    const result = await restoreSettings(state.apiKey);
-    const refreshedSettings = await loadSettings(state.apiKey);
-    state.settingsPage = refreshedSettings;
-    renderSettingsOptions(refreshedSettings);
-    renderSettingsPage(refreshedSettings);
-    if (state.catalogPage) {
-      renderOverview(state.catalogPage, refreshedSettings);
-    }
-    renderSettingsMutation(result);
-    updateShellSignals();
-    syncPanelGuards();
-  },
-});
-
-bindClickAction(elements.settingsReset, "settings-reset", {
-  busyLabel: "重置中",
+  busyLabel: "打开中",
   minBusyMs: MIN_BUSY_MS.reset,
+  readyMessage: "可以继续编辑服务。",
   work: async () => {
-    resetSettingsForm();
+    openLlmEditor({ protocol: getSelectedLlmDraft().protocol || "openai" });
   },
+});
+
+elements.llmProtocolGrid.addEventListener("click", (event) => {
+  const protocolCard = event.target.closest("[data-llm-protocol]");
+  if (!(protocolCard instanceof HTMLElement)) {
+    return;
+  }
+  const protocol = protocolCard.dataset.llmProtocol || "openai";
+  primeLlmEditorFromSettings(state.settingsPage, { protocol });
+  renderLlmPage("已切换协议模板。", "status-ok");
+});
+
+elements.llmServiceForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+});
+
+elements.llmServiceName.addEventListener("input", () => {
+  updateLlmEditorDraft({ name: elements.llmServiceName.value });
+  syncLlmEditorDraftUi();
+  renderLlmIconPreview();
+  renderLlmStatus("服务名称已修改，点击“保存服务”后才会生效。", "status-warn");
+  syncActionAvailability();
+});
+
+elements.llmIconUpload.addEventListener("click", () => {
+  elements.llmServiceIconFile.click();
+});
+
+elements.llmServiceIconFile.addEventListener("change", async () => {
+  const [file] = elements.llmServiceIconFile.files || [];
+  if (!file) {
+    return;
+  }
+  try {
+    await updateDraftIconFromFile(file);
+  } catch (error) {
+    renderLlmStatus(error instanceof Error ? error.message : "图标图片处理失败。", "status-err");
+  } finally {
+    elements.llmServiceIconFile.value = "";
+  }
+});
+
+elements.llmIconRemove.addEventListener("click", () => {
+  updateLlmEditorDraft({ icon: "" });
+  elements.llmServiceIcon.value = "";
+  syncLlmEditorDraftUi();
+  renderLlmIconPreview();
+  renderLlmStatus("已移除图片图标，保存后会回退为服务名称首字母。", "status-warn");
+  syncActionAvailability();
+});
+
+elements.llmServiceEndpoint.addEventListener("input", () => {
+  updateLlmEditorDraft({ endpoint: elements.llmServiceEndpoint.value });
+  syncLlmEditorDraftUi();
+  renderLlmStatus("服务地址已修改，点击“保存服务”后才会生效。", "status-warn");
+  syncActionAvailability();
+});
+
+elements.llmServiceApiKey.addEventListener("input", () => {
+  updateLlmEditorDraft({ apiKey: elements.llmServiceApiKey.value });
+  syncLlmEditorDraftUi();
+  renderLlmStatus("Key 已修改，点击“保存服务”后才会生效。", "status-warn");
+  syncActionAvailability();
+});
+
+elements.llmActiveModel.addEventListener("change", () => {
+  updateLlmEditorDraft({ model: elements.llmActiveModel.value });
+  syncLlmEditorDraftUi();
+  renderLlmStatus("活跃模型已修改，点击“保存服务”后才会生效。", "status-warn");
+  syncActionAvailability();
+});
+
+bindClickAction(elements.llmServiceSave, "llm-service-save", {
+  before: () => {
+    navigate({
+      activeWorkspace: "workspace-settings",
+      activeSettingsSection: "settings-panel-llm",
+    });
+  },
+  busyLabel: "保存中",
+  minBusyMs: MIN_BUSY_MS.mutate,
+  readyMessage: "服务已保存。",
+  work: async () => {
+    await saveCurrentLlmService();
+    closeLlmEditor();
+  },
+});
+
+bindClickAction(elements.llmServiceDiscover, "llm-service-discover", {
+  before: () => {
+    navigate({
+      activeWorkspace: "workspace-settings",
+      activeSettingsSection: "settings-panel-llm",
+    });
+  },
+  busyLabel: "获取中",
+  minBusyMs: MIN_BUSY_MS.refresh,
+  readyMessage: "模型列表已刷新。",
+  work: async () => {
+    await discoverModelsFromEditor();
+  },
+});
+
+elements.llmServiceDelete.addEventListener("click", () => {
+  const draft = getSelectedLlmDraft();
+  const service = draft.serviceId ? getLlmServiceById(draft.serviceId) : null;
+  if (!service || !confirmDeleteLlmService(service)) {
+    return;
+  }
+  void runUiAction(`llm-delete-${service.service_id}`, {
+    button: elements.llmServiceDelete,
+    busyLabel: "删除中",
+    minBusyMs: MIN_BUSY_MS.mutate,
+    readyMessage: service.is_active ? "已删除服务，并切回内建模式。" : "服务已删除。",
+    work: async () => {
+      await deleteSavedLlmService(service.service_id, { closeEditor: true });
+    },
+  });
+});
+
+bindClickAction(elements.llmEditorReset, "llm-editor-reset", {
+  before: () => {
+    navigate({
+      activeWorkspace: "workspace-settings",
+      activeSettingsSection: "settings-panel-llm",
+    });
+  },
+  busyLabel: "切换中",
+  minBusyMs: MIN_BUSY_MS.reset,
+  readyMessage: "已切回新建服务。",
+  work: async () => {
+    const currentProtocol = getSelectedLlmDraft().protocol || "openai";
+    primeLlmEditorFromSettings(state.settingsPage, { protocol: currentProtocol });
+    setLlmModalOpen(true);
+    renderLlmPage("已切回新建服务。", "status-ok");
+  },
+});
+
+bindClickAction(elements.llmEditorClose, "llm-editor-close", {
+  busyLabel: "关闭中",
+  minBusyMs: MIN_BUSY_MS.reset,
+  readyMessage: "可以继续操作。",
+  work: async () => {
+    closeLlmEditor();
+  },
+});
+
+elements.llmModalCloseTargets.forEach((target) => {
+  target.addEventListener("click", () => {
+    closeLlmEditor();
+  });
+});
+
+elements.llmTraceClose.addEventListener("click", () => {
+  closeLlmTraceModal();
+});
+
+elements.llmTraceModalCloseTargets.forEach((target) => {
+  target.addEventListener("click", () => {
+    closeLlmTraceModal();
+  });
+});
+
+elements.llmServiceList.addEventListener("change", (event) => {
+  const modelSelect = event.target.closest("[data-llm-service-model]");
+  if (!(modelSelect instanceof HTMLSelectElement)) {
+    return;
+  }
+  state.llmServiceModelSelections[modelSelect.dataset.llmServiceModel] = modelSelect.value;
+  renderLlmStatus("已选择待启用的模型。", "status-ok");
+  syncActionAvailability();
+});
+
+elements.llmServiceList.addEventListener("click", (event) => {
+  const editButton = event.target.closest("[data-llm-edit-service]");
+  if (editButton instanceof HTMLElement) {
+    openLlmEditor(
+      { serviceId: editButton.dataset.llmEditService },
+      "已载入这项服务，可继续修改。",
+      "status-ok",
+    );
+    return;
+  }
+
+  const discoverButton = event.target.closest("[data-llm-discover-service]");
+  if (discoverButton instanceof HTMLButtonElement) {
+    void runUiAction(`llm-discover-${discoverButton.dataset.llmDiscoverService}`, {
+      button: discoverButton,
+      busyLabel: "获取中",
+      minBusyMs: MIN_BUSY_MS.refresh,
+      readyMessage: "模型列表已刷新。",
+      work: async () => {
+        await discoverModelsForService(discoverButton.dataset.llmDiscoverService);
+      },
+    });
+    return;
+  }
+
+  const deleteButton = event.target.closest("[data-llm-delete-service]");
+  if (deleteButton instanceof HTMLButtonElement) {
+    const service = getLlmServiceById(deleteButton.dataset.llmDeleteService);
+    if (!service || !confirmDeleteLlmService(service)) {
+      return;
+    }
+    void runUiAction(`llm-delete-${deleteButton.dataset.llmDeleteService}`, {
+      button: deleteButton,
+      busyLabel: "删除中",
+      minBusyMs: MIN_BUSY_MS.mutate,
+      readyMessage: service.is_active ? "已删除服务，并切回内建模式。" : "服务已删除。",
+      work: async () => {
+        await deleteSavedLlmService(deleteButton.dataset.llmDeleteService);
+      },
+    });
+    return;
+  }
+
+  const activateButton = event.target.closest("[data-llm-activate-service]");
+  if (activateButton instanceof HTMLButtonElement) {
+    void runUiAction(`llm-activate-${activateButton.dataset.llmActivateService}`, {
+      button: activateButton,
+      busyLabel: "启用中",
+      minBusyMs: MIN_BUSY_MS.mutate,
+      readyMessage: "已切换到这项服务。",
+      work: async () => {
+        await activateSavedLlmService(activateButton.dataset.llmActivateService);
+      },
+    });
+  }
+});
+
+window.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") {
+    return;
+  }
+  if (handleOperationChainEscape()) {
+    return;
+  }
+  if (state.llmModalOpen) {
+    closeLlmEditor();
+  }
+});
+
+window.addEventListener("resize", () => {
+  syncOperationChainVisibility();
+  if (window.innerWidth > 1024 && state.operationChainDrawerOpen) {
+    setOperationChainDrawerOpen(false);
+  }
 });
 
 bindFormAction(elements.debugForm, "debug-submit", {
@@ -1796,33 +1787,31 @@ function bindAvailabilitySync(control) {
   elements.offlineTargetRefs,
   elements.offlineReason,
   elements.offlinePriority,
-  elements.settingsBackend,
-  elements.settingsProfile,
   elements.settingsProvider,
-  elements.settingsModel,
   elements.settingsDevMode,
+  elements.llmServiceName,
+  elements.llmServiceIcon,
+  elements.llmServiceEndpoint,
+  elements.llmServiceApiKey,
+  elements.llmActiveModel,
   elements.debugRunId,
   elements.debugOperationId,
   elements.debugObjectId,
   elements.debugLimit,
 ].forEach(bindAvailabilitySync);
 
-// Mobile sidebar toggle
-const mobToggle = document.querySelector("#mob-toggle");
-const sidebarEl = document.querySelector("#sidebar");
-const backdropEl = document.querySelector("#sidebar-backdrop");
 function closeSidebar() {
-  sidebarEl.classList.remove("is-open");
-  backdropEl.classList.remove("is-open");
+  elements.sidebarEl.classList.remove("is-open");
+  elements.backdropEl.classList.remove("is-open");
 }
-if (mobToggle) {
-  mobToggle.addEventListener("click", () => {
-    const open = sidebarEl.classList.toggle("is-open");
-    backdropEl.classList.toggle("is-open", open);
+if (elements.mobToggle) {
+  elements.mobToggle.addEventListener("click", () => {
+    const open = elements.sidebarEl.classList.toggle("is-open");
+    elements.backdropEl.classList.toggle("is-open", open);
   });
 }
-if (backdropEl) {
-  backdropEl.addEventListener("click", closeSidebar);
+if (elements.backdropEl) {
+  elements.backdropEl.addEventListener("click", closeSidebar);
 }
 // Close sidebar when workspace tab clicked on mobile
 elements.workspaceTabs.forEach((tab) => {
@@ -1832,10 +1821,11 @@ elements.workspaceTabs.forEach((tab) => {
 });
 
 elements.apiKey.value = state.apiKey;
-setActiveWorkspace(state.activeWorkspace);
-setActiveOperation(state.activeOperation);
+workbenchRouter.initialize();
+syncOperationChainVisibility();
 renderIngestHistory();
 syncIngestFieldHints();
+renderLlmPage();
 updateShellSignals();
 syncPanelGuards();
 syncActionAvailability();
@@ -1848,6 +1838,6 @@ if (state.apiKey) {
   });
 } else {
   setStatus("当前还没有连接。");
-  renderOverviewEmpty("连接后可查看当前状态和可用功能。");
-  renderGateDemoEmpty("连接后可查看示例说明。");
+  renderOverviewEmpty("连接后可查看当前状态和主要入口。");
+  renderGateDemoEmpty("连接后可查看补充说明。");
 }

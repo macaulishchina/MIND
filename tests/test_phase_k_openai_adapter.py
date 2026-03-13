@@ -7,6 +7,7 @@ from typing import Any
 import pytest
 
 from mind.capabilities import (
+    AnswerRequest,
     CapabilityAdapterDescriptor,
     CapabilityAdapterError,
     CapabilityAuthConfig,
@@ -135,14 +136,181 @@ def test_openai_adapter_parses_reflect_claims() -> None:
     assert response.evidence_refs == ["episode-004", "episode-004-raw-04"]
 
 
-def test_openai_adapter_rejects_invalid_json_payload() -> None:
+def test_openai_adapter_supports_chat_completions_compatible_endpoint() -> None:
+    captured: dict[str, Any] = {}
+    config = _openai_config().model_copy(update={"endpoint": "https://api.deepseek.com"})
+
+    def _transport(
+        endpoint: str,
+        payload: dict[str, Any],
+        headers: dict[str, str],
+        timeout_seconds: float | None,
+    ) -> dict[str, Any]:
+        captured["endpoint"] = endpoint
+        captured["payload"] = payload
+        captured["headers"] = headers
+        captured["timeout_seconds"] = timeout_seconds
+        return {
+            "id": "chatcmpl_123",
+            "model": "deepseek-chat",
+            "choices": [
+                {
+                    "message": {
+                        "role": "assistant",
+                        "content": json.dumps({"summary_text": "compatible summary"}),
+                    }
+                }
+            ],
+        }
+
+    adapter = OpenAICapabilityAdapter(
+        config,
+        clock=_fixed_clock,
+        transport=_transport,
+    )
+    response = adapter.invoke(
+        SummarizeRequest(
+            request_id="sum-openai-compatible",
+            source_text="source text for a compatible provider",
+            source_refs=["obj-compatible"],
+            instruction="Summarize for a compatible provider.",
+            max_output_tokens=48,
+        )
+    )
+
+    assert response.summary_text == "compatible summary"
+    assert response.trace.provider_family is CapabilityProviderFamily.OPENAI
+    assert response.trace.endpoint == "https://api.deepseek.com/chat/completions"
+    assert captured["endpoint"] == "https://api.deepseek.com/chat/completions"
+    assert captured["headers"]["Authorization"] == "Bearer secret-key"
+    assert captured["payload"]["messages"][0]["role"] == "user"
+    assert "Return JSON only." in captured["payload"]["messages"][0]["content"]
+    assert captured["payload"]["max_tokens"] == 48
+
+
+def test_openai_adapter_extracts_json_from_markdown_code_fence() -> None:
     adapter = OpenAICapabilityAdapter(
         _openai_config(),
         clock=_fixed_clock,
         transport=lambda *_args, **_kwargs: {
             "status": "completed",
             "model": "gpt-4.1-mini",
-            "output_text": "not-json",
+            "output_text": '```json\n{"summary_text":"fenced summary"}\n```',
+        },
+    )
+
+    response = adapter.invoke(SummarizeRequest(request_id="sum-fenced", source_text="source"))
+
+    assert response.summary_text == "fenced summary"
+
+
+def test_openai_adapter_projects_plain_text_answer_when_provider_skips_json() -> None:
+    config = _openai_config().model_copy(update={"endpoint": "https://api.deepseek.com"})
+    adapter = OpenAICapabilityAdapter(
+        config,
+        clock=_fixed_clock,
+        transport=lambda *_args, **_kwargs: {
+            "id": "chatcmpl_plain_answer",
+            "model": "deepseek-chat",
+            "choices": [
+                {
+                    "message": {
+                        "role": "assistant",
+                        "content": "这是来自兼容服务的自然语言回答。",
+                    }
+                }
+            ],
+        },
+    )
+
+    response = adapter.invoke(
+        AnswerRequest(
+            request_id="answer-openai-plain-text",
+            question="请给出简短回答",
+            context_text="plain text compatible output",
+            support_ids=["obj-plain"],
+        )
+    )
+
+    assert response.answer_text == "这是来自兼容服务的自然语言回答。"
+    assert response.support_ids == ["obj-plain"]
+
+
+def test_openai_adapter_accepts_answer_alias_in_json_payload() -> None:
+    config = _openai_config().model_copy(update={"endpoint": "https://api.deepseek.com"})
+    adapter = OpenAICapabilityAdapter(
+        config,
+        clock=_fixed_clock,
+        transport=lambda *_args, **_kwargs: {
+            "id": "chatcmpl_answer_alias",
+            "model": "deepseek-chat",
+            "choices": [
+                {
+                    "message": {
+                        "role": "assistant",
+                        "content": '{"answer":"这是兼容服务返回的 answer 字段。"}',
+                    }
+                }
+            ],
+        },
+    )
+
+    response = adapter.invoke(
+        AnswerRequest(
+            request_id="answer-openai-answer-alias",
+            question="请给出简短回答",
+            context_text="json alias output",
+            support_ids=["obj-alias"],
+        )
+    )
+
+    assert response.answer_text == "这是兼容服务返回的 answer 字段。"
+    assert response.support_ids == ["obj-alias"]
+
+
+def test_openai_adapter_captures_raw_exchange_for_answer_requests() -> None:
+    config = _openai_config().model_copy(update={"endpoint": "https://api.deepseek.com"})
+    adapter = OpenAICapabilityAdapter(
+        config,
+        clock=_fixed_clock,
+        transport=lambda *_args, **_kwargs: {
+            "id": "chatcmpl_answer_trace",
+            "model": "deepseek-chat",
+            "choices": [
+                {
+                    "message": {
+                        "role": "assistant",
+                        "content": '{"answer_text":"你好，我是 DeepSeek。"}',
+                    }
+                }
+            ],
+        },
+    )
+
+    response = adapter.invoke(
+        AnswerRequest(
+            request_id="answer-openai-trace",
+            question="你好",
+            context_text='{"kind":"workspace","slots":[{"summary":"你好，今天下雨。"}]}',
+            support_ids=["obj-1"],
+            capture_raw_exchange=True,
+        )
+    )
+
+    assert response.answer_text == "你好，我是 DeepSeek。"
+    assert response.trace.request_text is not None
+    assert "Question: 你好" in response.trace.request_text
+    assert response.trace.response_text == '{"answer_text":"你好，我是 DeepSeek。"}'
+
+
+def test_openai_adapter_rejects_empty_payload() -> None:
+    adapter = OpenAICapabilityAdapter(
+        _openai_config(),
+        clock=_fixed_clock,
+        transport=lambda *_args, **_kwargs: {
+            "status": "completed",
+            "model": "gpt-4.1-mini",
+            "output_text": "   ",
         },
     )
 

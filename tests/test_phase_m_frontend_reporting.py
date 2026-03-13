@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import shutil
 
 from mind.fixtures import build_frontend_experience_bench_v1
 from mind.frontend import (
@@ -64,10 +65,8 @@ def test_frontend_flow_report_fails_when_transport_surface_regresses(
         (frontend_root / "index.html").read_text(encoding="utf-8"),
         encoding="utf-8",
     )
-    (broken_root / "styles.css").write_text(
-        (frontend_root / "styles.css").read_text(encoding="utf-8"),
-        encoding="utf-8",
-    )
+    shutil.copytree(frontend_root / "app", broken_root / "app")
+    shutil.copytree(frontend_root / "styles", broken_root / "styles")
     (broken_root / "app.js").write_text(
         (frontend_root / "app.js").read_text(encoding="utf-8"),
         encoding="utf-8",
@@ -75,7 +74,7 @@ def test_frontend_flow_report_fails_when_transport_surface_regresses(
     (broken_root / "api.js").write_text(
         (frontend_root / "api.js")
         .read_text(encoding="utf-8")
-        .replace('"/v1/frontend/settings:restore"', '"/v1/frontend/settings:noop"'),
+        .replace('"/v1/frontend/settings:apply"', '"/v1/frontend/settings:noop"'),
         encoding="utf-8",
     )
 
@@ -84,11 +83,11 @@ def test_frontend_flow_report_fails_when_transport_surface_regresses(
     assert report.passed is False
     assert report.transport_surface_present is False
     assert report.config_audit_pass is False
-    assert "config_recovery_mobile" in report.failure_ids
+    assert "config_dev_mode_toggle_desktop" in report.failure_ids
     scenario = next(
-        item for item in report.scenario_results if item.scenario_id == "config_recovery_mobile"
+        item for item in report.scenario_results if item.scenario_id == "config_dev_mode_toggle_desktop"
     )
-    assert 'transport:"/v1/frontend/settings:restore"' in scenario.missing_checks
+    assert 'transport:"/v1/frontend/settings:apply"' in scenario.missing_checks
 
 
 def test_frontend_flow_report_fails_when_access_answer_contract_regresses(
@@ -98,13 +97,21 @@ def test_frontend_flow_report_fails_when_access_answer_contract_regresses(
     broken_root = tmp_path / "frontend"
     broken_root.mkdir()
 
-    for name in ("index.html", "styles.css", "api.js"):
+    for name in ("index.html", "api.js"):
         (broken_root / name).write_text(
             (frontend_root / name).read_text(encoding="utf-8"),
             encoding="utf-8",
         )
+    shutil.copytree(frontend_root / "app", broken_root / "app")
+    shutil.copytree(frontend_root / "styles", broken_root / "styles")
     (broken_root / "app.js").write_text(
         (frontend_root / "app.js")
+        .read_text(encoding="utf-8")
+        .replace("const answer = result.answer || null;", "const answer = null;"),
+        encoding="utf-8",
+    )
+    (broken_root / "app" / "operation-chain.js").write_text(
+        (frontend_root / "app" / "operation-chain.js")
         .read_text(encoding="utf-8")
         .replace("const answer = result.answer || null;", "const answer = null;"),
         encoding="utf-8",

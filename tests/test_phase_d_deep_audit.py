@@ -315,9 +315,25 @@ class TestRetrievalEdgeCases:
         assert "governance_plan" not in text
         assert "summary_scope" in text
 
+    def test_build_search_text_keeps_cjk_content_readable(self) -> None:
+        obj = build_core_object_showcase()[0]
+        obj["content"] = "你好，今天下雨，记得带伞。"
+
+        text = build_search_text(obj)
+
+        assert "你好" in text
+        assert "\\u4f60" not in text
+
     def test_tokenize_basic(self) -> None:
         result = tokenize("Hello World 123")
         assert result == {"hello", "world", "123"}
+
+    def test_tokenize_supports_cjk_keywords(self) -> None:
+        result = tokenize("你好，今天下雨")
+        assert "你好" in result
+        assert "今天下雨" in result
+        assert "今天" in result
+        assert "下雨" in result
 
     def test_tokenize_empty(self) -> None:
         assert tokenize("") == set()
