@@ -208,6 +208,10 @@ class TestBackwardCompatReExport:
             "OfflineJobStore",
             "PromoteSchemaJobPayload",
             "ReflectEpisodeJobPayload",
+            "RefreshEmbeddingsJobPayload",
+            "ResolveConflictJobPayload",
+            "UpdatePriorityJobPayload",
+            "VerifyProposalJobPayload",
             "new_offline_job",
             "utc_now",
         }

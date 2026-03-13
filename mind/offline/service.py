@@ -23,7 +23,10 @@ from .jobs import (
     OfflineJobKind,
     PromoteSchemaJobPayload,
     ReflectEpisodeJobPayload,
+    RefreshEmbeddingsJobPayload,
+    ResolveConflictJobPayload,
     UpdatePriorityJobPayload,
+    VerifyProposalJobPayload,
 )
 from .promotion import assess_schema_promotion
 
@@ -225,6 +228,15 @@ class OfflineMaintenanceService:
                     ),
                 )
                 result = self._process_update_priority(job, payload=payload)
+            elif job.job_kind is OfflineJobKind.REFRESH_EMBEDDINGS:
+                payload = RefreshEmbeddingsJobPayload.model_validate(job.payload)
+                result = self._process_refresh_embeddings(job, payload=payload)
+            elif job.job_kind is OfflineJobKind.RESOLVE_CONFLICT:
+                payload = ResolveConflictJobPayload.model_validate(job.payload)
+                result = self._process_resolve_conflict(job, payload=payload)
+            elif job.job_kind is OfflineJobKind.VERIFY_PROPOSAL:
+                payload = VerifyProposalJobPayload.model_validate(job.payload)
+                result = self._process_verify_proposal(job, payload=payload)
             else:
                 raise OfflineMaintenanceError(
                     f"unsupported offline job kind '{job.job_kind.value}'"
@@ -358,6 +370,18 @@ class OfflineMaintenanceService:
         new_object_ids = list(result.response["new_object_ids"])
         if len(new_object_ids) != 1:
             raise OfflineMaintenanceError("promotion must create exactly one SchemaNote")
+
+        # Phase β-4: Set proposal_status=proposed on the new SchemaNote so that
+        # it must pass VERIFY_PROPOSAL before entering retrieval.
+        schema_obj = self.store.read_object(new_object_ids[0])
+        now = self._clock()
+        updated_metadata = dict(schema_obj.get("metadata", {}))
+        updated_metadata["proposal_status"] = "proposed"
+        updated_schema = dict(schema_obj)
+        updated_schema["version"] = int(schema_obj["version"]) + 1
+        updated_schema["updated_at"] = now.isoformat()
+        updated_schema["metadata"] = updated_metadata
+        self.store.insert_object(updated_schema)
         latest_schema = self.store.read_object(new_object_ids[0])
         return {
             "job_kind": job.job_kind.value,
@@ -368,6 +392,7 @@ class OfflineMaintenanceService:
             "stability_score": latest_schema["metadata"]["stability_score"],
             "source_refs": list(latest_schema["source_refs"]),
             "reconstruction_text": reconstruction.reconstruction_text,
+            "proposal_status": "proposed",
         }
 
     def _assess_promotion(
@@ -425,6 +450,179 @@ class OfflineMaintenanceService:
             "updated_count": len(updated_ids),
             "updated_ids": updated_ids,
             "reason": payload.reason,
+        }
+
+    def _process_refresh_embeddings(
+        self,
+        job: OfflineJob,
+        *,
+        payload: RefreshEmbeddingsJobPayload,
+    ) -> dict[str, Any]:
+        """Batch-refresh dense embeddings for objects that lack them (Phase β-1)."""
+        from mind.kernel.embedding import embed_objects
+
+        now = self._clock()
+        object_ids = payload.object_ids or [
+            obj["id"] for obj in self.store.iter_latest_objects()
+        ]
+        refreshed_ids: list[str] = []
+        target_objects: list[dict[str, Any]] = []
+        for object_id in object_ids:
+            try:
+                obj = self.store.read_object(object_id)
+            except Exception:
+                continue
+            if obj.get("status") in ("archived", "deprecated", "invalid"):
+                continue
+            # Only refresh objects that don't already have dense_embedding.
+            if obj.get("metadata", {}).get("dense_embedding_refreshed"):
+                continue
+            target_objects.append(obj)
+
+        if not target_objects:
+            return {
+                "job_kind": job.job_kind.value,
+                "refreshed_count": 0,
+                "refreshed_ids": [],
+                "reason": payload.reason,
+            }
+
+        embeddings = embed_objects(target_objects)
+        for obj in target_objects:
+            try:
+                embedding = embeddings.get(obj["id"])
+                if embedding is None:
+                    continue
+                metadata = dict(obj.get("metadata", {}))
+                metadata["dense_embedding_refreshed"] = True
+                metadata["dense_embedding_dim"] = len(embedding)
+                updated_obj = dict(obj)
+                updated_obj["version"] = int(obj["version"]) + 1
+                updated_obj["updated_at"] = now.isoformat()
+                updated_obj["metadata"] = metadata
+                self.store.insert_object(updated_obj)
+                refreshed_ids.append(obj["id"])
+            except Exception:
+                continue
+
+        return {
+            "job_kind": job.job_kind.value,
+            "refreshed_count": len(refreshed_ids),
+            "refreshed_ids": refreshed_ids,
+            "reason": payload.reason,
+        }
+
+    def _process_resolve_conflict(
+        self,
+        job: OfflineJob,
+        *,
+        payload: ResolveConflictJobPayload,
+    ) -> dict[str, Any]:
+        """Handle conflict resolution for a flagged object (Phase β-2)."""
+        from mind.primitives.conflict import ConflictRelation
+
+        now = self._clock()
+        deprecated_ids: list[str] = []
+        high_confidence_contradictions = [
+            c
+            for c in payload.conflict_candidates
+            if (
+                c.get("relation") == ConflictRelation.CONTRADICT
+                and float(c.get("confidence", 0.0)) >= 0.85
+            )
+        ]
+        for candidate in high_confidence_contradictions:
+            neighbour_id = candidate.get("neighbor_id")
+            if not neighbour_id:
+                continue
+            try:
+                neighbour = self.store.read_object(neighbour_id)
+            except Exception:
+                continue
+            if neighbour.get("status") in ("archived", "deprecated", "invalid"):
+                continue
+            metadata = dict(neighbour.get("metadata", {}))
+            metadata["deprecated_by"] = payload.object_id
+            metadata["deprecation_reason"] = candidate.get("explanation", "conflict resolved")
+            deprecated_obj = dict(neighbour)
+            deprecated_obj["status"] = "deprecated"
+            deprecated_obj["version"] = int(neighbour["version"]) + 1
+            deprecated_obj["updated_at"] = now.isoformat()
+            deprecated_obj["metadata"] = metadata
+            try:
+                self.store.insert_object(deprecated_obj)
+                deprecated_ids.append(neighbour_id)
+            except Exception:
+                continue
+
+        return {
+            "job_kind": job.job_kind.value,
+            "object_id": payload.object_id,
+            "deprecated_count": len(deprecated_ids),
+            "deprecated_ids": deprecated_ids,
+        }
+
+    def _process_verify_proposal(
+        self,
+        job: OfflineJob,
+        *,
+        payload: VerifyProposalJobPayload,
+    ) -> dict[str, Any]:
+        """Verify or reject a proposed SchemaNote (Phase β-4).
+
+        Simple rule-based verification:
+        * If the SchemaNote has cross-episode evidence (>= 2 distinct episodes),
+          it is promoted to ``committed``.
+        * Otherwise it is ``rejected``.
+        """
+        now = self._clock()
+        try:
+            schema_note = self.store.read_object(payload.schema_note_id)
+        except Exception as exc:
+            raise OfflineMaintenanceError(
+                f"schema note '{payload.schema_note_id}' not found"
+            ) from exc
+
+        if schema_note.get("type") != "SchemaNote":
+            raise OfflineMaintenanceError(
+                f"object '{payload.schema_note_id}' is not a SchemaNote"
+            )
+
+        metadata = schema_note.get("metadata", {})
+        evidence_refs = metadata.get("evidence_refs", [])
+        supporting_episode_ids = set()
+        for ref in evidence_refs:
+            try:
+                ref_obj = self.store.read_object(ref)
+                ep_id = ref_obj.get("metadata", {}).get("episode_id")
+                if ep_id:
+                    supporting_episode_ids.add(ep_id)
+            except Exception:
+                continue
+
+        # Verification decision: require cross-episode support.
+        verified = len(supporting_episode_ids) >= 2
+        new_proposal_status = "committed" if verified else "rejected"
+
+        updated_metadata = dict(metadata)
+        updated_metadata["proposal_status"] = new_proposal_status
+        updated_obj = dict(schema_note)
+        updated_obj["version"] = int(schema_note["version"]) + 1
+        updated_obj["updated_at"] = now.isoformat()
+        updated_obj["metadata"] = updated_metadata
+        try:
+            self.store.insert_object(updated_obj)
+        except Exception as exc:
+            raise OfflineMaintenanceError(
+                f"failed to update proposal status for '{payload.schema_note_id}'"
+            ) from exc
+
+        return {
+            "job_kind": job.job_kind.value,
+            "schema_note_id": payload.schema_note_id,
+            "proposal_status": new_proposal_status,
+            "supporting_episodes": sorted(supporting_episode_ids),
+            "verified": verified,
         }
 
     @staticmethod

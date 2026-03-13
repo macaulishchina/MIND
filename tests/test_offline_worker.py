@@ -175,7 +175,9 @@ def test_offline_worker_processes_reflection_and_promotion_jobs(tmp_path: Path) 
 
         schema = store.read_object(str(promote_result["schema_object_id"]))
         assert schema["type"] == "SchemaNote"
-        assert schema["version"] == 1
+        # Phase β-4: promotion sets proposal_status=proposed on a new version.
+        assert schema["version"] >= 1
+        assert schema["metadata"].get("proposal_status") == "proposed"
         assert schema["source_refs"] == [
             f"{reflect_episode.episode_id}-reflection",
             f"{promotion_episode.episode_id}-reflection",

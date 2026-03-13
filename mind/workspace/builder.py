@@ -54,6 +54,7 @@ class WorkspaceBuilder:
         telemetry_run_id: str | None = None,
         telemetry_operation_id: str | None = None,
         telemetry_parent_event_id: str | None = None,
+        slot_allocation_policy: Any = None,
     ) -> WorkspaceBuildResult:
         if not task_id:
             raise WorkspaceBuildError("task_id must be non-empty")
@@ -123,7 +124,18 @@ class WorkspaceBuilder:
             ),
             reverse=True,
         )
-        selected = ranked_candidates[:slot_limit]
+
+        # Phase β-3: Apply diversity rebalancing when a slot allocation policy
+        # is provided.  Falls back to simple score-rank truncation otherwise.
+        if slot_allocation_policy is not None:
+            from mind.workspace.policy import apply_diversity_policy
+            selected = apply_diversity_policy(
+                ranked_candidates,
+                slot_limit=slot_limit,
+                policy=slot_allocation_policy,
+            )
+        else:
+            selected = ranked_candidates[:slot_limit]
 
         slots = [
             self._build_slot(index=index + 1, obj=obj, retrieval_score=score)

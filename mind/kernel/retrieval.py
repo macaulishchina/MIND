@@ -125,6 +125,16 @@ def matches_retrieval_filters(
         return False
 
     metadata = obj.get("metadata", {})
+
+    # Phase β-4: exclude SchemaNote objects in `proposed` or `rejected` states
+    # from default retrieval paths. Only `verified` and `committed` SchemaNotes
+    # participate in retrieval (backward compat: absence of proposal_status is
+    # treated as `committed`).
+    if obj["type"] == "SchemaNote":
+        proposal_status = metadata.get("proposal_status")
+        if proposal_status in ("proposed", "rejected"):
+            return False
+
     if task_id is not None and metadata.get("task_id") != task_id:
         return False
 
