@@ -782,7 +782,7 @@ def test_frontend_llm_service_lifecycle_persists_and_activates(
         assert timeout == 10.0
         return _FakeResponse({"data": [{"id": "gpt-4.1-mini"}, {"id": "gpt-4o-mini"}]})
 
-    monkeypatch.setattr("mind.frontend.settings.urlopen", _fake_urlopen)
+    monkeypatch.setattr("mind.app.frontend_llm_services.urlopen", _fake_urlopen)
 
     config = resolve_cli_config(
         backend="sqlite",

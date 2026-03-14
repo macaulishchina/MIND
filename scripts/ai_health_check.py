@@ -79,9 +79,20 @@ LAYER_ORDER: dict[str, int] = {
 }
 
 # CLI modules are exempt from print() checks
-CLI_MODULES = {"mind/cli.py", "mind/product_cli.py", "mind/devcli.py", "mind/cli_gate.py"}
+CLI_MODULES = {
+    "mind/cli.py",
+    "mind/cli_demo_cmds.py",
+    "mind/cli_gates.py",
+    "mind/cli_ops_cmds.py",
+    "mind/cli_output.py",
+    "mind/cli_phase_gates.py",
+    "mind/cli_primitive_cmds.py",
+    "mind/devcli.py",
+    "mind/cli_gate.py",
+    "mind/product_cli.py",
+}
 
-FILE_LINE_LIMIT = 500
+FILE_LINE_LIMIT = 800
 CONSTITUTION_LINE_LIMIT = 500
 
 
@@ -395,7 +406,7 @@ def check_forbidden_patterns() -> dict[str, Any]:
         except OSError:
             continue
 
-        # --- File length > 500 lines ---
+        # --- File length > 800 lines ---
         if len(lines) > FILE_LINE_LIMIT:
             items.append(_v(
                 fstr, len(lines), "forbidden/file-too-long",

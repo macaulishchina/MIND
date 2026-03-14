@@ -20,6 +20,19 @@ from mind.primitives.service import PrimitiveService
 FIXED_TIMESTAMP = datetime(2026, 3, 9, 14, 0, tzinfo=UTC)
 
 
+class _StubCapabilityPort:
+    """Minimal stub so summarize / reflect can run without a real LLM."""
+
+    def summarize_text(self, **kwargs: Any) -> str:
+        return "stub summary"
+
+    def reflect_text(self, **kwargs: Any) -> str:
+        return "stub reflection"
+
+    def resolve_provider_config(self, **kwargs: Any) -> Any:
+        return None
+
+
 def _context(
     *,
     actor: str = "phase-c-tester",
@@ -43,7 +56,11 @@ def test_all_seven_primitives_are_callable_and_logged(tmp_path: Path) -> None:
     with SQLiteMemoryStore(db_path) as store:
         store.insert_objects(showcase)
         store.insert_objects(episode.objects)
-        service = PrimitiveService(store, clock=lambda: FIXED_TIMESTAMP)
+        service = PrimitiveService(
+            store,
+            clock=lambda: FIXED_TIMESTAMP,
+            capability_service=_StubCapabilityPort(),
+        )
         context = _context()
 
         write_result = service.write_raw(

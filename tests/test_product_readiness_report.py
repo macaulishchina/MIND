@@ -188,7 +188,8 @@ def test_product_readiness_gate_main_fails_and_persists_report(
 ) -> None:
     failing_report = _sample_product_readiness_report(passed=False)
     monkeypatch.setattr(
-        "mind.cli.evaluate_product_readiness_report", lambda repo_root: failing_report
+        "mind.cli_phase_gates.evaluate_product_readiness_report",
+        lambda repo_root: failing_report,
     )
 
     output_path = tmp_path / "product_readiness_gate_fail.json"

@@ -434,7 +434,7 @@ async def test_frontend_llm_service_routes_manage_services(
         assert timeout == 10.0
         return _FakeResponse({"data": [{"id": "gpt-4.1-mini"}, {"id": "gpt-4o-mini"}]})
 
-    monkeypatch.setattr("mind.frontend.settings.urlopen", _fake_urlopen)
+    monkeypatch.setattr("mind.app.frontend_llm_services.urlopen", _fake_urlopen)
 
     upsert = await api_client.post(
         "/v1/frontend/llm/services:upsert",

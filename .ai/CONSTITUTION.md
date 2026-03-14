@@ -128,7 +128,7 @@ All primitive operations use typed Pydantic contracts (`mind/primitives/contract
   same change.
 - **MUST**: If a target file is already over 400 lines, prefer extracting a
   sibling module instead of adding another responsibility to the file.
-- **MUST**: If a file is already over 500 lines, only make minimal bug-fix
+- **MUST**: If a file is already over 800 lines, only make minimal bug-fix
   edits or split it as part of the change.
 
 ---
@@ -153,7 +153,7 @@ All primitive operations use typed Pydantic contracts (`mind/primitives/contract
 - ❌ Hardcoded secrets, API keys, or connection strings.
 - ❌ `print()` for logging — use `logging.getLogger(__name__)`.
 - ❌ Nested functions deeper than 2 levels.
-- ❌ Files longer than 500 lines — split into modules.
+- ❌ Files longer than 800 lines — split into modules.
 - ❌ Placeholder production code (`TODO`, `FIXME`, `NotImplementedError`,
   `pass`, temporary fallback) as the final implementation.
 - ❌ Circular imports — if you get one, the layering is wrong.

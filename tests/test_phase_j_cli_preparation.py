@@ -252,10 +252,22 @@ def test_access_benchmark_uses_isolated_postgres_backend(
             ),
         )
 
-    monkeypatch.setattr("mind.cli.temporary_postgres_database", fake_temporary_postgres_database)
-    monkeypatch.setattr("mind.cli.run_postgres_migrations", fake_run_postgres_migrations)
-    monkeypatch.setattr("mind.cli.build_postgres_store_factory", fake_build_postgres_store_factory)
-    monkeypatch.setattr("mind.cli.evaluate_access_benchmark", fake_evaluate_access_benchmark)
+    monkeypatch.setattr(
+        "mind.cli_primitive_cmds.temporary_postgres_database",
+        fake_temporary_postgres_database,
+    )
+    monkeypatch.setattr(
+        "mind.cli_primitive_cmds.run_postgres_migrations",
+        fake_run_postgres_migrations,
+    )
+    monkeypatch.setattr(
+        "mind.cli_primitive_cmds.build_postgres_store_factory",
+        fake_build_postgres_store_factory,
+    )
+    monkeypatch.setattr(
+        "mind.cli_primitive_cmds.evaluate_access_benchmark",
+        fake_evaluate_access_benchmark,
+    )
 
     exit_code = mind_main(
         [
@@ -557,9 +569,12 @@ def test_demo_offline_job_uses_isolated_postgres_backend(
     def fake_run_postgres_migrations(dsn: str) -> None:
         captured["migrated_dsn"] = dsn
 
-    monkeypatch.setattr("mind.cli.temporary_postgres_database", fake_temporary_postgres_database)
-    monkeypatch.setattr("mind.cli.run_postgres_migrations", fake_run_postgres_migrations)
-    monkeypatch.setattr("mind.cli.PostgresMemoryStore", lambda dsn: fake_store)
+    monkeypatch.setattr(
+        "mind.cli_demo_cmds.temporary_postgres_database",
+        fake_temporary_postgres_database,
+    )
+    monkeypatch.setattr("mind.cli_demo_cmds.run_postgres_migrations", fake_run_postgres_migrations)
+    monkeypatch.setattr("mind.cli_demo_cmds.PostgresMemoryStore", lambda dsn: fake_store)
 
     exit_code = mind_main(
         [
@@ -605,7 +620,7 @@ def test_gate_phase_b_dispatches_to_phase_b_main(monkeypatch: pytest.MonkeyPatch
         called["count"] += 1
         return 17
 
-    monkeypatch.setattr("mind.cli.kernel_gate_main", fake_kernel_gate_main)
+    monkeypatch.setattr("mind.cli_demo_cmds.kernel_gate_main", fake_kernel_gate_main)
 
     exit_code = mind_main(["gate", "phase-b"])
 
@@ -620,7 +635,7 @@ def test_gate_phase_i_forwards_output_argument(monkeypatch: pytest.MonkeyPatch) 
         captured["argv"] = argv
         return 0
 
-    monkeypatch.setattr("mind.cli.access_gate_main", fake_access_gate_main)
+    monkeypatch.setattr("mind.cli_demo_cmds.access_gate_main", fake_access_gate_main)
 
     exit_code = mind_main(["gate", "phase-i", "--output", "/tmp/phase_i_gate.json"])
 
@@ -635,7 +650,7 @@ def test_gate_phase_j_forwards_output_and_dsn(monkeypatch: pytest.MonkeyPatch) -
         captured["argv"] = argv
         return 0
 
-    monkeypatch.setattr("mind.cli.cli_gate_main", fake_cli_gate_main)
+    monkeypatch.setattr("mind.cli_demo_cmds.cli_gate_main", fake_cli_gate_main)
 
     exit_code = mind_main(
         [
@@ -666,7 +681,7 @@ def test_gate_phase_k_forwards_output_and_live_providers(
         captured["argv"] = argv
         return 0
 
-    monkeypatch.setattr("mind.cli.capability_gate_main", fake_capability_gate_main)
+    monkeypatch.setattr("mind.cli_demo_cmds.capability_gate_main", fake_capability_gate_main)
 
     exit_code = mind_main(
         [
@@ -701,7 +716,10 @@ def test_gate_product_readiness_forwards_output_and_markdown(
         captured["argv"] = argv
         return 0
 
-    monkeypatch.setattr("mind.cli.product_readiness_gate_main", fake_product_readiness_gate_main)
+    monkeypatch.setattr(
+        "mind.cli_demo_cmds.product_readiness_gate_main",
+        fake_product_readiness_gate_main,
+    )
 
     exit_code = mind_main(
         [
@@ -730,7 +748,10 @@ def test_gate_postgres_regression_forwards_dsn(monkeypatch: pytest.MonkeyPatch) 
         captured["argv"] = argv
         return 0
 
-    monkeypatch.setattr("mind.cli.postgres_regression_main", fake_postgres_regression_main)
+    monkeypatch.setattr(
+        "mind.cli_demo_cmds.postgres_regression_main",
+        fake_postgres_regression_main,
+    )
 
     exit_code = mind_main(
         ["gate", "postgres-regression", "--dsn", "postgresql+psycopg://example"],
@@ -763,7 +784,7 @@ def test_report_phase_f_ci_forwards_repeat_count_and_output(
         captured["argv"] = argv
         return 0
 
-    monkeypatch.setattr("mind.cli.benchmark_report_main", fake_benchmark_report_main)
+    monkeypatch.setattr("mind.cli_ops_cmds.benchmark_report_main", fake_benchmark_report_main)
 
     exit_code = mind_main(
         [
@@ -794,7 +815,10 @@ def test_report_phase_g_cost_forwards_repeat_count_and_output(
         captured["argv"] = argv
         return 0
 
-    monkeypatch.setattr("mind.cli.strategy_cost_report_main", fake_strategy_cost_report_main)
+    monkeypatch.setattr(
+        "mind.cli_ops_cmds.strategy_cost_report_main",
+        fake_strategy_cost_report_main,
+    )
 
     exit_code = mind_main(
         [
@@ -826,7 +850,7 @@ def test_report_phase_k_compatibility_forwards_output_and_live_providers(
         return 0
 
     monkeypatch.setattr(
-        "mind.cli.capability_compatibility_report_main",
+        "mind.cli_ops_cmds.capability_compatibility_report_main",
         fake_capability_compatibility_report_main,
     )
 
@@ -860,7 +884,7 @@ def test_report_product_transport_forwards_output_and_markdown(
         return 0
 
     monkeypatch.setattr(
-        "mind.cli.product_transport_report_main",
+        "mind.cli_ops_cmds.product_transport_report_main",
         fake_product_transport_report_main,
     )
 
@@ -894,7 +918,7 @@ def test_report_deployment_smoke_forwards_output_and_markdown(
         return 0
 
     monkeypatch.setattr(
-        "mind.cli.deployment_smoke_report_main",
+        "mind.cli_ops_cmds.deployment_smoke_report_main",
         fake_deployment_smoke_report_main,
     )
 
@@ -928,7 +952,7 @@ def test_report_product_readiness_forwards_output_and_markdown(
         return 0
 
     monkeypatch.setattr(
-        "mind.cli.product_readiness_report_main",
+        "mind.cli_ops_cmds.product_readiness_report_main",
         fake_product_readiness_report_main,
     )
 
@@ -1009,7 +1033,7 @@ def test_offline_worker_dispatches_to_worker_main(monkeypatch: pytest.MonkeyPatc
         captured["argv"] = argv
         return 13
 
-    monkeypatch.setattr("mind.cli.offline_worker_main", fake_offline_worker_main)
+    monkeypatch.setattr("mind.cli_ops_cmds.offline_worker_main", fake_offline_worker_main)
 
     exit_code = mind_main(
         [
@@ -1066,7 +1090,7 @@ def test_offline_list_jobs_prints_filtered_jobs(
         ).model_copy(update={"status": OfflineJobStatus.SUCCEEDED}),
     ]
 
-    monkeypatch.setattr("mind.cli.PostgresMemoryStore", lambda dsn: fake_store)
+    monkeypatch.setattr("mind.cli_ops_cmds.PostgresMemoryStore", lambda dsn: fake_store)
 
     exit_code = mind_main(
         ["offline", "list-jobs", "--dsn", "postgresql+psycopg://jobs", "--status", "pending"]
@@ -1080,7 +1104,7 @@ def test_offline_list_jobs_prints_filtered_jobs(
 
 def test_offline_reflect_episode_enqueues_job(monkeypatch: pytest.MonkeyPatch) -> None:
     fake_store = _FakePostgresStore()
-    monkeypatch.setattr("mind.cli.PostgresMemoryStore", lambda dsn: fake_store)
+    monkeypatch.setattr("mind.cli_ops_cmds.PostgresMemoryStore", lambda dsn: fake_store)
 
     exit_code = mind_main(
         [
@@ -1110,7 +1134,7 @@ def test_offline_reflect_episode_enqueues_job(monkeypatch: pytest.MonkeyPatch) -
 
 def test_offline_promote_schema_enqueues_job(monkeypatch: pytest.MonkeyPatch) -> None:
     fake_store = _FakePostgresStore()
-    monkeypatch.setattr("mind.cli.PostgresMemoryStore", lambda dsn: fake_store)
+    monkeypatch.setattr("mind.cli_ops_cmds.PostgresMemoryStore", lambda dsn: fake_store)
 
     exit_code = mind_main(
         [
@@ -1151,8 +1175,8 @@ def test_offline_replay_ranks_candidate_ids(
         captured["top_k"] = top_k
         return (ReplayTarget(object_id="candidate-b", score=1.25),)
 
-    monkeypatch.setattr("mind.cli.PostgresMemoryStore", lambda dsn: fake_store)
-    monkeypatch.setattr("mind.cli.select_replay_targets", fake_select_replay_targets)
+    monkeypatch.setattr("mind.cli_ops_cmds.PostgresMemoryStore", lambda dsn: fake_store)
+    monkeypatch.setattr("mind.cli_ops_cmds.select_replay_targets", fake_select_replay_targets)
 
     exit_code = mind_main(
         [
@@ -1197,8 +1221,8 @@ def test_offline_replay_can_derive_candidates_from_episode(
         captured["top_k"] = top_k
         return ()
 
-    monkeypatch.setattr("mind.cli.PostgresMemoryStore", lambda dsn: fake_store)
-    monkeypatch.setattr("mind.cli.select_replay_targets", fake_select_replay_targets)
+    monkeypatch.setattr("mind.cli_ops_cmds.PostgresMemoryStore", lambda dsn: fake_store)
+    monkeypatch.setattr("mind.cli_ops_cmds.select_replay_targets", fake_select_replay_targets)
 
     exit_code = mind_main(
         [
@@ -1621,7 +1645,7 @@ def test_primitive_write_raw_can_use_postgres_backend(
             return None
 
     class _FakePrimitiveService:
-        def __init__(self, store: object) -> None:
+        def __init__(self, store: object, **kwargs: object) -> None:
             captured["store"] = store
 
         def write_raw(self, request: object, context: object) -> PrimitiveExecutionResult:

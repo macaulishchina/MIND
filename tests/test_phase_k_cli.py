@@ -57,7 +57,7 @@ def test_capability_gate_main_prints_pass_report(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     monkeypatch.setattr(
-        "mind.cli._build_live_capability_adapters",
+        "mind.cli_gates._build_live_capability_adapters",
         lambda requested_providers: [
             _ProviderAdapter(CapabilityProviderFamily.OPENAI),
             _ProviderAdapter(CapabilityProviderFamily.CLAUDE),
@@ -94,7 +94,7 @@ def test_capability_compatibility_report_main_prints_summary(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     monkeypatch.setattr(
-        "mind.cli._build_live_capability_adapters",
+        "mind.cli_gates._build_live_capability_adapters",
         lambda requested_providers: [
             _ProviderAdapter(CapabilityProviderFamily.OPENAI),
         ],
@@ -123,7 +123,7 @@ def test_capability_gate_main_rejects_missing_live_provider_auth(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        "mind.cli.build_capability_adapters_from_environment",
+        "mind.cli_phase_gates.build_capability_adapters_from_environment",
         lambda provider_families=None: [],
     )
 
