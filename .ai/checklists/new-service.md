@@ -47,5 +47,4 @@ Use this checklist when creating a brand new service under `mind/app/services/`.
 - [ ] `uv run ruff check mind/ tests/` — zero errors
 - [ ] `uv run mypy mind/ tests/` — zero errors
 - [ ] `uv run pytest tests/test_<service_name>.py -v` — all pass
-- [ ] `uv run python scripts/ai_health_check.py --report-for-ai` — quick local health check passes
-- [ ] `uv run python scripts/ai_health_check.py --full --report-for-ai` — full health check passes
+- [ ] Run the appropriate health check once for this milestone: `uv run python scripts/ai_health_check.py --report-for-ai` during local iteration, or `uv run python scripts/ai_health_check.py --full --report-for-ai` for final/pre-commit verification (`--full` subsumes quick)

@@ -12,10 +12,16 @@ from `.ai/templates/PLANS.md` before editing code.
 
 ## Health Check
 
-After completing code changes, run the health check:
+Use one health-check mode per verification milestone.
+For local iteration, run the quick health check:
 ```bash
 uv run python scripts/ai_health_check.py --report-for-ai
 ```
+For final verification or before committing, run the full health check instead:
+```bash
+uv run python scripts/ai_health_check.py --full --report-for-ai
+```
+The full check subsumes the quick check, so do not run both back-to-back for the same verification step.
 Then read `.ai/health/repair-prompt.md` for a prioritized repair plan.
 
 Also run this when the user requests a health assessment, full check,

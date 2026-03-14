@@ -248,7 +248,7 @@ Defined in `PrimitiveName` enum (`mind/primitives/contracts.py`):
 This project has an automated health check script: `scripts/ai_health_check.py`.
 
 **When to run it:**
-- After completing a batch of code changes (run quick during iteration, full before committing)
+- After completing a batch of code changes (use quick during iteration; use full instead for final verification or before committing)
 - After fixing bugs or refactoring
 - When the user asks for a health assessment, full check, AI health test, 全面检查, 健康检测, or similar
 - When you are unsure whether your changes introduced regressions
@@ -265,6 +265,9 @@ workers and automatic exclusion of `slow` / `gate` tests.
 ```bash
 uv run python scripts/ai_health_check.py --full --report-for-ai
 ```
+
+If you are already doing final verification, do not run the quick check right
+before this; the full check subsumes it.
 
 **Preferred routine pytest command** (instead of bare `uv run pytest tests/`):
 ```bash

@@ -146,7 +146,7 @@ def test_check_tests_injects_timing_path_and_reads_summary(
     assert "-n" in cmd
 
 
-def test_generate_ai_repair_prompt_mentions_full_recheck() -> None:
+def test_generate_ai_repair_prompt_prefers_full_for_final_verification() -> None:
     prompt = health_check.generate_ai_repair_prompt(
         {
             "score": {"total": 90.0},
@@ -169,3 +169,5 @@ def test_generate_ai_repair_prompt_mentions_full_recheck() -> None:
 
     assert "--report-for-ai" in prompt
     assert "--full --report-for-ai" in prompt
+    assert "intermediate feedback" in prompt
+    assert "instead of" in prompt

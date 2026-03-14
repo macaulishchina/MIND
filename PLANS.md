@@ -17,6 +17,8 @@
   runtime in practice.
 - AI agents may still invoke bare `uv run pytest tests/`, which is slower than
   the desired fast local workflow.
+- Some AI-facing verification guidance still suggests running both the default
+  quick health check and `--full` for the same milestone, which wastes time.
 - The access benchmark recomputes per-case baseline work multiple times.
 - There is no built-in timing artifact that explains where pytest time is
   spent.
@@ -69,8 +71,8 @@
 - `uv run pytest tests/test_ai_health_check.py -q --no-header`
 - `uv run pytest tests/test_access_benchmark.py -q --no-header`
 - `uv run pytest tests/test_phase_j_cli_preparation.py -q --no-header -k access_benchmark`
-- `uv run python scripts/ai_health_check.py --report-for-ai`
-- `uv run python scripts/ai_health_check.py --full --report-for-ai`
+- Local iteration: `uv run python scripts/ai_health_check.py --report-for-ai`
+- Final verification: `uv run python scripts/ai_health_check.py --full --report-for-ai` (skip quick if you are already running full)
 
 ## Progress Log
 
@@ -80,6 +82,8 @@
 - `done` — Optimized access benchmark baseline reuse so each case computes its baseline once.
 - `done` — Updated `.ai` workflow rules, checklists, and agent entrypoint docs to prefer quick parallel pytest and require full health checks before commit.
 - `done` — Verified with targeted pytest runs plus both quick and full health checks.
+- `done` — Followed up the AI-facing guidance so final verification uses
+  `--full` instead of redundantly asking for quick plus full in the same step.
 
 ## Decisions
 

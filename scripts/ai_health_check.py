@@ -138,7 +138,7 @@ def _run(
 
 def _pytest_worker_count() -> int:
     """Return the default worker count for quick pytest runs."""
-    return max(4, os.cpu_count() or 1)
+    return 2 * max(10, os.cpu_count() or 1)
 
 
 def build_pytest_command(*, full: bool) -> list[str]:
@@ -878,9 +878,10 @@ def generate_ai_repair_prompt(report: dict[str, Any]) -> str:
     lines.append("# AI Self-Repair Task")
     lines.append("")
     lines.append("The health check found the following issues.")
-    lines.append("Fix them in priority order. After each fix, re-run the quick check:")
+    lines.append("Fix them in priority order. Use the quick check only for intermediate feedback:")
     lines.append("  uv run python scripts/ai_health_check.py --report-for-ai")
-    lines.append("Before committing, run the full check:")
+    lines.append("For final verification or before committing, run the full check instead of")
+    lines.append("re-running quick:")
     lines.append("  uv run python scripts/ai_health_check.py --full --report-for-ai")
     lines.append("")
     lines.append("## Report Files")
@@ -946,8 +947,8 @@ def generate_ai_repair_prompt(report: dict[str, Any]) -> str:
     lines.append("2. Fix failing tests first (they block everything)")
     lines.append("3. Architecture violations next (structural integrity)")
     lines.append("4. Then forbidden patterns → mypy → ruff")
-    lines.append("5. After each category, re-run the quick health check")
-    lines.append("6. Before commit, re-run the full health check")
+    lines.append("5. Use the quick health check only for intermediate feedback")
+    lines.append("6. For final verification, run the full health check instead of quick")
     lines.append("7. Do NOT introduce new violations while fixing old ones")
     lines.append("")
 

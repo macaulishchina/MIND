@@ -69,6 +69,8 @@ tests/
 - For focused files or nodeids, keep the same worker-count rule when parallel
   execution is still helpful.
 - Before committing, run `uv run python scripts/ai_health_check.py --full --report-for-ai`.
+- If you are about to run the full health check, skip a separate quick health
+  check for that same verification step; full subsumes quick.
 
 ## Phase Gate Tests
 

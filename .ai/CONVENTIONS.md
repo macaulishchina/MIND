@@ -22,6 +22,8 @@ uv run python scripts/ai_health_check.py --full --report-for-ai
 
 Routine local pytest should prefer the parallel quick command from
 `.ai/rules/testing.md` instead of bare `uv run pytest tests/`.
+If you are already running the pre-commit full health check, skip a separate
+quick health check for that same verification step.
 
 ---
 
