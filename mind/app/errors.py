@@ -10,6 +10,7 @@ from mind.app.contracts import AppError, AppErrorCode
 # Exception hierarchy
 # ---------------------------------------------------------------------------
 
+
 class AppServiceError(RuntimeError):
     """Base exception for application service layer errors."""
 
@@ -49,6 +50,7 @@ class ConflictError(AppServiceError):
 # ---------------------------------------------------------------------------
 # Domain error mapper
 # ---------------------------------------------------------------------------
+
 
 def map_domain_error(exc: Exception) -> AppError:
     """Map a domain exception to a unified ``AppError`` payload.

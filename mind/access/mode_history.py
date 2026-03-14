@@ -52,9 +52,7 @@ class ModeHistoryCache:
         """
         key = str(task_family) if task_family is not None else "_all"
         bucket = self._scores.setdefault(key, {})
-        bucket[mode.value] = round(
-            bucket.get(mode.value, 0.0) + float(quality_signal), 4
-        )
+        bucket[mode.value] = round(bucket.get(mode.value, 0.0) + float(quality_signal), 4)
 
     def record_from_feedback(self, feedback_object: dict[str, Any]) -> None:
         """Extract mode + quality signal from a FeedbackRecord and call :meth:`record`.

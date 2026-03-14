@@ -420,8 +420,4 @@ def _session_payload(req: AppRequest) -> dict[str, Any]:
 
 
 def _runtime_defaults_from_preferences(preferences: dict[str, Any]) -> dict[str, Any]:
-    return {
-        key: preferences[key]
-        for key in _DEFAULT_RUNTIME_DEFAULTS
-        if key in preferences
-    }
+    return {key: preferences[key] for key in _DEFAULT_RUNTIME_DEFAULTS if key in preferences}

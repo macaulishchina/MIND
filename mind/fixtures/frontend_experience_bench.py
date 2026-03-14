@@ -59,7 +59,8 @@ def build_frontend_experience_bench_v1() -> list[FrontendExperienceScenario]:
             "access",
             "desktop",
             False,
-            "Desktop ask/access flow runs auto depth and returns answer details plus trace-backed context.",
+            "Desktop ask/access flow runs auto depth and returns "
+            "answer details plus trace-backed context.",
         ),
         FrontendExperienceScenario(
             "access_explain_mobile",
@@ -67,7 +68,8 @@ def build_frontend_experience_bench_v1() -> list[FrontendExperienceScenario]:
             "access",
             "mobile",
             False,
-            "Mobile access explain flow surfaces resolved depth, selected evidence, and answer support details.",
+            "Mobile access explain flow surfaces resolved depth, "
+            "selected evidence, and answer support details.",
         ),
         FrontendExperienceScenario(
             "offline_reflect_submit_desktop",
@@ -115,7 +117,8 @@ def build_frontend_experience_bench_v1() -> list[FrontendExperienceScenario]:
             "config_backend",
             "mobile",
             False,
-            "Mobile config view keeps the runtime environment visible without exposing an edit path.",
+            "Mobile config view keeps the runtime environment "
+            "visible without exposing an edit path.",
         ),
         FrontendExperienceScenario(
             "config_provider_model_desktop",
@@ -123,7 +126,8 @@ def build_frontend_experience_bench_v1() -> list[FrontendExperienceScenario]:
             "config_provider",
             "desktop",
             False,
-            "Desktop config view can switch answer mode immediately and still expose the LLM detail entrypoint.",
+            "Desktop config view can switch answer mode immediately "
+            "and still expose the LLM detail entrypoint.",
         ),
         FrontendExperienceScenario(
             "config_dev_mode_toggle_desktop",
@@ -205,15 +209,13 @@ def build_frontend_experience_bench_v1() -> list[FrontendExperienceScenario]:
         missing = sorted(expected_categories - actual_categories)
         extra = sorted(actual_categories - expected_categories)
         raise RuntimeError(
-            "FrontendExperienceBench v1 category mismatch: "
-            f"missing={missing}, extra={extra}"
+            f"FrontendExperienceBench v1 category mismatch: missing={missing}, extra={extra}"
         )
     if actual_entrypoints != expected_entrypoints:
         missing = sorted(expected_entrypoints - actual_entrypoints)
         extra = sorted(actual_entrypoints - expected_entrypoints)
         raise RuntimeError(
-            "FrontendExperienceBench v1 entrypoint mismatch: "
-            f"missing={missing}, extra={extra}"
+            f"FrontendExperienceBench v1 entrypoint mismatch: missing={missing}, extra={extra}"
         )
     if len(scenarios) != 20:
         raise RuntimeError(

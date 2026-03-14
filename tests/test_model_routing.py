@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-import pytest
-
+from mind.capabilities.config import CapabilityProviderConfig, CapabilityProviderFamily
 from mind.capabilities.contracts import (
     CapabilityName,
     CapabilityRoutingConfig,
+    SummarizeResponse,
 )
 from mind.capabilities.service import CapabilityService
-from mind.capabilities.config import CapabilityProviderConfig, CapabilityProviderFamily
 
 
 def _deterministic_config() -> CapabilityProviderConfig:
@@ -122,6 +121,7 @@ class TestCapabilityServiceRouting:
             source_text="backward compatibility test sentence",
         )
         response = service.invoke(req)
+        assert isinstance(response, SummarizeResponse)
         assert response.summary_text
 
 
@@ -146,6 +146,7 @@ class TestCliModelRoutingConfig:
 
     def test_model_routing_from_env(self) -> None:
         import json
+
         from mind.cli_config import resolve_cli_config
 
         routing = {"summarize": "small-model", "reflect": "large-model"}

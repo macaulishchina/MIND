@@ -33,6 +33,7 @@ class CliProfileSpec:
 @dataclass(frozen=True)
 class SchedulerConfig:
     """Scheduler tuning knobs (Phase α-3.6)."""
+
     auto_reflect_enabled: bool = True
     promote_threshold: int = 3
     priority_refresh_days: int = 7
@@ -41,6 +42,7 @@ class SchedulerConfig:
 @dataclass(frozen=True)
 class EmbeddingConfig:
     """Dense-retrieval embedding settings (Phase β-1)."""
+
     provider: str = "local"
     model_name: str = "deterministic-sha256"
     dimension: int = 64
@@ -92,17 +94,13 @@ _PROFILE_SPECS: tuple[CliProfileSpec, ...] = (
     ),
     CliProfileSpec(
         profile=CliProfile.POSTGRES_MAIN,
-        description=(
-            "Primary PostgreSQL profile for the formal backend and worker flows."
-        ),
+        description=("Primary PostgreSQL profile for the formal backend and worker flows."),
         default_backend=CliBackend.POSTGRESQL,
         env_hint="MIND_POSTGRES_DSN",
     ),
     CliProfileSpec(
         profile=CliProfile.POSTGRES_TEST,
-        description=(
-            "PostgreSQL test profile for isolated regression or temporary database runs."
-        ),
+        description=("PostgreSQL test profile for isolated regression or temporary database runs."),
         default_backend=CliBackend.POSTGRESQL,
         env_hint="MIND_TEST_POSTGRES_DSN",
     ),
@@ -144,9 +142,7 @@ def resolve_cli_config(
         sqlite_allowed=sqlite_allowed,
     )
     resolved_backend = backend_override or _profile_spec(resolved_profile).default_backend
-    backend_source = (
-        "cli" if backend_override is not None else f"profile:{resolved_profile.value}"
-    )
+    backend_source = "cli" if backend_override is not None else f"profile:{resolved_profile.value}"
 
     resolved_sqlite_path: Path | None = None
     sqlite_path_source: str | None = None
@@ -187,6 +183,7 @@ def resolve_cli_config(
         env_routing_raw = active_env.get("MIND_MODEL_ROUTING")
         if env_routing_raw:
             import json as _json
+
             try:
                 resolved_model_routing = _json.loads(env_routing_raw)
             except (ValueError, TypeError):
@@ -250,10 +247,7 @@ def build_config_doctor_checks(config: ResolvedCliConfig) -> tuple[ConfigDoctorC
             ConfigDoctorCheck(
                 name="sqlite_path",
                 status="ok",
-                detail=(
-                    f"path={config.sqlite_path.as_posix()},"
-                    f"source={config.sqlite_path_source}"
-                ),
+                detail=(f"path={config.sqlite_path.as_posix()},source={config.sqlite_path_source}"),
             )
         )
     else:
@@ -268,10 +262,7 @@ def build_config_doctor_checks(config: ResolvedCliConfig) -> tuple[ConfigDoctorC
             )
         else:
             status = "ok" if config.postgres_dsn.startswith("postgresql+psycopg://") else "warn"
-            detail = (
-                f"dsn={redact_dsn(config.postgres_dsn)},"
-                f"source={config.postgres_dsn_source}"
-            )
+            detail = f"dsn={redact_dsn(config.postgres_dsn)},source={config.postgres_dsn_source}"
             checks.append(ConfigDoctorCheck(name="postgres_dsn", status=status, detail=detail))
 
     return tuple(checks)
@@ -365,8 +356,7 @@ def _validate_sqlite_request(
         )
     if backend_override is CliBackend.SQLITE or sqlite_path is not None:
         raise RuntimeError(
-            "SQLite backend is test-only. Use PostgreSQL via MIND_POSTGRES_DSN "
-            "or --postgres-dsn."
+            "SQLite backend is test-only. Use PostgreSQL via MIND_POSTGRES_DSN or --postgres-dsn."
         )
 
 

@@ -112,6 +112,24 @@ class _SingleJobStore:
             }
         )
 
+    def cancel_offline_job(
+        self,
+        job_id: str,
+        *,
+        cancelled_at: datetime,
+        error: dict,
+    ) -> None:
+        job = self._jobs[job_id]
+        self._jobs[job_id] = job.model_copy(
+            update={
+                "status": OfflineJobStatus.FAILED,
+                "completed_at": cancelled_at,
+                "updated_at": cancelled_at,
+                "result": None,
+                "error": error,
+            }
+        )
+
 
 def test_offline_reflect_job_emits_offline_events_in_dev_mode(tmp_path: Path) -> None:
     recorder = InMemoryTelemetryRecorder()
@@ -153,7 +171,10 @@ def test_offline_reflect_job_emits_offline_events_in_dev_mode(tmp_path: Path) ->
     assert all(event.job_id == "phase-l-reflect-job" for event in offline_events)
     assert offline_events[1].payload["primitive"] == "reflect"
     assert offline_events[1].payload["episode_id"] == episode.episode_id
-    assert offline_events[2].payload["result"]["reflection_object_id"] == result["reflection_object_id"]
+    assert (
+        offline_events[2].payload["result"]["reflection_object_id"]
+        == result["reflection_object_id"]
+    )
 
     primitive_events = [
         event for event in recorder.iter_events() if event.scope is TelemetryScope.PRIMITIVE
@@ -292,7 +313,9 @@ def test_offline_service_does_not_emit_when_dev_mode_disabled(tmp_path: Path) ->
             actor="phase-l-offline",
         )
 
-    assert [event for event in recorder.iter_events() if event.scope is TelemetryScope.OFFLINE] == []
+    assert [
+        event for event in recorder.iter_events() if event.scope is TelemetryScope.OFFLINE
+    ] == []
 
 
 def test_offline_worker_passes_dev_mode_to_maintenance_service(tmp_path: Path) -> None:

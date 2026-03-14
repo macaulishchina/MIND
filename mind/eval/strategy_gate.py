@@ -178,8 +178,7 @@ def assert_strategy_gate(result: StrategyGateResult) -> None:
             f"{item.family}={item.pus_delta.mean_diff:.4f}" for item in result.family_improvements
         )
         raise RuntimeError(
-            "G-3 failed: optimized strategy did not generalize across >= 2 families "
-            f"({families})"
+            f"G-3 failed: optimized strategy did not generalize across >= 2 families ({families})"
         )
     if not result.g4_pass:
         raise RuntimeError(
@@ -274,9 +273,7 @@ def _system_report(
     suite_report: BenchmarkSuiteReport,
     system_id: str,
 ) -> BenchmarkSystemReport:
-    return next(
-        report for report in suite_report.system_reports if report.system_id == system_id
-    )
+    return next(report for report in suite_report.system_reports if report.system_id == system_id)
 
 
 def _budget_bias_within_limit(interval: Any) -> bool:

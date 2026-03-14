@@ -56,8 +56,7 @@ def test_mkdocs_config_exposes_product_grade_nav() -> None:
     assert config["site_name"] == "MIND"
     assert config["theme"]["name"] == "material"
     plugin_names = {
-        item if isinstance(item, str) else next(iter(item))
-        for item in config["plugins"]
+        item if isinstance(item, str) else next(iter(item)) for item in config["plugins"]
     }
     assert {"search", "mkdocstrings"}.issubset(plugin_names)
 

@@ -207,8 +207,7 @@ def assert_benchmark_comparison(result: BenchmarkComparisonResult) -> None:
         )
     if not result.f6_pass:
         raise RuntimeError(
-            "F-6 failed: MIND vs plain RAG "
-            f"(mean_diff={result.versus_plain_rag.mean_diff:.4f})"
+            f"F-6 failed: MIND vs plain RAG (mean_diff={result.versus_plain_rag.mean_diff:.4f})"
         )
 
 

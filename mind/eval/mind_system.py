@@ -118,9 +118,7 @@ class MindLongHorizonSystem:
         handle_count = len(handle_ids)
         repeated_handle_count = sum(count >= 2 for count in _counter(handle_ids).values())
         reuse_rate = _safe_ratio(repeated_handle_count, len(set(handle_ids)))
-        average_handle_count = (
-            handle_count / float(len(sequence.steps)) if sequence.steps else 0.0
-        )
+        average_handle_count = handle_count / float(len(sequence.steps)) if sequence.steps else 0.0
         return LongHorizonScoreCard(
             task_success_rate=round(task_successes / float(len(sequence.steps)), 4),
             gold_fact_coverage=round(gold_coverage_total / float(len(sequence.steps)), 4),
@@ -215,11 +213,7 @@ def _promotion_target_refs(
     store: SQLiteMemoryStore,
     sequence: LongHorizonEvalSequence,
 ) -> tuple[str, ...]:
-    needed_ids = {
-        object_id
-        for step in sequence.steps
-        for object_id in step.needed_object_ids
-    }
+    needed_ids = {object_id for step in sequence.steps for object_id in step.needed_object_ids}
     candidate_ids = tuple(
         object_id for object_id in sequence.candidate_ids if store.has_object(object_id)
     )
@@ -232,13 +226,10 @@ def _promotion_target_refs(
                 continue
             unique_coverage = len(set(refs).intersection(needed_ids))
             coverage_mentions = sum(
-                object_id in refs
-                for step in sequence.steps
-                for object_id in step.needed_object_ids
+                object_id in refs for step in sequence.steps for object_id in step.needed_object_ids
             )
             ranking_bonus = sum(
-                target.score
-                for target in select_replay_targets(store, refs, top_k=len(refs))
+                target.score for target in select_replay_targets(store, refs, top_k=len(refs))
             )
             key = (
                 float(coverage_mentions),

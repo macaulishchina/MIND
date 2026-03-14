@@ -1,5 +1,14 @@
 """Phase K capability-layer contracts and adapter protocol."""
 
+from .adapter import (
+    CapabilityAdapter,
+    CapabilityAdapterDescriptor,
+    CapabilityAdapterError,
+    invoke_capability,
+    supports_capability,
+    validate_capability_response,
+)
+from .answering import generate_answer_text
 from .audit import (
     CapabilityAuditCaseResult,
     CapabilityFailureAuditResult,
@@ -9,7 +18,6 @@ from .audit import (
     evaluate_capability_failure_audit,
     evaluate_capability_trace_audit,
 )
-from .answering import generate_answer_text
 from .benchmark import (
     CapabilityBenchCaseResult,
     CapabilityBenchmarkResult,
@@ -17,43 +25,11 @@ from .benchmark import (
     evaluate_capability_adapter_bench,
 )
 from .claude_adapter import ClaudeCapabilityAdapter
-from .gemini_adapter import GeminiCapabilityAdapter
-from .gate import (
-    CapabilityContractAuditResult,
-    CapabilityGateResult,
-    assert_capability_gate,
-    evaluate_capability_contract_audit,
-    evaluate_capability_gate,
-    write_capability_gate_report_json,
-)
-from .openai_adapter import OpenAICapabilityAdapter
-from .reporting import (
-    CapabilityProviderCompatibilityReport,
-    CapabilityProviderCompatibilitySummary,
-    build_capability_provider_compatibility_report,
-    evaluate_capability_provider_compatibility_report,
-    read_capability_provider_compatibility_report_json,
-    write_capability_provider_compatibility_report_json,
-)
-from .adapter import (
-    CapabilityAdapter,
-    CapabilityAdapterDescriptor,
-    CapabilityAdapterError,
-    invoke_capability,
-    supports_capability,
-    validate_capability_response,
-)
 from .config import (
     CapabilityAuthConfig,
     CapabilityAuthMode,
     CapabilityProviderConfig,
     resolve_capability_provider_config,
-)
-from .service import (
-    CapabilityService,
-    CapabilityServiceError,
-    DeterministicCapabilityAdapter,
-    build_capability_adapters_from_environment,
 )
 from .contracts import (
     CAPABILITY_CATALOG,
@@ -73,6 +49,30 @@ from .contracts import (
     SummarizeResponse,
     request_model_for,
     response_model_for,
+)
+from .gate import (
+    CapabilityContractAuditResult,
+    CapabilityGateResult,
+    assert_capability_gate,
+    evaluate_capability_contract_audit,
+    evaluate_capability_gate,
+    write_capability_gate_report_json,
+)
+from .gemini_adapter import GeminiCapabilityAdapter
+from .openai_adapter import OpenAICapabilityAdapter
+from .reporting import (
+    CapabilityProviderCompatibilityReport,
+    CapabilityProviderCompatibilitySummary,
+    build_capability_provider_compatibility_report,
+    evaluate_capability_provider_compatibility_report,
+    read_capability_provider_compatibility_report_json,
+    write_capability_provider_compatibility_report_json,
+)
+from .service import (
+    CapabilityService,
+    CapabilityServiceError,
+    DeterministicCapabilityAdapter,
+    build_capability_adapters_from_environment,
 )
 
 __all__ = [

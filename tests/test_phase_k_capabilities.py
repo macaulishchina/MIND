@@ -77,10 +77,7 @@ def test_request_response_model_mapping_is_complete() -> None:
     assert response_model_for(CapabilityName.SUMMARIZE) is SummarizeResponse
     assert response_model_for(CapabilityName.REFLECT) is ReflectResponse
     assert response_model_for(CapabilityName.ANSWER) is AnswerResponse
-    assert (
-        response_model_for(CapabilityName.OFFLINE_RECONSTRUCT)
-        is OfflineReconstructResponse
-    )
+    assert response_model_for(CapabilityName.OFFLINE_RECONSTRUCT) is OfflineReconstructResponse
 
 
 def test_offline_reconstruct_requires_episode_ids() -> None:
@@ -124,7 +121,7 @@ def test_invoke_capability_validates_support_and_response_shape() -> None:
             )
 
     response = invoke_capability(
-        _Adapter(),
+        _Adapter(),  # type: ignore[arg-type]
         SummarizeRequest(
             request_id="sum-invoke",
             source_text="source text",
@@ -155,7 +152,7 @@ def test_invoke_capability_rejects_unsupported_capability() -> None:
 
     with pytest.raises(CapabilityAdapterError, match="does not support answer"):
         invoke_capability(
-            _Adapter(),
+            _Adapter(),  # type: ignore[arg-type]
             AnswerRequest(
                 request_id="ans-unsupported",
                 question="What happened?",

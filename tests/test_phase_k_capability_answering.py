@@ -63,7 +63,7 @@ def test_workspace_answer_path_delegates_to_capability_service() -> None:
         token_count=6,
     )
 
-    answer = answer_from_workspace(case, context, capability_service=_FakeCapabilityService())
+    answer = answer_from_workspace(case, context, capability_service=_FakeCapabilityService())  # type: ignore[arg-type]
 
     assert answer.text == "delegated workspace answer"
     assert answer.support_ids == ("summary-1",)
@@ -115,7 +115,7 @@ def test_raw_topk_answer_path_delegates_to_capability_service() -> None:
         token_count=6,
     )
 
-    answer = answer_from_raw_topk(case, context, capability_service=_FakeCapabilityService())
+    answer = answer_from_raw_topk(case, context, capability_service=_FakeCapabilityService())  # type: ignore[arg-type]
 
     assert answer.text == "delegated raw answer"
     assert answer.support_ids == ("episode-001",)
@@ -162,10 +162,10 @@ def test_access_benchmark_answer_generation_delegates_to_capability_service() ->
     )
 
     answer = _generate_answer(
-        case,
+        case,  # type: ignore[arg-type]
         AccessContextKind.RAW_TOPK,
         context,
-        capability_service=_FakeCapabilityService(),
+        capability_service=_FakeCapabilityService(),  # type: ignore[arg-type]
     )
 
     assert answer.text == "success"

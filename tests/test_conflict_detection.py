@@ -6,12 +6,10 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-import pytest
-
 from mind.kernel.store import SQLiteMemoryStore
 from mind.offline import OfflineJobKind, new_offline_job
 from mind.offline.scheduler import OfflineJobScheduler
-from mind.offline_jobs import OfflineJob, OfflineJobStatus, ResolveConflictJobPayload
+from mind.offline_jobs import OfflineJob, ResolveConflictJobPayload
 from mind.primitives.conflict import (
     ConflictDetectionResult,
     ConflictRelation,
@@ -71,6 +69,30 @@ class _FakeJobStore:
         statuses: Any = (),
     ) -> list[OfflineJob]:
         return list(self._jobs)
+
+    def claim_offline_job(
+        self, *, worker_id: str, now: Any, job_kinds: Any = (),
+    ) -> OfflineJob | None:
+        return None
+
+    def complete_offline_job(
+        self, job_id: str, *, worker_id: str, completed_at: Any, result: Any,
+    ) -> None:
+        pass
+
+    def fail_offline_job(
+        self, job_id: str, *, worker_id: str, failed_at: Any, error: Any,
+    ) -> None:
+        pass
+
+    def cancel_offline_job(
+        self,
+        job_id: str,
+        *,
+        cancelled_at: Any = None,
+        error: Any = None,
+    ) -> None:
+        pass
 
 
 # ---------------------------------------------------------------------------
@@ -147,9 +169,7 @@ def test_detect_conflicts_identifies_contradiction(tmp_path: Path) -> None:
     with SQLiteMemoryStore(tmp_path / "test.sqlite3") as store:
         existing = _raw_object("old-001", text="The system is always available")
         store.insert_object(existing)
-        new_obj = _raw_object(
-            "new-001", text="The system is not always available incorrect"
-        )
+        new_obj = _raw_object("new-001", text="The system is not always available incorrect")
         store.insert_object(new_obj)
         results = detect_conflicts(store, new_obj)
     # Should detect at least one contradiction or return empty.

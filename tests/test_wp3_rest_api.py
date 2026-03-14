@@ -192,9 +192,7 @@ async def test_rest_pagination(api_client: httpx.AsyncClient) -> None:
         params=[("status", "pending")],
     )
     assert filtered_jobs.status_code == 200
-    filtered_job_ids = [
-        job["job_id"] for job in filtered_jobs.json()["result"]["jobs"]
-    ]
+    filtered_job_ids = [job["job_id"] for job in filtered_jobs.json()["result"]["jobs"]]
     assert state["pending_job_id"] in filtered_job_ids
 
 
@@ -230,7 +228,10 @@ async def test_frontend_settings_preview_route_returns_preview(
 
     assert response.status_code == 200
     assert response.json()["result"]["preview"]["provider"]["provider"] == "openai"
-    assert response.json()["result"]["preview"]["provider"]["endpoint"] == "https://proxy.example/v1/chat/completions"
+    assert (
+        response.json()["result"]["preview"]["provider"]["endpoint"]
+        == "https://proxy.example/v1/chat/completions"
+    )
     assert "dev_mode" in response.json()["result"]["changed_keys"]
     assert "endpoint" in response.json()["result"]["changed_keys"]
     assert response.json()["result"]["applied_env_overrides"]["OPENAI_API_KEY"] == "***redacted***"
@@ -425,11 +426,11 @@ async def test_frontend_llm_service_routes_manage_services(
         def __enter__(self) -> _FakeResponse:
             return self
 
-        def __exit__(self, exc_type: object, exc: object, tb: object) -> bool:
-            return False
+        def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+            return None
 
-    def _fake_urlopen(request: object, timeout: float = 10.0) -> _FakeResponse:
-        assert getattr(request, "full_url") == "https://proxy.example/v1/models"
+    def _fake_urlopen(request: Any, timeout: float = 10.0) -> _FakeResponse:
+        assert request.full_url == "https://proxy.example/v1/models"
         assert timeout == 10.0
         return _FakeResponse({"data": [{"id": "gpt-4.1-mini"}, {"id": "gpt-4o-mini"}]})
 
@@ -472,7 +473,9 @@ async def test_frontend_llm_service_routes_manage_services(
     payload = page.json()["result"]
     assert payload["provider"]["provider"] == "openai"
     assert payload["llm"]["active_service_id"] == service_id
-    service_view = next(item for item in payload["llm"]["services"] if item["service_id"] == service_id)
+    service_view = next(
+        item for item in payload["llm"]["services"] if item["service_id"] == service_id
+    )
     assert service_view["name"] == "公司代理"
     assert service_view["active_model"] == "gpt-4o-mini"
     assert service_view["endpoint"] == "https://proxy.example/v1"
@@ -567,7 +570,9 @@ async def test_editing_active_frontend_llm_service_updates_live_runtime(
     assert payload["llm"]["active_service_id"] == service_id
     assert payload["provider"]["provider"] == "openai"
     assert payload["provider"]["endpoint"] == "https://api.deepseek.com/v1/chat/completions"
-    service_view = next(item for item in payload["llm"]["services"] if item["service_id"] == service_id)
+    service_view = next(
+        item for item in payload["llm"]["services"] if item["service_id"] == service_id
+    )
     assert service_view["endpoint"] == "https://api.deepseek.com/v1"
     assert service_view["active_model"] == "deepseek-chat"
     assert service_view["is_active"] is True
@@ -911,6 +916,6 @@ def _is_empty_value(value: Any) -> bool:
         return True
     if isinstance(value, str):
         return not value.strip()
-    if isinstance(value, (list, tuple, set, dict)):
+    if isinstance(value, list | tuple | set | dict):
         return len(value) == 0
     return False

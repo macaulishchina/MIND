@@ -213,9 +213,7 @@ def new_offline_job(
         job_id=job_id or f"offline-job-{uuid4().hex}",
         job_kind=job_kind,
         payload=payload_json,
-        provider_selection=(
-            dict(provider_selection) if provider_selection is not None else None
-        ),
+        provider_selection=(dict(provider_selection) if provider_selection is not None else None),
         priority=priority,
         available_at=ready_at,
         created_at=created_at,

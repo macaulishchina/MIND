@@ -85,9 +85,7 @@ class OfflineJobScheduler:
         if positive_feedback_count < self._promote_threshold:
             return None
         episode_id = feedback_object.get("metadata", {}).get("episode_id", "")
-        reason = (
-            f"object {object_id} received {positive_feedback_count} positive feedback hits"
-        )
+        reason = f"object {object_id} received {positive_feedback_count} positive feedback hits"
         job = new_offline_job(
             job_kind=OfflineJobKind.PROMOTE_SCHEMA,
             payload={"target_refs": [object_id, episode_id or object_id], "reason": reason},
@@ -131,9 +129,7 @@ class OfflineJobScheduler:
 
         Returns the new job_id if a job was enqueued, else ``None``.
         """
-        has_contradiction = any(
-            c.get("relation") == "contradict" for c in conflict_candidates
-        )
+        has_contradiction = any(c.get("relation") == "contradict" for c in conflict_candidates)
         if not has_contradiction:
             return None
         job = new_offline_job(

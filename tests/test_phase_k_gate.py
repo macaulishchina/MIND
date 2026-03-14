@@ -69,9 +69,9 @@ def test_phase_k_gate_fails_current_unconfigured_baseline() -> None:
 def test_phase_k_gate_passes_with_all_provider_adapters() -> None:
     result = evaluate_capability_gate(
         adapters=[
-            _ProviderAdapter(CapabilityProviderFamily.OPENAI),  # type: ignore[list-item]
-            _ProviderAdapter(CapabilityProviderFamily.CLAUDE),  # type: ignore[list-item]
-            _ProviderAdapter(CapabilityProviderFamily.GEMINI),  # type: ignore[list-item]
+            _ProviderAdapter(CapabilityProviderFamily.OPENAI),
+            _ProviderAdapter(CapabilityProviderFamily.CLAUDE),
+            _ProviderAdapter(CapabilityProviderFamily.GEMINI),
         ]
     )
 
@@ -89,9 +89,9 @@ def test_phase_k_gate_passes_with_all_provider_adapters() -> None:
 def test_phase_k_gate_report_writes_json(tmp_path: Path) -> None:
     result = evaluate_capability_gate(
         adapters=[
-            _ProviderAdapter(CapabilityProviderFamily.OPENAI),  # type: ignore[list-item]
-            _ProviderAdapter(CapabilityProviderFamily.CLAUDE),  # type: ignore[list-item]
-            _ProviderAdapter(CapabilityProviderFamily.GEMINI),  # type: ignore[list-item]
+            _ProviderAdapter(CapabilityProviderFamily.OPENAI),
+            _ProviderAdapter(CapabilityProviderFamily.CLAUDE),
+            _ProviderAdapter(CapabilityProviderFamily.GEMINI),
         ]
     )
 

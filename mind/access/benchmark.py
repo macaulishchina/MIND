@@ -386,10 +386,7 @@ def _support_items(
 ) -> list[tuple[str, str]]:
     payload = json.loads(text)
     if context_kind is AccessContextKind.RAW_TOPK:
-        return [
-            (str(obj["id"]), _support_text_for_object(obj))
-            for obj in payload["objects"]
-        ]
+        return [(str(obj["id"]), _support_text_for_object(obj)) for obj in payload["objects"]]
     return [
         (
             str(payload["selected_object_ids"][index]),
@@ -469,15 +466,12 @@ def _satisfies_constraint(
         return "success" in normalized_answer or "failure" in normalized_answer
     if constraint == "must include tool usage when present":
         required_tool_fragments = [
-            fragment
-            for fragment in case.required_fragments
-            if "lookup-result-" in fragment
+            fragment for fragment in case.required_fragments if "lookup-result-" in fragment
         ]
         if not required_tool_fragments:
             return True
         return any(
-            _normalize(fragment) in normalized_answer
-            for fragment in required_tool_fragments
+            _normalize(fragment) in normalized_answer for fragment in required_tool_fragments
         )
     if constraint == "must include the failure or revalidation signal when present":
         if len(case.required_fragments) < 3:
@@ -714,10 +708,7 @@ def _meets_family_floor(
             and aggregate.memory_use_score >= 0.65
         )
     if aggregate.requested_mode is AccessMode.RECONSTRUCT:
-        return (
-            aggregate.answer_faithfulness >= 0.95
-            and aggregate.gold_fact_coverage >= 0.90
-        )
+        return aggregate.answer_faithfulness >= 0.95 and aggregate.gold_fact_coverage >= 0.90
     if aggregate.requested_mode is AccessMode.REFLECTIVE_ACCESS:
         return (
             aggregate.answer_faithfulness >= 0.97

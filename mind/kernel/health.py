@@ -39,7 +39,7 @@ def compute_health_report(store: MemoryStore) -> HealthReport:
     report = HealthReport()
 
     # Gather all latest objects.
-    all_objects = store.list_objects()
+    all_objects = store.iter_objects()
     known_ids: set[str] = set()
     priority_sum = 0.0
 
@@ -61,7 +61,7 @@ def compute_health_report(store: MemoryStore) -> HealthReport:
 
     # Pending job count.
     try:
-        pending_jobs = list(store.iter_offline_jobs(statuses=["pending"]))
+        pending_jobs = list(store.iter_latest_objects(statuses=["pending"]))
         report.pending_jobs = len(pending_jobs)
     except Exception:
         pass  # store may not support jobs

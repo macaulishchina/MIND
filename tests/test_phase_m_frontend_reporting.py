@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import shutil
+from pathlib import Path
 
 from mind.fixtures import build_frontend_experience_bench_v1
 from mind.frontend import (
@@ -85,7 +85,9 @@ def test_frontend_flow_report_fails_when_transport_surface_regresses(
     assert report.config_audit_pass is False
     assert "config_dev_mode_toggle_desktop" in report.failure_ids
     scenario = next(
-        item for item in report.scenario_results if item.scenario_id == "config_dev_mode_toggle_desktop"
+        item
+        for item in report.scenario_results
+        if item.scenario_id == "config_dev_mode_toggle_desktop"
     )
     assert 'transport:"/v1/frontend/settings:apply"' in scenario.missing_checks
 

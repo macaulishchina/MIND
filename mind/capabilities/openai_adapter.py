@@ -6,8 +6,8 @@ import json
 from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any
-from urllib.parse import urlsplit, urlunsplit
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 from .adapter import CapabilityAdapterDescriptor, CapabilityAdapterError
@@ -261,9 +261,7 @@ def _ensure_completed(response_payload: dict[str, Any], *, api_style: str) -> No
     status = response_payload.get("status")
     if status in (None, "completed"):
         return
-    raise CapabilityAdapterError(
-        f"openai response did not complete successfully: {status}"
-    )
+    raise CapabilityAdapterError(f"openai response did not complete successfully: {status}")
 
 
 def _parse_response(
@@ -324,7 +322,7 @@ def _coerce_output_payload(
     decoder = json.JSONDecoder()
     stripped = output_text.strip()
     for index, char in enumerate(stripped):
-        if char not in {'{', '[', '"'}:
+        if char not in {"{", "[", '"'}:
             continue
         try:
             parsed, _end = decoder.raw_decode(stripped[index:])
@@ -399,13 +397,33 @@ def _normalize_payload_mapping(
     if isinstance(request, SummarizeRequest):
         text = _coerce_mapping_text(
             payload,
-            ("summary_text", "summary", "answer_text", "answer", "response", "content", "output", "text", "message"),
+            (
+                "summary_text",
+                "summary",
+                "answer_text",
+                "answer",
+                "response",
+                "content",
+                "output",
+                "text",
+                "message",
+            ),
         )
         return {"summary_text": text} if text else None
     if isinstance(request, ReflectRequest):
         text = _coerce_mapping_text(
             payload,
-            ("reflection_text", "reflection", "answer_text", "answer", "response", "content", "output", "text", "message"),
+            (
+                "reflection_text",
+                "reflection",
+                "answer_text",
+                "answer",
+                "response",
+                "content",
+                "output",
+                "text",
+                "message",
+            ),
         )
         if not text:
             return None
@@ -421,7 +439,17 @@ def _normalize_payload_mapping(
     if isinstance(request, OfflineReconstructRequest):
         text = _coerce_mapping_text(
             payload,
-            ("reconstruction_text", "reconstruction", "answer_text", "answer", "response", "content", "output", "text", "message"),
+            (
+                "reconstruction_text",
+                "reconstruction",
+                "answer_text",
+                "answer",
+                "response",
+                "content",
+                "output",
+                "text",
+                "message",
+            ),
         )
         return {"reconstruction_text": text} if text else None
     return None
@@ -445,21 +473,16 @@ def _stringify_field_value(value: Any) -> str | None:
         text = value.strip()
         return text or None
     if isinstance(value, list):
-        fragments = [
-            text
-            for item in value
-            for text in [_stringify_field_value(item)]
-            if text
-        ]
+        fragments = [text for item in value for text in [_stringify_field_value(item)] if text]
         if fragments:
             return " ".join(fragments)
         return None
     if isinstance(value, dict):
         for nested_key in ("text", "content", "message", "answer", "output", "response"):
             if nested_key in value:
-                text = _stringify_field_value(value[nested_key])
-                if text:
-                    return text
+                nested_text = _stringify_field_value(value[nested_key])
+                if nested_text:
+                    return nested_text
         return None
     return None
 

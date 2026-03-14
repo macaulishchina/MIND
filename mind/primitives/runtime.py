@@ -11,7 +11,7 @@ from uuid import uuid4
 from pydantic import BaseModel, TypeAdapter, ValidationError
 
 from mind.kernel.store import MemoryStore, PrimitiveTransaction
-from mind.telemetry import TelemetryEvent, TelemetryEventKind, TelemetryScope, TelemetryRecorder
+from mind.telemetry import TelemetryEvent, TelemetryEventKind, TelemetryRecorder, TelemetryScope
 
 from .contracts import (
     BudgetEvent,
@@ -140,7 +140,11 @@ class PrimitiveRuntime:
                     primitive=primitive,
                     kind=TelemetryEventKind.ACTION_RESULT,
                     payload={"outcome": failure_result.outcome.value, "request": request_data},
-                    debug_fields={"error_code": failure_result.error.code.value},
+                    debug_fields={
+                        "error_code": failure_result.error.code.value
+                        if failure_result.error
+                        else "unknown"
+                    },
                 ),
             )
             return failure_result
@@ -169,7 +173,10 @@ class PrimitiveRuntime:
                     actor=actor,
                     primitive=primitive,
                     kind=TelemetryEventKind.DECISION,
-                    payload={"outcome": rejection_result.outcome.value, "request": request.model_dump(mode="json")},
+                    payload={
+                        "outcome": rejection_result.outcome.value,
+                        "request": request.model_dump(mode="json"),
+                    },
                     debug_fields={"error_code": exc.error.code.value},
                 ),
             )
@@ -195,8 +202,15 @@ class PrimitiveRuntime:
                     actor=actor,
                     primitive=primitive,
                     kind=TelemetryEventKind.ACTION_RESULT,
-                    payload={"outcome": failure_result.outcome.value, "request": request.model_dump(mode="json")},
-                    debug_fields={"error_code": failure_result.error.code.value},
+                    payload={
+                        "outcome": failure_result.outcome.value,
+                        "request": request.model_dump(mode="json"),
+                    },
+                    debug_fields={
+                        "error_code": failure_result.error.code.value
+                        if failure_result.error
+                        else "unknown"
+                    },
                 ),
             )
             return failure_result
@@ -312,7 +326,11 @@ class PrimitiveRuntime:
                     primitive=primitive,
                     kind=TelemetryEventKind.ACTION_RESULT,
                     payload={"outcome": failure_result.outcome.value, "request": request_data},
-                    debug_fields={"error_code": failure_result.error.code.value},
+                    debug_fields={
+                        "error_code": failure_result.error.code.value
+                        if failure_result.error
+                        else "unknown"
+                    },
                 ),
             )
             return failure_result
@@ -369,7 +387,10 @@ class PrimitiveRuntime:
                     actor=actor,
                     primitive=primitive,
                     kind=TelemetryEventKind.DECISION,
-                    payload={"outcome": rejection_result.outcome.value, "request": request.model_dump(mode="json")},
+                    payload={
+                        "outcome": rejection_result.outcome.value,
+                        "request": request.model_dump(mode="json"),
+                    },
                     debug_fields={"error_code": exc.error.code.value},
                 ),
             )
@@ -395,8 +416,15 @@ class PrimitiveRuntime:
                     actor=actor,
                     primitive=primitive,
                     kind=TelemetryEventKind.ACTION_RESULT,
-                    payload={"outcome": failure_result.outcome.value, "request": request.model_dump(mode="json")},
-                    debug_fields={"error_code": failure_result.error.code.value},
+                    payload={
+                        "outcome": failure_result.outcome.value,
+                        "request": request.model_dump(mode="json"),
+                    },
+                    debug_fields={
+                        "error_code": failure_result.error.code.value
+                        if failure_result.error
+                        else "unknown"
+                    },
                 ),
             )
             return failure_result
@@ -560,7 +588,11 @@ class PrimitiveRuntime:
             after = _json_compatible_payload(self.store.read_object(object_id))
             current_version = int(after["version"])
             before: dict[str, Any] = {}
-            previous_versions = [version for version in self.store.versions_for_object(object_id) if version < current_version]
+            previous_versions = [
+                version
+                for version in self.store.versions_for_object(object_id)
+                if version < current_version
+            ]
             if previous_versions:
                 before = _json_compatible_payload(
                     self.store.read_object(object_id, version=max(previous_versions))

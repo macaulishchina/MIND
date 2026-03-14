@@ -207,10 +207,7 @@ def _build_episode_benchmark_cases(episode: EpisodeFixture) -> list[RetrievalBen
         RetrievalBenchmarkCase(
             case_id=f"{episode.episode_id}_keyword_task_episode",
             task_id=episode.task_id,
-            query=(
-                f"{episode_object['content']['title']} "
-                f"{episode_object['metadata']['result']}"
-            ),
+            query=(f"{episode_object['content']['title']} {episode_object['metadata']['result']}"),
             query_modes=(RetrieveQueryMode.KEYWORD,),
             filters={"object_types": ["TaskEpisode"], "task_id": episode.task_id},
             gold_candidate_ids=(episode.episode_id,),

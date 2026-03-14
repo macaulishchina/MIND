@@ -107,7 +107,11 @@ def test_access_auto_upgrade_emits_multiple_decision_events(tmp_path: Path) -> N
                 "query_modes": ["keyword"],
                 "filters": {"object_types": ["SummaryNote", "TaskEpisode"]},
             },
-            _context(actor="phase-l-access-auto", dev_mode=True, telemetry_run_id="run-phase-l-access-002"),
+            _context(
+                actor="phase-l-access-auto",
+                dev_mode=True,
+                telemetry_run_id="run-phase-l-access-002",
+            ),
         )
 
     access_decisions = [
@@ -151,6 +155,4 @@ def test_access_telemetry_is_disabled_when_dev_mode_is_false(tmp_path: Path) -> 
             _context(),
         )
 
-    assert [
-        event for event in recorder.iter_events() if event.scope is TelemetryScope.ACCESS
-    ] == []
+    assert [event for event in recorder.iter_events() if event.scope is TelemetryScope.ACCESS] == []

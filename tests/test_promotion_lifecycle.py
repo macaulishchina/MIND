@@ -8,10 +8,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-import pytest
-
-from mind.kernel.schema import VALID_PROPOSAL_STATUS, validate_object
 from mind.kernel.retrieval import matches_retrieval_filters
+from mind.kernel.schema import VALID_PROPOSAL_STATUS, validate_object
 from mind.kernel.store import SQLiteMemoryStore
 from mind.offline import OfflineJobKind, new_offline_job
 from mind.offline.scheduler import OfflineJobScheduler
@@ -94,6 +92,30 @@ class _FakeJobStore:
         statuses: Any = (),
     ) -> list[OfflineJob]:
         return list(self._jobs)
+
+    def claim_offline_job(
+        self, *, worker_id: str, now: Any, job_kinds: Any = (),
+    ) -> OfflineJob | None:
+        return None
+
+    def complete_offline_job(
+        self, job_id: str, *, worker_id: str, completed_at: Any, result: Any,
+    ) -> None:
+        pass
+
+    def fail_offline_job(
+        self, job_id: str, *, worker_id: str, failed_at: Any, error: Any,
+    ) -> None:
+        pass
+
+    def cancel_offline_job(
+        self,
+        job_id: str,
+        *,
+        cancelled_at: Any = None,
+        error: Any = None,
+    ) -> None:
+        pass
 
 
 # ---------------------------------------------------------------------------

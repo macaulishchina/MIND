@@ -272,8 +272,8 @@ def test_postgres_user_state_roundtrip() -> None:
             assert store.read_principal("principal-pg")["tenant_id"] == "tenant-pg"
             assert store.read_session("session-pg")["metadata"]["source"] == "pytest"
             assert store.read_namespace("ns-pg")["workspace_id"] == "workspace-pg"
-            assert [
-                row["principal_id"] for row in store.list_principals()
-            ] == [principal["principal_id"]]
+            assert [row["principal_id"] for row in store.list_principals()] == [
+                principal["principal_id"]
+            ]
             assert [row["session_id"] for row in store.list_sessions()] == [session["session_id"]]
             assert namespace["visibility_policy"] == "shared"

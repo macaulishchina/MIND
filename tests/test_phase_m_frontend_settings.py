@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest
 
 from mind.frontend import (
-    build_frontend_settings_mutation_result,
     FrontendSettingsUpdateRequest,
+    build_frontend_settings_mutation_result,
     build_frontend_settings_page,
     build_frontend_settings_snapshot,
     dump_frontend_settings_snapshot_state,

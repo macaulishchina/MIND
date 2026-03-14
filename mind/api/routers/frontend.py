@@ -9,8 +9,8 @@ from fastapi.responses import JSONResponse
 
 from mind.api._utils import app_json_response, build_app_request, get_registry
 from mind.api.auth import require_api_key
-from mind.app.context import PrincipalContext
 from mind.app._service_utils import new_response
+from mind.app.context import PrincipalContext
 from mind.app.contracts import AppError, AppErrorCode, AppStatus
 from mind.frontend import build_frontend_experience_catalog
 

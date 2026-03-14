@@ -108,6 +108,24 @@ class FakeOfflineJobStore:
             }
         )
 
+    def cancel_offline_job(
+        self,
+        job_id: str,
+        *,
+        cancelled_at: datetime,
+        error: dict,
+    ) -> None:
+        job = self._jobs[job_id]
+        self._jobs[job_id] = job.model_copy(
+            update={
+                "status": OfflineJobStatus.FAILED,
+                "completed_at": cancelled_at,
+                "updated_at": cancelled_at,
+                "result": None,
+                "error": error,
+            }
+        )
+
 
 def test_offline_worker_processes_reflection_and_promotion_jobs(tmp_path: Path) -> None:
     db_path = tmp_path / "phase_e_worker.sqlite3"

@@ -24,7 +24,7 @@ def generate_answer_text(
 
     service = capability_service or _default_answer_capability_service()
     request_suffix = hashlib.sha1(
-        f"{question}\n{context_text}\n{','.join(support_ids)}".encode("utf-8")
+        f"{question}\n{context_text}\n{','.join(support_ids)}".encode()
     ).hexdigest()[:10]
     response = service.answer(
         AnswerRequest(

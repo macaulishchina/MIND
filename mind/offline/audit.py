@@ -49,8 +49,7 @@ def audit_schema_evidence(
     schema_object = store.read_object(schema_object_id)
     metadata = schema_object.get("metadata", {})
     evidence_refs = tuple(
-        str(ref)
-        for ref in metadata.get("evidence_refs", schema_object["source_refs"])
+        str(ref) for ref in metadata.get("evidence_refs", schema_object["source_refs"])
     )
     rule_tokens = _rule_tokens(str(schema_object.get("content", {}).get("rule", "")))
     supported_count = 0
@@ -80,13 +79,10 @@ def audit_promotion_within_window(
     schema_object = store.read_object(schema_object_id)
     metadata = schema_object.get("metadata", {})
     promotion_source_refs = tuple(
-        str(ref)
-        for ref in metadata.get("promotion_source_refs", schema_object["source_refs"])
+        str(ref) for ref in metadata.get("promotion_source_refs", schema_object["source_refs"])
     )
     future_needed_refs = {
-        object_id
-        for step in sequence.steps[:10]
-        for object_id in step.needed_object_ids
+        object_id for step in sequence.steps[:10] for object_id in step.needed_object_ids
     }
     remains_active = schema_object["status"] not in {"archived", "deprecated", "invalid"}
     reused_within_window = bool(set(promotion_source_refs).intersection(future_needed_refs))

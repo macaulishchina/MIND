@@ -189,6 +189,7 @@ def test_registry_exposes_frontend_experience_service(tmp_path: Path) -> None:
     assert access.result["answer"]["support_ids"]
 
     assert offline.status is AppStatus.OK
+    assert offline.result is not None
     assert offline.result == {"job_id": offline.result["job_id"], "status": "pending"}
 
 
@@ -291,9 +292,14 @@ def test_frontend_access_uses_activated_openai_compatible_service(
     assert access.result is not None
     assert access.result["answer"]["text"] == "compatible llm answer"
     assert access.result["answer"]["trace"]["provider_family"] == "openai"
-    assert access.result["answer"]["trace"]["endpoint"] == "https://api.deepseek.com/chat/completions"
+    assert (
+        access.result["answer"]["trace"]["endpoint"] == "https://api.deepseek.com/chat/completions"
+    )
     assert "You are the MIND answer capability." in access.result["answer"]["trace"]["request_text"]
-    assert "Question: deepseek compatible provider seed" in access.result["answer"]["trace"]["request_text"]
+    assert (
+        "Question: deepseek compatible provider seed"
+        in access.result["answer"]["trace"]["request_text"]
+    )
     assert captured["endpoint"] == "https://api.deepseek.com/chat/completions"
     assert captured["headers"]["Authorization"] == "Bearer deepseek-key"
     assert captured["payload"]["messages"][0]["role"] == "user"
@@ -768,8 +774,8 @@ def test_frontend_llm_service_lifecycle_persists_and_activates(
         def __enter__(self) -> _FakeResponse:
             return self
 
-        def __exit__(self, exc_type: object, exc: object, tb: object) -> bool:
-            return False
+        def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+            return None
 
     def _fake_urlopen(request: Any, timeout: float = 10.0) -> _FakeResponse:
         assert request.full_url == "https://proxy.example/v1/models"
@@ -1065,7 +1071,10 @@ def test_editing_saved_llm_service_does_not_change_active_service(tmp_path: Path
                     "service_id": secondary.result["service_id"],
                     "protocol": "claude",
                     "name": "备用服务-已编辑",
-                    "icon": "data:image/webp;base64,UklGRi4AAABXRUJQVlA4ICIAAADQAwCdASoIAAIAAUAmJaACdLoAA5gA",
+                    "icon": (
+                        "data:image/webp;base64,UklGRi4AAABXRUJQVlA4"
+                        "ICIAAADQAwCdASoIAAIAAUAmJaACdLoAA5gA"
+                    ),
                     "endpoint": "https://proxy.example/v1/messages",
                 },
                 request_id="req-front-llm-edit-secondary-update",
@@ -1081,10 +1090,15 @@ def test_editing_saved_llm_service_does_not_change_active_service(tmp_path: Path
     assert page.result is not None
     assert page.result["llm"]["active_service_id"] == primary.result["service_id"]
     edited_view = next(
-        item for item in page.result["llm"]["services"] if item["service_id"] == secondary.result["service_id"]
+        item
+        for item in page.result["llm"]["services"]
+        if item["service_id"] == secondary.result["service_id"]
     )
     assert edited_view["name"] == "备用服务-已编辑"
-    assert edited_view["icon"] == "data:image/webp;base64,UklGRi4AAABXRUJQVlA4ICIAAADQAwCdASoIAAIAAUAmJaACdLoAA5gA"
+    assert (
+        edited_view["icon"]
+        == "data:image/webp;base64,UklGRi4AAABXRUJQVlA4ICIAAADQAwCdASoIAAIAAUAmJaACdLoAA5gA"
+    )
     assert edited_view["is_active"] is False
 
 

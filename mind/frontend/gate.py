@@ -180,7 +180,9 @@ def evaluate_frontend_gate(
 
 def assert_frontend_gate(result: FrontendGateResult) -> None:
     if not result.m1_pass:
-        raise RuntimeError("M-1 failed: frontend experience flow or contract coverage is incomplete")
+        raise RuntimeError(
+            "M-1 failed: frontend experience flow or contract coverage is incomplete"
+        )
     if not result.m2_pass:
         raise RuntimeError("M-2 failed: config surface coverage regressed")
     if not result.m3_pass:
@@ -213,8 +215,7 @@ def read_frontend_gate_report_json(path: str | Path) -> dict[str, Any]:
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
     if payload.get("schema_version") != _SCHEMA_VERSION:
         raise ValueError(
-            "unexpected frontend gate report schema_version "
-            f"({payload.get('schema_version')!r})"
+            f"unexpected frontend gate report schema_version ({payload.get('schema_version')!r})"
         )
     return payload
 

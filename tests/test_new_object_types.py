@@ -175,22 +175,24 @@ class TestNewTypesCRUD:
 
     def _seed_source(self, store: SQLiteMemoryStore, src_id: str) -> None:
         """Insert a RawRecord to satisfy source_refs constraint."""
-        store.insert_object({
-            "id": src_id,
-            "type": "RawRecord",
-            "content": "seed",
-            "source_refs": [],
-            "created_at": _ts(),
-            "updated_at": _ts(),
-            "version": 1,
-            "status": "active",
-            "priority": 0.5,
-            "metadata": {
-                "record_kind": "user_message",
-                "episode_id": "ep-seed",
-                "timestamp_order": 1,
-            },
-        })
+        store.insert_object(
+            {
+                "id": src_id,
+                "type": "RawRecord",
+                "content": "seed",
+                "source_refs": [],
+                "created_at": _ts(),
+                "updated_at": _ts(),
+                "version": 1,
+                "status": "active",
+                "priority": 0.5,
+                "metadata": {
+                    "record_kind": "user_message",
+                    "episode_id": "ep-seed",
+                    "timestamp_order": 1,
+                },
+            }
+        )
 
     def test_policy_note_write_read(self) -> None:
         store = self._store()
@@ -306,8 +308,7 @@ class TestPolicyPromotion:
 
     def test_policy_promotion_succeeds_with_enough_episodes(self) -> None:
         objects = [
-            self._make_evidence(f"ep-{i}", f"obj-{i}")
-            for i in range(POLICY_PROMOTION_MIN_EPISODES)
+            self._make_evidence(f"ep-{i}", f"obj-{i}") for i in range(POLICY_PROMOTION_MIN_EPISODES)
         ]
         decision = assess_policy_promotion(objects)
         assert decision.promote
@@ -317,9 +318,7 @@ class TestPolicyPromotion:
         """PolicyNote min_episodes must be ≥ SchemaNote min_episodes (2)."""
         assert POLICY_PROMOTION_MIN_EPISODES >= 2
         # With exactly 2 episodes, schema passes but policy may not.
-        two_ep_objects = [
-            self._make_evidence(f"ep-{i}", f"obj-{i}") for i in range(2)
-        ]
+        two_ep_objects = [self._make_evidence(f"ep-{i}", f"obj-{i}") for i in range(2)]
         schema_decision = assess_schema_promotion(two_ep_objects)
         policy_decision = assess_policy_promotion(two_ep_objects)
         # PolicyNote threshold is 3; with 2 episodes it should fail if threshold > 2.
@@ -329,8 +328,7 @@ class TestPolicyPromotion:
 
     def test_policy_promotion_inactive_objects_rejected(self) -> None:
         objects = [
-            self._make_evidence(f"ep-{i}", f"obj-{i}")
-            for i in range(POLICY_PROMOTION_MIN_EPISODES)
+            self._make_evidence(f"ep-{i}", f"obj-{i}") for i in range(POLICY_PROMOTION_MIN_EPISODES)
         ]
         objects[0]["status"] = "archived"
         decision = assess_policy_promotion(objects)
@@ -338,8 +336,7 @@ class TestPolicyPromotion:
 
     def test_policy_promotion_stability_score_in_range(self) -> None:
         objects = [
-            self._make_evidence(f"ep-{i}", f"obj-{i}")
-            for i in range(POLICY_PROMOTION_MIN_EPISODES)
+            self._make_evidence(f"ep-{i}", f"obj-{i}") for i in range(POLICY_PROMOTION_MIN_EPISODES)
         ]
         decision = assess_policy_promotion(objects)
         assert 0.0 <= decision.stability_score <= 1.0

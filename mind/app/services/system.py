@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from os import environ
 from typing import Any
-from collections.abc import Mapping
 
 from mind.app._service_utils import new_response
 from mind.app.contracts import AppError, AppErrorCode, AppRequest, AppResponse, AppStatus

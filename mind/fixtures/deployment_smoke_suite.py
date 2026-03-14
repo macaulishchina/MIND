@@ -208,7 +208,9 @@ def evaluate_deployment_smoke_suite(
     postgres = compose_services.get("postgres", {}) if isinstance(compose_services, dict) else {}
     api = compose_services.get("api", {}) if isinstance(compose_services, dict) else {}
     worker = compose_services.get("worker", {}) if isinstance(compose_services, dict) else {}
-    dev_docs = compose_dev_services.get("docs", {}) if isinstance(compose_dev_services, dict) else {}
+    dev_docs = (
+        compose_dev_services.get("docs", {}) if isinstance(compose_dev_services, dict) else {}
+    )
     docs = compose_docs_services.get("docs", {}) if isinstance(compose_docs_services, dict) else {}
     dockerfile_api = root / "Dockerfile.api"
     dockerfile_docs = root / "Dockerfile.docs"
@@ -219,7 +221,7 @@ def evaluate_deployment_smoke_suite(
     api_instructions = _parse_dockerfile_instructions(dockerfile_api)
     docs_instructions = _parse_dockerfile_instructions(dockerfile_docs)
     docs_dev_instructions = _parse_dockerfile_instructions(dockerfile_docs_dev)
-    worker_instructions = _parse_dockerfile_instructions(dockerfile_worker)
+    _parse_dockerfile_instructions(dockerfile_worker)
     env_vars = _read_env_var_names(env_example)
     runtime_product_transport_checks = _build_runtime_product_transport_checks(
         runtime_product_transport_report
@@ -250,7 +252,8 @@ def evaluate_deployment_smoke_suite(
         "worker_builds_dockerfile_worker": _dockerfile_ref(worker) == "Dockerfile.worker",
         "api_exposes_18600": "18600:18600" in list(api.get("ports", [])),
         "dev_api_mounts_frontend": any(
-            "frontend" in str(volume) for volume in list(compose_dev_services.get("api", {}).get("volumes", []))
+            "frontend" in str(volume)
+            for volume in list(compose_dev_services.get("api", {}).get("volumes", []))
         ),
         "docs_exposes_18601": any("18601" in str(port) for port in list(docs.get("ports", []))),
         "dev_docs_exposes_18602": any(
@@ -261,14 +264,16 @@ def evaluate_deployment_smoke_suite(
         ),
         "dev_api_debugpy_exposes_18606": any(
             "18606:5678" in str(port) for port in list(api.get("ports", []))
-        ) or any(
-            "18606:5678" in str(port) for port in list(compose_dev_services.get("api", {}).get("ports", []))
+        )
+        or any(
+            "18606:5678" in str(port)
+            for port in list(compose_dev_services.get("api", {}).get("ports", []))
         ),
         "worker_runs_loop": "mindtest-offline-worker-once" in _worker_command(worker),
         "dockerfile_api_exists": dockerfile_api.exists(),
         "dockerfile_api_installs_api": "requirements-api.txt" in _read_text(dockerfile_api)
         and "optional-dependencies" in _read_text(dockerfile_api)
-        and ".get(\"api\", [])" in _read_text(dockerfile_api),
+        and '.get("api", [])' in _read_text(dockerfile_api),
         "dockerfile_api_bundles_frontend": any(
             line.startswith("COPY frontend ") for line in api_instructions
         ),
@@ -307,16 +312,13 @@ def evaluate_deployment_smoke_suite(
         }.issubset(env_vars),
         "entrypoint_exists": entrypoint.exists(),
         "entrypoint_runs_migration": "alembic upgrade head" in _read_text(entrypoint),
-        "entrypoint_runs_uvicorn": "uvicorn mind.api.app:create_app --factory" in _read_text(
-            entrypoint
-        ),
-        "deploy_script_builds_docs_site": "build_docs_site" in _read_text(
-            root / "scripts" / "deploy.sh"
-        )
+        "entrypoint_runs_uvicorn": "uvicorn mind.api.app:create_app --factory"
+        in _read_text(entrypoint),
+        "deploy_script_builds_docs_site": "build_docs_site"
+        in _read_text(root / "scripts" / "deploy.sh")
         and "mkdocs build --strict" in _read_text(root / "scripts" / "deploy.sh"),
-        "deploy_script_includes_docs_overlay": 'DOCS_FILE="compose.docs.yaml"' in _read_text(
-            root / "scripts" / "deploy.sh"
-        ),
+        "deploy_script_includes_docs_overlay": 'DOCS_FILE="compose.docs.yaml"'
+        in _read_text(root / "scripts" / "deploy.sh"),
         **runtime_product_transport_checks,
     }
 
@@ -368,10 +370,7 @@ def render_deployment_smoke_report_markdown(
     ]
     for result in report.results:
         lines.append(
-            "| "
-            f"{result.name} | "
-            f"{'PASS' if result.passed else 'FAIL'} | "
-            f"{result.description} |"
+            f"| {result.name} | {'PASS' if result.passed else 'FAIL'} | {result.description} |"
         )
     if report.failure_ids:
         lines.extend(
@@ -406,8 +405,7 @@ def read_deployment_smoke_report_json(path: str | Path) -> DeploymentSmokeReport
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
     if payload.get("schema_version") != _SCHEMA_VERSION:
         raise ValueError(
-            "unexpected deployment smoke report schema_version "
-            f"({payload.get('schema_version')!r})"
+            f"unexpected deployment smoke report schema_version ({payload.get('schema_version')!r})"
         )
     return _report_from_dict(payload)
 

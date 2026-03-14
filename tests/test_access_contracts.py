@@ -193,9 +193,7 @@ def test_access_depth_bench_v1_is_frozen_to_sixty_cases() -> None:
 def test_access_depth_bench_failure_cases_require_reflective_mode() -> None:
     cases = build_access_depth_bench_v1()
     case = next(
-        sample
-        for sample in cases
-        if sample.case_id == "episode-004_high_correctness_detailed"
+        sample for sample in cases if sample.case_id == "episode-004_high_correctness_detailed"
     )
 
     assert case.task_family is AccessTaskFamily.HIGH_CORRECTNESS

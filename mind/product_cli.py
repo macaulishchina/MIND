@@ -96,9 +96,9 @@ class LocalProductClient:
         )
 
     def config_summary(self) -> dict[str, Any]:
-        return self.registry.system_status_service.config_summary(
-            self._request({})
-        ).model_dump(mode="json")
+        return self.registry.system_status_service.config_summary(self._request({})).model_dump(
+            mode="json"
+        )
 
     def provider_status(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         request_payload = payload or {}
@@ -133,9 +133,7 @@ class LocalProductClient:
                 device_id=str(payload.get("device_id")) if payload.get("device_id") else None,
             )
         input_payload = {
-            key: value
-            for key, value in payload.items()
-            if key != "provider_selection"
+            key: value for key, value in payload.items() if key != "provider_selection"
         }
         return AppRequest(
             principal=principal,
@@ -256,7 +254,9 @@ def build_product_parser() -> argparse.ArgumentParser:
     session_show.add_argument("session_id")
 
     status_parser = subparsers.add_parser("status", help="Show system health and readiness.")
-    status_parser.add_argument("--detailed", action="store_true", help="Include full health report.")
+    status_parser.add_argument(
+        "--detailed", action="store_true", help="Include full health report."
+    )
     config = subparsers.add_parser("config", help="Show resolved configuration.")
     config.add_argument(
         "--provider",
@@ -297,7 +297,9 @@ def build_product_parser() -> argparse.ArgumentParser:
     feedback.add_argument("--helpful", nargs="*", default=[], help="Helpful object IDs.")
     feedback.add_argument("--unhelpful", nargs="*", default=[], help="Unhelpful object IDs.")
     feedback.add_argument(
-        "--quality-signal", type=float, default=0.0,
+        "--quality-signal",
+        type=float,
+        default=0.0,
         help="Quality score in [-1, 1].",
     )
     feedback.add_argument("--principal-id", default="cli-user")
@@ -396,7 +398,7 @@ def _dispatch_command(args: argparse.Namespace, client: ProductClient) -> dict[s
         if getattr(args, "detailed", False):
             from mind.kernel.health import compute_health_report
 
-            report = compute_health_report(client.registry.store)
+            report = compute_health_report(client.registry.store)  # type: ignore[attr-defined]
             result_data["health_report"] = report.to_dict()
         return {
             "status": status_value,
@@ -418,7 +420,9 @@ def _dispatch_command(args: argparse.Namespace, client: ProductClient) -> dict[s
                 "runtime": config_summary.get("result"),
                 "provider": provider_status.get("result"),
             },
-            "error": provider_status.get("error") if provider_status.get("status") != AppStatus.OK.value else config_summary.get("error"),
+            "error": provider_status.get("error")
+            if provider_status.get("status") != AppStatus.OK.value
+            else config_summary.get("error"),
             "request_id": provider_status.get("request_id") or config_summary.get("request_id"),
             "trace_ref": provider_status.get("trace_ref") or config_summary.get("trace_ref"),
         }
@@ -498,11 +502,7 @@ def _provider_selection_from_namespace(
     if all(value in (None, "") for value in values.values()):
         return None
 
-    payload = {
-        key: value
-        for key, value in values.items()
-        if value not in (None, "")
-    }
+    payload = {key: value for key, value in values.items() if value not in (None, "")}
     return ProviderSelection.model_validate(payload)
 
 
@@ -525,8 +525,8 @@ class _ClientContext(AbstractContextManager[ProductClient]):
 
     def __enter__(self) -> ProductClient:
         if self._args.remote:
-            self._client = MindAPIClient(self._args.remote, api_key=self._args.api_key)
-            return self._client
+            self._client = MindAPIClient(self._args.remote, api_key=self._args.api_key)  # type: ignore[assignment]
+            return self._client  # type: ignore[return-value]
 
         sqlite_test_mode = _sqlite_test_mode_enabled()
         if self._args.sqlite_path and not sqlite_test_mode:
@@ -670,9 +670,7 @@ class _CliRenderer:
         current = list(widths)
         minimums = [max(3, min(len(header), 8)) for header in headers]
         while sum(current) > available:
-            shrinkable = [
-                index for index, width in enumerate(current) if width > minimums[index]
-            ]
+            shrinkable = [index for index, width in enumerate(current) if width > minimums[index]]
             if not shrinkable:
                 break
             target = max(shrinkable, key=lambda index: current[index] - minimums[index])
@@ -801,7 +799,7 @@ def _format_recall_payload(payload: dict[str, Any], renderer: _CliRenderer) -> s
             if has_type:
                 row.append(str(candidate.get("object_type") or "-"))
             row.append(object_id)
-            row.append(f"{score:.3f}" if isinstance(score, (int, float)) else "-")
+            row.append(f"{score:.3f}" if isinstance(score, int | float) else "-")
             if has_preview:
                 row.append(str(candidate.get("content_preview") or "-"))
             rows.append(row)
@@ -832,7 +830,7 @@ def _format_ask_payload(payload: dict[str, Any], renderer: _CliRenderer) -> str:
         renderer.kv_block(
             [
                 ("Access Depth", _display_access_depth(result.get("resolved_mode"))),
-                ("Answer", _truncate(_stringify(result.get("answer_text")), 72)),
+                ("Answer", _truncate(_stringify(result.get("answer_text")) or "", 72)),
                 ("Selection Reason", _stringify(first_event.get("reason_code"))),
                 ("Context Shape", _stringify(result.get("context_kind"))),
                 ("Context Objects", _stringify(len(result.get("context_object_ids") or []))),
@@ -872,7 +870,7 @@ def _format_ask_payload(payload: dict[str, Any], renderer: _CliRenderer) -> str:
                     [
                         str(index),
                         str(event.get("event_kind") or "-"),
-                        _display_access_depth(event.get("mode")),
+                        _display_access_depth(event.get("mode")) or "-",
                         _truncate(str(event.get("summary") or ""), 72),
                     ]
                     for index, event in enumerate(events, start=1)
@@ -1067,9 +1065,7 @@ def _format_config_payload(payload: dict[str, Any], renderer: _CliRenderer) -> s
         _append_meta_section(lines, payload, renderer)
         return "\n".join(lines)
     lines.extend(
-        renderer.kv_block(
-            [(_labelize(key), _stringify(result.get(key))) for key in sorted(result)]
-        )
+        renderer.kv_block([(_labelize(key), _stringify(result.get(key))) for key in sorted(result)])
     )
     _append_meta_section(lines, payload, renderer)
     return "\n".join(lines)
@@ -1084,14 +1080,23 @@ def _format_error_payload(payload: dict[str, Any], renderer: _CliRenderer) -> st
                 ("Status", _stringify(payload.get("status"))),
                 ("Code", _stringify(error.get("code"))),
                 ("Message", _stringify(error.get("message"))),
-                ("Retryable", renderer.yes_no(error.get("retryable")) if error.get("retryable") is not None else None),
+                (
+                    "Retryable",
+                    renderer.yes_no(error.get("retryable"))
+                    if error.get("retryable") is not None
+                    else None,
+                ),
             ]
         )
     )
     details = error.get("details") or {}
     if details:
         lines.extend(renderer.section("Details"))
-        lines.extend(renderer.kv_block([(_labelize(key), _stringify(details[key])) for key in sorted(details)]))
+        lines.extend(
+            renderer.kv_block(
+                [(_labelize(key), _stringify(details[key])) for key in sorted(details)]
+            )
+        )
     _append_meta_section(lines, payload, renderer)
     return "\n".join(lines)
 
@@ -1156,9 +1161,7 @@ def _render_access_object_table(
     has_score = any(item.get("score") is not None for item in summaries)
     has_preview = any(item.get("content_preview") for item in summaries)
     summary_by_id = {
-        str(item.get("object_id")): item
-        for item in summaries
-        if item.get("object_id") is not None
+        str(item.get("object_id")): item for item in summaries if item.get("object_id") is not None
     }
 
     headers = ["#", "Object ID"]
@@ -1182,7 +1185,7 @@ def _render_access_object_table(
             row.append(str(summary.get("episode_id") or "-"))
         if has_score:
             score = summary.get("score")
-            row.append(f"{score:.3f}" if isinstance(score, (int, float)) else "-")
+            row.append(f"{score:.3f}" if isinstance(score, int | float) else "-")
         if has_preview:
             row.append(str(summary.get("content_preview") or "-"))
         rows.append(row)

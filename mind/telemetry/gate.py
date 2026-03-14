@@ -45,7 +45,9 @@ class TelemetryToggleAuditResult:
 
     @property
     def passed(self) -> bool:
-        return self.disabled_event_count == 0 and self.matching_scenario_count == self.scenario_count
+        return (
+            self.disabled_event_count == 0 and self.matching_scenario_count == self.scenario_count
+        )
 
 
 @dataclass(frozen=True)
@@ -177,8 +179,7 @@ def read_telemetry_gate_report_json(path: str | Path) -> dict[str, Any]:
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
     if payload.get("schema_version") != _SCHEMA_VERSION:
         raise ValueError(
-            "unexpected telemetry gate report schema_version "
-            f"({payload.get('schema_version')!r})"
+            f"unexpected telemetry gate report schema_version ({payload.get('schema_version')!r})"
         )
     return payload
 
@@ -268,8 +269,8 @@ def _normalize_result(value: Any) -> Any:
         return _normalize_result(asdict(value))
     if isinstance(value, dict):
         return {str(key): _normalize_result(item) for key, item in sorted(value.items())}
-    if isinstance(value, (list, tuple)):
+    if isinstance(value, list | tuple):
         return [_normalize_result(item) for item in value]
-    if isinstance(value, (str, int, float, bool)) or value is None:
+    if isinstance(value, str | int | float | bool) or value is None:
         return value
     return str(value)

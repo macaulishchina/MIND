@@ -201,8 +201,7 @@ def read_strategy_cost_report_json(path: str | Path) -> StrategyCostReport:
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
     if payload.get("schema_version") != _COST_REPORT_SCHEMA_VERSION:
         raise ValueError(
-            "unexpected strategy cost report schema_version "
-            f"({payload.get('schema_version')!r})"
+            f"unexpected strategy cost report schema_version ({payload.get('schema_version')!r})"
         )
     return _cost_report_from_dict(payload)
 
@@ -222,8 +221,7 @@ def _validate_runs_and_snapshots(
     for run, snapshot in zip(runs, snapshots, strict=True):
         if run.run_id != snapshot.run_id:
             raise ValueError(
-                "run and snapshot ids do not align "
-                f"({run.run_id} != {snapshot.run_id})"
+                f"run and snapshot ids do not align ({run.run_id} != {snapshot.run_id})"
             )
 
 

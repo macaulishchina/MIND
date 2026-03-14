@@ -59,9 +59,9 @@ def test_capability_gate_main_prints_pass_report(
     monkeypatch.setattr(
         "mind.cli._build_live_capability_adapters",
         lambda requested_providers: [
-            _ProviderAdapter(CapabilityProviderFamily.OPENAI),  # type: ignore[list-item]
-            _ProviderAdapter(CapabilityProviderFamily.CLAUDE),  # type: ignore[list-item]
-            _ProviderAdapter(CapabilityProviderFamily.GEMINI),  # type: ignore[list-item]
+            _ProviderAdapter(CapabilityProviderFamily.OPENAI),
+            _ProviderAdapter(CapabilityProviderFamily.CLAUDE),
+            _ProviderAdapter(CapabilityProviderFamily.GEMINI),
         ],
     )
 
@@ -96,7 +96,7 @@ def test_capability_compatibility_report_main_prints_summary(
     monkeypatch.setattr(
         "mind.cli._build_live_capability_adapters",
         lambda requested_providers: [
-            _ProviderAdapter(CapabilityProviderFamily.OPENAI),  # type: ignore[list-item]
+            _ProviderAdapter(CapabilityProviderFamily.OPENAI),
         ],
     )
 

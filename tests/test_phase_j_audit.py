@@ -27,15 +27,11 @@ class TestAcceptanceReportsCatalog:
 
     def test_acceptance_reports_contains_all_phases(self) -> None:
         for phase in self.REQUIRED_PHASES:
-            assert phase in _ACCEPTANCE_REPORTS, (
-                f"_ACCEPTANCE_REPORTS is missing phase '{phase}'"
-            )
+            assert phase in _ACCEPTANCE_REPORTS, f"_ACCEPTANCE_REPORTS is missing phase '{phase}'"
 
     def test_acceptance_reports_paths_all_exist(self) -> None:
         for phase, path in _ACCEPTANCE_REPORTS.items():
-            assert path.exists(), (
-                f"Acceptance report for phase '{phase}' does not exist at {path}"
-            )
+            assert path.exists(), f"Acceptance report for phase '{phase}' does not exist at {path}"
 
     def test_acceptance_report_phase_j_via_cli(
         self,
@@ -77,28 +73,44 @@ class TestRestructuredExports:
 
     NEW_IMPORTS = {
         "mind.kernel.gate": (
-            "KernelGateResult", "evaluate_kernel_gate", "assert_kernel_gate",
+            "KernelGateResult",
+            "evaluate_kernel_gate",
+            "assert_kernel_gate",
         ),
         "mind.primitives.gate": (
-            "PrimitiveGateResult", "evaluate_primitive_gate", "assert_primitive_gate",
+            "PrimitiveGateResult",
+            "evaluate_primitive_gate",
+            "assert_primitive_gate",
         ),
         "mind.workspace.smoke": (
-            "WorkspaceSmokeResult", "evaluate_workspace_smoke", "assert_workspace_smoke",
+            "WorkspaceSmokeResult",
+            "evaluate_workspace_smoke",
+            "assert_workspace_smoke",
         ),
         "mind.offline.assessment": (
-            "OfflineGateResult", "evaluate_offline_gate", "assert_offline_gate",
+            "OfflineGateResult",
+            "evaluate_offline_gate",
+            "assert_offline_gate",
         ),
         "mind.eval.benchmark_gate": (
-            "BenchmarkGateResult", "evaluate_benchmark_gate", "assert_benchmark_gate",
+            "BenchmarkGateResult",
+            "evaluate_benchmark_gate",
+            "assert_benchmark_gate",
         ),
         "mind.eval.strategy_gate": (
-            "StrategyGateResult", "evaluate_strategy_gate", "assert_strategy_gate",
+            "StrategyGateResult",
+            "evaluate_strategy_gate",
+            "assert_strategy_gate",
         ),
         "mind.governance.gate": (
-            "GovernanceGateResult", "evaluate_governance_gate", "assert_governance_gate",
+            "GovernanceGateResult",
+            "evaluate_governance_gate",
+            "assert_governance_gate",
         ),
         "mind.access.gate": (
-            "AccessGateResult", "evaluate_access_gate", "assert_access_gate",
+            "AccessGateResult",
+            "evaluate_access_gate",
+            "assert_access_gate",
         ),
     }
 
@@ -106,22 +118,17 @@ class TestRestructuredExports:
     def test_old_phase_file_no_longer_exists(self, old_path: str) -> None:
         repo_root = Path(__file__).resolve().parent.parent
         full_path = repo_root / old_path
-        assert not full_path.exists(), (
-            f"Stale phase file still exists: {old_path}"
-        )
+        assert not full_path.exists(), f"Stale phase file still exists: {old_path}"
 
     @pytest.mark.parametrize("module_path,names", list(NEW_IMPORTS.items()))
-    def test_new_gate_module_importable(
-        self, module_path: str, names: tuple[str, ...]
-    ) -> None:
+    def test_new_gate_module_importable(self, module_path: str, names: tuple[str, ...]) -> None:
         mod = importlib.import_module(module_path)
         for name in names:
-            assert hasattr(mod, name), (
-                f"{module_path} is missing expected export '{name}'"
-            )
+            assert hasattr(mod, name), f"{module_path} is missing expected export '{name}'"
 
     def test_package_init_reexports_kernel_gate(self) -> None:
         from mind.kernel.gate import KernelGateResult, evaluate_kernel_gate
+
         assert KernelGateResult is not None
         assert callable(evaluate_kernel_gate)
 
@@ -131,6 +138,7 @@ class TestRestructuredExports:
             assert_offline_gate,
             evaluate_offline_gate,
         )
+
         assert OfflineGateResult is not None
         assert callable(evaluate_offline_gate)
         assert callable(assert_offline_gate)
@@ -141,6 +149,7 @@ class TestRestructuredExports:
             assert_governance_gate,
             evaluate_governance_gate,
         )
+
         assert GovernanceGateResult is not None
         assert callable(evaluate_governance_gate)
         assert callable(assert_governance_gate)
@@ -151,6 +160,7 @@ class TestRestructuredExports:
             assert_access_gate,
             evaluate_access_gate,
         )
+
         assert AccessGateResult is not None
         assert callable(evaluate_access_gate)
         assert callable(assert_access_gate)
@@ -164,6 +174,7 @@ class TestRestructuredExports:
             evaluate_benchmark_gate,
             evaluate_strategy_gate,
         )
+
         assert BenchmarkGateResult is not None
         assert callable(evaluate_benchmark_gate)
         assert callable(assert_benchmark_gate)
@@ -177,6 +188,7 @@ class TestRestructuredExports:
             assert_workspace_smoke,
             evaluate_workspace_smoke,
         )
+
         assert WorkspaceSmokeResult is not None
         assert callable(evaluate_workspace_smoke)
         assert callable(assert_workspace_smoke)
@@ -190,6 +202,7 @@ class TestRestructuredExports:
 def test_build_canonical_seed_objects_is_importable() -> None:
     """Verify that the renamed helper function is reachable."""
     from mind.offline.assessment import build_canonical_seed_objects
+
     assert callable(build_canonical_seed_objects)
 
 
@@ -224,11 +237,13 @@ class TestCliGateModuleStructure:
 
     def test_cli_gate_result_properties_cover_j1_through_j6(self) -> None:
         from mind.cli_gate import CliGateResult
+
         for jx in ("j1_pass", "j2_pass", "j3_pass", "j4_pass", "j5_pass", "j6_pass"):
             assert hasattr(CliGateResult, jx), f"CliGateResult missing property '{jx}'"
 
     def test_cli_gate_pass_property_exists(self) -> None:
         from mind.cli_gate import CliGateResult
+
         assert hasattr(CliGateResult, "cli_gate_pass")
 
 

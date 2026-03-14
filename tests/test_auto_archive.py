@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING
 
 import pytest
 
 from mind.eval.growth_metrics import ArchiveReport
 from mind.kernel.store import SQLiteMemoryStore
-from mind.offline_jobs import AutoArchiveJobPayload, OfflineJobKind
 from mind.offline.scheduler import OfflineJobScheduler
+from mind.offline_jobs import AutoArchiveJobPayload, OfflineJob, OfflineJobKind
+
+if TYPE_CHECKING:
+    from mind.offline.service import OfflineMaintenanceService
 
 
 def _ts(days_ago: float = 0.0) -> str:
@@ -66,7 +70,7 @@ class TestAutoArchiveJobKind:
         assert payload.stale_days == 30
 
     def test_auto_archive_payload_stale_days_ge_1(self) -> None:
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             AutoArchiveJobPayload(stale_days=0)
 
 
@@ -78,10 +82,10 @@ class TestSchedulerAutoArchive:
         jobs: list = []
 
         class FakeStore:
-            def enqueue_offline_job(self, job):
+            def enqueue_offline_job(self, job: object) -> None:
                 jobs.append(job)
 
-            def iter_offline_jobs(self, *, statuses=()):
+            def iter_offline_jobs(self, *, statuses: tuple[object, ...] = ()) -> list:
                 return list(jobs)
 
         return jobs, FakeStore()
@@ -116,12 +120,14 @@ class TestAutoArchiveExecution:
     def _store(self) -> SQLiteMemoryStore:
         return SQLiteMemoryStore(":memory:")
 
-    def _service(self, store: SQLiteMemoryStore):
+    def _service(self, store: SQLiteMemoryStore) -> OfflineMaintenanceService:
         from mind.offline.service import OfflineMaintenanceService
+
         return OfflineMaintenanceService(store)
 
-    def _make_job(self, payload: AutoArchiveJobPayload):
+    def _make_job(self, payload: AutoArchiveJobPayload) -> OfflineJob:
         from mind.offline_jobs import new_offline_job
+
         return new_offline_job(
             job_kind=OfflineJobKind.AUTO_ARCHIVE,
             payload=payload,
@@ -318,7 +324,9 @@ class TestProductCliUnarchive:
 
         parser = build_product_parser()
         # Verify "unarchive" is a registered subcommand.
+        assert parser._subparsers is not None
         choices = parser._subparsers._group_actions[0].choices
+        assert choices is not None
         assert "unarchive" in choices
 
     def test_unarchive_requires_object_id(self) -> None:

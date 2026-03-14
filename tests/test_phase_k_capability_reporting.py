@@ -98,7 +98,7 @@ def test_provider_compatibility_report_round_trips(tmp_path: Path) -> None:
 
 def test_provider_compatibility_report_reflects_registered_openai_adapter() -> None:
     report = evaluate_capability_provider_compatibility_report(
-        adapters=[_OpenAICapabilityAdapter()],  # type: ignore[list-item]
+        adapters=[_OpenAICapabilityAdapter()],
         clock=_fixed_clock,
     )
 

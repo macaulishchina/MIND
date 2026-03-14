@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from mind.kernel.embedding import (
     EmbeddingProvider,
     LocalHashEmbedding,
@@ -12,7 +10,6 @@ from mind.kernel.embedding import (
     set_default_provider,
 )
 from mind.kernel.retrieval import EMBEDDING_DIM, cosine_similarity, embed_text
-
 
 # ---------------------------------------------------------------------------
 # Helpers

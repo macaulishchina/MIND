@@ -108,7 +108,7 @@ class OfflineMaintenanceService:
 
         try:
             if job.job_kind is OfflineJobKind.REFLECT_EPISODE:
-                payload = ReflectEpisodeJobPayload.model_validate(job.payload)
+                reflect_payload = ReflectEpisodeJobPayload.model_validate(job.payload)
                 last_parent_event_id = f"{operation_id}-dispatch"
                 self._record_telemetry(
                     enabled=dev_mode,
@@ -127,15 +127,15 @@ class OfflineMaintenanceService:
                             "job_kind": job.job_kind.value,
                             "handler": "reflect_episode",
                             "primitive": "reflect",
-                            "episode_id": payload.episode_id,
-                            "focus": payload.focus,
+                            "episode_id": reflect_payload.episode_id,
+                            "focus": reflect_payload.focus,
                         },
                     ),
                 )
                 result = self._process_reflect_episode(
                     job,
                     actor=actor,
-                    payload=payload,
+                    payload=reflect_payload,
                     dev_mode=dev_mode,
                     provider_selection=provider_selection,
                     telemetry_run_id=run_id,
@@ -143,7 +143,7 @@ class OfflineMaintenanceService:
                     telemetry_parent_event_id=last_parent_event_id,
                 )
             elif job.job_kind is OfflineJobKind.PROMOTE_SCHEMA:
-                payload = PromoteSchemaJobPayload.model_validate(job.payload)
+                schema_payload = PromoteSchemaJobPayload.model_validate(job.payload)
                 last_parent_event_id = f"{operation_id}-dispatch"
                 self._record_telemetry(
                     enabled=dev_mode,
@@ -162,12 +162,12 @@ class OfflineMaintenanceService:
                             "job_kind": job.job_kind.value,
                             "handler": "promote_schema",
                             "primitive": "reorganize_simple",
-                            "target_refs": list(payload.target_refs),
-                            "requested_reason": payload.reason,
+                            "target_refs": list(schema_payload.target_refs),
+                            "requested_reason": schema_payload.reason,
                         },
                     ),
                 )
-                decision, target_objects = self._assess_promotion(payload)
+                decision, target_objects = self._assess_promotion(schema_payload)
                 last_parent_event_id = f"{operation_id}-assessment"
                 self._record_telemetry(
                     enabled=dev_mode,
@@ -199,7 +199,7 @@ class OfflineMaintenanceService:
                 result = self._process_promote_schema(
                     job,
                     actor=actor,
-                    payload=payload,
+                    payload=schema_payload,
                     decision=decision,
                     target_objects=target_objects,
                     dev_mode=dev_mode,
@@ -209,7 +209,7 @@ class OfflineMaintenanceService:
                     telemetry_parent_event_id=last_parent_event_id,
                 )
             elif job.job_kind is OfflineJobKind.UPDATE_PRIORITY:
-                payload = UpdatePriorityJobPayload.model_validate(job.payload)
+                priority_payload = UpdatePriorityJobPayload.model_validate(job.payload)
                 last_parent_event_id = f"{operation_id}-dispatch"
                 self._record_telemetry(
                     enabled=dev_mode,
@@ -227,36 +227,36 @@ class OfflineMaintenanceService:
                             "stage": "dispatch",
                             "job_kind": job.job_kind.value,
                             "handler": "update_priority",
-                            "object_count": len(payload.object_ids),
-                            "reason": payload.reason,
+                            "object_count": len(priority_payload.object_ids),
+                            "reason": priority_payload.reason,
                         },
                     ),
                 )
-                result = self._process_update_priority(job, payload=payload)
+                result = self._process_update_priority(job, payload=priority_payload)
             elif job.job_kind is OfflineJobKind.REFRESH_EMBEDDINGS:
-                payload = RefreshEmbeddingsJobPayload.model_validate(job.payload)
-                result = self._process_refresh_embeddings(job, payload=payload)
+                refresh_payload = RefreshEmbeddingsJobPayload.model_validate(job.payload)
+                result = self._process_refresh_embeddings(job, payload=refresh_payload)
             elif job.job_kind is OfflineJobKind.RESOLVE_CONFLICT:
-                payload = ResolveConflictJobPayload.model_validate(job.payload)
-                result = self._process_resolve_conflict(job, payload=payload)
+                conflict_payload = ResolveConflictJobPayload.model_validate(job.payload)
+                result = self._process_resolve_conflict(job, payload=conflict_payload)
             elif job.job_kind is OfflineJobKind.VERIFY_PROPOSAL:
-                payload = VerifyProposalJobPayload.model_validate(job.payload)
-                result = self._process_verify_proposal(job, payload=payload)
+                verify_payload = VerifyProposalJobPayload.model_validate(job.payload)
+                result = self._process_verify_proposal(job, payload=verify_payload)
             elif job.job_kind is OfflineJobKind.PROMOTE_POLICY:
-                payload = PromotePolicyJobPayload.model_validate(job.payload)
-                result = self._process_promote_policy(job, payload=payload)
+                policy_payload = PromotePolicyJobPayload.model_validate(job.payload)
+                result = self._process_promote_policy(job, payload=policy_payload)
             elif job.job_kind is OfflineJobKind.PROMOTE_PREFERENCE:
-                payload = PromotePreferenceJobPayload.model_validate(job.payload)
-                result = self._process_promote_preference(job, payload=payload)
+                pref_payload = PromotePreferenceJobPayload.model_validate(job.payload)
+                result = self._process_promote_preference(job, payload=pref_payload)
             elif job.job_kind is OfflineJobKind.DISCOVER_LINKS:
-                payload = DiscoverLinksJobPayload.model_validate(job.payload)
-                result = self._process_discover_links(job, payload=payload)
+                links_payload = DiscoverLinksJobPayload.model_validate(job.payload)
+                result = self._process_discover_links(job, payload=links_payload)
             elif job.job_kind is OfflineJobKind.REBUILD_ARTIFACT_INDEX:
-                payload = RebuildArtifactIndexJobPayload.model_validate(job.payload)
-                result = self._process_rebuild_artifact_index(job, payload=payload)
+                index_payload = RebuildArtifactIndexJobPayload.model_validate(job.payload)
+                result = self._process_rebuild_artifact_index(job, payload=index_payload)
             elif job.job_kind is OfflineJobKind.AUTO_ARCHIVE:
-                payload = AutoArchiveJobPayload.model_validate(job.payload)
-                result = self._process_auto_archive(job, payload=payload)
+                archive_payload = AutoArchiveJobPayload.model_validate(job.payload)
+                result = self._process_auto_archive(job, payload=archive_payload)
             else:
                 raise OfflineMaintenanceError(
                     f"unsupported offline job kind '{job.job_kind.value}'"
@@ -431,9 +431,7 @@ class OfflineMaintenanceService:
         """Batch-refresh decay_score on a set of objects using recency signal."""
         now = self._clock()
         updated_ids: list[str] = []
-        object_ids = payload.object_ids or [
-            obj["id"] for obj in self.store.iter_latest_objects()
-        ]
+        object_ids = payload.object_ids or [obj["id"] for obj in self.store.iter_latest_objects()]
         for object_id in object_ids:
             try:
                 obj = self.store.read_object(object_id)
@@ -482,9 +480,7 @@ class OfflineMaintenanceService:
         from mind.kernel.embedding import embed_objects
 
         now = self._clock()
-        object_ids = payload.object_ids or [
-            obj["id"] for obj in self.store.iter_latest_objects()
-        ]
+        object_ids = payload.object_ids or [obj["id"] for obj in self.store.iter_latest_objects()]
         refreshed_ids: list[str] = []
         target_objects: list[dict[str, Any]] = []
         for object_id in object_ids:
@@ -604,9 +600,7 @@ class OfflineMaintenanceService:
             ) from exc
 
         if schema_note.get("type") != "SchemaNote":
-            raise OfflineMaintenanceError(
-                f"object '{payload.schema_note_id}' is not a SchemaNote"
-            )
+            raise OfflineMaintenanceError(f"object '{payload.schema_note_id}' is not a SchemaNote")
 
         metadata = schema_note.get("metadata", {})
         evidence_refs = metadata.get("evidence_refs", [])
@@ -659,6 +653,7 @@ class OfflineMaintenanceService:
         now = self._clock()
         ts = now.isoformat()
         from uuid import uuid4
+
         policy_id = f"policy-{uuid4().hex}"
         policy_note = {
             "id": policy_id,
@@ -706,6 +701,7 @@ class OfflineMaintenanceService:
         now = self._clock()
         ts = now.isoformat()
         from uuid import uuid4
+
         pref_id = f"preference-{uuid4().hex}"
         preference_note = {
             "id": pref_id,
@@ -743,9 +739,10 @@ class OfflineMaintenanceService:
         payload: DiscoverLinksJobPayload,
     ) -> dict[str, Any]:
         """Automatically discover and create proposed LinkEdge objects (Phase γ-2)."""
-        from mind.kernel.embedding import embed_objects
-        from uuid import uuid4
         import math
+        from uuid import uuid4
+
+        from mind.kernel.embedding import embed_objects
 
         now = self._clock()
         ts = now.isoformat()
@@ -786,12 +783,12 @@ class OfflineMaintenanceService:
                 dst_norm = math.sqrt(sum(v * v for v in dst_vec))
                 if dst_norm == 0:
                     continue
-                dot = sum(a * b for a, b in zip(src_vec, dst_vec))
+                dot = sum(a * b for a, b in zip(src_vec, dst_vec, strict=False))
                 sim = dot / (src_norm * dst_norm)
                 if sim >= payload.min_similarity:
                     similarities.append((sim, dst_obj["id"]))
             similarities.sort(reverse=True)
-            for sim, dst_id in similarities[:payload.top_k]:
+            for sim, dst_id in similarities[: payload.top_k]:
                 link_id = f"link-{src_obj['id']}-{dst_id}-{uuid4().hex[:8]}"
                 link = {
                     "id": link_id,

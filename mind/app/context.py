@@ -24,6 +24,7 @@ _TRUE_ENV_VALUES = frozenset({"1", "true", "yes", "on"})
 # Supporting enums
 # ---------------------------------------------------------------------------
 
+
 class PrincipalKind(StrEnum):
     """Kinds of principal identities."""
 
@@ -53,6 +54,7 @@ class RetentionClass(StrEnum):
 # ---------------------------------------------------------------------------
 # Frozen context models
 # ---------------------------------------------------------------------------
+
 
 class PrincipalContext(BaseModel):
     """Identity context for the acting principal."""
@@ -123,6 +125,7 @@ class ProviderSelection(BaseModel):
 # Context projection
 # ---------------------------------------------------------------------------
 
+
 def resolve_execution_context(
     principal: PrincipalContext | None = None,
     session: SessionContext | None = None,
@@ -156,14 +159,14 @@ def resolve_execution_context(
         capabilities=capabilities,
         dev_mode=dev_mode,
         provider_selection=(
-            provider_selection.model_dump(mode="json")
-            if provider_selection is not None
-            else None
+            provider_selection.model_dump(mode="json") if provider_selection is not None else None
         ),
         telemetry_run_id=(
             session.request_id
             if session is not None and session.request_id
-            else session.session_id if session is not None else None
+            else session.session_id
+            if session is not None
+            else None
         ),
     )
 

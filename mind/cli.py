@@ -32,11 +32,6 @@ from .capabilities import (
     write_capability_gate_report_json,
     write_capability_provider_compatibility_report_json,
 )
-from .frontend import (
-    assert_frontend_gate,
-    evaluate_frontend_gate,
-    write_frontend_gate_report_json,
-)
 from .cli_config import (
     CliBackend,
     CliProfile,
@@ -68,27 +63,32 @@ from .eval import (
     write_strategy_gate_report_json,
 )
 from .fixtures.access_depth_bench import AccessDepthBenchCase, build_access_depth_bench_v1
+from .fixtures.deployment_smoke_suite import (
+    evaluate_deployment_smoke_suite,
+    write_deployment_smoke_report_json,
+    write_deployment_smoke_report_markdown,
+)
 from .fixtures.long_horizon_eval import (
     build_long_horizon_eval_manifest_v1,
     build_long_horizon_eval_v1,
 )
-from .fixtures.deployment_smoke_suite import (
-    evaluate_deployment_smoke_suite,
-    write_deployment_smoke_report_markdown,
-    write_deployment_smoke_report_json,
-)
 from .fixtures.product_readiness_report import (
     assert_product_readiness_report,
     evaluate_product_readiness_report,
-    write_product_readiness_report_markdown,
     write_product_readiness_report_json,
+    write_product_readiness_report_markdown,
 )
 from .fixtures.product_transport_audit import (
     evaluate_runtime_product_transport_audit_report,
-    write_product_transport_audit_markdown,
     write_product_transport_audit_json,
+    write_product_transport_audit_markdown,
 )
 from .fixtures.retrieval_benchmark import build_canonical_seed_objects
+from .frontend import (
+    assert_frontend_gate,
+    evaluate_frontend_gate,
+    write_frontend_gate_report_json,
+)
 from .governance import (
     GovernanceService,
     GovernanceServiceError,
@@ -292,7 +292,7 @@ def _build_forwarded_argv(
         value = getattr(args, attr_name)
         if value is None:
             continue
-        if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        if isinstance(value, Sequence) and not isinstance(value, str | bytes | bytearray):
             for item in value:
                 forwarded.extend((flag, str(item)))
             continue
@@ -1346,9 +1346,7 @@ def _demo_access_case(case_id: str | None) -> AccessDepthBenchCase:
         raise SystemExit(f"Unknown access demo case_id '{case_id}'.")
 
     high_correctness_cases = [
-        case
-        for case in cases
-        if case.task_family is AccessTaskFamily.HIGH_CORRECTNESS
+        case for case in cases if case.task_family is AccessTaskFamily.HIGH_CORRECTNESS
     ]
     if high_correctness_cases:
         return high_correctness_cases[0]
@@ -1441,8 +1439,7 @@ def _run_demo_offline_job(args: argparse.Namespace) -> int:
     print(f"pending_job_count={len(jobs)}")
     for index, queued_job in enumerate(jobs, start=1):
         print(
-            f"job_{index}="
-            f"{queued_job.job_id}:{queued_job.job_kind.value}:{queued_job.status.value}"
+            f"job_{index}={queued_job.job_id}:{queued_job.job_kind.value}:{queued_job.status.value}"
         )
     return 0
 
@@ -1694,7 +1691,10 @@ def _configure_gate_commands(command_parser: argparse.ArgumentParser) -> None:
         action="append",
         choices=_LIVE_CAPABILITY_PROVIDER_CHOICES,
         default=[],
-        help="Optional live provider adapter to execute during the gate. May be passed multiple times.",
+        help=(
+            "Optional live provider adapter to execute during the gate."
+            " May be passed multiple times."
+        ),
     )
     phase_k_parser.set_defaults(
         _mind_handler=_run_forwarded_command(
@@ -1779,8 +1779,7 @@ def _run_list_offline_jobs(args: argparse.Namespace) -> int:
     print(f"job_count={len(jobs)}")
     for index, job in enumerate(jobs, start=1):
         print(
-            f"job_{index}="
-            f"{job.job_id}:{job.job_kind.value}:{job.status.value}:{job.priority:.2f}"
+            f"job_{index}={job.job_id}:{job.job_kind.value}:{job.status.value}:{job.priority:.2f}"
         )
     return 0
 
@@ -2060,9 +2059,7 @@ def _run_config_profile(args: argparse.Namespace) -> int:
     selected_name = getattr(args, "name", None)
     if selected_name is not None:
         selected_profile = CliProfile(selected_name)
-        profiles = tuple(
-            profile for profile in profiles if profile.profile is selected_profile
-        )
+        profiles = tuple(profile for profile in profiles if profile.profile is selected_profile)
 
     print("CLI profiles")
     print(f"profile_count={len(profiles)}")
@@ -2240,7 +2237,10 @@ def _configure_report_commands(command_parser: argparse.ArgumentParser) -> None:
         action="append",
         choices=_LIVE_CAPABILITY_PROVIDER_CHOICES,
         default=[],
-        help="Optional live provider adapter to execute during the report. May be passed multiple times.",
+        help=(
+            "Optional live provider adapter to execute during the report."
+            " May be passed multiple times."
+        ),
     )
     phase_k_compatibility_parser.set_defaults(
         _mind_handler=_run_forwarded_command(
@@ -2442,10 +2442,7 @@ def primitive_gate_main() -> int:
     print(f"schema_valid_calls={result.schema_valid_calls}/{result.total_calls}")
     print(f"structured_log_calls={result.structured_log_calls}/{result.total_calls}")
     print(f"smoke_coverage={result.smoke_success_count}/7")
-    print(
-        "budget_rejections="
-        f"{result.budget_rejection_match_count}/{result.budget_total}"
-    )
+    print(f"budget_rejections={result.budget_rejection_match_count}/{result.budget_total}")
     print(f"rollback_atomic={result.rollback_atomic_count}/{result.rollback_total}")
     print(f"C-1={'PASS' if result.c1_pass else 'FAIL'}")
     print(f"C-2={'PASS' if result.c2_pass else 'FAIL'}")
@@ -2518,10 +2515,7 @@ def postgres_regression_main(argv: Sequence[str] | None = None) -> int:
         f"{kernel_result.round_trip_match_count}/{kernel_result.round_trip_total}"
     )
     print(f"phase_b_replay={kernel_result.replay_match_count}/{kernel_result.replay_total}")
-    print(
-        "phase_c_schema="
-        f"{primitive_result.schema_valid_calls}/{primitive_result.total_calls}"
-    )
+    print(f"phase_c_schema={primitive_result.schema_valid_calls}/{primitive_result.total_calls}")
     print(
         "phase_c_budget_rejections="
         f"{primitive_result.budget_rejection_match_count}/{primitive_result.budget_total}"
@@ -2530,26 +2524,11 @@ def postgres_regression_main(argv: Sequence[str] | None = None) -> int:
         "phase_c_rollback_atomic="
         f"{primitive_result.rollback_atomic_count}/{primitive_result.rollback_total}"
     )
-    print(
-        "phase_d_recall_at_20="
-        f"{workspace_result.candidate_recall_at_20:.2f}"
-    )
-    print(
-        "phase_d_workspace_coverage="
-        f"{workspace_result.workspace_gold_fact_coverage:.2f}"
-    )
-    print(
-        "phase_d_workspace_discipline="
-        f"{workspace_result.workspace_slot_discipline_rate:.2f}"
-    )
-    print(
-        "phase_d_token_cost_ratio="
-        f"{workspace_result.median_token_cost_ratio:.2f}"
-    )
-    print(
-        "phase_d_task_success_drop_pp="
-        f"{workspace_result.task_success_drop_pp:.2f}"
-    )
+    print(f"phase_d_recall_at_20={workspace_result.candidate_recall_at_20:.2f}")
+    print(f"phase_d_workspace_coverage={workspace_result.workspace_gold_fact_coverage:.2f}")
+    print(f"phase_d_workspace_discipline={workspace_result.workspace_slot_discipline_rate:.2f}")
+    print(f"phase_d_token_cost_ratio={workspace_result.median_token_cost_ratio:.2f}")
+    print(f"phase_d_task_success_drop_pp={workspace_result.task_success_drop_pp:.2f}")
     print(f"phase_e_replay_lift={offline_result.startup_result.replay_lift:.2f}")
     print(
         "phase_e_schema_validation_precision="
@@ -2560,10 +2539,7 @@ def postgres_regression_main(argv: Sequence[str] | None = None) -> int:
         f"{offline_result.startup_result.promotion_precision_at_10:.2f}"
     )
     print(f"phase_e_pus_improvement={offline_result.dev_eval.pus_improvement:.2f}")
-    print(
-        "phase_e_pollution_rate_delta="
-        f"{offline_result.dev_eval.pollution_rate_delta:.2f}"
-    )
+    print(f"phase_e_pollution_rate_delta={offline_result.dev_eval.pollution_rate_delta:.2f}")
     return 0
 
 
@@ -2763,30 +2739,19 @@ def governance_gate_main(argv: Sequence[str] | None = None) -> int:
     print("Phase H gate report")
     print(f"report_path={output_path}")
     print(
-        "direct_provenance_bindings="
-        f"{result.authoritative_binding_count}/{result.raw_object_count}"
+        f"direct_provenance_bindings={result.authoritative_binding_count}/{result.raw_object_count}"
     )
     print(f"orphan_provenance_rows={result.orphan_provenance_count}")
+    print(f"low_privilege_blocks={result.low_privilege_block_count}/{result.low_privilege_total}")
+    print(f"privileged_summaries={result.privileged_summary_count}/{result.privileged_total}")
     print(
-        "low_privilege_blocks="
-        f"{result.low_privilege_block_count}/{result.low_privilege_total}"
-    )
-    print(
-        "privileged_summaries="
-        f"{result.privileged_summary_count}/{result.privileged_total}"
-    )
-    print(
-        "online_conceal_blocks="
-        f"{result.online_conceal_block_count}/{result.online_conceal_total}"
+        f"online_conceal_blocks={result.online_conceal_block_count}/{result.online_conceal_total}"
     )
     print(
         "offline_conceal_blocks="
         f"{result.offline_conceal_block_count}/{result.offline_conceal_total}"
     )
-    print(
-        "governance_stage_sequence="
-        f"{','.join(result.governance_audit_stage_sequence)}"
-    )
+    print(f"governance_stage_sequence={','.join(result.governance_audit_stage_sequence)}")
     print(f"provenance_query_hit_count={result.provenance_query_hit_count}")
     print(f"H-1={'PASS' if result.h1_pass else 'FAIL'}")
     print(f"H-2={'PASS' if result.h2_pass else 'FAIL'}")
@@ -2857,10 +2822,7 @@ def access_gate_main(argv: Sequence[str] | None = None) -> int:
         f"downgrade:{result.auto_audit.downgrade_count},"
         f"jump:{result.auto_audit.jump_count}"
     )
-    print(
-        "fixed_lock_overrides="
-        f"{result.fixed_lock_override_count}/{result.fixed_lock_run_count}"
-    )
+    print(f"fixed_lock_overrides={result.fixed_lock_override_count}/{result.fixed_lock_run_count}")
     print(f"I-1={'PASS' if result.i1_pass else 'FAIL'}")
     print(f"I-2={'PASS' if result.i2_pass else 'FAIL'}")
     print(f"I-3={'PASS' if result.i3_pass else 'FAIL'}")
@@ -2909,26 +2871,16 @@ def cli_gate_main(argv: Sequence[str] | None = None) -> int:
     print(f"report_path={output_path}")
     print(f"scenario_count={result.scenario_count}")
     print(f"help_coverage={result.help_coverage_count}/{result.help_total}")
-    print(
-        "family_reachability="
-        f"{result.family_reachability_count}/{result.family_total}"
-    )
+    print(f"family_reachability={result.family_reachability_count}/{result.family_total}")
     print(
         "representative_flows="
         f"{result.representative_flow_pass_count}/{result.representative_flow_total}"
     )
     print(f"postgres_demo_configured={str(result.postgres_demo_configured).lower()}")
+    print(f"config_audit={result.config_audit_pass_count}/{result.config_audit_total}")
+    print(f"output_contracts={result.output_contract_pass_count}/{result.output_contract_total}")
     print(
-        "config_audit="
-        f"{result.config_audit_pass_count}/{result.config_audit_total}"
-    )
-    print(
-        "output_contracts="
-        f"{result.output_contract_pass_count}/{result.output_contract_total}"
-    )
-    print(
-        "invalid_exit_contracts="
-        f"{result.invalid_exit_coverage_count}/{result.invalid_exit_total}"
+        f"invalid_exit_contracts={result.invalid_exit_coverage_count}/{result.invalid_exit_total}"
     )
     print(
         "wrapped_regressions="
@@ -2961,7 +2913,10 @@ def capability_gate_main(argv: Sequence[str] | None = None) -> int:
         action="append",
         choices=_LIVE_CAPABILITY_PROVIDER_CHOICES,
         default=[],
-        help="Optional live provider adapter to execute during the gate. May be passed multiple times.",
+        help=(
+            "Optional live provider adapter to execute during the gate."
+            " May be passed multiple times."
+        ),
     )
     args = parser.parse_args(list(argv) if argv is not None else None)
 
@@ -2985,10 +2940,11 @@ def capability_gate_main(argv: Sequence[str] | None = None) -> int:
         "benchmark="
         f"{result.benchmark_result.passed_case_count}/{result.benchmark_result.case_count}"
     )
+    audit = result.failure_audit
     print(
         "failure_audit="
-        f"{result.failure_audit.fallback_success_count + result.failure_audit.structured_failure_count}/"
-        f"{result.failure_audit.audited_case_count}"
+        f"{audit.fallback_success_count + audit.structured_failure_count}"
+        f"/{audit.audited_case_count}"
     )
     print(
         "trace_coverage="
@@ -3029,7 +2985,10 @@ def capability_compatibility_report_main(argv: Sequence[str] | None = None) -> i
         action="append",
         choices=_LIVE_CAPABILITY_PROVIDER_CHOICES,
         default=[],
-        help="Optional live provider adapter to execute during the report. May be passed multiple times.",
+        help=(
+            "Optional live provider adapter to execute during the report."
+            " May be passed multiple times."
+        ),
     )
     args = parser.parse_args(list(argv) if argv is not None else None)
 
@@ -3400,29 +3359,17 @@ def benchmark_gate_main(argv: Sequence[str] | None = None) -> int:
     output_path = write_benchmark_gate_report_json(args.output, result)
     print("Phase F gate report")
     print(f"manifest_hash={result.manifest_hash}")
-    print(
-        "manifest_step_range="
-        f"{result.manifest_min_step_count}..{result.manifest_max_step_count}"
-    )
+    print(f"manifest_step_range={result.manifest_min_step_count}..{result.manifest_max_step_count}")
     print(f"repeat_count={result.comparison_result.suite_report.repeat_count}")
     print(f"report_path={output_path}")
-    print(
-        "mind_vs_no_memory_diff="
-        f"{result.comparison_result.versus_no_memory.mean_diff:.2f}"
-    )
+    print(f"mind_vs_no_memory_diff={result.comparison_result.versus_no_memory.mean_diff:.2f}")
     print(
         "mind_vs_fixed_summary_memory_diff="
         f"{result.comparison_result.versus_fixed_summary_memory.mean_diff:.2f}"
     )
-    print(
-        "mind_vs_plain_rag_diff="
-        f"{result.comparison_result.versus_plain_rag.mean_diff:.2f}"
-    )
+    print(f"mind_vs_plain_rag_diff={result.comparison_result.versus_plain_rag.mean_diff:.2f}")
     print(f"workspace_ablation_drop={result.workspace_ablation.mean_diff:.2f}")
-    print(
-        "offline_maintenance_ablation_drop="
-        f"{result.offline_maintenance_ablation.mean_diff:.2f}"
-    )
+    print(f"offline_maintenance_ablation_drop={result.offline_maintenance_ablation.mean_diff:.2f}")
     print(f"F-1={'PASS' if result.f1_pass else 'FAIL'}")
     print(f"F-2={'PASS' if result.f2_pass else 'FAIL'}")
     print(f"F-3={'PASS' if result.f3_pass else 'FAIL'}")
@@ -3565,8 +3512,7 @@ def strategy_gate_main(argv: Sequence[str] | None = None) -> int:
     print(f"token_budget_bias={result.optimized_cost_report.token_budget_bias.mean:.2f}")
     print(f"storage_budget_bias={result.optimized_cost_report.storage_budget_bias.mean:.2f}")
     print(
-        "maintenance_budget_bias="
-        f"{result.optimized_cost_report.maintenance_budget_bias.mean:.2f}"
+        f"maintenance_budget_bias={result.optimized_cost_report.maintenance_budget_bias.mean:.2f}"
     )
     print(f"total_budget_bias={result.optimized_cost_report.total_budget_bias.mean:.2f}")
     print(f"pollution_rate_delta={result.pollution_rate_delta.mean_diff:.2f}")
@@ -3642,10 +3588,7 @@ def frontend_gate_main(argv: Sequence[str] | None = None) -> int:
     output_path = write_frontend_gate_report_json(args.output, result)
     print("Phase M gate report")
     print(f"report_path={output_path}")
-    print(
-        "flow_report="
-        f"{result.flow_report.passed_count}/{result.flow_report.scenario_count}"
-    )
+    print(f"flow_report={result.flow_report.passed_count}/{result.flow_report.scenario_count}")
     print(
         "responsive_audit="
         f"{result.responsive_audit.passed_count}/{result.responsive_audit.scenario_count}"

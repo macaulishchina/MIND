@@ -211,9 +211,7 @@ def test_provenance_summary_excludes_all_high_sensitivity_fields() -> None:
     """ProvenanceSummary must structurally exclude every HIGH_SENSITIVITY field."""
     summary_fields = set(ProvenanceSummary.model_fields.keys())
     overlap = HIGH_SENSITIVITY_PROVENANCE_FIELDS & summary_fields
-    assert overlap == set(), (
-        f"ProvenanceSummary leaks high-sensitivity fields: {overlap}"
-    )
+    assert overlap == set(), f"ProvenanceSummary leaks high-sensitivity fields: {overlap}"
 
 
 def test_build_provenance_summary_strips_high_sensitivity() -> None:

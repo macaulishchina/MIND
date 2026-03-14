@@ -82,7 +82,8 @@ class CapabilityGateResult:
             summary.provider_family: summary for summary in self.compatibility_report.providers
         }
         return all(
-            provider_map[provider].benchmark_failed_case_count == 0 for provider in _EXTERNAL_PROVIDERS
+            provider_map[provider].benchmark_failed_case_count == 0
+            for provider in _EXTERNAL_PROVIDERS
         )
 
     @property

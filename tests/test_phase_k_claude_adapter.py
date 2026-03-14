@@ -86,6 +86,7 @@ def test_claude_adapter_posts_messages_request() -> None:
         )
     )
 
+    assert isinstance(response, SummarizeResponse)
     assert response.summary_text == "claude summary"
     assert response.source_refs == ["obj-2"]
     assert response.trace.provider_family is CapabilityProviderFamily.CLAUDE
@@ -149,7 +150,9 @@ def test_claude_adapter_rejects_invalid_json_payload() -> None:
         adapter.invoke(SummarizeRequest(request_id="sum-invalid", source_text="source"))
 
 
-def test_capability_service_builds_claude_adapter_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_capability_service_builds_claude_adapter_by_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     captured: dict[str, SummarizeRequest] = {}
 
     class _FakeClaudeAdapter:
@@ -242,7 +245,9 @@ def test_capability_service_fail_closed_when_claude_adapter_fails(
     monkeypatch.setattr("mind.capabilities.service.ClaudeCapabilityAdapter", _FailingClaudeAdapter)
     service = CapabilityService(provider_config=_claude_config(), clock=_fixed_clock)
 
-    with pytest.raises(CapabilityServiceError, match="primary capability adapter failed for claude"):
+    with pytest.raises(
+        CapabilityServiceError, match="primary capability adapter failed for claude"
+    ):
         service.summarize(
             SummarizeRequest(
                 request_id="sum-claude-fail-closed",

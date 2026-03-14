@@ -499,13 +499,14 @@ def build_product_transport_consistency_scenarios_v1() -> tuple[
     )
     if len(scenarios) != 3:
         raise RuntimeError(
-            "Product transport consistency scenarios expected 3 entries, "
-            f"got {len(scenarios)}"
+            f"Product transport consistency scenarios expected 3 entries, got {len(scenarios)}"
         )
     return scenarios
 
 
-def normalize_product_transport_payload(command_family: str, payload: dict[str, Any]) -> dict[str, Any]:
+def normalize_product_transport_payload(
+    command_family: str, payload: dict[str, Any]
+) -> dict[str, Any]:
     """Normalize one transport payload for shared semantic comparisons."""
 
     result = payload.get("result") or {}

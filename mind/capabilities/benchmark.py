@@ -43,7 +43,7 @@ class CapabilityBenchmarkResult:
 
 
 def evaluate_capability_adapter_bench(
-    scenarios: Iterable["CapabilityAdapterScenario"] | None = None,
+    scenarios: Iterable[CapabilityAdapterScenario] | None = None,
     *,
     adapters: list[CapabilityAdapter] | None = None,
     clock: Callable[[], datetime] | None = None,
@@ -78,7 +78,7 @@ def assert_capability_adapter_bench(
 
 
 def _run_benchmark_case(
-    scenario: "CapabilityAdapterScenario",
+    scenario: CapabilityAdapterScenario,
     *,
     adapters: list[CapabilityAdapter] | None,
     clock: Callable[[], datetime] | None,
@@ -116,7 +116,7 @@ def _run_benchmark_case(
     )
 
 
-def _default_scenarios() -> tuple["CapabilityAdapterScenario", ...]:
+def _default_scenarios() -> tuple[CapabilityAdapterScenario, ...]:
     from mind.fixtures.capability_adapter_bench import build_capability_adapter_bench_v1
 
     return build_capability_adapter_bench_v1()

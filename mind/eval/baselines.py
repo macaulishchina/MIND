@@ -47,10 +47,7 @@ class FixedSummaryMemoryBaselineSystem:
         run_id: int,
     ) -> LongHorizonScoreCard:
         del run_id
-        selected_steps = tuple(
-            self._select_step_handles(sequence, step)
-            for step in sequence.steps
-        )
+        selected_steps = tuple(self._select_step_handles(sequence, step) for step in sequence.steps)
         return _score_sequence(sequence, selected_steps, objects=self._objects)
 
     def _select_step_handles(
@@ -88,8 +85,7 @@ class PlainRagBaselineSystem:
         run_id: int,
     ) -> LongHorizonScoreCard:
         selected_steps = tuple(
-            self._select_step_handles(sequence, step, run_id=run_id)
-            for step in sequence.steps
+            self._select_step_handles(sequence, step, run_id=run_id) for step in sequence.steps
         )
         return _score_sequence(sequence, selected_steps, objects=self._objects)
 

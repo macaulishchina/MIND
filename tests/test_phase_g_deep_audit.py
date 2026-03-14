@@ -114,9 +114,12 @@ class TestOptimizedBudgetSchedule:
             steps=(),
             tags=(),
         )
-        assert optimized_budget_schedule(
-            sequence=empty, candidate_ids=empty.candidate_ids, base_step_budget=1
-        ) == ()
+        assert (
+            optimized_budget_schedule(
+                sequence=empty, candidate_ids=empty.candidate_ids, base_step_budget=1
+            )
+            == ()
+        )
 
     def test_single_step_sequence_no_reallocation(self) -> None:
         from mind.fixtures.long_horizon_eval import LongHorizonEvalSequence
@@ -141,9 +144,7 @@ class TestOptimizedBudgetSchedule:
             schedule = optimized_budget_schedule(
                 sequence=seq, candidate_ids=seq.candidate_ids, base_step_budget=1
             )
-            assert sum(schedule) == len(seq.steps), (
-                f"Budget not preserved for {seq.sequence_id}"
-            )
+            assert sum(schedule) == len(seq.steps), f"Budget not preserved for {seq.sequence_id}"
 
 
 class TestFirstCompletableMultiObjectStep:
@@ -256,15 +257,21 @@ class TestMindLongHorizonSystemCostSnapshot:
 class TestBudgetBiasWithinLimit:
     def test_within_5pct(self) -> None:
         interval = MetricConfidenceInterval(
-            mean=0.04, ci_lower=-0.04, ci_upper=0.05,
-            sample_count=3, raw_values=(0.04, -0.04, 0.05),
+            mean=0.04,
+            ci_lower=-0.04,
+            ci_upper=0.05,
+            sample_count=3,
+            raw_values=(0.04, -0.04, 0.05),
         )
         assert _budget_bias_within_limit(interval) is True
 
     def test_exceeds_5pct(self) -> None:
         interval = MetricConfidenceInterval(
-            mean=0.06, ci_lower=-0.01, ci_upper=0.06,
-            sample_count=3, raw_values=(0.06, -0.01, 0.06),
+            mean=0.06,
+            ci_lower=-0.01,
+            ci_upper=0.06,
+            sample_count=3,
+            raw_values=(0.06, -0.01, 0.06),
         )
         assert _budget_bias_within_limit(interval) is False
 
@@ -291,9 +298,7 @@ class TestAssertPhaseGGateFailures:
 class TestPhaseGGateReportJson:
     def test_gate_report_persists(self, tmp_path: Path) -> None:
         result = evaluate_strategy_gate(repeat_count=3)
-        output_path = write_strategy_gate_report_json(
-            tmp_path / "gate_report.json", result
-        )
+        output_path = write_strategy_gate_report_json(tmp_path / "gate_report.json", result)
         assert output_path.exists()
         import json
 
@@ -352,12 +357,8 @@ class TestHandleCoverage:
             seed = build_canonical_seed_objects()
             store.insert_objects(seed)
             # Pick a non-SchemaNote object
-            raw_obj = next(
-                obj for obj in seed if obj["type"] != "SchemaNote"
-            )
-            coverage = handle_coverage(
-                store, raw_obj["id"], allow_schema_expansion=True
-            )
+            raw_obj = next(obj for obj in seed if obj["type"] != "SchemaNote")
+            coverage = handle_coverage(store, raw_obj["id"], allow_schema_expansion=True)
             assert coverage == {raw_obj["id"]}
         finally:
             store.close()
@@ -368,9 +369,7 @@ class TestHandleCoverage:
             seed = build_canonical_seed_objects()
             store.insert_objects(seed)
             for obj in seed:
-                coverage = handle_coverage(
-                    store, obj["id"], allow_schema_expansion=False
-                )
+                coverage = handle_coverage(store, obj["id"], allow_schema_expansion=False)
                 assert coverage == {obj["id"]}
         finally:
             store.close()

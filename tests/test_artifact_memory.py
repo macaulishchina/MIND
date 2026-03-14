@@ -4,12 +4,9 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-import pytest
-
 from mind.kernel.schema import (
     CORE_OBJECT_TYPES,
     REQUIRED_METADATA_FIELDS,
-    ensure_valid_object,
     validate_object,
 )
 from mind.offline.artifact_indexer import build_artifact_index

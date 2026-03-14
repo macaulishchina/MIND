@@ -322,7 +322,9 @@ def test_debug_field_audit_detects_missing_required_fields() -> None:
 
     assert not result.passed
     assert result.audited_event_count == 2
-    retrieval_rule = next(rule for rule in result.rule_results if rule.rule_id == "retrieval_ranking")
+    retrieval_rule = next(
+        rule for rule in result.rule_results if rule.rule_id == "retrieval_ranking"
+    )
     assert retrieval_rule.matched_event_count == 1
     assert retrieval_rule.complete_event_count == 0
     assert retrieval_rule.incomplete_event_ids == ("retrieval-decision-bad",)

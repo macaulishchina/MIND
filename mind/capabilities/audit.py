@@ -82,7 +82,7 @@ class CapabilityTraceAuditResult:
 
 
 def evaluate_capability_failure_audit(
-    scenarios: Iterable["CapabilityAdapterScenario"] | None = None,
+    scenarios: Iterable[CapabilityAdapterScenario] | None = None,
     *,
     adapters: list[CapabilityAdapter] | None = None,
     clock: Callable[[], datetime] | None = None,
@@ -126,7 +126,7 @@ def evaluate_capability_failure_audit(
 
 
 def evaluate_capability_trace_audit(
-    scenarios: Iterable["CapabilityAdapterScenario"] | None = None,
+    scenarios: Iterable[CapabilityAdapterScenario] | None = None,
     *,
     adapters: list[CapabilityAdapter] | None = None,
     clock: Callable[[], datetime] | None = None,
@@ -172,14 +172,12 @@ def assert_capability_trace_audit(result: CapabilityTraceAuditResult) -> None:
     if result.passed:
         return
     raise RuntimeError(
-        "K-6 failed: "
-        f"complete_trace={result.complete_trace_count}/"
-        f"{result.audited_case_count}"
+        f"K-6 failed: complete_trace={result.complete_trace_count}/{result.audited_case_count}"
     )
 
 
 def _run_audit_case(
-    scenario: "CapabilityAdapterScenario",
+    scenario: CapabilityAdapterScenario,
     *,
     adapters: list[CapabilityAdapter] | None,
     clock: Callable[[], datetime] | None,
@@ -255,7 +253,7 @@ def _trace_complete(trace: CapabilityInvocationTrace) -> bool:
     )
 
 
-def _default_scenarios() -> tuple["CapabilityAdapterScenario", ...]:
+def _default_scenarios() -> tuple[CapabilityAdapterScenario, ...]:
     from mind.fixtures.capability_adapter_bench import build_capability_adapter_bench_v1
 
     return build_capability_adapter_bench_v1()

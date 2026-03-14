@@ -5,13 +5,10 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
-import pytest
-
 from mind.workspace.policy import (
     FLASH_POLICY,
     RECALL_POLICY,
     RECONSTRUCT_POLICY,
-    REFLECTIVE_POLICY,
     SlotAllocationPolicy,
     apply_diversity_policy,
     evidence_diversity_score,
@@ -106,28 +103,20 @@ def test_apply_diversity_policy_returns_up_to_slot_limit() -> None:
 def test_apply_diversity_policy_all_same_episode_promotes_diverse() -> None:
     """β-3: When all candidates are from the same episode, diverse ones get promoted."""
     # 4 objects from ep-001, 1 from ep-002 (lower score)
-    candidates = [
-        _obj(f"obj-{i:03d}", episode_id="ep-001", score=float(10 - i))
-        for i in range(4)
-    ]
+    candidates = [_obj(f"obj-{i:03d}", episode_id="ep-001", score=float(10 - i)) for i in range(4)]
     candidates.append(_obj("obj-ep2", episode_id="ep-002", score=0.1))
     # Sort by score descending
     candidates.sort(key=lambda x: x[1], reverse=True)
     policy = RECALL_POLICY
     selected = apply_diversity_policy(candidates, slot_limit=4, policy=policy)
-    episodes_in_selected = {
-        obj.get("metadata", {}).get("episode_id") for obj, _ in selected
-    }
+    episodes_in_selected = {obj.get("metadata", {}).get("episode_id") for obj, _ in selected}
     # With diversity policy, ep-002 should be included.
     assert "ep-002" in episodes_in_selected
 
 
 def test_apply_diversity_policy_no_policy_is_greedy() -> None:
     """β-3: Passing FLASH_POLICY (no diversity) just takes top N by score."""
-    candidates = [
-        _obj(f"obj-{i:03d}", episode_id="ep-001", score=float(10 - i))
-        for i in range(6)
-    ]
+    candidates = [_obj(f"obj-{i:03d}", episode_id="ep-001", score=float(10 - i)) for i in range(6)]
     candidates.sort(key=lambda x: x[1], reverse=True)
     selected = apply_diversity_policy(candidates, slot_limit=3, policy=FLASH_POLICY)
     # Greedy: top 3 by score, all from ep-001
@@ -198,9 +187,7 @@ def test_evidence_diversity_score_single_object() -> None:
 def test_evidence_diversity_score_multi_episode() -> None:
     """β-3: Higher diversity with objects from different episodes."""
     objs_single = [_obj(f"obj-{i}", episode_id="ep-001")[0] for i in range(4)]
-    objs_multi = [
-        _obj(f"obj-{i}", episode_id=f"ep-{i:03d}")[0] for i in range(4)
-    ]
+    objs_multi = [_obj(f"obj-{i}", episode_id=f"ep-{i:03d}")[0] for i in range(4)]
     score_single = evidence_diversity_score(objs_single)
     score_multi = evidence_diversity_score(objs_multi)
     assert score_multi >= score_single
@@ -209,8 +196,7 @@ def test_evidence_diversity_score_multi_episode() -> None:
 def test_evidence_diversity_score_mixed_types() -> None:
     """β-3: Mixed object types increase the diversity score."""
     obj_single_type = [
-        _obj(f"obj-{i}", object_type="RawRecord", episode_id=f"ep-{i}")[0]
-        for i in range(4)
+        _obj(f"obj-{i}", object_type="RawRecord", episode_id=f"ep-{i}")[0] for i in range(4)
     ]
     obj_mixed_type = [
         _obj("obj-a", object_type="RawRecord", episode_id="ep-0")[0],

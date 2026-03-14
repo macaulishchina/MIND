@@ -42,13 +42,31 @@ REQUIRED_METADATA_FIELDS = {
     "LinkEdge": ("confidence", "evidence_refs"),
     "WorkspaceView": ("task_id", "slot_limit", "slots", "selection_policy"),
     "SchemaNote": ("kind", "evidence_refs", "stability_score", "promotion_source_refs"),
-    "FeedbackRecord": ("task_id", "episode_id", "query", "used_object_ids",
-                       "helpful_object_ids", "unhelpful_object_ids", "quality_signal"),
-    "PolicyNote": ("trigger_condition", "action_pattern", "evidence_refs",
-                   "confidence", "applies_to_scope"),
+    "FeedbackRecord": (
+        "task_id",
+        "episode_id",
+        "query",
+        "used_object_ids",
+        "helpful_object_ids",
+        "unhelpful_object_ids",
+        "quality_signal",
+    ),
+    "PolicyNote": (
+        "trigger_condition",
+        "action_pattern",
+        "evidence_refs",
+        "confidence",
+        "applies_to_scope",
+    ),
     "PreferenceNote": ("preference_key", "preference_value", "strength", "evidence_refs"),
-    "ArtifactIndex": ("parent_object_id", "section_id", "heading", "summary",
-                      "depth", "content_range"),
+    "ArtifactIndex": (
+        "parent_object_id",
+        "section_id",
+        "heading",
+        "summary",
+        "depth",
+        "content_range",
+    ),
 }
 
 VALID_STATUS = {"active", "archived", "deprecated", "invalid"}
@@ -213,10 +231,7 @@ def validate_object(obj: dict[str, Any]) -> list[str]:
         set(metadata).intersection(RESERVED_CONTROL_PLANE_METADATA_FIELDS)
     )
     if reserved_metadata_fields:
-        errors.append(
-            "metadata contains reserved control-plane fields "
-            f"{reserved_metadata_fields}"
-        )
+        errors.append(f"metadata contains reserved control-plane fields {reserved_metadata_fields}")
 
     if object_type in REQUIRED_METADATA_FIELDS:
         for field in REQUIRED_METADATA_FIELDS[object_type]:

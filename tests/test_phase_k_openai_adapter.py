@@ -8,6 +8,7 @@ import pytest
 
 from mind.capabilities import (
     AnswerRequest,
+    AnswerResponse,
     CapabilityAdapterDescriptor,
     CapabilityAdapterError,
     CapabilityAuthConfig,
@@ -20,6 +21,7 @@ from mind.capabilities import (
     CapabilityServiceError,
     OpenAICapabilityAdapter,
     ReflectRequest,
+    ReflectResponse,
     SummarizeRequest,
     SummarizeResponse,
 )
@@ -93,6 +95,7 @@ def test_openai_adapter_posts_structured_summary_request() -> None:
         )
     )
 
+    assert isinstance(response, SummarizeResponse)
     assert response.summary_text == "provider summary"
     assert response.source_refs == ["obj-1"]
     assert response.trace.provider_family is CapabilityProviderFamily.OPENAI
@@ -131,6 +134,7 @@ def test_openai_adapter_parses_reflect_claims() -> None:
         )
     )
 
+    assert isinstance(response, ReflectResponse)
     assert response.reflection_text.startswith("Episode failed")
     assert response.claims == ["stale-memory", "refresh-summary"]
     assert response.evidence_refs == ["episode-004", "episode-004-raw-04"]
@@ -178,6 +182,7 @@ def test_openai_adapter_supports_chat_completions_compatible_endpoint() -> None:
         )
     )
 
+    assert isinstance(response, SummarizeResponse)
     assert response.summary_text == "compatible summary"
     assert response.trace.provider_family is CapabilityProviderFamily.OPENAI
     assert response.trace.endpoint == "https://api.deepseek.com/chat/completions"
@@ -201,6 +206,7 @@ def test_openai_adapter_extracts_json_from_markdown_code_fence() -> None:
 
     response = adapter.invoke(SummarizeRequest(request_id="sum-fenced", source_text="source"))
 
+    assert isinstance(response, SummarizeResponse)
     assert response.summary_text == "fenced summary"
 
 
@@ -232,6 +238,7 @@ def test_openai_adapter_projects_plain_text_answer_when_provider_skips_json() ->
         )
     )
 
+    assert isinstance(response, AnswerResponse)
     assert response.answer_text == "这是来自兼容服务的自然语言回答。"
     assert response.support_ids == ["obj-plain"]
 
@@ -264,6 +271,7 @@ def test_openai_adapter_accepts_answer_alias_in_json_payload() -> None:
         )
     )
 
+    assert isinstance(response, AnswerResponse)
     assert response.answer_text == "这是兼容服务返回的 answer 字段。"
     assert response.support_ids == ["obj-alias"]
 
@@ -297,6 +305,7 @@ def test_openai_adapter_captures_raw_exchange_for_answer_requests() -> None:
         )
     )
 
+    assert isinstance(response, AnswerResponse)
     assert response.answer_text == "你好，我是 DeepSeek。"
     assert response.trace.request_text is not None
     assert "Question: 你好" in response.trace.request_text
@@ -318,7 +327,9 @@ def test_openai_adapter_rejects_empty_payload() -> None:
         adapter.invoke(SummarizeRequest(request_id="sum-invalid", source_text="source"))
 
 
-def test_capability_service_builds_openai_adapter_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_capability_service_builds_openai_adapter_by_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     captured: dict[str, SummarizeRequest] = {}
 
     class _FakeOpenAIAdapter:
@@ -358,6 +369,7 @@ def test_capability_service_builds_openai_adapter_by_default(monkeypatch: pytest
     )
 
     assert captured["request"].source_refs == ["obj-7"]
+    assert isinstance(response, SummarizeResponse)
     assert response.summary_text == "openai adapter response"
     assert response.trace.provider_family is CapabilityProviderFamily.OPENAI
 
@@ -411,7 +423,9 @@ def test_capability_service_fail_closed_when_openai_adapter_fails(
     monkeypatch.setattr("mind.capabilities.service.OpenAICapabilityAdapter", _FailingOpenAIAdapter)
     service = CapabilityService(provider_config=_openai_config(), clock=_fixed_clock)
 
-    with pytest.raises(CapabilityServiceError, match="primary capability adapter failed for openai"):
+    with pytest.raises(
+        CapabilityServiceError, match="primary capability adapter failed for openai"
+    ):
         service.summarize(
             SummarizeRequest(
                 request_id="sum-openai-fail-closed",

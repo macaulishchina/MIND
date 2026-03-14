@@ -89,12 +89,12 @@ def test_gemini_adapter_posts_generate_content_request() -> None:
         )
     )
 
+    assert isinstance(response, SummarizeResponse)
     assert response.summary_text == "gemini summary"
     assert response.source_refs == ["obj-3"]
     assert response.trace.provider_family is CapabilityProviderFamily.GEMINI
     assert captured["endpoint"] == (
-        "https://generativelanguage.googleapis.com/v1beta/models/"
-        "gemini-2.0-flash:generateContent"
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
     )
     assert captured["headers"]["x-goog-api-key"] == "gemini-secret"
     assert captured["payload"]["generationConfig"]["responseMimeType"] == "application/json"
@@ -116,7 +116,10 @@ def test_gemini_adapter_parses_reflect_claims() -> None:
                             {
                                 "text": json.dumps(
                                     {
-                                        "reflection_text": "Episode failed; reflection focus: stale memory",
+                                        "reflection_text": (
+                                            "Episode failed;"
+                                            " reflection focus: stale memory"
+                                        ),
                                         "claims": ["stale-memory", "refresh-cache"],
                                     }
                                 )
@@ -158,7 +161,9 @@ def test_gemini_adapter_rejects_invalid_json_payload() -> None:
         adapter.invoke(SummarizeRequest(request_id="sum-invalid", source_text="source"))
 
 
-def test_capability_service_builds_gemini_adapter_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_capability_service_builds_gemini_adapter_by_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     captured: dict[str, SummarizeRequest] = {}
 
     class _FakeGeminiAdapter:
@@ -251,7 +256,9 @@ def test_capability_service_fail_closed_when_gemini_adapter_fails(
     monkeypatch.setattr("mind.capabilities.service.GeminiCapabilityAdapter", _FailingGeminiAdapter)
     service = CapabilityService(provider_config=_gemini_config(), clock=_fixed_clock)
 
-    with pytest.raises(CapabilityServiceError, match="primary capability adapter failed for gemini"):
+    with pytest.raises(
+        CapabilityServiceError, match="primary capability adapter failed for gemini"
+    ):
         service.summarize(
             SummarizeRequest(
                 request_id="sum-gemini-fail-closed",

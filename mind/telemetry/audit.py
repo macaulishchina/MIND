@@ -7,7 +7,12 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from typing import Any
 
-from .contracts import TELEMETRY_COVERAGE_SURFACES, TelemetryEvent, TelemetryEventKind, TelemetryScope
+from .contracts import (
+    TELEMETRY_COVERAGE_SURFACES,
+    TelemetryEvent,
+    TelemetryEventKind,
+    TelemetryScope,
+)
 
 
 @dataclass(frozen=True)
@@ -159,7 +164,7 @@ def evaluate_telemetry_coverage_audit(
     """Audit whether all required telemetry surfaces are represented."""
 
     event_list = tuple(events)
-    counts = defaultdict(int)
+    counts: defaultdict[TelemetryScope, int] = defaultdict(int)
     for event in event_list:
         counts[event.scope] += 1
     scope_results = tuple(
@@ -411,8 +416,7 @@ def assert_telemetry_timeline_audit(result: TelemetryTimelineAuditResult) -> Non
     if result.passed:
         return
     raise RuntimeError(
-        "L-5 failed: "
-        f"replayable_runs={result.replayable_run_count}/{result.audited_run_count}"
+        f"L-5 failed: replayable_runs={result.replayable_run_count}/{result.audited_run_count}"
     )
 
 
@@ -486,8 +490,7 @@ def _debug_field_rules() -> tuple[_TelemetryDebugFieldRule, ...]:
         _TelemetryDebugFieldRule(
             rule_id="access_mode_switch",
             applies=lambda event: (
-                event.scope is TelemetryScope.ACCESS
-                and event.kind is TelemetryEventKind.DECISION
+                event.scope is TelemetryScope.ACCESS and event.kind is TelemetryEventKind.DECISION
             ),
             missing_fields=lambda event: _missing_fields(
                 event,

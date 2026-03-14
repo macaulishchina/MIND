@@ -322,8 +322,13 @@ def test_frontend_debug_timeline_surfaces_access_answer_result_summary() -> None
     )
 
     assert response.returned_event_count == 1
-    assert response.timeline[0].summary == "recall answer: episode four required a corrected replay hint"
+    assert (
+        response.timeline[0].summary
+        == "recall answer: episode four required a corrected replay hint"
+    )
+    assert response.timeline[0].payload is not None
     assert response.timeline[0].payload["answer_text"] == (
         "episode four required a corrected replay hint"
     )
+    assert response.timeline[0].debug_fields is not None
     assert response.timeline[0].debug_fields["answer_length"] == 43

@@ -57,14 +57,12 @@ def test_capability_adapter_bench_reports_current_baseline() -> None:
     assert result.passed_case_count == 36
     assert result.failed_case_count == 12
     assert result.pass_rate == 0.75
-    assert all(
-        "fail_closed" in case.scenario_id for case in result.case_results if not case.passed
-    )
+    assert all("fail_closed" in case.scenario_id for case in result.case_results if not case.passed)
 
 
 def test_capability_adapter_bench_improves_when_provider_adapter_is_registered() -> None:
     result = evaluate_capability_adapter_bench(
-        adapters=[_OpenAICapabilityAdapter()],  # type: ignore[list-item]
+        adapters=[_OpenAICapabilityAdapter()],
         clock=_fixed_clock,
     )
 

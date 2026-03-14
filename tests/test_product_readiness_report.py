@@ -14,8 +14,8 @@ from mind.fixtures import (
     evaluate_product_readiness_report,
     read_product_readiness_report_json,
     render_product_readiness_report_markdown,
-    write_product_readiness_report_markdown,
     write_product_readiness_report_json,
+    write_product_readiness_report_markdown,
 )
 
 
@@ -106,7 +106,10 @@ def test_product_readiness_report_markdown_renders_stable_summary() -> None:
 
     assert markdown.startswith("# Product Readiness Gate\n")
     assert "| Component | Status | Passed | Total | Coverage | Failure IDs | Detail |" in markdown
-    assert "| Product Transport Audit | FAIL | 2 | 3 | 0.6667 | ask_cli | coverage:0.6667 |" in markdown
+    assert (
+        "| Product Transport Audit | FAIL | 2 | 3 | 0.6667 | ask_cli | coverage:0.6667 |"
+        in markdown
+    )
     assert "Failing components: `product_transport`" in markdown
 
 
@@ -184,7 +187,9 @@ def test_product_readiness_gate_main_fails_and_persists_report(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     failing_report = _sample_product_readiness_report(passed=False)
-    monkeypatch.setattr("mind.cli.evaluate_product_readiness_report", lambda repo_root: failing_report)
+    monkeypatch.setattr(
+        "mind.cli.evaluate_product_readiness_report", lambda repo_root: failing_report
+    )
 
     output_path = tmp_path / "product_readiness_gate_fail.json"
     markdown_output_path = tmp_path / "product_readiness_gate_fail.md"

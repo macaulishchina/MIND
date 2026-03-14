@@ -150,9 +150,7 @@ def evaluate_frontend_responsive_audit(
     styles_css = load_frontend_stylesheets(root, index_html)
 
     static_shell_present = (
-        'id="app-shell"' in index_html
-        and "./app.js" in index_html
-        and "./styles/" in index_html
+        'id="app-shell"' in index_html and "./app.js" in index_html and "./styles/" in index_html
     )
     viewport_meta_present = 'name="viewport"' in index_html and "width=device-width" in index_html
     fluid_shell_present = "width: min(1180px, calc(100vw - 2rem));" in styles_css
@@ -160,9 +158,7 @@ def evaluate_frontend_responsive_audit(
 
     frozen_scenarios = scenarios or build_frontend_experience_bench_v1()
     audited_scenarios = [
-        scenario
-        for scenario in frozen_scenarios
-        if scenario.viewport in {"desktop", "mobile"}
+        scenario for scenario in frozen_scenarios if scenario.viewport in {"desktop", "mobile"}
     ]
     results: list[FrontendResponsiveScenarioResult] = []
     for scenario in audited_scenarios:

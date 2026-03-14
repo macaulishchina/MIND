@@ -140,7 +140,11 @@ def test_frontend_access_projection_includes_llm_request_text_for_web_access() -
             "resolved_mode": "recall",
             "context_kind": "workspace",
             "context_object_ids": ["obj-1"],
-            "context_text": "{\"kind\":\"workspace\",\"slots\":[{\"summary\":\"\\u4f60\\u597d\\uff0c\\u4eca\\u5929\\u4e0b\\u96e8\\uff0c\\u8bb0\\u5f97\\u5e26\\u4f1e\\u3002\"}]}",
+            "context_text": (
+                '{"kind":"workspace","slots":[{"summary":'
+                '"\\u4f60\\u597d\\uff0c\\u4eca\\u5929\\u4e0b\\u96e8'
+                '\\uff0c\\u8bb0\\u5f97\\u5e26\\u4f1e\\u3002"}]}'
+            ),
             "candidate_ids": ["obj-1"],
             "candidate_summaries": [
                 {
@@ -166,7 +170,7 @@ def test_frontend_access_projection_includes_llm_request_text_for_web_access() -
                 "provider_family": "openai",
                 "endpoint": "https://api.deepseek.com/v1/chat/completions",
                 "fallback_used": False,
-                "response_text": "{\"answer_text\":\"你好，今天记得带伞。\"}",
+                "response_text": '{"answer_text":"你好，今天记得带伞。"}',
             },
             "trace": {"events": [{"summary": "recall completed with 1 candidate"}]},
         },

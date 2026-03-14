@@ -541,8 +541,7 @@ class PrimitiveService:
             candidate_ids = [match.object["id"] for match in matches]
             candidate_scores = [round(match.score, 4) for match in matches]
             candidate_summaries = [
-                self._object_summary(match.object, score=round(match.score, 4))
-                for match in matches
+                self._object_summary(match.object, score=round(match.score, 4)) for match in matches
             ]
             retrieval_backend = "store_search"
 
@@ -1228,7 +1227,9 @@ class PrimitiveService:
         try:
             return resolve_capability_provider_config(
                 selection=context.provider_selection,
-                env=self._provider_env_resolver() if self._provider_env_resolver is not None else None,
+                env=self._provider_env_resolver()
+                if self._provider_env_resolver is not None
+                else None,
             )
         except RuntimeError as exc:
             raise self._reject(

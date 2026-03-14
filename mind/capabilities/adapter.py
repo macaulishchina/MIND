@@ -78,7 +78,6 @@ def invoke_capability(
         raise CapabilityAdapterError(f"unsupported capability {request.capability!r}")
     if not supports_capability(adapter, request.capability):
         raise CapabilityAdapterError(
-            f"adapter {adapter.descriptor.adapter_name} does not support "
-            f"{request.capability.value}"
+            f"adapter {adapter.descriptor.adapter_name} does not support {request.capability.value}"
         )
     return validate_capability_response(request, adapter.invoke(request))

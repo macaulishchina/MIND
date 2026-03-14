@@ -29,6 +29,7 @@ from mind.kernel.store import SQLiteMemoryStore, StoreError
 # Test helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_request(**overrides: Any) -> AppRequest:
     defaults: dict[str, Any] = {
         "request_id": f"test-{uuid.uuid4().hex[:8]}",
@@ -46,6 +47,7 @@ def _build_sqlite_store(tmp_path: Path) -> SQLiteMemoryStore:
 # ---------------------------------------------------------------------------
 # 1. Contract models
 # ---------------------------------------------------------------------------
+
 
 class TestContracts:
     """AppRequest, AppResponse, AppError serialization."""
@@ -72,6 +74,7 @@ class TestContracts:
 # ---------------------------------------------------------------------------
 # 2. Context and execution context resolution
 # ---------------------------------------------------------------------------
+
 
 class TestContext:
     """PrincipalContext, SessionContext, ExecutionPolicy, and projection."""
@@ -136,12 +139,13 @@ class TestContext:
     def test_principal_context_frozen(self) -> None:
         p = PrincipalContext(principal_id="test")
         with pytest.raises(PydanticValidationError):
-            p.principal_id = "changed"  # type: ignore[misc]
+            p.principal_id = "changed"
 
 
 # ---------------------------------------------------------------------------
 # 3. Error mapping
 # ---------------------------------------------------------------------------
+
 
 class TestErrorMapping:
     """map_domain_error covers domain error → AppError."""
@@ -188,6 +192,7 @@ class TestErrorMapping:
 # ---------------------------------------------------------------------------
 # 4. Registry builds successfully
 # ---------------------------------------------------------------------------
+
 
 class TestRegistry:
     """AppServiceRegistry builds for SQLite."""
@@ -301,6 +306,7 @@ class TestRegistry:
 # 5. Service roundtrips
 # ---------------------------------------------------------------------------
 
+
 class TestIngestService:
     """MemoryIngestService.remember() roundtrip."""
 
@@ -311,11 +317,14 @@ class TestIngestService:
         store = _build_sqlite_store(tmp_path)
         svc = MemoryIngestService(PrimitiveService(store))
 
-        req = _make_request(input={
-            "content": "test memory",
-            "episode_id": "ep-test-1",
-            "timestamp_order": 1,
-        }, idempotency_key="idem-remember-1")
+        req = _make_request(
+            input={
+                "content": "test memory",
+                "episode_id": "ep-test-1",
+                "timestamp_order": 1,
+            },
+            idempotency_key="idem-remember-1",
+        )
         resp = svc.remember(req)
         assert resp.status == AppStatus.OK
         assert resp.result is not None
@@ -330,11 +339,13 @@ class TestIngestService:
         store = _build_sqlite_store(tmp_path)
         svc = MemoryIngestService(PrimitiveService(store))
 
-        req = _make_request(input={
-            "content": "trace test",
-            "episode_id": "ep-trace-1",
-            "timestamp_order": 1,
-        })
+        req = _make_request(
+            input={
+                "content": "trace test",
+                "episode_id": "ep-trace-1",
+                "timestamp_order": 1,
+            }
+        )
         resp = svc.remember(req)
         assert resp.trace_ref is not None
 
@@ -527,9 +538,7 @@ class TestOfflineJobService:
         assert submit.result is not None
         assert submit.result["provider_selection"]["provider"] == "openai"
 
-        get_job = svc.get_job(
-            _make_request(input={"job_id": submit.result["job_id"]})
-        )
+        get_job = svc.get_job(_make_request(input={"job_id": submit.result["job_id"]}))
 
         assert get_job.status == AppStatus.OK
         assert get_job.result is not None
@@ -748,6 +757,7 @@ class TestSystemService:
 # ---------------------------------------------------------------------------
 # 6. Envelope shape consistency
 # ---------------------------------------------------------------------------
+
 
 class TestEnvelopeShape:
     """Every service response carries request_id."""

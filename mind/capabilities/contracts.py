@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Any, Literal, TypeAlias
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -120,9 +120,7 @@ class AnswerResponse(CapabilityResponseBase):
 
 
 class OfflineReconstructRequest(CapabilityRequestBase):
-    capability: Literal[CapabilityName.OFFLINE_RECONSTRUCT] = (
-        CapabilityName.OFFLINE_RECONSTRUCT
-    )
+    capability: Literal[CapabilityName.OFFLINE_RECONSTRUCT] = CapabilityName.OFFLINE_RECONSTRUCT
     objective: str = Field(min_length=1)
     evidence_text: str = Field(min_length=1)
     episode_ids: list[str] = Field(min_length=1)
@@ -130,18 +128,16 @@ class OfflineReconstructRequest(CapabilityRequestBase):
 
 
 class OfflineReconstructResponse(CapabilityResponseBase):
-    capability: Literal[CapabilityName.OFFLINE_RECONSTRUCT] = (
-        CapabilityName.OFFLINE_RECONSTRUCT
-    )
+    capability: Literal[CapabilityName.OFFLINE_RECONSTRUCT] = CapabilityName.OFFLINE_RECONSTRUCT
     reconstruction_text: str = Field(min_length=1)
     supporting_episode_ids: list[str] = Field(default_factory=list)
     evidence_refs: list[str] = Field(default_factory=list)
 
 
-CapabilityRequest: TypeAlias = (
+type CapabilityRequest = (
     SummarizeRequest | ReflectRequest | AnswerRequest | OfflineReconstructRequest
 )
-CapabilityResponse: TypeAlias = (
+type CapabilityResponse = (
     SummarizeResponse | ReflectResponse | AnswerResponse | OfflineReconstructResponse
 )
 
@@ -185,10 +181,10 @@ _RESPONSE_MODELS = {
 def request_model_for(capability: CapabilityName) -> type[CapabilityRequest]:
     """Return the request model type for one capability."""
 
-    return _REQUEST_MODELS[capability]
+    return _REQUEST_MODELS[capability]  # type: ignore[return-value]
 
 
 def response_model_for(capability: CapabilityName) -> type[CapabilityResponse]:
     """Return the response model type for one capability."""
 
-    return _RESPONSE_MODELS[capability]
+    return _RESPONSE_MODELS[capability]  # type: ignore[return-value]

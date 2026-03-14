@@ -315,11 +315,15 @@ class PostgresMemoryStore:
 
     def read_principal(self, principal_id: str) -> dict[str, Any]:
         with self.engine.connect() as connection:
-            row = connection.execute(
-                sa.select(principals_table)
-                .where(principals_table.c.principal_id == principal_id)
-                .limit(1)
-            ).mappings().first()
+            row = (
+                connection.execute(
+                    sa.select(principals_table)
+                    .where(principals_table.c.principal_id == principal_id)
+                    .limit(1)
+                )
+                .mappings()
+                .first()
+            )
         if row is None:
             raise StoreError(f"principal '{principal_id}' not found")
         return self._decode_principal_row(row)
@@ -370,11 +374,15 @@ class PostgresMemoryStore:
 
     def read_session(self, session_id: str) -> dict[str, Any]:
         with self.engine.connect() as connection:
-            row = connection.execute(
-                sa.select(sessions_table)
-                .where(sessions_table.c.session_id == session_id)
-                .limit(1)
-            ).mappings().first()
+            row = (
+                connection.execute(
+                    sa.select(sessions_table)
+                    .where(sessions_table.c.session_id == session_id)
+                    .limit(1)
+                )
+                .mappings()
+                .first()
+            )
         if row is None:
             raise StoreError(f"session '{session_id}' not found")
         return self._decode_session_row(row)
@@ -434,11 +442,15 @@ class PostgresMemoryStore:
 
     def read_namespace(self, namespace_id: str) -> dict[str, Any]:
         with self.engine.connect() as connection:
-            row = connection.execute(
-                sa.select(namespaces_table)
-                .where(namespaces_table.c.namespace_id == namespace_id)
-                .limit(1)
-            ).mappings().first()
+            row = (
+                connection.execute(
+                    sa.select(namespaces_table)
+                    .where(namespaces_table.c.namespace_id == namespace_id)
+                    .limit(1)
+                )
+                .mappings()
+                .first()
+            )
         if row is None:
             raise StoreError(f"namespace '{namespace_id}' not found")
         return self._decode_namespace_row(row)
@@ -760,9 +772,7 @@ class PostgresMemoryStore:
                 request_json=validated.request,
                 response_json=validated.response,
                 error_json=(
-                    validated.error.model_dump(mode="json")
-                    if validated.error is not None
-                    else None
+                    validated.error.model_dump(mode="json") if validated.error is not None else None
                 ),
             )
         )
@@ -868,11 +878,15 @@ class PostgresMemoryStore:
         connection: Connection,
         provenance_id: str,
     ) -> DirectProvenanceRecord:
-        row = connection.execute(
-            sa.select(provenance_ledger_table)
-            .where(provenance_ledger_table.c.provenance_id == provenance_id)
-            .limit(1)
-        ).mappings().first()
+        row = (
+            connection.execute(
+                sa.select(provenance_ledger_table)
+                .where(provenance_ledger_table.c.provenance_id == provenance_id)
+                .limit(1)
+            )
+            .mappings()
+            .first()
+        )
         if row is None:
             raise StoreError(f"direct provenance '{provenance_id}' not found")
         return self._decode_direct_provenance_row(row)
@@ -882,11 +896,15 @@ class PostgresMemoryStore:
         connection: Connection,
         audit_id: str,
     ) -> GovernanceAuditRecord:
-        row = connection.execute(
-            sa.select(governance_audit_table)
-            .where(governance_audit_table.c.audit_id == audit_id)
-            .limit(1)
-        ).mappings().first()
+        row = (
+            connection.execute(
+                sa.select(governance_audit_table)
+                .where(governance_audit_table.c.audit_id == audit_id)
+                .limit(1)
+            )
+            .mappings()
+            .first()
+        )
         if row is None:
             raise StoreError(f"governance audit '{audit_id}' not found")
         return self._decode_governance_audit_row(row)
@@ -896,11 +914,15 @@ class PostgresMemoryStore:
         connection: Connection,
         concealment_id: str,
     ) -> ConcealmentRecord:
-        row = connection.execute(
-            sa.select(concealed_objects_table)
-            .where(concealed_objects_table.c.concealment_id == concealment_id)
-            .limit(1)
-        ).mappings().first()
+        row = (
+            connection.execute(
+                sa.select(concealed_objects_table)
+                .where(concealed_objects_table.c.concealment_id == concealment_id)
+                .limit(1)
+            )
+            .mappings()
+            .first()
+        )
         if row is None:
             raise StoreError(f"concealment '{concealment_id}' not found")
         return self._decode_concealment_row(row)
@@ -910,11 +932,15 @@ class PostgresMemoryStore:
         connection: Connection,
         object_id: str,
     ) -> DirectProvenanceRecord:
-        row = connection.execute(
-            sa.select(provenance_ledger_table)
-            .where(provenance_ledger_table.c.bound_object_id == object_id)
-            .limit(1)
-        ).mappings().first()
+        row = (
+            connection.execute(
+                sa.select(provenance_ledger_table)
+                .where(provenance_ledger_table.c.bound_object_id == object_id)
+                .limit(1)
+            )
+            .mappings()
+            .first()
+        )
         if row is None:
             raise StoreError(f"direct provenance for object '{object_id}' not found")
         return self._decode_direct_provenance_row(row)
@@ -924,11 +950,15 @@ class PostgresMemoryStore:
         connection: Connection,
         object_id: str,
     ) -> ConcealmentRecord:
-        row = connection.execute(
-            sa.select(concealed_objects_table)
-            .where(concealed_objects_table.c.object_id == object_id)
-            .limit(1)
-        ).mappings().first()
+        row = (
+            connection.execute(
+                sa.select(concealed_objects_table)
+                .where(concealed_objects_table.c.object_id == object_id)
+                .limit(1)
+            )
+            .mappings()
+            .first()
+        )
         if row is None:
             raise StoreError(f"concealment for object '{object_id}' not found")
         return self._decode_concealment_row(row)
@@ -1135,15 +1165,12 @@ class PostgresMemoryStore:
             .subquery()
         )
 
-        statement = (
-            sa.select(object_versions_table)
-            .join(
-                latest_versions,
-                sa.and_(
-                    object_versions_table.c.object_id == latest_versions.c.object_id,
-                    object_versions_table.c.version == latest_versions.c.version,
-                ),
-            )
+        statement = sa.select(object_versions_table).join(
+            latest_versions,
+            sa.and_(
+                object_versions_table.c.object_id == latest_versions.c.object_id,
+                object_versions_table.c.version == latest_versions.c.version,
+            ),
         )
         statement = statement.outerjoin(
             concealed_objects_table,
@@ -1379,13 +1406,17 @@ class _PostgresStoreTransaction:
         return self._store._read_object(self._require_connection(), object_id, version)
 
     def iter_objects(self) -> list[dict[str, Any]]:
-        rows = self._require_connection().execute(
-            sa.select(object_versions_table).order_by(
-                object_versions_table.c.inserted_at.asc(),
-                object_versions_table.c.object_id.asc(),
-                object_versions_table.c.version.asc(),
+        rows = (
+            self._require_connection()
+            .execute(
+                sa.select(object_versions_table).order_by(
+                    object_versions_table.c.inserted_at.asc(),
+                    object_versions_table.c.object_id.asc(),
+                    object_versions_table.c.version.asc(),
+                )
             )
-        ).mappings()
+            .mappings()
+        )
         return [self._store._decode_object_row(row) for row in rows]
 
     def insert_direct_provenance(
@@ -1401,12 +1432,16 @@ class _PostgresStoreTransaction:
         return self._store._direct_provenance_for_object(self._require_connection(), object_id)
 
     def iter_direct_provenance(self) -> list[DirectProvenanceRecord]:
-        rows = self._require_connection().execute(
-            sa.select(provenance_ledger_table).order_by(
-                provenance_ledger_table.c.ingested_at.asc(),
-                provenance_ledger_table.c.provenance_id.asc(),
+        rows = (
+            self._require_connection()
+            .execute(
+                sa.select(provenance_ledger_table).order_by(
+                    provenance_ledger_table.c.ingested_at.asc(),
+                    provenance_ledger_table.c.provenance_id.asc(),
+                )
             )
-        ).mappings()
+            .mappings()
+        )
         return [self._store._decode_direct_provenance_row(row) for row in rows]
 
     def record_governance_audit(
@@ -1419,26 +1454,34 @@ class _PostgresStoreTransaction:
         return self._store._read_governance_audit(self._require_connection(), audit_id)
 
     def iter_governance_audit(self) -> list[GovernanceAuditRecord]:
-        rows = self._require_connection().execute(
-            sa.select(governance_audit_table).order_by(
-                governance_audit_table.c.timestamp.asc(),
-                governance_audit_table.c.audit_id.asc(),
+        rows = (
+            self._require_connection()
+            .execute(
+                sa.select(governance_audit_table).order_by(
+                    governance_audit_table.c.timestamp.asc(),
+                    governance_audit_table.c.audit_id.asc(),
+                )
             )
-        ).mappings()
+            .mappings()
+        )
         return [self._store._decode_governance_audit_row(row) for row in rows]
 
     def iter_governance_audit_for_operation(
         self,
         operation_id: str,
     ) -> list[GovernanceAuditRecord]:
-        rows = self._require_connection().execute(
-            sa.select(governance_audit_table)
-            .where(governance_audit_table.c.operation_id == operation_id)
-            .order_by(
-                governance_audit_table.c.timestamp.asc(),
-                governance_audit_table.c.audit_id.asc(),
+        rows = (
+            self._require_connection()
+            .execute(
+                sa.select(governance_audit_table)
+                .where(governance_audit_table.c.operation_id == operation_id)
+                .order_by(
+                    governance_audit_table.c.timestamp.asc(),
+                    governance_audit_table.c.audit_id.asc(),
+                )
             )
-        ).mappings()
+            .mappings()
+        )
         return [self._store._decode_governance_audit_row(row) for row in rows]
 
     def record_concealment(self, record: ConcealmentRecord | dict[str, Any]) -> None:
@@ -1451,20 +1494,28 @@ class _PostgresStoreTransaction:
         return self._store._concealment_for_object(self._require_connection(), object_id)
 
     def is_object_concealed(self, object_id: str) -> bool:
-        row = self._require_connection().execute(
-            sa.select(concealed_objects_table.c.concealment_id)
-            .where(concealed_objects_table.c.object_id == object_id)
-            .limit(1)
-        ).first()
+        row = (
+            self._require_connection()
+            .execute(
+                sa.select(concealed_objects_table.c.concealment_id)
+                .where(concealed_objects_table.c.object_id == object_id)
+                .limit(1)
+            )
+            .first()
+        )
         return row is not None
 
     def iter_concealments(self) -> list[ConcealmentRecord]:
-        rows = self._require_connection().execute(
-            sa.select(concealed_objects_table).order_by(
-                concealed_objects_table.c.concealed_at.asc(),
-                concealed_objects_table.c.concealment_id.asc(),
+        rows = (
+            self._require_connection()
+            .execute(
+                sa.select(concealed_objects_table).order_by(
+                    concealed_objects_table.c.concealed_at.asc(),
+                    concealed_objects_table.c.concealment_id.asc(),
+                )
             )
-        ).mappings()
+            .mappings()
+        )
         return [self._store._decode_concealment_row(row) for row in rows]
 
     def raw_records_for_episode(self, episode_id: str) -> list[dict[str, Any]]:
@@ -1473,12 +1524,16 @@ class _PostgresStoreTransaction:
             object_versions_table.c.metadata_json.op("->>")("timestamp_order"),
             sa.Integer(),
         )
-        rows = self._require_connection().execute(
-            sa.select(object_versions_table)
-            .where(object_versions_table.c.type == "RawRecord")
-            .where(episode_expr == episode_id)
-            .order_by(timestamp_order_expr.asc(), object_versions_table.c.object_id.asc())
-        ).mappings()
+        rows = (
+            self._require_connection()
+            .execute(
+                sa.select(object_versions_table)
+                .where(object_versions_table.c.type == "RawRecord")
+                .where(episode_expr == episode_id)
+                .order_by(timestamp_order_expr.asc(), object_versions_table.c.object_id.asc())
+            )
+            .mappings()
+        )
         return [self._store._decode_object_row(row) for row in rows]
 
     def record_primitive_call(self, log: PrimitiveCallLog | dict[str, Any]) -> None:

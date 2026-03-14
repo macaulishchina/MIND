@@ -19,7 +19,6 @@ import tomllib
 from contextlib import redirect_stderr, redirect_stdout
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any
 
 import pytest
 
@@ -30,7 +29,6 @@ from mind.offline_jobs import (
     OfflineJobStatus,
     OfflineJobStore,
     new_offline_job,
-    utc_now,
 )
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -40,6 +38,7 @@ NOW = datetime(2026, 3, 10, 12, 0, tzinfo=UTC)
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _build_store(tmp_path: Path) -> SQLiteMemoryStore:
     return SQLiteMemoryStore(tmp_path / "audit.sqlite3")
@@ -170,22 +169,50 @@ class TestBackwardCompatReExport:
     def test_offline_jobs_module_exports_all_names(self) -> None:
         from mind.offline.jobs import (
             OfflineJob as OJ_old,
+        )
+        from mind.offline.jobs import (
             OfflineJobKind as OJK_old,
+        )
+        from mind.offline.jobs import (
             OfflineJobStatus as OJS_old,
+        )
+        from mind.offline.jobs import (
             OfflineJobStore as OJST_old,
+        )
+        from mind.offline.jobs import (
             PromoteSchemaJobPayload as PSJP_old,
+        )
+        from mind.offline.jobs import (
             ReflectEpisodeJobPayload as REJP_old,
+        )
+        from mind.offline.jobs import (
             new_offline_job as noj_old,
+        )
+        from mind.offline.jobs import (
             utc_now as un_old,
         )
         from mind.offline_jobs import (
             OfflineJob as OJ_new,
+        )
+        from mind.offline_jobs import (
             OfflineJobKind as OJK_new,
+        )
+        from mind.offline_jobs import (
             OfflineJobStatus as OJS_new,
+        )
+        from mind.offline_jobs import (
             OfflineJobStore as OJST_new,
+        )
+        from mind.offline_jobs import (
             PromoteSchemaJobPayload as PSJP_new,
+        )
+        from mind.offline_jobs import (
             ReflectEpisodeJobPayload as REJP_new,
+        )
+        from mind.offline_jobs import (
             new_offline_job as noj_new,
+        )
+        from mind.offline_jobs import (
             utc_now as un_new,
         )
 
@@ -353,12 +380,18 @@ class TestProductCliCommandDispatch:
         from mind.product_cli import build_product_parser
 
         parser = build_product_parser()
-        args = parser.parse_args([
-            "session", "open",
-            "--principal-id", "p1",
-            "--session-id", "s1",
-            "--channel", "cli",
-        ])
+        args = parser.parse_args(
+            [
+                "session",
+                "open",
+                "--principal-id",
+                "p1",
+                "--session-id",
+                "s1",
+                "--channel",
+                "cli",
+            ]
+        )
 
         assert args.command == "session"
         assert args.session_command == "open"
@@ -407,12 +440,17 @@ class TestCrossLayerIntegration:
         # Remember
         remember_out = io.StringIO()
         with redirect_stdout(remember_out), redirect_stderr(io.StringIO()):
-            code = product_main([
-                "--json",
-                "--sqlite-path", sqlite_path,
-                "remember", "audit test content",
-                "--episode-id", "ep-audit",
-            ])
+            code = product_main(
+                [
+                    "--json",
+                    "--sqlite-path",
+                    sqlite_path,
+                    "remember",
+                    "audit test content",
+                    "--episode-id",
+                    "ep-audit",
+                ]
+            )
         assert code == 0
         remember_payload = json.loads(remember_out.getvalue())
         assert remember_payload["status"] == "ok"
@@ -420,11 +458,15 @@ class TestCrossLayerIntegration:
         # Recall
         recall_out = io.StringIO()
         with redirect_stdout(recall_out), redirect_stderr(io.StringIO()):
-            code = product_main([
-                "--json",
-                "--sqlite-path", sqlite_path,
-                "recall", "audit test",
-            ])
+            code = product_main(
+                [
+                    "--json",
+                    "--sqlite-path",
+                    sqlite_path,
+                    "recall",
+                    "audit test",
+                ]
+            )
         assert code == 0
         recall_payload = json.loads(recall_out.getvalue())
         assert recall_payload["status"] == "ok"
@@ -439,14 +481,21 @@ class TestCrossLayerIntegration:
         # Open session
         open_out = io.StringIO()
         with redirect_stdout(open_out), redirect_stderr(io.StringIO()):
-            code = product_main([
-                "--json",
-                "--sqlite-path", sqlite_path,
-                "session", "open",
-                "--principal-id", "audit-principal",
-                "--session-id", "audit-session",
-                "--channel", "cli",
-            ])
+            code = product_main(
+                [
+                    "--json",
+                    "--sqlite-path",
+                    sqlite_path,
+                    "session",
+                    "open",
+                    "--principal-id",
+                    "audit-principal",
+                    "--session-id",
+                    "audit-session",
+                    "--channel",
+                    "cli",
+                ]
+            )
         assert code == 0
         open_payload = json.loads(open_out.getvalue())
         assert open_payload["status"] == "ok"
@@ -455,11 +504,16 @@ class TestCrossLayerIntegration:
         # Show session
         show_out = io.StringIO()
         with redirect_stdout(show_out), redirect_stderr(io.StringIO()):
-            code = product_main([
-                "--json",
-                "--sqlite-path", sqlite_path,
-                "session", "show", "audit-session",
-            ])
+            code = product_main(
+                [
+                    "--json",
+                    "--sqlite-path",
+                    sqlite_path,
+                    "session",
+                    "show",
+                    "audit-session",
+                ]
+            )
         assert code == 0
         show_payload = json.loads(show_out.getvalue())
         assert show_payload["result"]["principal_id"] == "audit-principal"
@@ -467,12 +521,17 @@ class TestCrossLayerIntegration:
         # List sessions
         list_out = io.StringIO()
         with redirect_stdout(list_out), redirect_stderr(io.StringIO()):
-            code = product_main([
-                "--json",
-                "--sqlite-path", sqlite_path,
-                "session", "list",
-                "--principal-id", "audit-principal",
-            ])
+            code = product_main(
+                [
+                    "--json",
+                    "--sqlite-path",
+                    sqlite_path,
+                    "session",
+                    "list",
+                    "--principal-id",
+                    "audit-principal",
+                ]
+            )
         assert code == 0
         list_payload = json.loads(list_out.getvalue())
         assert list_payload["result"]["total"] >= 1
@@ -537,9 +596,7 @@ class TestVersionCoherence:
         ]
         for key in scripts:
             for pattern in old_patterns:
-                assert not key.startswith(pattern), (
-                    f"Deprecated script entry '{key}' still present"
-                )
+                assert not key.startswith(pattern), f"Deprecated script entry '{key}' still present"
 
     def test_api_and_mcp_extras_declared(self) -> None:
         data = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
@@ -589,7 +646,10 @@ class TestSQLiteOfflineJobEdgeCases:
         first = store.claim_offline_job(worker_id="w1", now=NOW)
         assert first is not None
         store.fail_offline_job(
-            "one-shot", worker_id="w1", failed_at=NOW, error={"fail": True},
+            "one-shot",
+            worker_id="w1",
+            failed_at=NOW,
+            error={"fail": True},
         )
 
         # Job is now failed; re-enqueue as pending to test attempt exhaustion
@@ -684,51 +744,61 @@ class TestUserStateEdgeCases:
 
     def test_insert_principal_upsert_preserves_created_at(self, tmp_path: Path) -> None:
         store = _build_store(tmp_path)
-        first = store.insert_principal({
-            "principal_id": "upsert-p",
-            "tenant_id": "t",
-            "roles": [],
-            "capabilities": [],
-            "preferences": {},
-        })
+        first = store.insert_principal(
+            {
+                "principal_id": "upsert-p",
+                "tenant_id": "t",
+                "roles": [],
+                "capabilities": [],
+                "preferences": {},
+            }
+        )
         original_created = first["created_at"]
 
         # Upsert with updated roles
-        updated = store.insert_principal({
-            "principal_id": "upsert-p",
-            "tenant_id": "t",
-            "roles": ["admin"],
-            "capabilities": [],
-            "preferences": {},
-        })
+        updated = store.insert_principal(
+            {
+                "principal_id": "upsert-p",
+                "tenant_id": "t",
+                "roles": ["admin"],
+                "capabilities": [],
+                "preferences": {},
+            }
+        )
 
         assert updated["created_at"] == original_created
         assert updated["roles"] == ["admin"]
 
     def test_insert_session_upsert_preserves_started_at(self, tmp_path: Path) -> None:
         store = _build_store(tmp_path)
-        store.insert_principal({
-            "principal_id": "p-sess-upsert",
-            "tenant_id": "t",
-            "roles": [],
-            "capabilities": [],
-            "preferences": {},
-        })
+        store.insert_principal(
+            {
+                "principal_id": "p-sess-upsert",
+                "tenant_id": "t",
+                "roles": [],
+                "capabilities": [],
+                "preferences": {},
+            }
+        )
 
-        first = store.insert_session({
-            "session_id": "s-upsert",
-            "principal_id": "p-sess-upsert",
-            "channel": "cli",
-            "metadata": {"step": 1},
-        })
+        first = store.insert_session(
+            {
+                "session_id": "s-upsert",
+                "principal_id": "p-sess-upsert",
+                "channel": "cli",
+                "metadata": {"step": 1},
+            }
+        )
         original_started = first["started_at"]
 
-        second = store.insert_session({
-            "session_id": "s-upsert",
-            "principal_id": "p-sess-upsert",
-            "channel": "rest",
-            "metadata": {"step": 2},
-        })
+        second = store.insert_session(
+            {
+                "session_id": "s-upsert",
+                "principal_id": "p-sess-upsert",
+                "channel": "rest",
+                "metadata": {"step": 2},
+            }
+        )
 
         assert second["started_at"] == original_started
         assert second["channel"] == "rest"
@@ -737,20 +807,24 @@ class TestUserStateEdgeCases:
     def test_list_principals_tenant_filter(self, tmp_path: Path) -> None:
         store = _build_store(tmp_path)
         for i in range(3):
-            store.insert_principal({
-                "principal_id": f"p-t1-{i}",
-                "tenant_id": "tenant-1",
+            store.insert_principal(
+                {
+                    "principal_id": f"p-t1-{i}",
+                    "tenant_id": "tenant-1",
+                    "roles": [],
+                    "capabilities": [],
+                    "preferences": {},
+                }
+            )
+        store.insert_principal(
+            {
+                "principal_id": "p-t2",
+                "tenant_id": "tenant-2",
                 "roles": [],
                 "capabilities": [],
                 "preferences": {},
-            })
-        store.insert_principal({
-            "principal_id": "p-t2",
-            "tenant_id": "tenant-2",
-            "roles": [],
-            "capabilities": [],
-            "preferences": {},
-        })
+            }
+        )
 
         t1_list = store.list_principals(tenant_id="tenant-1")
         t2_list = store.list_principals(tenant_id="tenant-2")
@@ -762,24 +836,34 @@ class TestUserStateEdgeCases:
 
     def test_list_sessions_principal_filter(self, tmp_path: Path) -> None:
         store = _build_store(tmp_path)
-        store.insert_principal({
-            "principal_id": "pa",
-            "tenant_id": "t",
-            "roles": [],
-            "capabilities": [],
-            "preferences": {},
-        })
-        store.insert_principal({
-            "principal_id": "pb",
-            "tenant_id": "t",
-            "roles": [],
-            "capabilities": [],
-            "preferences": {},
-        })
+        store.insert_principal(
+            {
+                "principal_id": "pa",
+                "tenant_id": "t",
+                "roles": [],
+                "capabilities": [],
+                "preferences": {},
+            }
+        )
+        store.insert_principal(
+            {
+                "principal_id": "pb",
+                "tenant_id": "t",
+                "roles": [],
+                "capabilities": [],
+                "preferences": {},
+            }
+        )
 
-        store.insert_session({"session_id": "sa1", "principal_id": "pa", "channel": "cli", "metadata": {}})
-        store.insert_session({"session_id": "sa2", "principal_id": "pa", "channel": "cli", "metadata": {}})
-        store.insert_session({"session_id": "sb1", "principal_id": "pb", "channel": "cli", "metadata": {}})
+        store.insert_session(
+            {"session_id": "sa1", "principal_id": "pa", "channel": "cli", "metadata": {}}
+        )
+        store.insert_session(
+            {"session_id": "sa2", "principal_id": "pa", "channel": "cli", "metadata": {}}
+        )
+        store.insert_session(
+            {"session_id": "sb1", "principal_id": "pb", "channel": "cli", "metadata": {}}
+        )
 
         pa_sessions = store.list_sessions(principal_id="pa")
         pb_sessions = store.list_sessions(principal_id="pb")
@@ -791,40 +875,48 @@ class TestUserStateEdgeCases:
 
     def test_update_session_merges_metadata(self, tmp_path: Path) -> None:
         store = _build_store(tmp_path)
-        store.insert_principal({
-            "principal_id": "p-merge",
-            "tenant_id": "t",
-            "roles": [],
-            "capabilities": [],
-            "preferences": {},
-        })
-        store.insert_session({
-            "session_id": "s-merge",
-            "principal_id": "p-merge",
-            "channel": "cli",
-            "metadata": {"key_a": "a", "key_b": "b"},
-        })
+        store.insert_principal(
+            {
+                "principal_id": "p-merge",
+                "tenant_id": "t",
+                "roles": [],
+                "capabilities": [],
+                "preferences": {},
+            }
+        )
+        store.insert_session(
+            {
+                "session_id": "s-merge",
+                "principal_id": "p-merge",
+                "channel": "cli",
+                "metadata": {"key_a": "a", "key_b": "b"},
+            }
+        )
 
         updated = store.update_session("s-merge", {"metadata": {"key_b": "B", "key_c": "c"}})
 
-        assert updated["metadata"]["key_a"] == "a"   # preserved
-        assert updated["metadata"]["key_b"] == "B"   # overwritten
-        assert updated["metadata"]["key_c"] == "c"   # new
+        assert updated["metadata"]["key_a"] == "a"  # preserved
+        assert updated["metadata"]["key_b"] == "B"  # overwritten
+        assert updated["metadata"]["key_c"] == "c"  # new
 
     def test_namespace_upsert_preserves_created_at(self, tmp_path: Path) -> None:
         store = _build_store(tmp_path)
-        first = store.insert_namespace({
-            "namespace_id": "ns-upsert",
-            "tenant_id": "t",
-            "visibility_policy": "team",
-        })
+        first = store.insert_namespace(
+            {
+                "namespace_id": "ns-upsert",
+                "tenant_id": "t",
+                "visibility_policy": "team",
+            }
+        )
         original_created = first["created_at"]
 
-        updated = store.insert_namespace({
-            "namespace_id": "ns-upsert",
-            "tenant_id": "t",
-            "visibility_policy": "private",
-        })
+        updated = store.insert_namespace(
+            {
+                "namespace_id": "ns-upsert",
+                "tenant_id": "t",
+                "visibility_policy": "private",
+            }
+        )
 
         assert updated["created_at"] == original_created
         assert updated["visibility_policy"] == "private"
@@ -842,14 +934,16 @@ class TestNormalizationHelpers:
         from mind.primitives.contracts import Capability
 
         store = _build_store(tmp_path)
-        created = store.insert_principal({
-            "principal_id": "p-enum",
-            "tenant_id": "t",
-            "principal_kind": "user",
-            "roles": [],
-            "capabilities": [Capability.MEMORY_READ, Capability.GOVERNANCE_PLAN],
-            "preferences": {},
-        })
+        created = store.insert_principal(
+            {
+                "principal_id": "p-enum",
+                "tenant_id": "t",
+                "principal_kind": "user",
+                "roles": [],
+                "capabilities": [Capability.MEMORY_READ, Capability.GOVERNANCE_PLAN],
+                "preferences": {},
+            }
+        )
 
         assert all(isinstance(cap, str) for cap in created["capabilities"])
         assert "memory_read" in created["capabilities"]
@@ -858,27 +952,33 @@ class TestNormalizationHelpers:
         from mind.app.context import SourceChannel
 
         store = _build_store(tmp_path)
-        store.insert_principal({
-            "principal_id": "p-channel",
-            "tenant_id": "t",
-            "roles": [],
-            "capabilities": [],
-            "preferences": {},
-        })
-        created = store.insert_session({
-            "session_id": "s-channel",
-            "principal_id": "p-channel",
-            "channel": SourceChannel.CLI,
-            "metadata": {},
-        })
+        store.insert_principal(
+            {
+                "principal_id": "p-channel",
+                "tenant_id": "t",
+                "roles": [],
+                "capabilities": [],
+                "preferences": {},
+            }
+        )
+        created = store.insert_session(
+            {
+                "session_id": "s-channel",
+                "principal_id": "p-channel",
+                "channel": SourceChannel.CLI,
+                "metadata": {},
+            }
+        )
 
         assert created["channel"] == "cli"
 
     def test_principal_defaults_applied(self, tmp_path: Path) -> None:
         store = _build_store(tmp_path)
-        created = store.insert_principal({
-            "principal_id": "p-defaults",
-        })
+        created = store.insert_principal(
+            {
+                "principal_id": "p-defaults",
+            }
+        )
 
         assert created["principal_kind"] == "user"
         assert created["tenant_id"] == "default"
@@ -890,9 +990,11 @@ class TestNormalizationHelpers:
 
     def test_namespace_defaults_applied(self, tmp_path: Path) -> None:
         store = _build_store(tmp_path)
-        created = store.insert_namespace({
-            "namespace_id": "ns-defaults",
-        })
+        created = store.insert_namespace(
+            {
+                "namespace_id": "ns-defaults",
+            }
+        )
 
         assert created["tenant_id"] == "default"
         assert created["visibility_policy"] == "default"

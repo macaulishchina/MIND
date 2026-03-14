@@ -217,11 +217,7 @@ class GlobalRuntimeManager:
                     else None
                 ),
                 endpoint=str(service["endpoint"]),
-                api_key=(
-                    str(service["api_key"])
-                    if service.get("api_key") is not None
-                    else None
-                ),
+                api_key=(str(service["api_key"]) if service.get("api_key") is not None else None),
                 dev_mode=self._state.dev_mode if dev_mode is None else bool(dev_mode),
             ),
             llm_state=llm_state,
@@ -394,7 +390,10 @@ class GlobalRuntimeManager:
             selection_input["model"] = next_request.model
             selection_input["timeout_ms"] = current_selection.timeout_ms
             selection_input["retry_policy"] = current_selection.retry_policy
-        if getattr(next_request, "endpoint", None) is not None and str(next_request.endpoint).strip():
+        if (
+            getattr(next_request, "endpoint", None) is not None
+            and str(next_request.endpoint).strip()
+        ):
             selection_input["endpoint"] = resolve_frontend_llm_runtime_endpoint(
                 str(selection_input.get("provider") or current_selection.provider),
                 str(next_request.endpoint).strip(),
@@ -513,7 +512,10 @@ class GlobalRuntimeManager:
                     next_provider,
                     str(selected_service["endpoint"]),
                 )
-            elif next_provider == current_selection.provider and current_selection.endpoint is not None:
+            elif (
+                next_provider == current_selection.provider
+                and current_selection.endpoint is not None
+            ):
                 active_env["MIND_PROVIDER_ENDPOINT"] = current_selection.endpoint
             else:
                 active_env.pop("MIND_PROVIDER_ENDPOINT", None)
@@ -539,7 +541,11 @@ class GlobalRuntimeManager:
         active_env.pop("MIND_PROVIDER_API_KEY", None)
         for secret_env_key in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY"):
             active_env.pop(secret_env_key, None)
-        if next_provider != "deterministic" and isinstance(api_key_override, str) and api_key_override:
+        if (
+            next_provider != "deterministic"
+            and isinstance(api_key_override, str)
+            and api_key_override
+        ):
             secret_env = provider_secret_env(next_provider)
             if secret_env is not None:
                 active_env[secret_env] = api_key_override
@@ -550,7 +556,9 @@ class GlobalRuntimeManager:
         else:
             active_env.pop("MIND_PROVIDER_TIMEOUT_MS", None)
             active_env.pop("MIND_PROVIDER_RETRY_POLICY", None)
-        active_env["MIND_DEV_MODE"] = "true" if (self._state.dev_mode if dev_mode is None else dev_mode) else "false"
+        active_env["MIND_DEV_MODE"] = (
+            "true" if (self._state.dev_mode if dev_mode is None else dev_mode) else "false"
+        )
         return active_env
 
     def _normalize_provider_name(self, provider: str) -> str:

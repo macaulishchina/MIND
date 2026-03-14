@@ -14,8 +14,7 @@ def load_frontend_javascript(root: str | Path) -> str:
     app_module_root = frontend_root / "app"
     if app_module_root.is_dir():
         js_sources.extend(
-            path.read_text(encoding="utf-8")
-            for path in sorted(app_module_root.rglob("*.js"))
+            path.read_text(encoding="utf-8") for path in sorted(app_module_root.rglob("*.js"))
         )
     return "\n".join(js_sources)
 
@@ -36,6 +35,5 @@ def linked_stylesheet_paths(root: str | Path, index_html: str) -> tuple[Path, ..
 
 def load_frontend_stylesheets(root: str | Path, index_html: str) -> str:
     return "\n".join(
-        path.read_text(encoding="utf-8")
-        for path in linked_stylesheet_paths(root, index_html)
+        path.read_text(encoding="utf-8") for path in linked_stylesheet_paths(root, index_html)
     )

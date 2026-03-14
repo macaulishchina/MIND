@@ -79,7 +79,7 @@ async def test_static_frontend_index_is_mounted(
     assert 'id="llm-icon-upload"' in response.text
     assert 'id="llm-trace-modal"' in response.text
     assert 'id="llm-trace-body"' in response.text
-    assert 'data-llm-trace-modal-close' in response.text
+    assert "data-llm-trace-modal-close" in response.text
 
 
 @pytest.mark.anyio
@@ -93,9 +93,15 @@ async def test_static_frontend_assets_are_served(
     utils_js = await static_frontend_client.get("/frontend/app/utils.js")
     operation_chain_js = await static_frontend_client.get("/frontend/app/operation-chain.js")
     feature_overview_js = await static_frontend_client.get("/frontend/app/features/overview.js")
-    feature_operation_chain_js = await static_frontend_client.get("/frontend/app/features/operation-chain.js")
-    feature_settings_general_js = await static_frontend_client.get("/frontend/app/features/settings-general.js")
-    feature_settings_llm_js = await static_frontend_client.get("/frontend/app/features/settings-llm.js")
+    feature_operation_chain_js = await static_frontend_client.get(
+        "/frontend/app/features/operation-chain.js"
+    )
+    feature_settings_general_js = await static_frontend_client.get(
+        "/frontend/app/features/settings-general.js"
+    )
+    feature_settings_llm_js = await static_frontend_client.get(
+        "/frontend/app/features/settings-llm.js"
+    )
     core_dom_js = await static_frontend_client.get("/frontend/app/core/dom.js")
     core_store_js = await static_frontend_client.get("/frontend/app/core/store.js")
     core_router_js = await static_frontend_client.get("/frontend/app/core/router.js")
@@ -103,7 +109,9 @@ async def test_static_frontend_assets_are_served(
     core_actions_js = await static_frontend_client.get("/frontend/app/core/actions.js")
     core_api_client_js = await static_frontend_client.get("/frontend/app/core/api-client.js")
     workbench_state_js = await static_frontend_client.get("/frontend/app/workbench-state.js")
-    workbench_navigation_js = await static_frontend_client.get("/frontend/app/workbench-navigation.js")
+    workbench_navigation_js = await static_frontend_client.get(
+        "/frontend/app/workbench-navigation.js"
+    )
     tokens_css = await static_frontend_client.get("/frontend/styles/tokens.css")
     layout_css = await static_frontend_client.get("/frontend/styles/layout.css")
     components_css = await static_frontend_client.get("/frontend/styles/components.css")
@@ -171,7 +179,10 @@ async def test_static_frontend_assets_are_served(
     assert "createSettingsLlmFeature" in feature_settings_llm_js.text
     assert "collectLlmServicePayload" in feature_settings_llm_js.text
     assert "updateDraftIconFromFile" in feature_settings_llm_js.text
-    assert 'export { createOperationChainManager } from "../operation-chain.js";' in feature_operation_chain_js.text
+    assert (
+        'export { createOperationChainManager } from "../operation-chain.js";'
+        in feature_operation_chain_js.text
+    )
     assert "ops-chain-shell" in core_dom_js.text
     assert "未调用 LLM，走内建路径" in operation_chain_js.text
     assert "查看本轮提交、发送给 AI 的原文，以及 AI 的原始返回" in operation_chain_js.text

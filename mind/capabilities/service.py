@@ -14,6 +14,7 @@ from .adapter import (
     CapabilityAdapterError,
     invoke_capability,
 )
+from .claude_adapter import ClaudeCapabilityAdapter
 from .config import CapabilityProviderConfig, resolve_capability_provider_config
 from .contracts import (
     AnswerRequest,
@@ -32,9 +33,8 @@ from .contracts import (
     SummarizeRequest,
     SummarizeResponse,
 )
-from .claude_adapter import ClaudeCapabilityAdapter
-from .openai_adapter import OpenAICapabilityAdapter
 from .gemini_adapter import GeminiCapabilityAdapter
+from .openai_adapter import OpenAICapabilityAdapter
 
 
 class CapabilityServiceError(RuntimeError):
@@ -68,7 +68,9 @@ class DeterministicCapabilityAdapter:
             claims = _reflection_claims(request.evidence_text)
             reflection_text = f"{focus}: {_excerpt(request.evidence_text, limit=20)}"
             if request.outcome_hint in {"success", "failure"}:
-                prefix = "Episode succeeded" if request.outcome_hint == "success" else "Episode failed"
+                prefix = (
+                    "Episode succeeded" if request.outcome_hint == "success" else "Episode failed"
+                )
                 reflection_text = f"{prefix}; reflection focus: {focus[:120]}"
             return ReflectResponse(
                 reflection_text=reflection_text,
@@ -128,10 +130,7 @@ class CapabilityService:
             *_default_provider_adapters(self.provider_config, clock=self._clock),
             *(adapters or []),
         ]
-        self._adapters = {
-            adapter.descriptor.provider_family: adapter
-            for adapter in adapter_list
-        }
+        self._adapters = {adapter.descriptor.provider_family: adapter for adapter in adapter_list}
 
     def invoke(self, request: CapabilityRequest) -> CapabilityResponse:
         # Check per-capability routing override (Phase γ-3).
@@ -209,8 +208,7 @@ class CapabilityService:
                 }
             )
         raise CapabilityServiceError(
-            "primary capability adapter failed for "
-            f"{provider_config.provider_family.value}: {exc}"
+            f"primary capability adapter failed for {provider_config.provider_family.value}: {exc}"
         ) from exc
 
     def summarize(
@@ -254,9 +252,7 @@ class CapabilityService:
     ) -> OfflineReconstructResponse:
         response = self._invoke(request, provider_config=provider_config)
         if not isinstance(response, OfflineReconstructResponse):
-            raise CapabilityServiceError(
-                "offline_reconstruct returned unexpected response type"
-            )
+            raise CapabilityServiceError("offline_reconstruct returned unexpected response type")
         return response
 
     def _resolve_primary_adapter(
@@ -295,7 +291,8 @@ def build_capability_adapters_from_environment(
         config = resolve_capability_provider_config(env=provider_env)
         if not config.auth.is_configured():
             continue
-        adapters.append(adapter_builders[family](config, clock=active_clock))
+        adapter: CapabilityAdapter = adapter_builders[family](config, clock=active_clock)  # type: ignore[assignment]
+        adapters.append(adapter)
     return adapters
 
 
@@ -318,7 +315,7 @@ def _reflection_claims(evidence_text: str) -> list[str]:
     midpoint = max(1, min(len(words) - 1, len(words) // 2))
     return [
         " ".join(words[:midpoint]),
-        " ".join(words[midpoint: midpoint + max(1, min(6, len(words) - midpoint))]),
+        " ".join(words[midpoint : midpoint + max(1, min(6, len(words) - midpoint))]),
     ]
 
 

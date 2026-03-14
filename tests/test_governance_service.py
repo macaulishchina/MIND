@@ -98,9 +98,9 @@ def test_governance_service_conceal_flow_records_full_audit_chain(tmp_path: Path
         assert plan.candidate_object_ids == [write_a.response["object_id"]]
         assert plan.candidate_provenance_ids == [write_a.response["provenance_id"]]
         assert preview.candidate_object_ids == [write_a.response["object_id"]]
-        summary = preview.provenance_summaries[
-            write_a.response["object_id"]
-        ].model_dump(mode="json")
+        summary = preview.provenance_summaries[write_a.response["object_id"]].model_dump(
+            mode="json"
+        )
         assert summary["producer_id"] == "user-a"
         assert summary["user_id"] == "user-a"
         assert not (HIGH_SENSITIVITY_PROVENANCE_FIELDS & set(summary))

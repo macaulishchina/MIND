@@ -305,9 +305,7 @@ def build_frontend_settings_page(
         supported_capabilities=[str(item) for item in provider_status["supported_capabilities"]],
     )
     resolved_llm_state = load_frontend_llm_state(
-        {_FRONTEND_LLM_STATE_PREFERENCE_KEY: llm_state}
-        if llm_state is not None
-        else None
+        {_FRONTEND_LLM_STATE_PREFERENCE_KEY: llm_state} if llm_state is not None else None
     )
     runtime_active_service_id = runtime_source_service_id or _resolve_runtime_service_id(
         resolved_llm_state,
@@ -425,9 +423,7 @@ def preview_frontend_settings_update(
         preview_env["MIND_DEV_MODE"] = applied_env_overrides["MIND_DEV_MODE"]
 
     resolved_llm_state = load_frontend_llm_state(
-        {_FRONTEND_LLM_STATE_PREFERENCE_KEY: llm_state}
-        if llm_state is not None
-        else None
+        {_FRONTEND_LLM_STATE_PREFERENCE_KEY: llm_state} if llm_state is not None else None
     )
     preview_llm_state = apply_frontend_llm_state_update(resolved_llm_state, request)
 
@@ -503,6 +499,7 @@ def build_frontend_settings_mutation_result(
     """Build the stable frontend-facing apply/restore response payload."""
 
     resolved_current = _coerce_snapshot(current_snapshot)
+    assert resolved_current is not None
     resolved_previous = _coerce_snapshot(previous_snapshot)
     return FrontendSettingsMutationResult(
         action=action,
@@ -536,9 +533,7 @@ def dump_frontend_settings_snapshot_state(
     """Serialize the persisted frontend settings snapshot state for preferences."""
 
     resolved_state = _coerce_snapshot_state(snapshot_state)
-    return {
-        _FRONTEND_SETTINGS_STATE_PREFERENCE_KEY: resolved_state.model_dump(mode="json")
-    }
+    return {_FRONTEND_SETTINGS_STATE_PREFERENCE_KEY: resolved_state.model_dump(mode="json")}
 
 
 def load_frontend_llm_state(
@@ -600,9 +595,15 @@ def apply_frontend_llm_state_update(
             "name": _default_llm_name(request.provider),
             "icon": _default_llm_icon(request.provider),
             "endpoint": _resolve_llm_provider_endpoint(request.provider, request.endpoint),
-            "api_key": request.api_key.strip() if request.api_key and request.api_key.strip() else None,
-            "active_model": request.model.strip() if request.model and request.model.strip() else None,
-            "model_options": [request.model.strip()] if request.model and request.model.strip() else [],
+            "api_key": request.api_key.strip()
+            if request.api_key and request.api_key.strip()
+            else None,
+            "active_model": request.model.strip()
+            if request.model and request.model.strip()
+            else None,
+            "model_options": [request.model.strip()]
+            if request.model and request.model.strip()
+            else [],
         }
         resolved["services"] = [
             service_item
@@ -712,7 +713,11 @@ def upsert_frontend_llm_service(
         else FrontendLlmServiceUpsertRequest.model_validate(request_payload)
     )
     resolved = load_frontend_llm_state({_FRONTEND_LLM_STATE_PREFERENCE_KEY: llm_state})
-    existing = find_frontend_llm_service(resolved, service_id=request.service_id) if request.service_id else None
+    existing = (
+        find_frontend_llm_service(resolved, service_id=request.service_id)
+        if request.service_id
+        else None
+    )
     service_id = request.service_id or f"svc-{new_service_id}"
     protocol = request.protocol
     service = {
@@ -733,8 +738,10 @@ def upsert_frontend_llm_service(
         ),
         "model_options": list(existing.get("model_options", [])) if existing is not None else [],
     }
-    if service["active_model"] and service["active_model"] not in service["model_options"]:
-        service["model_options"] = [service["active_model"], *service["model_options"]]
+    model_options = service["model_options"]
+    assert isinstance(model_options, list)
+    if service["active_model"] and service["active_model"] not in model_options:
+        service["model_options"] = [service["active_model"], *model_options]
     next_services: list[dict[str, Any]] = []
     replaced = False
     for current in resolved["services"]:
@@ -842,9 +849,8 @@ def delete_frontend_llm_service(
 
     remaining_ids = {service["service_id"] for service in next_services}
     if resolved.get("selected_service_id") not in remaining_ids:
-        resolved["selected_service_id"] = (
-            resolved.get("active_service_id")
-            or (next_services[0]["service_id"] if next_services else None)
+        resolved["selected_service_id"] = resolved.get("active_service_id") or (
+            next_services[0]["service_id"] if next_services else None
         )
     return resolved, deleted, deleted_was_active
 
@@ -904,9 +910,7 @@ def dump_frontend_runtime_state(
         if isinstance(runtime_state, FrontendPersistedRuntimeState)
         else FrontendPersistedRuntimeState.model_validate(runtime_state)
     )
-    return {
-        _FRONTEND_RUNTIME_STATE_PREFERENCE_KEY: resolved.model_dump(mode="json")
-    }
+    return {_FRONTEND_RUNTIME_STATE_PREFERENCE_KEY: resolved.model_dump(mode="json")}
 
 
 def _load_llm_services(raw_state: Mapping[str, Any]) -> list[dict[str, Any]]:
@@ -931,8 +935,12 @@ def _normalize_llm_service(raw_service: Mapping[str, Any]) -> dict[str, Any] | N
     service_id = str(raw_service.get("service_id") or raw_service.get("id") or "").strip()
     if not service_id:
         return None
-    active_model = str(raw_service.get("active_model") or raw_service.get("model") or "").strip() or None
-    model_options = _dedupe_strings(raw_service.get("model_options") or raw_service.get("models") or [])
+    active_model = (
+        str(raw_service.get("active_model") or raw_service.get("model") or "").strip() or None
+    )
+    model_options = _dedupe_strings(
+        raw_service.get("model_options") or raw_service.get("models") or []
+    )
     if active_model and active_model not in model_options:
         model_options = [active_model, *model_options]
     api_key = raw_service.get("api_key")
@@ -1002,7 +1010,9 @@ def _resolve_runtime_service_id(
             return service["service_id"]
     if endpoint is not None:
         for service in llm_state.get("services", []):
-            if service["protocol"] == protocol and _service_matches_runtime_endpoint(service, endpoint):
+            if service["protocol"] == protocol and _service_matches_runtime_endpoint(
+                service, endpoint
+            ):
                 return service["service_id"]
     for service in llm_state.get("services", []):
         if service["protocol"] == protocol:
@@ -1115,7 +1125,9 @@ def _strip_llm_endpoint_suffix(provider: str, path: str) -> str:
     return cleaned_path
 
 
-def _service_matches_runtime_endpoint(service: Mapping[str, Any], runtime_endpoint: str | None) -> bool:
+def _service_matches_runtime_endpoint(
+    service: Mapping[str, Any], runtime_endpoint: str | None
+) -> bool:
     if runtime_endpoint is None:
         return False
     return resolve_frontend_llm_runtime_endpoint(

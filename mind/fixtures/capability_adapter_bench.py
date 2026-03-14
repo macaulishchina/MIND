@@ -58,9 +58,7 @@ def build_capability_adapter_bench_v1() -> tuple[CapabilityAdapterScenario, ...]
         scenarios.extend(_offline_reconstruct_cases(provider))
 
     if len(scenarios) != 48:
-        raise RuntimeError(
-            f"CapabilityAdapterBench v1 expected 48 scenarios, got {len(scenarios)}"
-        )
+        raise RuntimeError(f"CapabilityAdapterBench v1 expected 48 scenarios, got {len(scenarios)}")
     return tuple(scenarios)
 
 

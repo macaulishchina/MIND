@@ -386,9 +386,7 @@ def build_frontend_experience_catalog(
                     {scenario.viewport for scenario in entry_scenarios}
                 ),
                 scenario_ids=[scenario.scenario_id for scenario in entry_scenarios],
-                requires_dev_mode=any(
-                    scenario.requires_dev_mode for scenario in entry_scenarios
-                ),
+                requires_dev_mode=any(scenario.requires_dev_mode for scenario in entry_scenarios),
             )
         )
     return FrontendExperienceCatalogPage(
@@ -411,9 +409,7 @@ def build_frontend_gate_demo_page(
     if not gate_demo_scenarios:
         raise RuntimeError("missing frontend experience bench entrypoint gate_demo")
 
-    supported_viewports = _viewport_order(
-        {scenario.viewport for scenario in gate_demo_scenarios}
-    )
+    supported_viewports = _viewport_order({scenario.viewport for scenario in gate_demo_scenarios})
     scenario_ids = [scenario.scenario_id for scenario in gate_demo_scenarios]
 
     return FrontendGateDemoPage(
@@ -540,12 +536,8 @@ def _project_evidence_collection(
         raw_score = raw_summary.get("score")
         score = (
             float(raw_score)
-            if isinstance(raw_score, (int, float))
-            else (
-                fallback_scores[index]
-                if index < len(fallback_scores)
-                else None
-            )
+            if isinstance(raw_score, int | float)
+            else (fallback_scores[index] if index < len(fallback_scores) else None)
         )
         views.append(
             FrontendAccessEvidenceView(
@@ -615,9 +607,7 @@ def _project_access_answer(
                 else None
             ),
             endpoint=(
-                str(raw_trace["endpoint"])
-                if raw_trace.get("endpoint") is not None
-                else None
+                str(raw_trace["endpoint"]) if raw_trace.get("endpoint") is not None else None
             ),
             fallback_used=bool(raw_trace.get("fallback_used")),
             fallback_reason=(
@@ -678,8 +668,7 @@ def _build_frontend_access_llm_request_text(
     if not context_text:
         return None
     support_ids = [
-        str(item)
-        for item in (payload.get("answer_support_ids") or fallback_support_ids or ())
+        str(item) for item in (payload.get("answer_support_ids") or fallback_support_ids or ())
     ]
     if provider_family == "openai":
         response_line = "Return JSON only."
@@ -743,7 +732,7 @@ def _format_frontend_access_trace_text(raw_text: Any) -> str | None:
         parsed = json.loads(text)
     except (TypeError, ValueError):
         return text
-    if isinstance(parsed, (dict, list)):
+    if isinstance(parsed, dict | list):
         return json.dumps(parsed, ensure_ascii=False, indent=2)
     if isinstance(parsed, str):
         return parsed
@@ -788,12 +777,8 @@ def _project_retrieve_candidates(
         raw_score = raw_summary.get("score")
         score = (
             float(raw_score)
-            if isinstance(raw_score, (int, float))
-            else (
-                fallback_scores[index]
-                if index < len(fallback_scores)
-                else None
-            )
+            if isinstance(raw_score, int | float)
+            else (fallback_scores[index] if index < len(fallback_scores) else None)
         )
         views.append(
             FrontendRetrieveCandidateView(
@@ -846,6 +831,7 @@ _ENTRYPOINT_SUMMARIES = {
         "Submit offline maintenance jobs without changing runtime semantics implicitly."
     ),
     FrontendExperienceEntrypoint.GATE_DEMO: (
-        "Expose gate, report, and demo entry summaries without coupling the UI to raw developer CLI."
+        "Expose gate, report, and demo entry summaries "
+        "without coupling the UI to raw developer CLI."
     ),
 }

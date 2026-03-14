@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parent.parent
 # 1. mindtest entry point exposes all 8 dev command groups
 # ---------------------------------------------------------------------------
 
+
 class TestMindtestHelp:
     """Verify the mindtest CLI help covers all 8 command groups."""
 
@@ -32,12 +33,14 @@ class TestMindtestHelp:
     def test_mindtest_entry_point_importable(self) -> None:
         """mindtest_main is importable from devcli."""
         from mind.devcli import mindtest_main
+
         assert callable(mindtest_main)
 
     def test_mindtest_main_is_mind_main(self) -> None:
         """mindtest_main is the same function as mind_main."""
         from mind.cli import mind_main
         from mind.devcli import mindtest_main
+
         assert mindtest_main is mind_main
 
     def test_mindtest_help_covers_all_groups(self) -> None:
@@ -64,6 +67,7 @@ class TestMindtestHelp:
 # ---------------------------------------------------------------------------
 # 2. mind entry point no longer resolves to dev CLI
 # ---------------------------------------------------------------------------
+
 
 class TestMindEntryPointRemoved:
     """Verify that the 'mind' entry point is no longer the dev CLI."""
@@ -126,14 +130,15 @@ class TestDocsNoStaleReferences:
             hits.extend(self._scan_file(md))
         # Allow docs/reports/ to contain historical references
         non_report_hits = [h for h in hits if "/reports/" not in h]
-        assert non_report_hits == [], (
-            "Stale CLI references in docs/:\n" + "\n".join(non_report_hits)
+        assert non_report_hits == [], "Stale CLI references in docs/:\n" + "\n".join(
+            non_report_hits
         )
 
 
 # ---------------------------------------------------------------------------
 # 4. pyproject.toml has mindtest-phase-* aliases
 # ---------------------------------------------------------------------------
+
 
 class TestMindtestAliases:
     """All mindtest-phase-* aliases exist in pyproject.toml."""

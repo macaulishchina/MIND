@@ -95,8 +95,7 @@ class CliGateResult:
     @property
     def j4_pass(self) -> bool:
         return (
-            self.config_audit_total > 0
-            and self.config_audit_pass_count == self.config_audit_total
+            self.config_audit_total > 0 and self.config_audit_pass_count == self.config_audit_total
         )
 
     @property
@@ -433,7 +432,10 @@ def _evaluate_config_audit() -> _AuditOutcome:
         ),
         (
             "cli_profile_postgres_main",
-            {"MIND_CLI_PROFILE": "sqlite_local", "MIND_POSTGRES_DSN": "postgresql+psycopg://env-main"},
+            {
+                "MIND_CLI_PROFILE": "sqlite_local",
+                "MIND_POSTGRES_DSN": "postgresql+psycopg://env-main",
+            },
             {"profile": CliProfile.POSTGRES_MAIN},
             {
                 "requested_profile_source": "cli",
@@ -535,7 +537,10 @@ def _evaluate_config_audit() -> _AuditOutcome:
         ),
         (
             "env_profile_plus_cli_dsn",
-            {"MIND_CLI_PROFILE": "postgres_main", "MIND_POSTGRES_DSN": "postgresql+psycopg://env-main"},
+            {
+                "MIND_CLI_PROFILE": "postgres_main",
+                "MIND_POSTGRES_DSN": "postgresql+psycopg://env-main",
+            },
             {"postgres_dsn": "postgresql+psycopg://cli-override"},
             {
                 "resolved_profile": "postgres_main",
@@ -719,9 +724,8 @@ def _evaluate_output_contract_audit() -> _AuditOutcome:
         checks.append(("demo_ingest_read", demo, ("read_response_json=", "read_object_count=1")))
 
         for check_id, run, required_fragments in checks:
-            if (
-                run.exit_code == 0
-                and all(fragment in run.stdout for fragment in required_fragments)
+            if run.exit_code == 0 and all(
+                fragment in run.stdout for fragment in required_fragments
             ):
                 pass_count += 1
                 continue

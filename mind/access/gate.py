@@ -80,16 +80,12 @@ class AccessGateResult:
     @property
     def i2_pass(self) -> bool:
         return (
-            self.flash_time_budget_hit_rate >= 0.95
-            and self.flash_constraint_satisfaction >= 0.95
+            self.flash_time_budget_hit_rate >= 0.95 and self.flash_constraint_satisfaction >= 0.95
         )
 
     @property
     def i3_pass(self) -> bool:
-        return (
-            self.recall_answer_quality_score >= 0.75
-            and self.recall_memory_use_score >= 0.65
-        )
+        return self.recall_answer_quality_score >= 0.75 and self.recall_memory_use_score >= 0.65
 
     @property
     def i4_pass(self) -> bool:
@@ -132,10 +128,7 @@ class AccessGateResult:
 
     @property
     def i8_pass(self) -> bool:
-        return (
-            self.fixed_lock_run_count > 0
-            and self.fixed_lock_override_count == 0
-        )
+        return self.fixed_lock_run_count > 0 and self.fixed_lock_override_count == 0
 
     @property
     def access_gate_pass(self) -> bool:

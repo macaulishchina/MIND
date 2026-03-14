@@ -88,14 +88,15 @@ def build_frontend_debug_timeline(
             verification_notes=_as_str_list(event.payload.get("verification_notes")),
         )
         for event in returned_events
-        if event.scope is TelemetryScope.ACCESS
-        and event.kind is TelemetryEventKind.CONTEXT_RESULT
+        if event.scope is TelemetryScope.ACCESS and event.kind is TelemetryEventKind.CONTEXT_RESULT
     ]
     evidence_views = [
         *_project_retrieval_evidence(returned_events, selected_ids_by_operation),
         *_project_workspace_evidence(returned_events),
     ]
-    available_scopes = sorted({event.scope for event in returned_events}, key=lambda item: item.value)
+    available_scopes = sorted(
+        {event.scope for event in returned_events}, key=lambda item: item.value
+    )
     return FrontendDebugTimelineResponse(
         query=validated_query,
         total_event_count=len(event_list),
@@ -130,7 +131,10 @@ def _matches(event: TelemetryEvent, query: FrontendDebugTimelineQuery) -> bool:
 def _event_label(event: TelemetryEvent) -> str:
     if event.scope is TelemetryScope.OBJECT_DELTA:
         return "Object Delta"
-    return f"{event.scope.value.replace('_', ' ').title()} {event.kind.value.replace('_', ' ').title()}"
+    return (
+        f"{event.scope.value.replace('_', ' ').title()}"
+        f" {event.kind.value.replace('_', ' ').title()}"
+    )
 
 
 def _event_summary(event: TelemetryEvent) -> str:
@@ -308,6 +312,6 @@ def _as_str_list(value: object) -> list[str]:
 
 
 def _float_or_none(value: object) -> float | None:
-    if isinstance(value, (int, float)):
+    if isinstance(value, int | float):
         return float(value)
     return None

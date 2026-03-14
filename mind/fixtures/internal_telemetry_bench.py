@@ -246,8 +246,7 @@ def build_internal_telemetry_bench_v1() -> list[InternalTelemetryScenario]:
         missing = sorted(scope.value for scope in expected_scopes - actual_scopes)
         extra = sorted(scope.value for scope in actual_scopes - expected_scopes)
         raise RuntimeError(
-            "InternalTelemetryBench v1 scope mismatch: "
-            f"missing={missing}, extra={extra}"
+            f"InternalTelemetryBench v1 scope mismatch: missing={missing}, extra={extra}"
         )
     if len(scenarios) != 30:
         raise RuntimeError(f"InternalTelemetryBench v1 expected 30 scenarios, got {len(scenarios)}")

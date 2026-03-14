@@ -239,8 +239,7 @@ class GovernanceService:
                 if self.store.is_object_concealed(object_id)
             ]
             provenance_summaries = {
-                record.bound_object_id: build_provenance_summary(record)
-                for record in records
+                record.bound_object_id: build_provenance_summary(record) for record in records
             }
             last_parent_event_id = f"{event_prefix}-selection"
             self._record_telemetry(
@@ -504,9 +503,7 @@ class GovernanceService:
     ) -> GovernanceAuditRecord:
         rows = self.store.iter_governance_audit_for_operation(operation_id)
         matches = [
-            row
-            for row in rows
-            if row.stage == stage and row.action == GovernanceAction.CONCEAL
+            row for row in rows if row.stage == stage and row.action == GovernanceAction.CONCEAL
         ]
         if not matches:
             raise GovernanceServiceError(
@@ -561,9 +558,7 @@ class GovernanceService:
     ) -> None:
         if capability in context.capabilities:
             return
-        raise GovernanceServiceError(
-            f"capability '{capability.value}' required to {action}"
-        )
+        raise GovernanceServiceError(f"capability '{capability.value}' required to {action}")
 
     @staticmethod
     def _new_id(prefix: str) -> str:

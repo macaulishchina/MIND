@@ -34,7 +34,11 @@ _TRANSPORT_MARKERS: dict[str, tuple[str, ...]] = {
     "offline": ('"/v1/frontend/offline"', "submitOffline"),
     "gate_demo": ('"/v1/frontend/gate-demo"', "loadGateDemo"),
     "config_backend": ('"/v1/frontend/settings"', "loadSettings"),
-    "config_provider": ('"/v1/frontend/settings"', '"/v1/frontend/settings:apply"', "applySettings"),
+    "config_provider": (
+        '"/v1/frontend/settings"',
+        '"/v1/frontend/settings:apply"',
+        "applySettings",
+    ),
     "config_dev_mode": ('"/v1/frontend/settings:apply"', "applySettings"),
     "config_llm": (
         '"/v1/frontend/llm/services:upsert"',
@@ -215,9 +219,7 @@ def evaluate_frontend_flow_report(
         for entrypoint in _REQUIRED_EXPERIENCE_ENTRYPOINTS
         if entrypoint in covered_experience_entrypoints_set
     )
-    debug_guard = next(
-        result for result in scenario_results if result.entrypoint == "debug_guard"
-    )
+    debug_guard = next(result for result in scenario_results if result.entrypoint == "debug_guard")
     return FrontendFlowReport(
         schema_version=_SCHEMA_VERSION,
         generated_at=(generated_at or datetime.now(UTC)).isoformat(),
@@ -233,10 +235,9 @@ def evaluate_frontend_flow_report(
         contract_audit_pass=contract_audit_pass,
         config_audit_pass=category_map["config"].passed,
         debug_ui_audit_pass=category_map["debug"].passed,
-        dev_mode_guard_pass=debug_guard.passed and all(
-            result.requires_dev_mode
-            for result in scenario_results
-            if result.category == "debug"
+        dev_mode_guard_pass=debug_guard.passed
+        and all(
+            result.requires_dev_mode for result in scenario_results if result.category == "debug"
         ),
         failure_ids=failure_ids,
         category_summaries=category_summaries,
@@ -262,8 +263,7 @@ def read_frontend_flow_report_json(path: str | Path) -> FrontendFlowReport:
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
     if payload.get("schema_version") != _SCHEMA_VERSION:
         raise ValueError(
-            "unexpected frontend flow report schema_version "
-            f"({payload.get('schema_version')!r})"
+            f"unexpected frontend flow report schema_version ({payload.get('schema_version')!r})"
         )
     return _report_from_dict(payload)
 
@@ -314,11 +314,7 @@ def _missing_transport_markers(
     markers = _TRANSPORT_MARKERS.get(entrypoint)
     if markers is None:
         return (f"transport:unsupported-entrypoint:{entrypoint}",)
-    return tuple(
-        f"transport:{marker}"
-        for marker in markers
-        if marker not in api_js
-    )
+    return tuple(f"transport:{marker}" for marker in markers if marker not in api_js)
 
 
 def _missing_contract_markers(

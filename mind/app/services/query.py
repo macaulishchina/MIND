@@ -208,9 +208,7 @@ class MemoryQueryService:
             )
             resp.status = AppStatus.OK
             resp.result = {
-                "matches": [
-                    {"object": m.object, "score": m.score} for m in matches
-                ],
+                "matches": [{"object": m.object, "score": m.score} for m in matches],
                 "total": len(matches),
             }
         except Exception as exc:

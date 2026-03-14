@@ -156,8 +156,7 @@ class GovernanceAuditRecord(GovernanceModel):
 
         if self.capability is not expected:
             raise ValueError(
-                f"governance stage '{self.stage.value}' requires capability "
-                f"'{expected.value}'"
+                f"governance stage '{self.stage.value}' requires capability '{expected.value}'"
             )
         return self
 

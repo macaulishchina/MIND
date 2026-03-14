@@ -444,4 +444,15 @@ def build_core_object_showcase() -> list[dict]:
             "quality_signal": 0.5,
         },
     }
-    return [raw, episode, summary, reflection, entity, link, workspace, schema, feedback_1, feedback_2]
+    return [
+        raw,
+        episode,
+        summary,
+        reflection,
+        entity,
+        link,
+        workspace,
+        schema,
+        feedback_1,
+        feedback_2,
+    ]

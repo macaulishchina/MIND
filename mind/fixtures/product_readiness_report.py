@@ -59,7 +59,9 @@ class ProductReadinessReport:
 
     @property
     def failure_ids(self) -> tuple[str, ...]:
-        return tuple(component.component_id for component in self.components if not component.passed)
+        return tuple(
+            component.component_id for component in self.components if not component.passed
+        )
 
     @property
     def passed(self) -> bool:
@@ -158,14 +160,11 @@ def assert_product_readiness_report(
 
     component_map = {component.component_id: component for component in report.components}
     missing = tuple(
-        component_id
-        for component_id in required_component_ids
-        if component_id not in component_map
+        component_id for component_id in required_component_ids if component_id not in component_map
     )
     if missing:
         raise RuntimeError(
-            "product readiness report missing required components: "
-            + ",".join(missing)
+            "product readiness report missing required components: " + ",".join(missing)
         )
 
     failing = tuple(

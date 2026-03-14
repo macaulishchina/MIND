@@ -145,7 +145,9 @@ def _frontend_asset_response(frontend_root: Path, asset_path: str) -> Response:
     # so serve the small frontend bundle through explicit routes instead.
     candidate = _resolve_frontend_asset(frontend_root, asset_path)
     media_type, _ = guess_type(str(candidate))
-    return Response(content=candidate.read_bytes(), media_type=media_type or "application/octet-stream")
+    return Response(
+        content=candidate.read_bytes(), media_type=media_type or "application/octet-stream"
+    )
 
 
 def _resolve_frontend_asset(frontend_root: Path, asset_path: str) -> Path:

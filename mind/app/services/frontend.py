@@ -11,7 +11,7 @@ from pydantic import ValidationError as PydanticValidationError
 
 from mind.app._service_utils import new_response
 from mind.app.contracts import AppError, AppErrorCode, AppRequest, AppResponse, AppStatus
-from mind.app.runtime import GlobalRuntimeManager, SYSTEM_RUNTIME_PRINCIPAL_ID
+from mind.app.runtime import SYSTEM_RUNTIME_PRINCIPAL_ID, GlobalRuntimeManager
 from mind.app.services.system import build_config_summary_payload, build_provider_status_payload
 from mind.capabilities import resolve_capability_provider_config
 from mind.telemetry import JsonlTelemetryRecorder, TelemetryEvent, resolve_dev_telemetry_path
@@ -108,9 +108,7 @@ class FrontendExperienceAppService:
                 projected_response,
                 frontend_request=validated,
                 runtime_provider=(
-                    req.provider_selection.provider
-                    if req.provider_selection is not None
-                    else None
+                    req.provider_selection.provider if req.provider_selection is not None else None
                 ),
             ),
         )
@@ -600,7 +598,7 @@ class FrontendSettingsAppService:
                 input={
                     "principal_id": principal_id,
                     "preferences": dict(preference_update),
-                }
+                },
             )
         )
         if update_response.status is not AppStatus.OK:

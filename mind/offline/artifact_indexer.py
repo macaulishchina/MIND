@@ -76,6 +76,7 @@ def _content_text(obj: dict[str, Any]) -> str:
             if isinstance(val, str):
                 return val
         import json
+
         return json.dumps(content, ensure_ascii=False)
     return str(content)
 

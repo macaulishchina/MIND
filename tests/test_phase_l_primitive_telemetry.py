@@ -91,12 +91,14 @@ def test_write_raw_emits_primitive_and_object_delta_events_in_dev_mode(tmp_path:
         ]
         assert all(event.run_id == "run-phase-l-001" for event in events)
         assert events[0].payload["primitive"] == "write_raw"
+        assert result.response is not None
         assert events[1].debug_fields["mutated_ids"] == [result.response["object_id"]]
         assert events[2].object_id == result.response["object_id"]
         assert events[2].object_version == 1
         assert events[2].before == {}
         assert events[2].after is not None
         assert events[2].after["version"] == 1
+        assert events[2].delta is not None
         assert events[2].delta["version"]["before"] is None
         assert events[2].delta["version"]["after"] == 1
         assert events[2].debug_fields["created"] is True
@@ -165,14 +167,15 @@ def test_reorganize_simple_emits_state_delta_with_previous_version(tmp_path: Pat
         delta_event = next(
             event for event in recorder.iter_events() if event.scope is TelemetryScope.OBJECT_DELTA
         )
+        assert delta_event.before is not None
         assert delta_event.object_id == showcase[2]["id"]
         assert delta_event.object_version == 2
-        assert delta_event.before is not None
         assert delta_event.before["version"] == 1
         assert delta_event.before["status"] == "active"
         assert delta_event.after is not None
         assert delta_event.after["version"] == 2
         assert delta_event.after["status"] == "archived"
+        assert delta_event.delta is not None
         assert delta_event.delta["status"] == {
             "before": "active",
             "after": "archived",
@@ -245,18 +248,21 @@ def test_retrieve_emits_retrieval_events_for_store_search_backend(tmp_path: Path
         assert retrieval_events[1].payload["retrieval_backend"] == "store_search"
         assert retrieval_events[1].payload["candidate_ids"]
         assert retrieval_events[2].payload["evidence_summary"]["returned_count"] >= 1
-        assert retrieval_events[2].debug_fields["top_candidate_id"] == result.response["candidate_ids"][0]
+        assert result.response is not None
+        assert (
+            retrieval_events[2].debug_fields["top_candidate_id"]
+            == result.response["candidate_ids"][0]
+        )
 
 
 def test_retrieve_emits_retrieval_events_for_vector_override_backend(tmp_path: Path) -> None:
     recorder = InMemoryTelemetryRecorder()
     showcase = build_core_object_showcase()
 
-    def vector_retriever(query: str | dict[str, object], objects: list[dict[str, object]]) -> dict[str, float]:
-        return {
-            str(obj["id"]): (1.0 if obj["type"] == "SummaryNote" else 0.0)
-            for obj in objects
-        }
+    def vector_retriever(
+        query: str | dict[str, object], objects: list[dict[str, object]]
+    ) -> dict[str, float]:
+        return {str(obj["id"]): (1.0 if obj["type"] == "SummaryNote" else 0.0) for obj in objects}
 
     with SQLiteMemoryStore(tmp_path / "phase_l_telemetry_retrieve_vector.sqlite3") as store:
         store.insert_objects(showcase)

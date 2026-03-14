@@ -46,11 +46,7 @@ def _build_episode_access_cases(episode: EpisodeFixture) -> list[AccessDepthBenc
         None,
     )
     tool_result_record = next(
-        (
-            obj
-            for obj in raw_records
-            if str(obj["metadata"]["record_kind"]) == "tool_result"
-        ),
+        (obj for obj in raw_records if str(obj["metadata"]["record_kind"]) == "tool_result"),
         None,
     )
 
@@ -58,9 +54,7 @@ def _build_episode_access_cases(episode: EpisodeFixture) -> list[AccessDepthBenc
     summary_text = str(summary["content"]["summary"])
     final_raw_text = str(final_raw_record["content"]["text"])
     tool_result_text = (
-        str(tool_result_record["content"]["result"])
-        if tool_result_record is not None
-        else None
+        str(tool_result_record["content"]["result"]) if tool_result_record is not None else None
     )
 
     high_correctness_required_fragments: tuple[str, ...]

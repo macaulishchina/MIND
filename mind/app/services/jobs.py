@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from mind.app._service_utils import new_response
 from mind.app.contracts import AppError, AppErrorCode, AppRequest, AppResponse, AppStatus
 from mind.app.errors import map_domain_error
@@ -26,7 +28,7 @@ class OfflineJobAppService:
         store: MemoryStore,
         offline_service: OfflineMaintenanceService,
         *,
-        request_defaults_resolver: object = None,
+        request_defaults_resolver: Callable[..., AppRequest] | None = None,
     ) -> None:
         self._store = store
         self._offline = offline_service
@@ -100,9 +102,7 @@ class OfflineJobAppService:
             job_id = req.input.get("job_id", "")
             if not job_id:
                 resp.status = AppStatus.ERROR
-                resp.error = AppError(
-                    code=AppErrorCode.VALIDATION_ERROR, message="job_id required"
-                )
+                resp.error = AppError(code=AppErrorCode.VALIDATION_ERROR, message="job_id required")
                 return resp
 
             store = self._store
@@ -172,9 +172,7 @@ class OfflineJobAppService:
             job_id = req.input.get("job_id", "")
             if not job_id:
                 resp.status = AppStatus.ERROR
-                resp.error = AppError(
-                    code=AppErrorCode.VALIDATION_ERROR, message="job_id required"
-                )
+                resp.error = AppError(code=AppErrorCode.VALIDATION_ERROR, message="job_id required")
                 return resp
 
             store = self._store

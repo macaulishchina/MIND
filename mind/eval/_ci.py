@@ -90,7 +90,7 @@ def metric_interval(values: list[float]) -> MetricConfidenceInterval:
     sample_std = stdev(values)
     margin = 0.0
     if sample_std != 0.0:
-        margin = t_critical(sample_count - 1) * (sample_std / (sample_count ** 0.5))
+        margin = t_critical(sample_count - 1) * (sample_std / (sample_count**0.5))
     return MetricConfidenceInterval(
         mean=center,
         ci_lower=round(center - margin, 4),

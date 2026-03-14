@@ -71,7 +71,7 @@ class OpenAIEmbedding:
 
     def embed(self, texts: list[str]) -> list[tuple[float, ...]]:
         try:
-            import openai  # type: ignore[import-untyped]
+            import openai  # type: ignore[import-not-found]
         except ImportError as exc:
             raise ImportError(
                 "openai package is required for OpenAIEmbedding. "
@@ -107,9 +107,11 @@ class SentenceTransformerEmbedding:
 
     def embed(self, texts: list[str]) -> list[tuple[float, ...]]:
         model = self._load_model()
-        import numpy as np  # type: ignore[import-untyped]
+        import numpy as np  # type: ignore[import-not-found]
 
-        embeddings: np.ndarray = model.encode(texts, convert_to_numpy=True, normalize_embeddings=True)
+        embeddings: np.ndarray = model.encode(
+            texts, convert_to_numpy=True, normalize_embeddings=True
+        )
         if self._dim is None:
             self._dim = int(embeddings.shape[1])
         return [tuple(float(v) for v in row) for row in embeddings]
@@ -125,7 +127,7 @@ class SentenceTransformerEmbedding:
         if self._model is not None:
             return self._model
         try:
-            from sentence_transformers import SentenceTransformer  # type: ignore[import-untyped]
+            from sentence_transformers import SentenceTransformer  # type: ignore[import-not-found]
         except ImportError as exc:
             raise ImportError(
                 "sentence-transformers is required for SentenceTransformerEmbedding. "

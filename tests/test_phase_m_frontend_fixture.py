@@ -16,9 +16,7 @@ def test_frontend_experience_bench_v1_covers_phase_m_required_entrypoints() -> N
     scenarios = build_frontend_experience_bench_v1()
 
     experience_entrypoints = {
-        scenario.entrypoint
-        for scenario in scenarios
-        if scenario.category == "experience"
+        scenario.entrypoint for scenario in scenarios if scenario.category == "experience"
     }
     assert experience_entrypoints == {
         "ingest",
@@ -29,9 +27,7 @@ def test_frontend_experience_bench_v1_covers_phase_m_required_entrypoints() -> N
     }
 
     config_entrypoints = {
-        scenario.entrypoint
-        for scenario in scenarios
-        if scenario.category == "config"
+        scenario.entrypoint for scenario in scenarios if scenario.category == "config"
     }
     assert config_entrypoints == {
         "config_backend",

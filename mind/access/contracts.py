@@ -231,7 +231,9 @@ class AccessRunResponse(AccessModel):
             raise ValueError("only reflective access may define verification notes")
         if self.candidate_summaries and len(self.candidate_summaries) > len(self.candidate_ids):
             raise ValueError("candidate_summaries cannot exceed candidate_ids")
-        if self.selected_summaries and len(self.selected_summaries) != len(self.selected_object_ids):
+        if self.selected_summaries and len(self.selected_summaries) != len(
+            self.selected_object_ids
+        ):
             raise ValueError("selected_summaries must match selected_object_ids")
         if self.answer_trace is not None and not self.answer_text:
             raise ValueError("answer_trace requires answer_text")

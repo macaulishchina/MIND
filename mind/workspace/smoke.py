@@ -106,8 +106,7 @@ class WorkspaceSmokeResult:
     @property
     def d4_pass(self) -> bool:
         return (
-            self.workspace_slot_discipline_rate == 1.0
-            and self.workspace_source_ref_coverage == 1.0
+            self.workspace_slot_discipline_rate == 1.0 and self.workspace_source_ref_coverage == 1.0
         )
 
     @property
@@ -163,12 +162,12 @@ def evaluate_workspace_smoke(
 
         raw_top20_success_rate = sum(run.raw_top20_task_success for run in runs) / float(len(runs))
         workspace_success_rate = sum(run.workspace_task_success for run in runs) / float(len(runs))
-        raw_top20_proxy_rate = sum(
-            run.raw_top20_task_success_proxy for run in runs
-        ) / float(len(runs))
-        workspace_proxy_rate = sum(
-            run.workspace_task_success_proxy for run in runs
-        ) / float(len(runs))
+        raw_top20_proxy_rate = sum(run.raw_top20_task_success_proxy for run in runs) / float(
+            len(runs)
+        )
+        workspace_proxy_rate = sum(run.workspace_task_success_proxy for run in runs) / float(
+            len(runs)
+        )
         return WorkspaceSmokeResult(
             smoke_case_count=len(smoke_cases),
             benchmark_case_count=len(benchmark_cases),
@@ -243,14 +242,10 @@ def assert_workspace_smoke(result: WorkspaceSmokeResult) -> None:
             f"vector={result.vector_smoke_successes})"
         )
     if not result.d2_pass:
-        raise RuntimeError(
-            "D-2 failed: candidate recall@20 "
-            f"({result.candidate_recall_at_20:.2f})"
-        )
+        raise RuntimeError(f"D-2 failed: candidate recall@20 ({result.candidate_recall_at_20:.2f})")
     if not result.d3_pass:
         raise RuntimeError(
-            "D-3 failed: workspace gold-fact coverage "
-            f"({result.workspace_gold_fact_coverage:.2f})"
+            f"D-3 failed: workspace gold-fact coverage ({result.workspace_gold_fact_coverage:.2f})"
         )
     if not result.d4_pass:
         raise RuntimeError(

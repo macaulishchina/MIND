@@ -24,7 +24,7 @@ class MemoryAccessService:
         access_service: AccessService,
         *,
         provider_env_resolver: Callable[[], Mapping[str, str] | None] | None = None,
-        request_defaults_resolver: Callable[[AppRequest], AppRequest] | None = None,
+        request_defaults_resolver: Callable[..., AppRequest] | None = None,
     ) -> None:
         self._access = access_service
         self._provider_env_resolver = provider_env_resolver
@@ -71,9 +71,7 @@ class MemoryAccessService:
                 resp.error = AppError(
                     code=AppErrorCode.VALIDATION_ERROR,
                     message=str(exc),
-                    details={
-                        "provider_selection": req.provider_selection.model_dump(mode="json")
-                    },
+                    details={"provider_selection": req.provider_selection.model_dump(mode="json")},
                 )
                 return resp
         ctx = resolve_execution_context(

@@ -206,11 +206,7 @@ def _build_app_request(
     input_payload = (
         dict(arguments["input"])
         if isinstance(arguments.get("input"), dict)
-        else {
-            key: value
-            for key, value in arguments.items()
-            if key not in _APP_ENVELOPE_KEYS
-        }
+        else {key: value for key, value in arguments.items() if key not in _APP_ENVELOPE_KEYS}
     )
     return AppRequest(
         request_id=request_id,
@@ -285,8 +281,11 @@ def _tool_catalog() -> tuple[MCPToolDefinition, ...]:
             name="record_feedback",
             description="Record post-query feedback on memory objects.",
             input_schema=_object_schema(
-                "task_id", "episode_id", "query",
-                "used_object_ids", "helpful_object_ids",
+                "task_id",
+                "episode_id",
+                "query",
+                "used_object_ids",
+                "helpful_object_ids",
                 "quality_signal",
             ),
         ),

@@ -64,7 +64,4 @@ def test_objects_reject_reserved_control_plane_metadata_fields() -> None:
 
     errors = validate_object(summary)
 
-    assert (
-        "metadata contains reserved control-plane fields ['provenance_id']"
-        in errors
-    )
+    assert "metadata contains reserved control-plane fields ['provenance_id']" in errors

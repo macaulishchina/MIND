@@ -93,8 +93,7 @@ def test_mind_cli_scenario_set_v1_is_frozen_and_complete() -> None:
     assert scenarios[0].argv == ("mind", "-h")
     assert any(scenario.argv == ("mind", "gate", "phase-i") for scenario in scenarios)
     assert any(
-        scenario.argv == ("mind", "report", "acceptance", "--phase", "h")
-        for scenario in scenarios
+        scenario.argv == ("mind", "report", "acceptance", "--phase", "h") for scenario in scenarios
     )
 
 
@@ -693,7 +692,9 @@ def test_gate_phase_k_forwards_output_and_live_providers(
     ]
 
 
-def test_gate_product_readiness_forwards_output_and_markdown(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_gate_product_readiness_forwards_output_and_markdown(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     captured: dict[str, Sequence[str] | None] = {"argv": None}
 
     def fake_product_readiness_gate_main(argv: Sequence[str] | None = None) -> int:

@@ -222,8 +222,7 @@ def assert_primitive_gate(result: PrimitiveGateResult) -> None:
         raise RuntimeError(f"C-1 failed: smoke coverage {result.smoke_success_count}/7")
     if not result.c2_pass:
         raise RuntimeError(
-            "C-2 failed: schema compliance "
-            f"({result.schema_valid_calls}/{result.total_calls})"
+            f"C-2 failed: schema compliance ({result.schema_valid_calls}/{result.total_calls})"
         )
     if not result.c3_pass:
         raise RuntimeError(
@@ -301,8 +300,7 @@ def _expectation_matched(
 ) -> bool:
     actual_error = result.error.code if result.error is not None else None
     return (
-        result.outcome is call.expectation.outcome
-        and actual_error is call.expectation.error_code
+        result.outcome is call.expectation.outcome and actual_error is call.expectation.error_code
     )
 
 

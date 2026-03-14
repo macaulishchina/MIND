@@ -2,21 +2,22 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Mapping
+from typing import TYPE_CHECKING
 
 from mind.access.service import AccessService
-from mind.app.services.access import MemoryAccessService
 from mind.app.runtime import GlobalRuntimeManager
+from mind.app.services.access import MemoryAccessService
+from mind.app.services.feedback import FeedbackService
 from mind.app.services.frontend import (
     FrontendDebugAppService,
     FrontendExperienceAppService,
     FrontendSettingsAppService,
 )
 from mind.app.services.governance import GovernanceAppService
-from mind.app.services.feedback import FeedbackService
 from mind.app.services.ingest import MemoryIngestService
 from mind.app.services.jobs import OfflineJobAppService
 from mind.app.services.query import MemoryQueryService
@@ -205,7 +206,7 @@ def build_app_registry(
     )
     frontend_debug_service = FrontendDebugAppService(
         telemetry_source=(
-            effective_telemetry_recorder
+            effective_telemetry_recorder  # type: ignore[arg-type]
             if hasattr(effective_telemetry_recorder, "iter_events")
             else None
         ),
@@ -241,7 +242,7 @@ def build_app_registry(
         yield registry
     finally:
         if hasattr(effective_telemetry_recorder, "close"):
-            effective_telemetry_recorder.close()  # type: ignore[call-arg]
+            effective_telemetry_recorder.close()  # type: ignore[union-attr]
         # Cleanup if store has a close method
         if hasattr(store, "close"):
             store.close()

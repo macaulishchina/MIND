@@ -7,8 +7,8 @@ import io
 import json
 import sys
 import tomllib
-from collections.abc import AsyncIterator
 from argparse import Namespace
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager, redirect_stderr, redirect_stdout
 from pathlib import Path
 from typing import Any
@@ -307,6 +307,7 @@ async def test_product_transport_consistency_scenarios_v1_rest_cli_pass_rate(
             )
             if rest_response.status_code != 200:
                 continue
+            assert scenario.cli_argv is not None
             exit_code, cli_payload = _run_product_cli(
                 ["--sqlite-path", str(cli_path), *scenario.cli_argv[1:]]
             )
@@ -326,7 +327,9 @@ async def test_product_transport_consistency_scenarios_v1_rest_cli_pass_rate(
 
 
 def test_product_cli_status_default_output_is_human_readable(tmp_path: Path) -> None:
-    exit_code, output = _run_product_cli_text(["--sqlite-path", str(tmp_path / "status.sqlite3"), "status"])
+    exit_code, output = _run_product_cli_text(
+        ["--sqlite-path", str(tmp_path / "status.sqlite3"), "status"]
+    )
 
     assert exit_code == 0
     assert "System Status [OK]" in output
@@ -453,7 +456,7 @@ def test_product_cli_dispatch_generates_default_episode_id(
         conversation_id=None,
     )
 
-    payload = _dispatch_command(args, _FakeClient())
+    payload = _dispatch_command(args, _FakeClient())  # type: ignore[arg-type]
 
     assert captured["payload"]["episode_id"] == "user-host-window"
     assert payload["result"]["episode_id"] == "user-host-window"
@@ -636,8 +639,7 @@ def _normalize_cli_payload(command: str, payload: dict[str, Any]) -> dict[str, A
     if command == "recall":
         result = payload["result"]
         candidate_types = tuple(
-            candidate.get("object_type")
-            for candidate in result.get("candidates", [])
+            candidate.get("object_type") for candidate in result.get("candidates", [])
         )
         return {
             "status": payload["status"],

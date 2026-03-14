@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-import pytest
-
 from mind.kernel.graph import build_adjacency_index, expand_by_graph
 from mind.kernel.store import SQLiteMemoryStore
 from mind.offline_jobs import DiscoverLinksJobPayload, OfflineJobKind
@@ -188,8 +186,11 @@ class TestAdjacencyIndexConcealment:
         link = _link_object("obj-x", "obj-y", "link-xy")
         store.insert_object(link)
         # Conceal the link
+        from datetime import UTC
+        from datetime import datetime as _datetime
+
         from mind.kernel.governance import ConcealmentRecord
-        from datetime import UTC, datetime as _datetime
+
         store.record_concealment(
             ConcealmentRecord(
                 concealment_id="c-xy",
@@ -241,8 +242,8 @@ class TestAccessServiceGraphExpand:
         return store
 
     def test_graph_hops_for_mode(self) -> None:
-        from mind.access.service import _graph_hops_for_mode
         from mind.access.contracts import AccessMode
+        from mind.access.service import _graph_hops_for_mode
 
         assert _graph_hops_for_mode(AccessMode.FLASH) == 0
         assert _graph_hops_for_mode(AccessMode.RECALL) == 1

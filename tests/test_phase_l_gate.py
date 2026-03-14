@@ -23,7 +23,9 @@ from mind.telemetry import (
     InMemoryTelemetryRecorder,
     TelemetryEvent,
     TelemetryEventKind,
+    TelemetryGateResult,
     TelemetryScope,
+    TelemetryToggleAuditResult,
     assert_telemetry_gate,
     evaluate_telemetry_gate,
     evaluate_telemetry_toggle_audit,
@@ -121,7 +123,7 @@ def test_phase_l_gate_fails_on_toggle_drift(tmp_path: Path) -> None:
         assert_telemetry_gate(result)
 
 
-def _evaluate_passing_gate_result(tmp_path: Path):
+def _evaluate_passing_gate_result(tmp_path: Path) -> TelemetryGateResult:
     events = _record_phase_l_events(tmp_path / "phase_l_gate.sqlite3")
     toggle_audit = _evaluate_toggle_audit(tmp_path)
     return evaluate_telemetry_gate(events, toggle_audit=toggle_audit)
@@ -258,7 +260,7 @@ def _record_phase_l_events(db_path: Path) -> tuple[TelemetryEvent, ...]:
     return tuple(recorder.iter_events())
 
 
-def _evaluate_toggle_audit(tmp_path: Path):
+def _evaluate_toggle_audit(tmp_path: Path) -> TelemetryToggleAuditResult:
     disabled_recorder = InMemoryTelemetryRecorder()
     enabled_read = _run_read_projection(
         tmp_path / "phase_l_toggle_enabled_read.sqlite3",

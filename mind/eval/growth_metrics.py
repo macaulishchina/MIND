@@ -140,8 +140,7 @@ class GrowthPhaseAlphaReport:
     def alpha_gate_pass(self) -> bool:
         """Return True if the Phase α quality gates are met."""
         return (
-            self.growth_lift.growth_lift >= 0.0
-            and self.memory_efficiency.memory_efficiency >= 0.0
+            self.growth_lift.growth_lift >= 0.0 and self.memory_efficiency.memory_efficiency >= 0.0
         )
 
 
@@ -281,15 +280,9 @@ class ArchiveReport:
             unarchived_count: Number of objects restored after auto-archiving.
             total_objects: Total object population (archived + active).
         """
-        archive_rate = (
-            round(archived_count / float(total_objects), 4)
-            if total_objects > 0
-            else 0.0
-        )
+        archive_rate = round(archived_count / float(total_objects), 4) if total_objects > 0 else 0.0
         misarchive_rate = (
-            round(unarchived_count / float(archived_count), 4)
-            if archived_count > 0
-            else 0.0
+            round(unarchived_count / float(archived_count), 4) if archived_count > 0 else 0.0
         )
         return cls(
             archived_count=archived_count,

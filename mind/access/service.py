@@ -12,6 +12,8 @@ from pydantic import ValidationError
 
 from mind.capabilities import (
     AnswerRequest as CapabilityAnswerRequest,
+)
+from mind.capabilities import (
     CapabilityService,
     resolve_capability_provider_config,
 )
@@ -239,8 +241,7 @@ class AccessService:
                 reason_code=AccessReasonCode.EXPLICIT_MODE_REQUEST,
                 switch_kind=AccessSwitchKind.INITIAL,
                 summary=(
-                    f"fixed mode {request.requested_mode.value} selected "
-                    f"for task {request.task_id}"
+                    f"fixed mode {request.requested_mode.value} selected for task {request.task_id}"
                 ),
             ),
             *execution.events,
@@ -274,6 +275,7 @@ class AccessService:
         # β-5.1: lightweight scouting retrieval (store-level, no budget cost)
         try:
             from mind.kernel.retrieval import keyword_score
+
             scout_scored: list[tuple[str, float]] = []
             for obj in self.store.iter_latest_objects(statuses=("active",)):
                 ks = keyword_score(request.query, obj)
@@ -285,7 +287,8 @@ class AccessService:
             scout_ids = []
 
         initial_mode, initial_reason = self._choose_initial_auto_mode(
-            request, scout_ids=scout_ids,
+            request,
+            scout_ids=scout_ids,
         )
         events = [
             self._select_event(
@@ -314,8 +317,7 @@ class AccessService:
                     switch_kind=switch_kind,
                     from_mode=first_execution.mode,
                     summary=(
-                        f"auto switched from {first_execution.mode.value} "
-                        f"to {target_mode.value}"
+                        f"auto switched from {first_execution.mode.value} to {target_mode.value}"
                     ),
                 )
             )
@@ -503,9 +505,7 @@ class AccessService:
                 AccessModeTraceEvent(
                     event_kind=AccessTraceKind.WORKSPACE,
                     mode=mode,
-                    summary=(
-                        f"built workspace with {len(selected_object_ids)} selected objects"
-                    ),
+                    summary=(f"built workspace with {len(selected_object_ids)} selected objects"),
                     target_ids=selected_object_ids,
                 )
             )
@@ -544,18 +544,13 @@ class AccessService:
         simple_enough = (
             len(candidate_ids) <= 2
             and not expanded_object_ids
-            and (
-                context_kind is AccessContextKind.RAW_TOPK
-                or len(selected_object_ids) <= 1
-            )
+            and (context_kind is AccessContextKind.RAW_TOPK or len(selected_object_ids) <= 1)
         )
         return _ModeExecution(
             mode=mode,
             context_kind=context_kind,
             workspace_id=(
-                f"workspace-{mode.value}-{request.task_id}"
-                if plan.build_workspace
-                else None
+                f"workspace-{mode.value}-{request.task_id}" if plan.build_workspace else None
             ),
             context_object_ids=context_object_ids,
             context_text=serialized_context.text,
@@ -582,7 +577,9 @@ class AccessService:
         operation_id: str,
     ) -> None:
         decision_events = [
-            event for event in response.trace.events if event.event_kind is AccessTraceKind.SELECT_MODE
+            event
+            for event in response.trace.events
+            if event.event_kind is AccessTraceKind.SELECT_MODE
         ]
         parent_event_id = f"{operation_id}-entry"
         for index, decision in enumerate(decision_events, start=1):
@@ -691,14 +688,10 @@ class AccessService:
             for oid in scout_ids[:3]:
                 if self.store.has_object(oid):
                     scout_objects.append(self.store.read_object(oid))
-            episodes = {
-                obj.get("metadata", {}).get("episode_id")
-                for obj in scout_objects
-            }
+            episodes = {obj.get("metadata", {}).get("episode_id") for obj in scout_objects}
             episodes.discard(None)
             has_conflict = any(
-                obj.get("metadata", {}).get("conflict_candidates")
-                for obj in scout_objects
+                obj.get("metadata", {}).get("conflict_candidates") for obj in scout_objects
             )
             if has_conflict:
                 return AccessMode.RECONSTRUCT, AccessReasonCode.EVIDENCE_CONFLICT
@@ -831,9 +824,7 @@ class AccessService:
         anchor_types = ["TaskEpisode", "SummaryNote"]
         if mode is AccessMode.REFLECTIVE_ACCESS:
             anchor_types.append("ReflectionNote")
-        episode_raw_ids = {
-            str(obj["id"]) for obj in self.store.raw_records_for_episode(episode_id)
-        }
+        episode_raw_ids = {str(obj["id"]) for obj in self.store.raw_records_for_episode(episode_id)}
         candidates = [
             obj
             for obj in self.store.iter_latest_objects(object_types=anchor_types)
@@ -888,8 +879,7 @@ class AccessService:
         candidate_scores: list[float],
     ) -> list[float]:
         score_map = {
-            object_id: candidate_scores[index]
-            for index, object_id in enumerate(candidate_ids)
+            object_id: candidate_scores[index] for index, object_id in enumerate(candidate_ids)
         }
         return [float(score_map.get(object_id, 0.0)) for object_id in workspace_candidate_ids]
 
@@ -976,7 +966,9 @@ class AccessService:
         """
         parent_ids: set[str] = set()
         for obj in objects:
-            obj_type = getattr(obj, "type", None) or (obj.get("type") if isinstance(obj, dict) else None)
+            obj_type = getattr(obj, "type", None) or (
+                obj.get("type") if isinstance(obj, dict) else None
+            )
             if obj_type == "ArtifactIndex":
                 oid = getattr(obj, "id", None) or (obj.get("id") if isinstance(obj, dict) else None)
                 if oid:
@@ -1232,9 +1224,7 @@ class AccessService:
             if not isinstance(objects, list):
                 return execution.context_text
             parts = [
-                _support_text_for_object_payload(obj)
-                for obj in objects
-                if isinstance(obj, dict)
+                _support_text_for_object_payload(obj) for obj in objects if isinstance(obj, dict)
             ]
             return " | ".join(part for part in parts if part)
 
@@ -1305,11 +1295,7 @@ def _merge_summaries(
     incoming: tuple[dict[str, Any], ...],
 ) -> list[dict[str, Any]]:
     merged = list(existing)
-    seen = {
-        str(item.get("object_id"))
-        for item in existing
-        if item.get("object_id") is not None
-    }
+    seen = {str(item.get("object_id")) for item in existing if item.get("object_id") is not None}
     for item in incoming:
         object_id = item.get("object_id")
         if object_id is None or str(object_id) in seen:

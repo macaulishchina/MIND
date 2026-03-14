@@ -21,6 +21,7 @@ from mind.primitives.contracts import ContractModel
 # Status and error enums
 # ---------------------------------------------------------------------------
 
+
 class AppStatus(StrEnum):
     """Top-level status returned in every AppResponse."""
 
@@ -91,6 +92,7 @@ class AppErrorCode(StrEnum):
 # ---------------------------------------------------------------------------
 # Envelope models
 # ---------------------------------------------------------------------------
+
 
 class AppError(ContractModel):
     """Structured error payload returned inside AppResponse."""

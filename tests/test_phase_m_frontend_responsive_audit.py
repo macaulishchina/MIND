@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import shutil
+from pathlib import Path
 
 from mind.fixtures import build_frontend_experience_bench_v1
 from mind.frontend import (

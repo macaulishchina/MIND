@@ -105,8 +105,7 @@ def read_benchmark_suite_report_json(path: str | Path) -> BenchmarkSuiteReport:
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
     if payload.get("schema_version") != _REPORT_SCHEMA_VERSION:
         raise ValueError(
-            "unexpected benchmark report schema_version "
-            f"({payload.get('schema_version')!r})"
+            f"unexpected benchmark report schema_version ({payload.get('schema_version')!r})"
         )
     return _suite_report_from_dict(payload)
 
@@ -165,8 +164,7 @@ def _suite_report_from_dict(payload: dict[str, Any]) -> BenchmarkSuiteReport:
         fixture_hash=str(payload["fixture_hash"]),
         repeat_count=int(payload["repeat_count"]),
         system_reports=tuple(
-            _system_report_from_dict(system_payload)
-            for system_payload in payload["system_reports"]
+            _system_report_from_dict(system_payload) for system_payload in payload["system_reports"]
         ),
     )
 

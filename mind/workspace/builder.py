@@ -136,6 +136,7 @@ class WorkspaceBuilder:
         # is provided.  Falls back to simple score-rank truncation otherwise.
         if slot_allocation_policy is not None:
             from mind.workspace.policy import apply_diversity_policy
+
             selected = apply_diversity_policy(
                 ranked_candidates,
                 slot_limit=slot_limit,

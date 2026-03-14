@@ -207,4 +207,3 @@ def assess_preference_promotion(target_objects: list[dict[str, Any]]) -> Promoti
         evidence_refs=tuple(obj["id"] for obj in target_objects),
         stability_score=stability_score,
     )
-

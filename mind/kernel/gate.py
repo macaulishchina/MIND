@@ -114,8 +114,7 @@ def assert_kernel_gate(result: KernelGateResult) -> None:
         )
     if not result.b2_pass:
         raise RuntimeError(
-            "B-2 failed: source trace coverage "
-            f"{result.integrity_report.source_trace_coverage:.2f}"
+            f"B-2 failed: source trace coverage {result.integrity_report.source_trace_coverage:.2f}"
         )
     if not result.b3_pass:
         raise RuntimeError(
@@ -131,6 +130,5 @@ def assert_kernel_gate(result: KernelGateResult) -> None:
         )
     if not result.b5_pass:
         raise RuntimeError(
-            "B-5 failed: metadata coverage "
-            f"{result.integrity_report.metadata_coverage:.2f}"
+            f"B-5 failed: metadata coverage {result.integrity_report.metadata_coverage:.2f}"
         )

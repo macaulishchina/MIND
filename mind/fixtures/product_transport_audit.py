@@ -3,17 +3,17 @@
 from __future__ import annotations
 
 import asyncio
-import io
 import inspect
+import io
 import json
 import os
 import tempfile
-from collections.abc import AsyncIterator, Sequence
+from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager, redirect_stderr, redirect_stdout
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from .product_transport_scenarios import (
     ProductTransportConsistencyScenario,
@@ -239,8 +239,12 @@ def render_product_transport_audit_markdown(
         f"- Bench version: `{report.bench_version}`",
         f"- Status: `{'PASS' if report.passed else 'FAIL'}`",
         f"- Coverage: `{report.passed_count}/{report.scenario_count}` (`{report.coverage:.4f}`)",
-        f"- REST/MCP pass rate: `{report.rest_mcp_match_count}/{report.rest_mcp_pair_count}` (`{report.rest_mcp_pass_rate:.4f}`)",
-        f"- REST/CLI pass rate: `{report.rest_cli_match_count}/{report.rest_cli_pair_count}` (`{report.rest_cli_pass_rate:.4f}`)",
+        f"- REST/MCP pass rate: "
+        f"`{report.rest_mcp_match_count}/{report.rest_mcp_pair_count}` "
+        f"(`{report.rest_mcp_pass_rate:.4f}`)",
+        f"- REST/CLI pass rate: "
+        f"`{report.rest_cli_match_count}/{report.rest_cli_pair_count}` "
+        f"(`{report.rest_cli_pass_rate:.4f}`)",
         "",
         "| Scenario | Command Family | REST | MCP | CLI | REST/MCP | REST/CLI | Failure Reasons |",
         "| --- | --- | --- | --- | --- | --- | --- | --- |",
@@ -290,8 +294,7 @@ def read_product_transport_audit_json(path: str | Path) -> ProductTransportAudit
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
     if payload.get("schema_version") != _SCHEMA_VERSION:
         raise ValueError(
-            "unexpected product transport audit schema_version "
-            f"({payload.get('schema_version')!r})"
+            f"unexpected product transport audit schema_version ({payload.get('schema_version')!r})"
         )
     return _report_from_dict(payload)
 
@@ -340,9 +343,15 @@ async def _evaluate_runtime_product_transport_audit_report_async(
             rest_path = root / "rest.sqlite3"
             mcp_path = root / "mcp.sqlite3"
             cli_path = root / "cli.sqlite3"
-            _seed_runtime_backend(rest_path, LocalProductClient, resolve_cli_config, build_app_registry)
-            _seed_runtime_backend(mcp_path, LocalProductClient, resolve_cli_config, build_app_registry)
-            _seed_runtime_backend(cli_path, LocalProductClient, resolve_cli_config, build_app_registry)
+            _seed_runtime_backend(
+                rest_path, LocalProductClient, resolve_cli_config, build_app_registry
+            )
+            _seed_runtime_backend(
+                mcp_path, LocalProductClient, resolve_cli_config, build_app_registry
+            )
+            _seed_runtime_backend(
+                cli_path, LocalProductClient, resolve_cli_config, build_app_registry
+            )
 
             rest_config = resolve_cli_config(backend="sqlite", sqlite_path=str(rest_path))
             mcp_config = resolve_cli_config(backend="sqlite", sqlite_path=str(mcp_path))
@@ -381,7 +390,9 @@ def _seed_runtime_backend(
     resolve_cli_config: Callable[..., Any],
     build_app_registry: Callable[[Any], Any],
 ) -> None:
-    with build_app_registry(resolve_cli_config(backend="sqlite", sqlite_path=str(path))) as registry:
+    with build_app_registry(
+        resolve_cli_config(backend="sqlite", sqlite_path=str(path))
+    ) as registry:
         client = local_client_type(registry)
         client.open_session(
             {
@@ -468,7 +479,7 @@ def _run_runtime_cli(
     sqlite_path: Path,
     scenario: ProductTransportConsistencyScenario,
     *,
-    product_main: Callable[[Sequence[str] | None], int],
+    product_main: Callable[[list[str] | None], int],
 ) -> dict[str, Any] | None:
     if scenario.cli_argv is None:
         return None
@@ -535,24 +546,16 @@ def _report_from_dict(payload: dict[str, Any]) -> ProductTransportAuditReport:
                 command_family=str(result["command_family"]),
                 rest_available=bool(result["rest_available"]),
                 mcp_available=(
-                    bool(result["mcp_available"])
-                    if result["mcp_available"] is not None
-                    else None
+                    bool(result["mcp_available"]) if result["mcp_available"] is not None else None
                 ),
                 cli_available=(
-                    bool(result["cli_available"])
-                    if result["cli_available"] is not None
-                    else None
+                    bool(result["cli_available"]) if result["cli_available"] is not None else None
                 ),
                 rest_mcp_match=(
-                    bool(result["rest_mcp_match"])
-                    if result["rest_mcp_match"] is not None
-                    else None
+                    bool(result["rest_mcp_match"]) if result["rest_mcp_match"] is not None else None
                 ),
                 rest_cli_match=(
-                    bool(result["rest_cli_match"])
-                    if result["rest_cli_match"] is not None
-                    else None
+                    bool(result["rest_cli_match"]) if result["rest_cli_match"] is not None else None
                 ),
                 failure_reasons=tuple(result["failure_reasons"]),
             )

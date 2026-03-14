@@ -88,9 +88,7 @@ def build_app_request(
         raw_payload.get("provider_selection"),
     )
     session = _build_session_context(request, raw_payload, request_id=request_id)
-    idempotency_key = raw_payload.get("idempotency_key") or request.headers.get(
-        "X-Idempotency-Key"
-    )
+    idempotency_key = raw_payload.get("idempotency_key") or request.headers.get("X-Idempotency-Key")
 
     return AppRequest(
         request_id=request_id,
@@ -190,9 +188,7 @@ def _build_session_context(
     request_id: str,
 ) -> SessionContext:
     session_payload = (
-        dict(payload.get("session", {}))
-        if isinstance(payload.get("session"), dict)
-        else {}
+        dict(payload.get("session", {})) if isinstance(payload.get("session"), dict) else {}
     )
     header_mapping = {
         "session_id": request.headers.get("X-Session-ID"),

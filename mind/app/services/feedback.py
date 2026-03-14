@@ -7,7 +7,7 @@ from typing import Any
 
 from mind.app._service_utils import latest_trace_ref, new_response, result_status
 from mind.app.context import resolve_execution_context
-from mind.app.contracts import AppRequest, AppResponse, AppStatus
+from mind.app.contracts import AppError, AppErrorCode, AppRequest, AppResponse, AppStatus
 from mind.app.errors import map_domain_error
 from mind.primitives.contracts import PrimitiveName, PrimitiveOutcome
 from mind.primitives.service import PrimitiveService
@@ -80,10 +80,13 @@ class FeedbackService:
             self._try_schedule_feedback(result.response, feedback_req)
         else:
             resp.status = result_status(result.outcome)
-            resp.error = (
-                {"message": result.error.message}
-                if result.error is not None
-                else {"message": "feedback recording failed"}
+            resp.error = AppError(
+                code=AppErrorCode.INTERNAL_ERROR,
+                message=(
+                    result.error.message
+                    if result.error is not None
+                    else "feedback recording failed"
+                ),
             )
         return resp
 

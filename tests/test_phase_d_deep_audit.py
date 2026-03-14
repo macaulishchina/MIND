@@ -573,13 +573,15 @@ class TestAnswerScoringEdgeCases:
         """If slots and selected_object_ids lengths differ, raise RuntimeError."""
         from mind.workspace.context_protocol import SerializedContext
 
-        bad_payload = json.dumps({
-            "protocol": "mind.phase_d_context.v1",
-            "kind": "workspace",
-            "task_id": "test",
-            "selected_object_ids": ["obj-1", "obj-2"],
-            "slots": [{"summary": "only one slot", "source_refs": ["obj-1"]}],
-        })
+        bad_payload = json.dumps(
+            {
+                "protocol": "mind.phase_d_context.v1",
+                "kind": "workspace",
+                "task_id": "test",
+                "selected_object_ids": ["obj-1", "obj-2"],
+                "slots": [{"summary": "only one slot", "source_refs": ["obj-1"]}],
+            }
+        )
         bad_context = SerializedContext(
             protocol="mind.phase_d_context.v1",
             kind="workspace",

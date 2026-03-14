@@ -165,8 +165,7 @@ def test_fixed_mode_requests_remain_locked(tmp_path: Path) -> None:
 
     assert result.resolved_mode is AccessMode.RECALL
     assert (
-        sum(event.event_kind is AccessTraceKind.SELECT_MODE for event in result.trace.events)
-        == 1
+        sum(event.event_kind is AccessTraceKind.SELECT_MODE for event in result.trace.events) == 1
     )
 
 
@@ -192,9 +191,7 @@ def test_auto_upgrades_from_flash_to_recall_when_constraints_require_more_contex
         )
 
     select_events = [
-        event
-        for event in result.trace.events
-        if event.event_kind is AccessTraceKind.SELECT_MODE
+        event for event in result.trace.events if event.event_kind is AccessTraceKind.SELECT_MODE
     ]
     assert result.resolved_mode is AccessMode.RECALL
     assert [event.mode for event in select_events] == [AccessMode.FLASH, AccessMode.RECALL]
@@ -224,9 +221,7 @@ def test_auto_downgrades_from_recall_to_flash_when_case_is_simple(tmp_path: Path
         )
 
     select_events = [
-        event
-        for event in result.trace.events
-        if event.event_kind is AccessTraceKind.SELECT_MODE
+        event for event in result.trace.events if event.event_kind is AccessTraceKind.SELECT_MODE
     ]
     assert result.resolved_mode is AccessMode.FLASH
     assert [event.mode for event in select_events] == [AccessMode.RECALL, AccessMode.FLASH]
@@ -257,9 +252,7 @@ def test_auto_jumps_from_reconstruct_to_reflective_on_conflict_signal(tmp_path: 
         )
 
     select_events = [
-        event
-        for event in result.trace.events
-        if event.event_kind is AccessTraceKind.SELECT_MODE
+        event for event in result.trace.events if event.event_kind is AccessTraceKind.SELECT_MODE
     ]
     assert result.resolved_mode is AccessMode.REFLECTIVE_ACCESS
     assert [event.mode for event in select_events] == [
@@ -319,9 +312,7 @@ def test_auto_balanced_stays_at_recall_without_switch(tmp_path: Path) -> None:
         )
 
     select_events = [
-        event
-        for event in result.trace.events
-        if event.event_kind is AccessTraceKind.SELECT_MODE
+        event for event in result.trace.events if event.event_kind is AccessTraceKind.SELECT_MODE
     ]
     assert result.resolved_mode is AccessMode.RECALL
     assert len(select_events) == 1, "balanced auto should stay at recall"
@@ -396,11 +387,17 @@ def test_all_trace_events_carry_non_auto_mode(tmp_path: Path) -> None:
                     "query_modes": ["keyword"],
                     "filters": {
                         "object_types": [
-                            "ReflectionNote", "SummaryNote", "TaskEpisode", "RawRecord",
+                            "ReflectionNote",
+                            "SummaryNote",
+                            "TaskEpisode",
+                            "RawRecord",
                         ]
                     },
                 },
-                _context(actor=f"phase-i-mode-audit-{mode_value}"),
+                _context(
+                    actor=f"phase-i-mode-audit-{mode_value}",
+                    budget_limit=200.0,
+                ),
             )
             for event in result.trace.events:
                 assert event.mode is not AccessMode.AUTO, (

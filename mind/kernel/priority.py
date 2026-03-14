@@ -6,7 +6,7 @@ with recency, feedback, and type-bonus signals.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 # Weight factors for the blended priority formula.
@@ -54,7 +54,7 @@ def compute_effective_priority(
     stays in a sane range.
     """
     if now is None:
-        now = datetime.now(tz=timezone.utc)
+        now = datetime.now(tz=UTC)
 
     metadata = obj.get("metadata", {})
 
@@ -67,7 +67,7 @@ def compute_effective_priority(
         try:
             last_dt = datetime.fromisoformat(str(last_accessed))
             if last_dt.tzinfo is None:
-                last_dt = last_dt.replace(tzinfo=timezone.utc)
+                last_dt = last_dt.replace(tzinfo=UTC)
             days_since = max((now - last_dt).total_seconds() / 86400.0, 0.0)
         except (ValueError, TypeError):
             days_since = 30.0

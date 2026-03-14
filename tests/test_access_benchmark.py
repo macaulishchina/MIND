@@ -32,8 +32,7 @@ def test_access_benchmark_runs_all_modes_across_all_cases() -> None:
     assert len(result.frontier_comparisons) == 3
 
 
-def test_access_benchmark_frontier_comparison_uses_expected_fixed_families(
-) -> None:
+def test_access_benchmark_frontier_comparison_uses_expected_fixed_families() -> None:
     result = _benchmark_result()
     comparison_by_family = {
         comparison.task_family: comparison for comparison in result.frontier_comparisons
@@ -44,19 +43,15 @@ def test_access_benchmark_frontier_comparison_uses_expected_fixed_families(
         is AccessMode.FLASH
     )
     assert (
-        comparison_by_family[AccessTaskFamily.BALANCED].family_best_fixed_mode
-        is AccessMode.RECALL
+        comparison_by_family[AccessTaskFamily.BALANCED].family_best_fixed_mode is AccessMode.RECALL
     )
-    assert comparison_by_family[
-        AccessTaskFamily.HIGH_CORRECTNESS
-    ].family_best_fixed_mode in {
+    assert comparison_by_family[AccessTaskFamily.HIGH_CORRECTNESS].family_best_fixed_mode in {
         AccessMode.RECONSTRUCT,
         AccessMode.REFLECTIVE_ACCESS,
     }
 
 
-def test_access_benchmark_auto_aggregates_exist_for_all_task_families(
-) -> None:
+def test_access_benchmark_auto_aggregates_exist_for_all_task_families() -> None:
     result = _benchmark_result()
     auto_aggregates = {
         aggregate.task_family: aggregate
@@ -70,10 +65,8 @@ def test_access_benchmark_auto_aggregates_exist_for_all_task_families(
         AccessTaskFamily.HIGH_CORRECTNESS,
     }
     assert all(
-        0.0 <= aggregate.cost_efficiency_score <= 1.0
-        for aggregate in auto_aggregates.values()
+        0.0 <= aggregate.cost_efficiency_score <= 1.0 for aggregate in auto_aggregates.values()
     )
     assert all(
-        0.0 <= aggregate.answer_quality_score <= 1.0
-        for aggregate in auto_aggregates.values()
+        0.0 <= aggregate.answer_quality_score <= 1.0 for aggregate in auto_aggregates.values()
     )

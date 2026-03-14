@@ -19,9 +19,7 @@ def map_mcp_session(
 
     payload = dict(client_info or {})
     principal_payload = (
-        dict(payload.get("principal", {}))
-        if isinstance(payload.get("principal"), dict)
-        else {}
+        dict(payload.get("principal", {})) if isinstance(payload.get("principal"), dict) else {}
     )
     principal_payload.setdefault(
         "principal_id",
@@ -41,9 +39,7 @@ def map_mcp_session(
     principal = PrincipalContext.model_validate(principal_payload)
 
     session_payload = (
-        dict(payload.get("session", {}))
-        if isinstance(payload.get("session"), dict)
-        else {}
+        dict(payload.get("session", {})) if isinstance(payload.get("session"), dict) else {}
     )
     session_payload.setdefault(
         "session_id",

@@ -31,10 +31,8 @@ from mind.kernel.embedding import (
     EmbeddingProvider,
     LocalHashEmbedding,
     embed_objects,
-    get_default_provider,
-    set_default_provider,
 )
-from mind.kernel.retrieval import EMBEDDING_DIM, cosine_similarity, matches_retrieval_filters
+from mind.kernel.retrieval import EMBEDDING_DIM, matches_retrieval_filters
 from mind.kernel.schema import VALID_PROPOSAL_STATUS, validate_object
 from mind.kernel.store import SQLiteMemoryStore
 from mind.offline import (
@@ -58,7 +56,6 @@ from mind.primitives.conflict import (
 from mind.workspace.policy import (
     FLASH_POLICY,
     RECALL_POLICY,
-    RECONSTRUCT_POLICY,
     SlotAllocationPolicy,
     apply_diversity_policy,
     evidence_diversity_score,
@@ -193,10 +190,32 @@ class _FakeJobStore:
     def enqueue_offline_job(self, job: OfflineJob | dict[str, Any]) -> None:
         self._jobs.append(OfflineJob.model_validate(job))
 
-    def iter_offline_jobs(
-        self, *, statuses: Iterable[OfflineJobStatus] = ()
-    ) -> list[OfflineJob]:
+    def iter_offline_jobs(self, *, statuses: Iterable[OfflineJobStatus] = ()) -> list[OfflineJob]:
         return list(self._jobs)
+
+    def claim_offline_job(
+        self, *, worker_id: str, now: Any, job_kinds: Any = (),
+    ) -> OfflineJob | None:
+        return None
+
+    def complete_offline_job(
+        self, job_id: str, *, worker_id: str, completed_at: Any, result: Any,
+    ) -> None:
+        pass
+
+    def fail_offline_job(
+        self, job_id: str, *, worker_id: str, failed_at: Any, error: Any,
+    ) -> None:
+        pass
+
+    def cancel_offline_job(
+        self,
+        job_id: str,
+        *,
+        cancelled_at: Any = None,
+        error: Any = None,
+    ) -> None:
+        pass
 
 
 # ===========================================================================
@@ -319,7 +338,9 @@ def test_β2_scheduler_enqueues_resolve_conflict_on_contradiction() -> None:
     """β-2: OfflineJobScheduler enqueues RESOLVE_CONFLICT when contradiction found."""
     job_store = _FakeJobStore()
     scheduler = OfflineJobScheduler(job_store, clock=lambda: FIXED_TIMESTAMP)
-    candidates = [{"relation": "contradict", "confidence": 0.9, "neighbor_id": "old", "explanation": "test"}]
+    candidates = [
+        {"relation": "contradict", "confidence": 0.9, "neighbor_id": "old", "explanation": "test"}
+    ]
     job_id = scheduler.on_conflict_detected("new-001", candidates)
     assert job_id is not None
     assert job_store.iter_offline_jobs()[0].job_kind is OfflineJobKind.RESOLVE_CONFLICT
@@ -329,7 +350,9 @@ def test_β2_scheduler_skips_resolve_conflict_without_contradiction() -> None:
     """β-2: OfflineJobScheduler does not enqueue RESOLVE_CONFLICT for non-contradictions."""
     job_store = _FakeJobStore()
     scheduler = OfflineJobScheduler(job_store, clock=lambda: FIXED_TIMESTAMP)
-    candidates = [{"relation": "novel", "confidence": 0.9, "neighbor_id": "old", "explanation": "test"}]
+    candidates = [
+        {"relation": "novel", "confidence": 0.9, "neighbor_id": "old", "explanation": "test"}
+    ]
     job_id = scheduler.on_conflict_detected("new-001", candidates)
     assert job_id is None
 
@@ -437,25 +460,33 @@ def test_β4_schema_note_invalid_proposal_status_fails_validation() -> None:
 def test_β4_proposed_schema_excluded_from_retrieval() -> None:
     """β-4: Proposed SchemaNote is excluded from default retrieval."""
     obj = _schema_note(proposal_status="proposed")
-    assert not matches_retrieval_filters(obj, object_types=[], statuses=[], episode_id=None, task_id=None)
+    assert not matches_retrieval_filters(
+        obj, object_types=[], statuses=[], episode_id=None, task_id=None
+    )
 
 
 def test_β4_rejected_schema_excluded_from_retrieval() -> None:
     """β-4: Rejected SchemaNote is excluded from default retrieval."""
     obj = _schema_note(proposal_status="rejected")
-    assert not matches_retrieval_filters(obj, object_types=[], statuses=[], episode_id=None, task_id=None)
+    assert not matches_retrieval_filters(
+        obj, object_types=[], statuses=[], episode_id=None, task_id=None
+    )
 
 
 def test_β4_committed_schema_included_in_retrieval() -> None:
     """β-4: Committed SchemaNote participates in default retrieval."""
     obj = _schema_note(proposal_status="committed")
-    assert matches_retrieval_filters(obj, object_types=[], statuses=[], episode_id=None, task_id=None)
+    assert matches_retrieval_filters(
+        obj, object_types=[], statuses=[], episode_id=None, task_id=None
+    )
 
 
 def test_β4_schema_without_proposal_status_included_in_retrieval() -> None:
     """β-4: SchemaNote without proposal_status is backward-compat committed."""
     obj = _schema_note()
-    assert matches_retrieval_filters(obj, object_types=[], statuses=[], episode_id=None, task_id=None)
+    assert matches_retrieval_filters(
+        obj, object_types=[], statuses=[], episode_id=None, task_id=None
+    )
 
 
 def test_β4_verify_proposal_job_kind_exists() -> None:
@@ -480,7 +511,9 @@ def test_β4_verify_proposal_commits_cross_episode(tmp_path: Path) -> None:
     with SQLiteMemoryStore(tmp_path / "β4.sqlite3") as store:
         store.insert_object(_raw_object("r1", "ep-001"))
         store.insert_object(_raw_object("r2", "ep-002"))
-        store.insert_object(_schema_note("s1", proposal_status="proposed", evidence_refs=["r1", "r2"]))
+        store.insert_object(
+            _schema_note("s1", proposal_status="proposed", evidence_refs=["r1", "r2"])
+        )
         service = OfflineMaintenanceService(store)
         job = new_offline_job(
             job_kind=OfflineJobKind.VERIFY_PROPOSAL,
@@ -497,7 +530,9 @@ def test_β4_verify_proposal_rejects_single_episode(tmp_path: Path) -> None:
     with SQLiteMemoryStore(tmp_path / "β4b.sqlite3") as store:
         store.insert_object(_raw_object("r1", "ep-001"))
         store.insert_object(_raw_object("r2", "ep-001"))
-        store.insert_object(_schema_note("s2", proposal_status="proposed", evidence_refs=["r1", "r2"]))
+        store.insert_object(
+            _schema_note("s2", proposal_status="proposed", evidence_refs=["r1", "r2"])
+        )
         service = OfflineMaintenanceService(store)
         job = new_offline_job(
             job_kind=OfflineJobKind.VERIFY_PROPOSAL,

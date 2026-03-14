@@ -481,9 +481,7 @@ class SQLiteMemoryStore:
         rows = self.connection.execute(f"PRAGMA table_info({table_name})").fetchall()
         if any(row["name"] == column_name for row in rows):
             return
-        self.connection.execute(
-            f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_sql}"
-        )
+        self.connection.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_sql}")
 
     def insert_object(self, obj: dict[str, Any]) -> None:
         with self.transaction() as transaction:

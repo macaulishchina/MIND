@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-import os
 import json
+import os
 from pathlib import Path
 
 import pytest
 
+from mind.cli import deployment_smoke_report_main
 from mind.fixtures import ProductTransportAuditReport
 from mind.fixtures.deployment_smoke_suite import (
     build_deployment_smoke_suite_v1,
@@ -16,10 +17,9 @@ from mind.fixtures.deployment_smoke_suite import (
     parse_dockerfile,
     read_deployment_smoke_report_json,
     render_deployment_smoke_report_markdown,
-    write_deployment_smoke_report_markdown,
     write_deployment_smoke_report_json,
+    write_deployment_smoke_report_markdown,
 )
-from mind.cli import deployment_smoke_report_main
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -81,8 +81,7 @@ def test_compose_yaml_schema_validation() -> None:
         == "${MIND_POSTGRES_PASSWORD:-postgres}"
     )
     assert (
-        compose_data["services"]["api"]["depends_on"]["postgres"]["condition"]
-        == "service_healthy"
+        compose_data["services"]["api"]["depends_on"]["postgres"]["condition"] == "service_healthy"
     )
     assert (
         compose_data["services"]["worker"]["depends_on"]["postgres"]["condition"]
@@ -249,7 +248,7 @@ def test_scripts_use_isolated_env_files_and_projects() -> None:
     assert "api_docs_url" in dev_script
     assert 'PROJECT_NAME="mind-prod"' in deploy_script
     assert 'LOCAL_ENV_FILE=".env.prod.local"' in deploy_script
-    assert 'MIND_POSTGRES_PASSWORD' in deploy_script
+    assert "MIND_POSTGRES_PASSWORD" in deploy_script
     assert 'DOCS_FILE="compose.docs.yaml"' in deploy_script
     assert "build_docs_site" in deploy_script
     assert "--attach" in deploy_script
@@ -272,9 +271,9 @@ def test_docs_release_script_builds_and_publishes_static_site() -> None:
 
 
 def test_product_readiness_artifact_script_generates_full_bundle() -> None:
-    artifact_script = (
-        ROOT / "scripts" / "product-readiness-artifacts.sh"
-    ).read_text(encoding="utf-8")
+    artifact_script = (ROOT / "scripts" / "product-readiness-artifacts.sh").read_text(
+        encoding="utf-8"
+    )
 
     assert "--output-dir" in artifact_script
     assert "command -v mindtest" in artifact_script
@@ -309,9 +308,9 @@ def test_python_dockerfiles_enable_cached_dependency_installs() -> None:
         assert "--mount=type=cache,target=/root/.cache/pip" in dockerfile
         assert "pip install --no-build-isolation --no-deps ." in dockerfile
 
-    assert 'COPY pyproject.toml /app/' in dockerfile_api
-    assert 'COPY pyproject.toml /app/' in dockerfile_worker
-    assert 'COPY pyproject.toml /app/' in dockerfile_docs_dev
+    assert "COPY pyproject.toml /app/" in dockerfile_api
+    assert "COPY pyproject.toml /app/" in dockerfile_worker
+    assert "COPY pyproject.toml /app/" in dockerfile_docs_dev
 
 
 def test_deployment_smoke_suite_v1() -> None:

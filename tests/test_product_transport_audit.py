@@ -12,16 +12,16 @@ import pytest
 
 from mind.api.app import create_app
 from mind.app.registry import build_app_registry
-from mind.cli_config import ResolvedCliConfig, resolve_cli_config
 from mind.cli import product_transport_report_main
+from mind.cli_config import ResolvedCliConfig, resolve_cli_config
 from mind.fixtures import (
     assert_product_transport_audit,
     build_product_transport_consistency_scenarios_v1,
     evaluate_product_transport_audit_report,
     read_product_transport_audit_json,
     render_product_transport_audit_markdown,
-    write_product_transport_audit_markdown,
     write_product_transport_audit_json,
+    write_product_transport_audit_markdown,
 )
 from mind.mcp.server import create_mcp_server
 from mind.product_cli import LocalProductClient, product_main
@@ -132,7 +132,10 @@ async def test_product_transport_audit_markdown_renders_stable_summary() -> None
     )
 
     assert markdown.startswith("# Product Transport Audit Report\n")
-    assert "| Scenario | Command Family | REST | MCP | CLI | REST/MCP | REST/CLI | Failure Reasons |" in markdown
+    assert (
+        "| Scenario | Command Family | REST | MCP | CLI | REST/MCP | REST/CLI | Failure Reasons |"
+        in markdown
+    )
     assert "Failing scenarios:" in markdown
     assert "rest_cli_mismatch" in markdown
 

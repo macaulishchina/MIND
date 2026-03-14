@@ -64,7 +64,7 @@ def test_failure_audit_covers_unavailable_provider_scenarios() -> None:
 
 def test_failure_audit_skips_provider_families_with_registered_adapter() -> None:
     result = evaluate_capability_failure_audit(
-        adapters=[_OpenAICapabilityAdapter()],  # type: ignore[list-item]
+        adapters=[_OpenAICapabilityAdapter()],
         clock=_fixed_clock,
     )
 

@@ -2,14 +2,15 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 from mind.capabilities import (
     AnswerRequest,
-    CapabilityInvocationTrace,
     CapabilityAuthConfig,
     CapabilityFallbackPolicy,
+    CapabilityInvocationTrace,
     CapabilityName,
     CapabilityProviderConfig,
     CapabilityProviderFamily,
@@ -248,7 +249,9 @@ def test_primitive_summarize_delegates_to_capability_service(tmp_path: Path) -> 
         assert result.outcome is PrimitiveOutcome.SUCCESS
         assert captured["request"].capability is CapabilityName.SUMMARIZE
         assert captured["request"].source_refs == [showcase[0]["id"]]
+        assert result.response is not None
         stored = store.read_object(result.response["summary_object_id"])
+        assert stored is not None
         assert stored["content"]["summary"] == "capability summary output"
 
 
@@ -370,7 +373,9 @@ def test_primitive_reflect_delegates_to_capability_service(tmp_path: Path) -> No
         assert captured["request"].capability is CapabilityName.REFLECT
         assert captured["request"].episode_id == episode.episode_id
         assert captured["request"].outcome_hint == "failure"
+        assert result.response is not None
         stored = store.read_object(result.response["reflection_object_id"])
+        assert stored is not None
         assert stored["content"]["summary"] == "Episode failed; reflection focus: delegated"
 
 

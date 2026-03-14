@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import math
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 
@@ -194,9 +194,7 @@ def _enforce_episode_diversity(
 
     # Count how many selected objects differ from dominant episode.
     diverse_count = sum(
-        1
-        for obj, _ in selected
-        if _episode_id(obj) is not None and _episode_id(obj) != dominant
+        1 for obj, _ in selected if _episode_id(obj) is not None and _episode_id(obj) != dominant
     )
 
     if diverse_count >= policy.min_diverse_episode_slots:

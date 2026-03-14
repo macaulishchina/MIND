@@ -69,8 +69,7 @@ class GovernanceGateResult:
     @property
     def h1_pass(self) -> bool:
         return (
-            self.raw_object_count > 0
-            and self.authoritative_binding_count == self.raw_object_count
+            self.raw_object_count > 0 and self.authoritative_binding_count == self.raw_object_count
         )
 
     @property
@@ -215,8 +214,7 @@ def evaluate_governance_gate(
             )
 
             write_results = [
-                primitive_service.write_raw(spec, writer_context)
-                for spec in raw_specs
+                primitive_service.write_raw(spec, writer_context) for spec in raw_specs
             ]
             raw_ids: list[str] = []
             for result in write_results:

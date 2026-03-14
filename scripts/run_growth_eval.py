@@ -27,7 +27,7 @@ def main() -> None:
         store = registry.store
 
         # Gather object inventory
-        all_objects = store.list_objects()
+        all_objects = store.iter_objects()
         total_objects = len(all_objects)
 
         type_counts: dict[str, int] = {}
@@ -70,7 +70,7 @@ def main() -> None:
 
         # Pending jobs
         try:
-            pending_jobs = len(list(store.iter_offline_jobs(statuses=["pending"])))
+            pending_jobs = len(store.iter_latest_objects(statuses=["pending"]))
         except Exception:
             pending_jobs = 0
 
