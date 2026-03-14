@@ -1,0 +1,12 @@
+Read .ai/CONSTITUTION.md before making any code changes to this project.
+
+This is the MIND project — a productized memory system for LLM agents.
+
+Key rules:
+- Layered architecture: Transport → App Services → Domain → Primitives → Kernel. Never import upward.
+- All app services use AppRequest → AppResponse envelope pattern.
+- New services must be registered in AppServiceRegistry (mind/app/registry.py).
+- Type annotations required on all functions (mypy strict mode).
+- Line length: 100 chars. Python 3.12+. Pydantic strict mode (extra="forbid", frozen=True).
+- Follow .ai/CHANGE_PROTOCOL.md for what to update when changing code.
+- Follow the rule routing table in .ai/CONSTITUTION.md §6 for module-specific rules.

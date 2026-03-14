@@ -1,0 +1,38 @@
+# Checklist: Refactoring
+
+Use this checklist when refactoring existing code.
+
+---
+
+## Pre-work
+
+- [ ] Define the refactoring goal in one sentence
+- [ ] Confirm the refactoring is requested or clearly necessary (not "nice to have")
+- [ ] Ensure full test suite passes BEFORE starting (`uv run pytest tests/ -x`)
+
+## Scope
+
+- [ ] Change is limited to the stated goal — no feature additions
+- [ ] No API/CLI/MCP interface changes (refactoring is internal)
+- [ ] If interface changes are needed, that's a feature change, not a refactor
+
+## Execution
+
+- [ ] Make changes in small, verifiable steps
+- [ ] Run tests after each step — never batch large changes
+- [ ] Preserve all existing behavior (tests should pass without modification)
+
+## Testing
+
+- [ ] All existing tests pass without modification
+- [ ] If tests need updating, it's a signal the refactor changed behavior — verify intentional
+- [ ] Add tests for any new internal abstraction that has complex logic
+
+## Verification
+
+- [ ] `uv run ruff check mind/ tests/` — zero errors
+- [ ] `uv run mypy mind/ tests/` — zero errors
+- [ ] `uv run pytest tests/ -x` — all pass
+- [ ] No new files over 500 lines
+- [ ] No new circular imports
+- [ ] Architecture invariants still hold (see CONSTITUTION.md §2)
