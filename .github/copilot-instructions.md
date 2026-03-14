@@ -11,3 +11,11 @@ Key points:
 - Type annotations required on all functions (mypy strict)
 - Line length: 100 chars, Python 3.12+, Pydantic strict mode
 - Follow CHANGE_PROTOCOL.md for file synchronization requirements
+
+## Health Check
+
+After completing code changes, run the health check:
+```bash
+uv run python scripts/ai_health_check.py --report-for-ai
+```
+Then read `.ai/health/repair-prompt.md` for a prioritized repair plan.

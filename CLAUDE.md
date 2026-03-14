@@ -6,3 +6,11 @@ coding standards, change protocols, and rule routing tables.
 
 For module-specific rules, follow the routing table in CONSTITUTION.md §6.
 For change-type checklists, follow the routing table in CONSTITUTION.md §7.
+
+## Health Check
+
+After completing code changes, run the health check:
+```bash
+uv run python scripts/ai_health_check.py --report-for-ai
+```
+Then read `.ai/health/repair-prompt.md` for a prioritized repair plan.

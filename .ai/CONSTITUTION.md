@@ -214,3 +214,27 @@ Defined in `PrimitiveName` enum (`mind/primitives/contracts.py`):
 - If you notice a rule in this file that is wrong, outdated, or missing, **flag it** to the user.
 - If you follow a rule and it leads to a bad outcome, record it in `.ai/health/drift-log.md`.
 - After completing any task, verify: "Did I follow the CHANGE_PROTOCOL?"
+
+### 10.1 Health Check
+
+This project has an automated health check script: `scripts/ai_health_check.py`.
+
+**When to run it:**
+- After completing a batch of code changes (before committing)
+- After fixing bugs or refactoring
+- When the user asks for a health assessment
+- When you are unsure whether your changes introduced regressions
+
+**How to run:**
+```bash
+uv run python scripts/ai_health_check.py --report-for-ai
+```
+
+**After running**, read the generated repair guide at `.ai/health/repair-prompt.md`.
+It contains a prioritized list of violations with file locations, descriptions,
+and fix hints. Follow the priority order: tests → architecture → forbidden patterns → mypy → ruff.
+
+**Quick drift check** (no re-scan, compares last two reports):
+```bash
+uv run python scripts/ai_health_check.py --compare
+```
