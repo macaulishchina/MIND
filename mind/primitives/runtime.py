@@ -233,9 +233,18 @@ class PrimitiveRuntime:
             request=request.model_dump(mode="json"),
             response=response.model_dump(mode="json"),
         )
-        self.store.record_primitive_call(call_log)
-        for event in result.budget_events:
-            self.store.record_budget_event(event.model_copy(update={"call_id": call_id}))
+        transaction_factory = getattr(self.store, "transaction", None)
+        if callable(transaction_factory):
+            # Keep read-side audit writes in a single transaction so read-heavy
+            # benchmarks do not pay a separate commit for each log row.
+            with transaction_factory() as transaction:
+                transaction.record_primitive_call(call_log)
+                for event in result.budget_events:
+                    transaction.record_budget_event(event.model_copy(update={"call_id": call_id}))
+        else:
+            self.store.record_primitive_call(call_log)
+            for event in result.budget_events:
+                self.store.record_budget_event(event.model_copy(update={"call_id": call_id}))
         self._record_telemetry(
             enabled=dev_mode,
             event=self._primitive_event(
