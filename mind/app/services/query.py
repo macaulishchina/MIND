@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from mind.app._service_utils import latest_trace_ref, new_response, result_error, result_status
@@ -12,6 +13,8 @@ from mind.kernel.schema import public_object_view
 from mind.kernel.store import MemoryStore
 from mind.primitives.contracts import PrimitiveErrorCode, PrimitiveName, PrimitiveOutcome
 from mind.primitives.service import PrimitiveService
+
+logger = logging.getLogger(__name__)
 
 
 class MemoryQueryService:
@@ -223,6 +226,7 @@ class MemoryQueryService:
             try:
                 obj = public_object_view(self._store.read_object(object_id))
             except Exception:
+                logger.warning("Failed to read candidate object %s", object_id, exc_info=True)
                 continue
 
             summary: dict[str, Any] = {

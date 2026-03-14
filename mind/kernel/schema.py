@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-CORE_OBJECT_TYPES = {
+CORE_OBJECT_TYPES = frozenset({
     "RawRecord",
     "TaskEpisode",
     "SummaryNote",
@@ -18,7 +18,7 @@ CORE_OBJECT_TYPES = {
     "PolicyNote",
     "PreferenceNote",
     "ArtifactIndex",
-}
+})
 
 REQUIRED_FIELDS = (
     "id",
@@ -69,17 +69,17 @@ REQUIRED_METADATA_FIELDS = {
     ),
 }
 
-VALID_STATUS = {"active", "archived", "deprecated", "invalid"}
-VALID_RECORD_KIND = {
+VALID_STATUS = frozenset({"active", "archived", "deprecated", "invalid"})
+VALID_RECORD_KIND = frozenset({
     "user_message",
     "assistant_message",
     "tool_call",
     "tool_result",
     "system_event",
-}
-VALID_REFLECTION_KIND = {"success", "failure", "mixed"}
-VALID_SCHEMA_KIND = {"semantic", "procedural"}
-VALID_PROPOSAL_STATUS = {"proposed", "verified", "committed", "rejected"}
+})
+VALID_REFLECTION_KIND = frozenset({"success", "failure", "mixed"})
+VALID_SCHEMA_KIND = frozenset({"semantic", "procedural"})
+VALID_PROPOSAL_STATUS = frozenset({"proposed", "verified", "committed", "rejected"})
 RESERVED_CONTROL_PLANE_METADATA_FIELDS = frozenset(
     {
         "conceal",

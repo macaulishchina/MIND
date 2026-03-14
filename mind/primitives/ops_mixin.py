@@ -53,9 +53,9 @@ from .runtime import (
 type VectorRetriever = Callable[[str | dict[str, Any], list[dict[str, Any]]], dict[str, float]]
 type QueryEmbedder = Callable[[str | dict[str, Any]], tuple[float, ...]]
 
-InaccessibleStatuses = {"invalid"}
+InaccessibleStatuses = frozenset({"invalid"})
 PositiveReasonHints = ("boost", "increase", "raise", "up", "urgent")
-SummaryScope = {"episode", "task", "object_set"}
+SummaryScope = frozenset({"episode", "task", "object_set"})
 
 
 def _tokenize(text: str) -> set[str]:

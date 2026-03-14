@@ -1,5 +1,7 @@
 """Frontend experience — re-exports from canonical location in mind.app."""
 
+from __future__ import annotations
+
 from mind.app.frontend_experience import (  # noqa: F401
     FrontendAccessAnswerTraceView,
     FrontendAccessAnswerView,

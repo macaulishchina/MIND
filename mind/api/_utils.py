@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any, TypeVar
 from uuid import uuid4
 
@@ -24,6 +25,8 @@ from mind.app import (
     SourceChannel,
 )
 from mind.app.registry import AppServiceRegistry
+
+logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -156,9 +159,13 @@ def unexpected_error_response(request: Request, exc: Exception) -> JSONResponse:
     """Render an internal error envelope for uncaught exceptions."""
 
     request_id = getattr(request.state, "request_id", f"req-{uuid4().hex[:16]}")
+    logger.exception("Unhandled exception for request %s", request_id)
     response = AppResponse(
         status=AppStatus.ERROR,
-        error=AppError(code=AppErrorCode.INTERNAL_ERROR, message=str(exc)),
+        error=AppError(
+            code=AppErrorCode.INTERNAL_ERROR,
+            message="internal server error",
+        ),
         request_id=request_id,
         trace_ref=f"app:{request_id}",
     )

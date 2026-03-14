@@ -40,15 +40,13 @@ from .contracts import (
     WriteRawRequest,
     WriteRawResponse,
 )
-from .ops_mixin import _PrimitiveOpsMixin
+from .ops_mixin import InaccessibleStatuses, _PrimitiveOpsMixin
 from .runtime import (
     PrimitiveHandlerResult,
     PrimitiveRejectedError,
     PrimitiveRuntime,
 )
 
-SummaryScope = {"episode", "task", "object_set"}
-InaccessibleStatuses = {"invalid"}
 PositiveReasonHints = ("boost", "increase", "raise", "up", "urgent")
 type VectorRetriever = Callable[[str | dict[str, Any], list[dict[str, Any]]], dict[str, float]]
 type QueryEmbedder = Callable[[str | dict[str, Any]], tuple[float, ...]]

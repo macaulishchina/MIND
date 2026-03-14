@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hmac
 from os import environ
 from typing import Annotated
 
@@ -19,7 +20,7 @@ async def require_api_key(x_api_key: APIKeyHeader = None) -> PrincipalContext:
     expected = environ.get("MIND_API_KEY")
     if not expected:
         raise AuthorizationError("api key auth is not configured")
-    if x_api_key != expected:
+    if not hmac.compare_digest(x_api_key or "", expected):
         raise AuthorizationError("invalid api key")
 
     return PrincipalContext(

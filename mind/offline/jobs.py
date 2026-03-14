@@ -1,5 +1,7 @@
 """Backward-compatible re-export for offline job contracts."""
 
+from __future__ import annotations
+
 from mind.offline_jobs import (
     AutoArchiveJobPayload,
     DiscoverLinksJobPayload,

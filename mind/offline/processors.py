@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import math
 from collections.abc import Callable, Mapping
 from datetime import datetime
@@ -35,6 +36,8 @@ from .promotion import (
 
 if TYPE_CHECKING:
     from mind.capabilities import CapabilityService
+
+logger = logging.getLogger(__name__)
 
 type ProviderEnvResolver = Callable[[], Mapping[str, str] | None]
 
@@ -181,6 +184,10 @@ class _OfflineProcessorMixin:
             try:
                 obj = self.store.read_object(object_id)
             except Exception:
+                logger.warning(
+                    "update_priority: failed to read %s",
+                    object_id, exc_info=True,
+                )
                 continue
             if obj.get("status") in ("archived", "deprecated", "invalid"):
                 continue
@@ -206,6 +213,10 @@ class _OfflineProcessorMixin:
                 self.store.insert_object(updated_obj)
                 updated_ids.append(object_id)
             except Exception:
+                logger.warning(
+                    "update_priority: failed to write %s",
+                    object_id, exc_info=True,
+                )
                 continue
 
         return {
@@ -232,6 +243,10 @@ class _OfflineProcessorMixin:
             try:
                 obj = self.store.read_object(object_id)
             except Exception:
+                logger.warning(
+                    "refresh_embeddings: failed to read %s",
+                    object_id, exc_info=True,
+                )
                 continue
             if obj.get("status") in ("archived", "deprecated", "invalid"):
                 continue
@@ -264,6 +279,10 @@ class _OfflineProcessorMixin:
                 self.store.insert_object(updated_obj)
                 refreshed_ids.append(obj["id"])
             except Exception:
+                logger.warning(
+                    "refresh_embeddings: failed to write %s",
+                    obj["id"], exc_info=True,
+                )
                 continue
 
         return {
@@ -299,6 +318,10 @@ class _OfflineProcessorMixin:
             try:
                 neighbour = self.store.read_object(neighbour_id)
             except Exception:
+                logger.warning(
+                    "resolve_conflict: failed to read %s",
+                    neighbour_id, exc_info=True,
+                )
                 continue
             if neighbour.get("status") in ("archived", "deprecated", "invalid"):
                 continue
@@ -314,6 +337,10 @@ class _OfflineProcessorMixin:
                 self.store.insert_object(deprecated_obj)
                 deprecated_ids.append(neighbour_id)
             except Exception:
+                logger.warning(
+                    "resolve_conflict: failed to deprecate %s",
+                    neighbour_id, exc_info=True,
+                )
                 continue
 
         return {
@@ -357,6 +384,10 @@ class _OfflineProcessorMixin:
                 if ep_id:
                     supporting_episode_ids.add(ep_id)
             except Exception:
+                logger.warning(
+                    "verify_proposal: failed to read ref %s",
+                    ref, exc_info=True,
+                )
                 continue
 
         # Verification decision: require cross-episode support.
@@ -500,6 +531,7 @@ class _OfflineProcessorMixin:
             try:
                 obj = self.store.read_object(oid)
             except Exception:
+                logger.warning("discover_links: failed to read object %s", oid, exc_info=True)
                 continue
             if obj.get("status") != "active":
                 continue
@@ -560,6 +592,10 @@ class _OfflineProcessorMixin:
                     self.store.insert_object(link)
                     created_links.append(link_id)
                 except Exception:
+                    logger.warning(
+                        "discover_links: failed to insert %s",
+                        link_id, exc_info=True,
+                    )
                     continue
 
         _ = obj_ids  # suppress unused variable warning
@@ -589,6 +625,10 @@ class _OfflineProcessorMixin:
             try:
                 obj = self.store.read_object(oid)
             except Exception:
+                logger.warning(
+                    "rebuild_artifact_index: failed to read %s",
+                    oid, exc_info=True,
+                )
                 continue
             if obj.get("status") != "active":
                 continue
@@ -606,6 +646,10 @@ class _OfflineProcessorMixin:
                     self.store.insert_object(artifact)
                     index_object_ids.append(artifact["id"])
                 except Exception:
+                    logger.warning(
+                        "rebuild_artifact_index: failed to insert for %s",
+                        oid, exc_info=True,
+                    )
                     continue
             indexed_ids.append(oid)
 
@@ -661,6 +705,10 @@ class _OfflineProcessorMixin:
                 self.store.insert_object(updated_obj)
                 archived_ids.append(obj["id"])
             except Exception:
+                logger.warning(
+                    "auto_archive: failed to archive %s",
+                    obj["id"], exc_info=True,
+                )
                 continue
 
         return {

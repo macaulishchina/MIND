@@ -1,5 +1,7 @@
 """Frontend settings — re-exports from canonical location in mind.app."""
 
+from __future__ import annotations
+
 from mind.app.frontend_settings import (  # noqa: F401
     FrontendLlmModelDiscoveryRequest,
     FrontendLlmModelDiscoveryResult,

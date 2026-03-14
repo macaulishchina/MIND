@@ -12,7 +12,7 @@ from mind.kernel.schema import ensure_valid_object
 from mind.kernel.store import MemoryStore, StoreError
 from mind.telemetry import TelemetryEvent, TelemetryEventKind, TelemetryRecorder, TelemetryScope
 
-InaccessibleWorkspaceStatuses = {"invalid"}
+InaccessibleWorkspaceStatuses = frozenset({"invalid"})
 
 
 class WorkspaceBuildError(RuntimeError):
