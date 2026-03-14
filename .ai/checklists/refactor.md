@@ -8,7 +8,7 @@ Use this checklist when refactoring existing code.
 
 - [ ] Define the refactoring goal in one sentence
 - [ ] Confirm the refactoring is requested or clearly necessary (not "nice to have")
-- [ ] Ensure full test suite passes BEFORE starting (`uv run pytest tests/ -x`)
+- [ ] Ensure the pre-commit full health check passes BEFORE starting (`uv run python scripts/ai_health_check.py --full --report-for-ai`)
 - [ ] If the refactor spans more than 5 files, multiple subsystems, or more than one commit, create or update `PLANS.md` from `.ai/templates/PLANS.md`
 - [ ] If the target file is over 400 lines, define the extraction boundary before editing
 
@@ -37,7 +37,8 @@ Use this checklist when refactoring existing code.
 
 - [ ] `uv run ruff check mind/ tests/` — zero errors
 - [ ] `uv run mypy mind/ tests/` — zero errors
-- [ ] `uv run pytest tests/ -x` — all pass
+- [ ] `uv run python scripts/ai_health_check.py --report-for-ai` — quick local health check passes
+- [ ] `uv run python scripts/ai_health_check.py --full --report-for-ai` — full health check passes
 - [ ] No new files over 500 lines
 - [ ] No new circular imports
 - [ ] Architecture invariants still hold (see CONSTITUTION.md §2)

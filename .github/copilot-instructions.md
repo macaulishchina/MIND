@@ -14,11 +14,17 @@ Key points:
 
 ## Health Check
 
-After completing code changes, run the health check:
+After completing code changes, run the quick health check:
 ```bash
 uv run python scripts/ai_health_check.py --report-for-ai
+```
+Before committing, run the full health check:
+```bash
+uv run python scripts/ai_health_check.py --full --report-for-ai
 ```
 Then read `.ai/health/repair-prompt.md` for a prioritized repair plan.
 
 Also run this when the user requests a health assessment, full check,
 AI health test, or similar (e.g. "做全面检查", "健康检测", "跑一下测试").
+For routine pytest runs, prefer the parallel quick command from `.ai/rules/testing.md`
+instead of bare `uv run pytest tests/`.

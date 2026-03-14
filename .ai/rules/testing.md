@@ -57,6 +57,19 @@ tests/
 - `mind/fixtures/` contains canonical seed data and benchmark datasets.
 - Use `mind.fixtures` to load golden test data when testing evaluation logic.
 
+## Preferred Commands
+
+- For routine local regression, prefer parallel quick pytest instead of bare
+  `uv run pytest tests/`.
+- Use worker count `max(4, cpu_count)` and `--dist loadfile` for routine
+  multi-file runs. Example:
+  ```bash
+  uv run pytest tests/ -n "$(uv run python -c 'import os; print(max(4, os.cpu_count() or 1))')" --dist loadfile -m "not slow and not gate"
+  ```
+- For focused files or nodeids, keep the same worker-count rule when parallel
+  execution is still helpful.
+- Before committing, run `uv run python scripts/ai_health_check.py --full --report-for-ai`.
+
 ## Phase Gate Tests
 
 - `test_phase_<x>_*.py` files are gate validation tests.

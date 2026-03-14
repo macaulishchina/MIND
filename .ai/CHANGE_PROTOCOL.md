@@ -160,7 +160,8 @@ From `docs/docs-authoring.md`:
 
 - [ ] `uv run ruff check mind/ tests/ scripts/` — zero errors
 - [ ] `uv run mypy mind/ tests/ scripts/` — zero errors
-- [ ] `uv run pytest tests/ -x` — all pass
+- [ ] `uv run python scripts/ai_health_check.py --report-for-ai` — quick local health check passes
+- [ ] `uv run python scripts/ai_health_check.py --full --report-for-ai` — pre-commit full health check passes
 - [ ] Changed code has corresponding test(s)
 - [ ] Documentation updated per sync rules above
 - [ ] No new `# type: ignore` without justification

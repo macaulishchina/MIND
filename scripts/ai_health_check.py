@@ -5,7 +5,8 @@ invariants, and .ai/ governance compliance.  Produces structured reports
 that an AI agent can consume to self-diagnose and self-repair.
 
 Usage:
-    uv run python scripts/ai_health_check.py                 # full scan
+    uv run python scripts/ai_health_check.py                 # quick scan (default)
+    uv run python scripts/ai_health_check.py --full         # full scan
     uv run python scripts/ai_health_check.py --report-for-ai # emit AI repair prompt
     uv run python scripts/ai_health_check.py --compare       # diff latest vs baseline
     uv run python scripts/ai_health_check.py --output-dir .ai/health
@@ -15,6 +16,7 @@ from __future__ import annotations
 
 import ast
 import json
+import os
 import re
 import subprocess
 import sys
@@ -29,6 +31,10 @@ from typing import Any
 
 DEFAULT_OUTPUT_DIR = Path(".ai/health")
 MAX_HISTORY = 20  # keep last N reports in history ring-buffer
+PYTEST_TIMING_FILENAME = "pytest-timing-latest.json"
+PYTEST_TIMING_TOP_N = 10
+PYTEST_TEST_TIMEOUT_SECONDS = 30
+PYTEST_RUN_TIMEOUT_SECONDS = 900
 
 SCAN_DIRS = ["mind/", "tests/", "scripts/"]
 
@@ -116,18 +122,71 @@ CONSTITUTION_LINE_LIMIT = 500
 # ---------------------------------------------------------------------------
 
 def _run(
-    cmd: list[str], *, timeout: int = 120
+    cmd: list[str], *, timeout: int = 120, env: dict[str, str] | None = None
 ) -> tuple[int, str, str]:
     """Run a command and return (exit_code, stdout, stderr)."""
     try:
         result = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=timeout,
+            cmd, capture_output=True, text=True, timeout=timeout, env=env,
         )
         return result.returncode, result.stdout, result.stderr
     except subprocess.TimeoutExpired:
         return -1, "", f"Command timed out after {timeout}s: {' '.join(cmd)}"
     except FileNotFoundError:
         return -2, "", f"Command not found: {cmd[0]}"
+
+
+def _pytest_worker_count() -> int:
+    """Return the default worker count for quick pytest runs."""
+    return max(4, os.cpu_count() or 1)
+
+
+def build_pytest_command(*, full: bool) -> list[str]:
+    """Build the pytest command for quick or full health-check runs."""
+    cmd = [
+        "uv", "run", "pytest", "tests/",
+        "--tb=short", "-q", "--no-header",
+        f"--timeout={PYTEST_TEST_TIMEOUT_SECONDS}", "-x",
+    ]
+    if not full:
+        cmd.extend(
+            [
+                "-m", "not slow and not gate",
+                "-n", str(_pytest_worker_count()),
+                "--dist", "loadfile",
+            ]
+        )
+    return cmd
+
+
+def _pytest_timing_path(output_dir: Path) -> Path:
+    """Return the pytest timing report path for the given output directory."""
+    return output_dir / PYTEST_TIMING_FILENAME
+
+
+def _load_pytest_timing_summary(path: Path) -> dict[str, Any]:
+    """Load pytest timing output and derive compact health-check summaries."""
+    if not path.exists():
+        return {"timing_available": False, "timing_path": str(path)}
+
+    try:
+        payload = json.loads(path.read_text())
+    except (json.JSONDecodeError, OSError):
+        return {"timing_available": False, "timing_path": str(path)}
+
+    test_cases = payload.get("test_cases", [])
+    slowest_tests = sorted(
+        test_cases,
+        key=lambda case: float(case.get("duration_seconds", 0.0)),
+        reverse=True,
+    )[:PYTEST_TIMING_TOP_N]
+    return {
+        "timing_available": True,
+        "timing_path": str(path),
+        "timing_totals": payload.get("totals", {}),
+        "phase_summaries": payload.get("phase_summaries", []),
+        "slowest_tests": slowest_tests,
+    }
 
 
 def _py_files(dirs: list[str] | None = None) -> list[Path]:
@@ -261,19 +320,24 @@ def check_mypy() -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# Check: pytest  (full run, no -x; capture errors/skipped/warnings)
+# Check: pytest  (quick by default; full available via --full)
 # ---------------------------------------------------------------------------
 
-def check_tests(*, quick: bool = False) -> dict[str, Any]:
-    """Run pytest with per-test timeout and fail-fast."""
-    cmd = [
-        "uv", "run", "pytest", "tests/",
-        "--tb=short", "-q", "--no-header",
-        "--timeout=30", "-x",
-    ]
-    if quick:
-        cmd.extend(["-m", "not slow and not gate"])
-    code, stdout, stderr = _run(cmd, timeout=300)
+def check_tests(output_dir: Path, *, full: bool = False) -> dict[str, Any]:
+    """Run pytest with timing capture and fail-fast behavior."""
+    cmd = build_pytest_command(full=full)
+    timing_path = _pytest_timing_path(output_dir)
+    timing_path.parent.mkdir(parents=True, exist_ok=True)
+    if timing_path.exists():
+        timing_path.unlink()
+
+    env = dict(os.environ)
+    env["MIND_PYTEST_TIMING_PATH"] = str(timing_path)
+    code, stdout, stderr = _run(
+        cmd,
+        timeout=PYTEST_RUN_TIMEOUT_SECONDS,
+        env=env,
+    )
     output = stdout + stderr
     passed = failed = errors = skipped = warnings = 0
     failed_tests: list[str] = []
@@ -308,10 +372,13 @@ def check_tests(*, quick: bool = False) -> dict[str, Any]:
         )
         for ft in failed_tests
     ]
+    timing_summary = _load_pytest_timing_summary(timing_path)
 
-    return {
+    result = {
         "tool": "pytest",
         "passed": code == 0,
+        "execution_mode": "full" if full else "quick",
+        "command": cmd,
         "tests_passed": passed,
         "tests_failed": failed,
         "tests_errors": errors,
@@ -320,6 +387,8 @@ def check_tests(*, quick: bool = False) -> dict[str, Any]:
         "failed_tests": failed_tests,
         "violations": items,
     }
+    result.update(timing_summary)
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -809,8 +878,10 @@ def generate_ai_repair_prompt(report: dict[str, Any]) -> str:
     lines.append("# AI Self-Repair Task")
     lines.append("")
     lines.append("The health check found the following issues.")
-    lines.append("Fix them in priority order. After each fix, re-run:")
+    lines.append("Fix them in priority order. After each fix, re-run the quick check:")
     lines.append("  uv run python scripts/ai_health_check.py --report-for-ai")
+    lines.append("Before committing, run the full check:")
+    lines.append("  uv run python scripts/ai_health_check.py --full --report-for-ai")
     lines.append("")
     lines.append("## Report Files")
     lines.append("")
@@ -875,8 +946,9 @@ def generate_ai_repair_prompt(report: dict[str, Any]) -> str:
     lines.append("2. Fix failing tests first (they block everything)")
     lines.append("3. Architecture violations next (structural integrity)")
     lines.append("4. Then forbidden patterns → mypy → ruff")
-    lines.append("5. After each category, re-run the health check")
-    lines.append("6. Do NOT introduce new violations while fixing old ones")
+    lines.append("5. After each category, re-run the quick health check")
+    lines.append("6. Before commit, re-run the full health check")
+    lines.append("7. Do NOT introduce new violations while fixing old ones")
     lines.append("")
 
     return "\n".join(lines)
@@ -886,9 +958,10 @@ def generate_ai_repair_prompt(report: dict[str, Any]) -> str:
 # Report generation — orchestration
 # ---------------------------------------------------------------------------
 
-def generate_report(output_dir: Path, *, quick: bool = False) -> dict[str, Any]:
+def generate_report(output_dir: Path, *, full: bool = False) -> dict[str, Any]:
     """Generate a comprehensive health report."""
-    print("🔍 Running AI governance health check (v2.1)...\n")
+    mode = "full" if full else "quick"
+    print(f"🔍 Running AI governance health check (v2.1, {mode})...\n")
 
     results: dict[str, Any] = {
         "timestamp": datetime.now(UTC).isoformat(),
@@ -900,7 +973,7 @@ def generate_report(output_dir: Path, *, quick: bool = False) -> dict[str, Any]:
     checks: list[tuple[str, Any]] = [
         ("ruff", check_ruff),
         ("mypy", check_mypy),
-        ("pytest", lambda: check_tests(quick=quick)),
+        ("pytest", lambda: check_tests(output_dir, full=full)),
         ("architecture", check_architecture),
         ("forbidden_patterns", check_forbidden_patterns),
         ("governance_files", check_governance_files),
@@ -922,6 +995,8 @@ def generate_report(output_dir: Path, *, quick: bool = False) -> dict[str, Any]:
         status = "✅" if passed else "❌"
         summary = _check_summary(name, result)
         print(f"  {status} {name}: {summary}")
+        if name == "pytest":
+            _print_pytest_timing_summary(result)
 
     results["all_passed"] = all_passed
     results["total_violations"] = total_violations
@@ -975,7 +1050,8 @@ def _check_summary(name: str, result: dict[str, Any]) -> str:
             f"{result.get('tests_passed', 0)} passed, "
             f"{result.get('tests_failed', 0)} failed, "
             f"{result.get('tests_errors', 0)} errors, "
-            f"{result.get('tests_skipped', 0)} skipped"
+            f"{result.get('tests_skipped', 0)} skipped "
+            f"({result.get('execution_mode', 'quick')})"
         )
     if name == "architecture":
         return f"{result.get('violation_count', 0)} layer violations"
@@ -994,6 +1070,33 @@ def _check_summary(name: str, result: dict[str, Any]) -> str:
             f"{result.get('violation_count', 0)} asset issues"
         )
     return str(result.get("passed", "?"))
+
+
+def _print_pytest_timing_summary(result: dict[str, Any]) -> None:
+    """Print compact pytest timing summaries when available."""
+    if not result.get("timing_available"):
+        return
+
+    timing_path = result.get("timing_path", "?")
+    print(f"    ⏱️  Timing log: {timing_path}")
+
+    phase_summaries = result.get("phase_summaries", [])
+    if phase_summaries:
+        print("    ⏱️  Phase totals:")
+        for phase in phase_summaries[:5]:
+            phase_name = phase.get("phase", "unknown")
+            total = float(phase.get("total_duration_seconds", 0.0))
+            count = int(phase.get("test_case_count", 0))
+            print(f"      - {phase_name}: {total:.2f}s across {count} cases")
+
+    slowest_tests = result.get("slowest_tests", [])
+    if slowest_tests:
+        print("    ⏱️  Slowest tests:")
+        for case in slowest_tests[:5]:
+            nodeid = case.get("nodeid", "?")
+            duration = float(case.get("duration_seconds", 0.0))
+            outcome = case.get("outcome", "?")
+            print(f"      - {duration:.2f}s [{outcome}] {nodeid}")
 
 
 def _write_report(output_dir: Path, results: dict[str, Any]) -> None:
@@ -1033,14 +1136,13 @@ def _slim_report(results: dict[str, Any]) -> dict[str, Any]:
 # CLI
 # ---------------------------------------------------------------------------
 
-def main() -> None:
-    """Entry point."""
+def _parse_cli_args(args: list[str]) -> tuple[Path, bool, bool, bool]:
+    """Parse CLI args into (output_dir, report_for_ai, compare_only, full)."""
     output_dir = DEFAULT_OUTPUT_DIR
     report_for_ai = False
     compare_only = False
-    quick = False
+    full = False
 
-    args = sys.argv[1:]
     i = 0
     while i < len(args):
         if args[i] == "--output-dir" and i + 1 < len(args):
@@ -1052,11 +1154,21 @@ def main() -> None:
         elif args[i] == "--compare":
             compare_only = True
             i += 1
+        elif args[i] == "--full":
+            full = True
+            i += 1
         elif args[i] == "--quick":
-            quick = True
+            full = False
             i += 1
         else:
             i += 1
+
+    return output_dir, report_for_ai, compare_only, full
+
+
+def main() -> None:
+    """Entry point."""
+    output_dir, report_for_ai, compare_only, full = _parse_cli_args(sys.argv[1:])
 
     if compare_only:
         latest = output_dir / "latest-report.json"
@@ -1069,7 +1181,7 @@ def main() -> None:
         print(json.dumps(drift, indent=2, default=str))
         sys.exit(0)
 
-    report = generate_report(output_dir, quick=quick)
+    report = generate_report(output_dir, full=full)
 
     if report_for_ai:
         prompt = generate_ai_repair_prompt(report)

@@ -21,7 +21,8 @@ Use this checklist when fixing a bug.
 
 - [ ] The failing test now passes
 - [ ] Add regression test if the bug could recur
-- [ ] `uv run pytest tests/ -x` — full suite still passes (no regressions)
+- [ ] `uv run python scripts/ai_health_check.py --report-for-ai` — quick local health check passes
+- [ ] `uv run python scripts/ai_health_check.py --full --report-for-ai` — full suite still passes (no regressions)
 
 ## Verification
 

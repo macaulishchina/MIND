@@ -41,5 +41,6 @@ Use this checklist when adding a REST API, MCP tool, or CLI command.
 
 - [ ] `uv run ruff check mind/ tests/` — zero errors
 - [ ] `uv run mypy mind/ tests/` — zero errors
-- [ ] `uv run pytest tests/ -x` — all pass
+- [ ] `uv run python scripts/ai_health_check.py --report-for-ai` — quick local health check passes
+- [ ] `uv run python scripts/ai_health_check.py --full --report-for-ai` — full health check passes
 - [ ] Endpoint is backward-compatible (no breaking changes to existing endpoints)

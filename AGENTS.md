@@ -12,8 +12,12 @@ from `.ai/templates/PLANS.md` before editing code.
 
 ## Health Check
 
-After completing code changes, run the health check:
+After completing code changes, run the quick health check:
 ```bash
 uv run python scripts/ai_health_check.py --report-for-ai
+```
+Before committing, run the full health check:
+```bash
+uv run python scripts/ai_health_check.py --full --report-for-ai
 ```
 Then read `.ai/health/repair-prompt.md` for a prioritized repair plan.

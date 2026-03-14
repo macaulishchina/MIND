@@ -248,14 +248,27 @@ Defined in `PrimitiveName` enum (`mind/primitives/contracts.py`):
 This project has an automated health check script: `scripts/ai_health_check.py`.
 
 **When to run it:**
-- After completing a batch of code changes (before committing)
+- After completing a batch of code changes (run quick during iteration, full before committing)
 - After fixing bugs or refactoring
 - When the user asks for a health assessment, full check, AI health test, 全面检查, 健康检测, or similar
 - When you are unsure whether your changes introduced regressions
 
-**How to run:**
+**Routine quick check (default):**
 ```bash
 uv run python scripts/ai_health_check.py --report-for-ai
+```
+
+This runs the fast local health check, including quick pytest with parallel
+workers and automatic exclusion of `slow` / `gate` tests.
+
+**Pre-commit full check (required):**
+```bash
+uv run python scripts/ai_health_check.py --full --report-for-ai
+```
+
+**Preferred routine pytest command** (instead of bare `uv run pytest tests/`):
+```bash
+uv run pytest tests/ -n "$(uv run python -c 'import os; print(max(4, os.cpu_count() or 1))')" --dist loadfile -m "not slow and not gate"
 ```
 
 **After running**, read the generated repair guide at `.ai/health/repair-prompt.md`.

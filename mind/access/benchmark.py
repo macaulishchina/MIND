@@ -163,23 +163,24 @@ def evaluate_access_benchmark(
             store.insert_objects(seed_objects)
             access_service = AccessService(store)
             primitive_service = PrimitiveService(store)
-            runs = [
-                _evaluate_case(
-                    case=case,
-                    requested_mode=requested_mode,
-                    access_service=access_service,
-                    primitive_service=primitive_service,
-                    store=store,
-                )
-                for case in cases
+            runs: list[AccessBenchmarkRun] = []
+            for case in cases:
+                baseline = _baseline_execution(case, primitive_service, store)
                 for requested_mode in (
                     AccessMode.FLASH,
                     AccessMode.RECALL,
                     AccessMode.RECONSTRUCT,
                     AccessMode.REFLECTIVE_ACCESS,
                     AccessMode.AUTO,
-                )
-            ]
+                ):
+                    runs.append(
+                        _evaluate_case(
+                            case=case,
+                            requested_mode=requested_mode,
+                            access_service=access_service,
+                            baseline=baseline,
+                        )
+                    )
 
         aggregates = tuple(_aggregate_runs(runs))
         frontier = tuple(_build_frontier_comparisons(aggregates))
@@ -204,8 +205,7 @@ def _evaluate_case(
     case: AccessDepthBenchCase,
     requested_mode: AccessMode,
     access_service: AccessService,
-    primitive_service: PrimitiveService,
-    store: MemoryStore,
+    baseline: _BaselineExecution,
 ) -> AccessBenchmarkRun:
     response = access_service.run(
         {
@@ -227,7 +227,6 @@ def _evaluate_case(
         token_count=response.context_token_count,
     )
     answer = _generate_answer(case, response.context_kind, context)
-    baseline = _baseline_execution(case, primitive_service, store)
 
     task_completion_score = _task_completion_score(case, answer)
     constraint_satisfaction = _constraint_satisfaction(case, answer)
@@ -463,5 +462,4 @@ def _find_support_id(
             best_id = object_id
             best_score = score
     return best_id if best_score > 0 else None
-
 

@@ -17,8 +17,11 @@ Run before committing:
 uv run ruff check mind/ tests/ scripts/
 uv run ruff format --check mind/ tests/ scripts/
 uv run mypy mind/ tests/ scripts/
-uv run pytest tests/ -x
+uv run python scripts/ai_health_check.py --full --report-for-ai
 ```
+
+Routine local pytest should prefer the parallel quick command from
+`.ai/rules/testing.md` instead of bare `uv run pytest tests/`.
 
 ---
 
