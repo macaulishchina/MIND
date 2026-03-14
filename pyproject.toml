@@ -29,6 +29,8 @@ docs = [
 dev = [
     "mypy>=1.18,<2",
     "pytest>=9,<10",
+    "pytest-timeout>=2.3,<3",
+    "pytest-xdist>=3.5,<4",
     "ruff>=0.11,<0.12",
 ]
 mcp = [
@@ -70,6 +72,12 @@ mind-mcp = "mind.mcp.server:run_mcp"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+markers = [
+    "unit: Pure logic tests, no I/O, <1s",
+    "integration: Multi-service or store tests, <5s",
+    "gate: Full phase-gate evaluation tests",
+    "slow: Tests that take >5s",
+]
 
 [tool.ruff]
 line-length = 100

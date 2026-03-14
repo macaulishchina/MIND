@@ -17,7 +17,7 @@ class PhaseBGateTests(unittest.TestCase):
         result = evaluate_kernel_gate()
 
         self.assertEqual(result.golden_episode_count, 20)
-        self.assertEqual(result.core_object_type_count, 8)
+        self.assertEqual(result.core_object_type_count, 10)
         self.assertEqual(result.round_trip_match_count, result.round_trip_total)
         self.assertEqual(result.replay_match_count, result.replay_total)
         self.assertTrue(result.b1_pass)
@@ -73,7 +73,7 @@ class PhaseBGateTests(unittest.TestCase):
                 store.insert_objects(showcase)
                 stored = store.iter_objects()
 
-        self.assertEqual(len(stored), 8)
+        self.assertEqual(len(stored), 10)
         report = build_integrity_report(stored)
         self.assertEqual(report.source_trace_coverage, 1.0)
         self.assertEqual(report.metadata_coverage, 1.0)

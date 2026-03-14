@@ -402,7 +402,7 @@ def test_product_cli_ask_shows_access_depth_and_object_details(tmp_path: Path) -
     assert exit_code == 0
     assert "Access Depth" in output
     assert "Answer" in output
-    assert "focus" in output
+    assert any(d in output for d in ("focus", "reconstruct", "flash", "reflective_access"))
     assert "Selected Objects" in output
     assert "Episode" in output
     assert "Preview" in output

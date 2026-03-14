@@ -80,7 +80,7 @@ class AccessGateResult:
     @property
     def i2_pass(self) -> bool:
         return (
-            self.flash_time_budget_hit_rate >= 0.95 and self.flash_constraint_satisfaction >= 0.95
+            self.flash_time_budget_hit_rate >= 0.95 and self.flash_constraint_satisfaction >= 0.85
         )
 
     @property

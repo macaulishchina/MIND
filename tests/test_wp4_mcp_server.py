@@ -24,7 +24,7 @@ from mind.mcp.session import map_mcp_session
 from mind.primitives.contracts import Capability
 
 
-def test_mcp_tool_catalog_lists_all_11_tools(tmp_path: Path) -> None:
+def test_mcp_tool_catalog_lists_all_tools(tmp_path: Path) -> None:
     config = _sqlite_config(tmp_path, "catalog")
     with create_mcp_server(config) as server:
         tool_names = [tool.name for tool in server.list_tools()]
@@ -41,6 +41,7 @@ def test_mcp_tool_catalog_lists_all_11_tools(tmp_path: Path) -> None:
         "execute_conceal",
         "submit_offline_job",
         "get_job_status",
+        "record_feedback",
     ]
 
 

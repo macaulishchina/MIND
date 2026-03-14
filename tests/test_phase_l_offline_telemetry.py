@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -9,9 +8,7 @@ import pytest
 from mind.fixtures.golden_episode_set import build_golden_episode_set
 from mind.kernel.store import SQLiteMemoryStore
 from mind.offline import (
-    OfflineJob,
     OfflineJobKind,
-    OfflineJobStatus,
     OfflineMaintenanceError,
     OfflineMaintenanceService,
     OfflineWorker,
@@ -20,115 +17,11 @@ from mind.offline import (
     new_offline_job,
 )
 from mind.telemetry import InMemoryTelemetryRecorder, TelemetryEventKind, TelemetryScope
+from tests.conftest import FakeJobStoreFull
 
 FIXED_TIMESTAMP = datetime(2026, 3, 12, 1, 30, tzinfo=UTC)
 
 
-class _SingleJobStore:
-    def __init__(self, jobs: list[OfflineJob]) -> None:
-        self._jobs = {job.job_id: job for job in jobs}
-
-    def enqueue_offline_job(self, job: OfflineJob | dict) -> None:
-        validated = OfflineJob.model_validate(job)
-        self._jobs[validated.job_id] = validated
-
-    def iter_offline_jobs(
-        self,
-        *,
-        statuses: Iterable[OfflineJobStatus] = (),
-    ) -> list[OfflineJob]:
-        jobs = list(self._jobs.values())
-        allowed = set(statuses)
-        if allowed:
-            jobs = [job for job in jobs if job.status in allowed]
-        return sorted(jobs, key=lambda item: (item.created_at, item.job_id))
-
-    def claim_offline_job(
-        self,
-        *,
-        worker_id: str,
-        now: datetime,
-        job_kinds: Iterable[OfflineJobKind] = (),
-    ) -> OfflineJob | None:
-        allowed_job_kinds = set(job_kinds)
-        jobs = [
-            job
-            for job in self._jobs.values()
-            if job.status is OfflineJobStatus.PENDING
-            and job.available_at <= now
-            and job.attempt_count < job.max_attempts
-            and (not allowed_job_kinds or job.job_kind in allowed_job_kinds)
-        ]
-        if not jobs:
-            return None
-        selected = jobs[0]
-        claimed = selected.model_copy(
-            update={
-                "status": OfflineJobStatus.RUNNING,
-                "attempt_count": selected.attempt_count + 1,
-                "locked_by": worker_id,
-                "locked_at": now,
-                "updated_at": now,
-            }
-        )
-        self._jobs[claimed.job_id] = claimed
-        return claimed
-
-    def complete_offline_job(
-        self,
-        job_id: str,
-        *,
-        worker_id: str,
-        completed_at: datetime,
-        result: dict,
-    ) -> None:
-        job = self._jobs[job_id]
-        self._jobs[job_id] = job.model_copy(
-            update={
-                "status": OfflineJobStatus.SUCCEEDED,
-                "completed_at": completed_at,
-                "updated_at": completed_at,
-                "result": result,
-                "error": None,
-            }
-        )
-
-    def fail_offline_job(
-        self,
-        job_id: str,
-        *,
-        worker_id: str,
-        failed_at: datetime,
-        error: dict,
-    ) -> None:
-        job = self._jobs[job_id]
-        self._jobs[job_id] = job.model_copy(
-            update={
-                "status": OfflineJobStatus.FAILED,
-                "completed_at": failed_at,
-                "updated_at": failed_at,
-                "result": None,
-                "error": error,
-            }
-        )
-
-    def cancel_offline_job(
-        self,
-        job_id: str,
-        *,
-        cancelled_at: datetime,
-        error: dict,
-    ) -> None:
-        job = self._jobs[job_id]
-        self._jobs[job_id] = job.model_copy(
-            update={
-                "status": OfflineJobStatus.FAILED,
-                "completed_at": cancelled_at,
-                "updated_at": cancelled_at,
-                "result": None,
-                "error": error,
-            }
-        )
 
 
 def test_offline_reflect_job_emits_offline_events_in_dev_mode(tmp_path: Path) -> None:
@@ -329,7 +222,7 @@ def test_offline_worker_passes_dev_mode_to_maintenance_service(tmp_path: Path) -
             clock=lambda: FIXED_TIMESTAMP,
             telemetry_recorder=recorder,
         )
-        job_store = _SingleJobStore(
+        job_store = FakeJobStoreFull(
             [
                 new_offline_job(
                     job_id="phase-l-worker-reflect",

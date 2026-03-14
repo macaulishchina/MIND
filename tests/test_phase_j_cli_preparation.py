@@ -186,7 +186,7 @@ def test_access_run_auto_can_jump_to_reflective_access(
     assert "resolved_mode=reflective_access" in output
     assert "context_kind=workspace" in output
     assert "verification_note_count=" in output
-    assert "trace_1=select_mode:reconstruct:initial:high_correctness_required:0" in output
+    assert "trace_1=select_mode:reconstruct:initial:constraint_risk:0" in output
     assert "select_mode:reflective_access:jump:evidence_conflict:0" in output
 
 
@@ -1469,7 +1469,7 @@ def test_primitive_retrieve_returns_ranked_candidates(
 
     assert retrieve_exit == 0
     output = capsys.readouterr().out
-    assert "candidate_count=1" in output
+    assert "candidate_count=2" in output
     assert f"candidate_1={alpha_object_id}:" in output
     assert '"retrieval_backend":"store_search"' in output
 

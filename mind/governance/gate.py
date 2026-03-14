@@ -592,6 +592,7 @@ def _ranking_isolation_regression() -> tuple[bool, bool, bool, int]:
             episode_id=None,
             task_id=None,
             query_embedding=None,
+            w_priority=0.0,
         )
     )
     return (

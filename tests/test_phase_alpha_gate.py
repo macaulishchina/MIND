@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -20,9 +19,7 @@ from mind.fixtures.golden_episode_set import build_golden_episode_set
 from mind.kernel.schema import CORE_OBJECT_TYPES, validate_object
 from mind.kernel.store import SQLiteMemoryStore
 from mind.offline import (
-    OfflineJob,
     OfflineJobKind,
-    OfflineJobStatus,
     OfflineMaintenanceService,
     new_offline_job,
 )
@@ -35,6 +32,7 @@ from mind.primitives.contracts import (
     PrimitiveOutcome,
 )
 from mind.primitives.service import PrimitiveService
+from tests.conftest import FakeJobStoreStub
 
 FIXED_TIMESTAMP = datetime(2026, 3, 13, 12, 0, tzinfo=UTC)
 
@@ -89,36 +87,7 @@ def _raw_object(
     }
 
 
-class _FakeJobStore:
-    def __init__(self) -> None:
-        self._jobs: dict[str, OfflineJob] = {}
 
-    def enqueue_offline_job(self, job: OfflineJob | dict[str, Any]) -> None:
-        validated = OfflineJob.model_validate(job)
-        self._jobs[validated.job_id] = validated
-
-    def iter_offline_jobs(
-        self,
-        *,
-        statuses: Iterable[OfflineJobStatus] = (),
-    ) -> list[OfflineJob]:
-        jobs = list(self._jobs.values())
-        allowed = set(statuses)
-        if allowed:
-            jobs = [j for j in jobs if j.status in allowed]
-        return sorted(jobs, key=lambda j: j.created_at)
-
-    def claim_offline_job(self, **kwargs: Any) -> OfflineJob | None:
-        return None
-
-    def complete_offline_job(self, *args: Any, **kwargs: Any) -> None:
-        pass
-
-    def fail_offline_job(self, *args: Any, **kwargs: Any) -> None:
-        pass
-
-    def cancel_offline_job(self, *args: Any, **kwargs: Any) -> None:
-        pass
 
 
 # ===========================================================================
@@ -468,7 +437,7 @@ def test_offline_service_handles_update_priority_job(tmp_path: Path) -> None:
 
 
 def test_scheduler_enqueues_reflect_episode_on_completed_episode() -> None:
-    job_store = _FakeJobStore()
+    job_store = FakeJobStoreStub()
     scheduler = OfflineJobScheduler(job_store, clock=lambda: FIXED_TIMESTAMP)
 
     episode_obj = {
@@ -487,7 +456,7 @@ def test_scheduler_enqueues_reflect_episode_on_completed_episode() -> None:
 
 
 def test_scheduler_does_not_enqueue_for_incomplete_episode() -> None:
-    job_store = _FakeJobStore()
+    job_store = FakeJobStoreStub()
     scheduler = OfflineJobScheduler(job_store, clock=lambda: FIXED_TIMESTAMP)
 
     episode_obj = {"metadata": {"result": None, "task_id": "task-001"}}
@@ -498,7 +467,7 @@ def test_scheduler_does_not_enqueue_for_incomplete_episode() -> None:
 
 
 def test_scheduler_enqueues_promote_schema_when_threshold_met() -> None:
-    job_store = _FakeJobStore()
+    job_store = FakeJobStoreStub()
     scheduler = OfflineJobScheduler(job_store, clock=lambda: FIXED_TIMESTAMP, promote_threshold=3)
 
     feedback_obj = {"metadata": {"episode_id": "ep-001"}}
@@ -511,7 +480,7 @@ def test_scheduler_enqueues_promote_schema_when_threshold_met() -> None:
 
 
 def test_scheduler_does_not_enqueue_promote_schema_below_threshold() -> None:
-    job_store = _FakeJobStore()
+    job_store = FakeJobStoreStub()
     scheduler = OfflineJobScheduler(job_store, clock=lambda: FIXED_TIMESTAMP, promote_threshold=3)
 
     feedback_obj = {"metadata": {"episode_id": "ep-001"}}
@@ -522,7 +491,7 @@ def test_scheduler_does_not_enqueue_promote_schema_below_threshold() -> None:
 
 
 def test_scheduler_schedules_update_priority_job() -> None:
-    job_store = _FakeJobStore()
+    job_store = FakeJobStoreStub()
     scheduler = OfflineJobScheduler(job_store, clock=lambda: FIXED_TIMESTAMP)
 
     job_id = scheduler.schedule_priority_update(["obj-1", "obj-2"], reason="batch update")
@@ -535,7 +504,7 @@ def test_scheduler_schedules_update_priority_job() -> None:
 
 
 def test_scheduler_schedules_priority_update_for_all_objects() -> None:
-    job_store = _FakeJobStore()
+    job_store = FakeJobStoreStub()
     scheduler = OfflineJobScheduler(job_store, clock=lambda: FIXED_TIMESTAMP)
 
     job_id = scheduler.schedule_priority_update()  # no object_ids = all objects

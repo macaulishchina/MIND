@@ -35,7 +35,7 @@ def test_memory_object_contract_accepts_showcase_objects() -> None:
 
     validated = [MemoryObject.model_validate(obj) for obj in showcase]
 
-    assert len(validated) == 8
+    assert len(validated) == 10
     assert {item.type for item in validated} == {
         "RawRecord",
         "TaskEpisode",
@@ -45,6 +45,7 @@ def test_memory_object_contract_accepts_showcase_objects() -> None:
         "LinkEdge",
         "WorkspaceView",
         "SchemaNote",
+        "FeedbackRecord",
     }
 
 

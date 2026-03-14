@@ -9,12 +9,13 @@ from typing import Any
 from mind.kernel.store import SQLiteMemoryStore
 from mind.offline import OfflineJobKind, new_offline_job
 from mind.offline.scheduler import OfflineJobScheduler
-from mind.offline_jobs import OfflineJob, ResolveConflictJobPayload
+from mind.offline_jobs import ResolveConflictJobPayload
 from mind.primitives.conflict import (
     ConflictDetectionResult,
     ConflictRelation,
     detect_conflicts,
 )
+from tests.conftest import FakeJobStoreStub
 
 FIXED_TIMESTAMP = datetime(2026, 3, 13, 12, 0, tzinfo=UTC)
 
@@ -56,43 +57,7 @@ def _raw_object(
     }
 
 
-class _FakeJobStore:
-    def __init__(self) -> None:
-        self._jobs: list[OfflineJob] = []
 
-    def enqueue_offline_job(self, job: OfflineJob | dict[str, Any]) -> None:
-        self._jobs.append(OfflineJob.model_validate(job))
-
-    def iter_offline_jobs(
-        self,
-        *,
-        statuses: Any = (),
-    ) -> list[OfflineJob]:
-        return list(self._jobs)
-
-    def claim_offline_job(
-        self, *, worker_id: str, now: Any, job_kinds: Any = (),
-    ) -> OfflineJob | None:
-        return None
-
-    def complete_offline_job(
-        self, job_id: str, *, worker_id: str, completed_at: Any, result: Any,
-    ) -> None:
-        pass
-
-    def fail_offline_job(
-        self, job_id: str, *, worker_id: str, failed_at: Any, error: Any,
-    ) -> None:
-        pass
-
-    def cancel_offline_job(
-        self,
-        job_id: str,
-        *,
-        cancelled_at: Any = None,
-        error: Any = None,
-    ) -> None:
-        pass
 
 
 # ---------------------------------------------------------------------------
@@ -207,7 +172,7 @@ def test_detect_conflicts_excludes_new_object_from_comparison(tmp_path: Path) ->
 
 def test_scheduler_on_conflict_detected_enqueues_resolve_conflict() -> None:
     """β-2: on_conflict_detected enqueues RESOLVE_CONFLICT when contradictions found."""
-    job_store = _FakeJobStore()
+    job_store = FakeJobStoreStub()
     scheduler = OfflineJobScheduler(job_store, clock=lambda: FIXED_TIMESTAMP)
     conflict_candidates = [
         {
@@ -227,7 +192,7 @@ def test_scheduler_on_conflict_detected_enqueues_resolve_conflict() -> None:
 
 def test_scheduler_on_conflict_detected_skips_when_no_contradiction() -> None:
     """β-2: on_conflict_detected skips when only NOVEL/REFINE conflicts."""
-    job_store = _FakeJobStore()
+    job_store = FakeJobStoreStub()
     scheduler = OfflineJobScheduler(job_store, clock=lambda: FIXED_TIMESTAMP)
     conflict_candidates = [
         {
@@ -244,7 +209,7 @@ def test_scheduler_on_conflict_detected_skips_when_no_contradiction() -> None:
 
 def test_scheduler_on_conflict_detected_skips_empty_candidates() -> None:
     """β-2: on_conflict_detected does nothing when candidate list is empty."""
-    job_store = _FakeJobStore()
+    job_store = FakeJobStoreStub()
     scheduler = OfflineJobScheduler(job_store, clock=lambda: FIXED_TIMESTAMP)
     job_id = scheduler.on_conflict_detected("new-001", [])
     assert job_id is None

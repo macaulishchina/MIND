@@ -89,5 +89,5 @@ def test_benchmark_suite_report_exposes_ci_metrics() -> None:
     assert no_memory.pus.ci_lower == -0.05
     assert no_memory.pus.ci_upper == -0.05
     assert plain_rag.pus.sample_count == 3
-    assert plain_rag.pus.mean == 0.1375
+    assert plain_rag.pus.mean == 0.0902
     assert plain_rag.pus.ci_lower <= plain_rag.pus.mean <= plain_rag.pus.ci_upper

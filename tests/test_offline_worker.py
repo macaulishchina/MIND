@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -16,115 +15,11 @@ from mind.offline import (
     ReflectEpisodeJobPayload,
     new_offline_job,
 )
+from tests.conftest import FakeJobStoreFull
 
 FIXED_TIMESTAMP = datetime(2026, 3, 9, 18, 0, tzinfo=UTC)
 
 
-class FakeOfflineJobStore:
-    def __init__(self, jobs: list[OfflineJob]) -> None:
-        self._jobs = {job.job_id: job for job in jobs}
-
-    def enqueue_offline_job(self, job: OfflineJob | dict) -> None:
-        validated = OfflineJob.model_validate(job)
-        self._jobs[validated.job_id] = validated
-
-    def iter_offline_jobs(
-        self,
-        *,
-        statuses: Iterable[OfflineJobStatus] = (),
-    ) -> list[OfflineJob]:
-        jobs = list(self._jobs.values())
-        allowed = set(statuses)
-        if allowed:
-            jobs = [job for job in jobs if job.status in allowed]
-        return sorted(jobs, key=lambda job: (job.created_at, job.job_id))
-
-    def claim_offline_job(
-        self,
-        *,
-        worker_id: str,
-        now: datetime,
-        job_kinds: Iterable[OfflineJobKind] = (),
-    ) -> OfflineJob | None:
-        allowed_job_kinds = set(job_kinds)
-        jobs = [
-            job
-            for job in self._jobs.values()
-            if job.status is OfflineJobStatus.PENDING
-            and job.available_at <= now
-            and job.attempt_count < job.max_attempts
-            and (not allowed_job_kinds or job.job_kind in allowed_job_kinds)
-        ]
-        if not jobs:
-            return None
-        selected = max(jobs, key=lambda job: (job.priority, -job.created_at.timestamp()))
-        claimed = selected.model_copy(
-            update={
-                "status": OfflineJobStatus.RUNNING,
-                "attempt_count": selected.attempt_count + 1,
-                "locked_by": worker_id,
-                "locked_at": now,
-                "updated_at": now,
-            }
-        )
-        self._jobs[claimed.job_id] = claimed
-        return claimed
-
-    def complete_offline_job(
-        self,
-        job_id: str,
-        *,
-        worker_id: str,
-        completed_at: datetime,
-        result: dict,
-    ) -> None:
-        job = self._jobs[job_id]
-        self._jobs[job_id] = job.model_copy(
-            update={
-                "status": OfflineJobStatus.SUCCEEDED,
-                "completed_at": completed_at,
-                "updated_at": completed_at,
-                "result": result,
-                "error": None,
-            }
-        )
-
-    def fail_offline_job(
-        self,
-        job_id: str,
-        *,
-        worker_id: str,
-        failed_at: datetime,
-        error: dict,
-    ) -> None:
-        job = self._jobs[job_id]
-        self._jobs[job_id] = job.model_copy(
-            update={
-                "status": OfflineJobStatus.FAILED,
-                "completed_at": failed_at,
-                "updated_at": failed_at,
-                "result": None,
-                "error": error,
-            }
-        )
-
-    def cancel_offline_job(
-        self,
-        job_id: str,
-        *,
-        cancelled_at: datetime,
-        error: dict,
-    ) -> None:
-        job = self._jobs[job_id]
-        self._jobs[job_id] = job.model_copy(
-            update={
-                "status": OfflineJobStatus.FAILED,
-                "completed_at": cancelled_at,
-                "updated_at": cancelled_at,
-                "result": None,
-                "error": error,
-            }
-        )
 
 
 def test_offline_worker_processes_reflection_and_promotion_jobs(tmp_path: Path) -> None:
@@ -137,7 +32,7 @@ def test_offline_worker_processes_reflection_and_promotion_jobs(tmp_path: Path) 
         store.insert_objects(reflect_episode.objects)
         store.insert_objects(promotion_episode.objects)
         maintenance_service = OfflineMaintenanceService(store, clock=lambda: FIXED_TIMESTAMP)
-        job_store = FakeOfflineJobStore(
+        job_store = FakeJobStoreFull(
             [
                 new_offline_job(
                     job_id="job-reflect",
@@ -214,7 +109,7 @@ def test_offline_worker_marks_failed_jobs(tmp_path: Path) -> None:
     with SQLiteMemoryStore(db_path) as store:
         store.insert_objects(episodes[0].objects)
         maintenance_service = OfflineMaintenanceService(store, clock=lambda: FIXED_TIMESTAMP)
-        job_store = FakeOfflineJobStore(
+        job_store = FakeJobStoreFull(
             [
                 new_offline_job(
                     job_id="job-invalid-promotion",
@@ -267,7 +162,7 @@ def test_offline_worker_replays_job_provider_selection() -> None:
             captured["provider_selection"] = provider_selection
             return {"job_id": job.job_id, "ok": True}
 
-    job_store = FakeOfflineJobStore(
+    job_store = FakeJobStoreFull(
         [
             new_offline_job(
                 job_id="job-provider-selection",

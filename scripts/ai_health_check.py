@@ -238,12 +238,16 @@ def check_mypy() -> dict[str, Any]:
 # Check: pytest  (full run, no -x; capture errors/skipped/warnings)
 # ---------------------------------------------------------------------------
 
-def check_tests() -> dict[str, Any]:
-    """Run pytest without -x to get full picture."""
-    code, stdout, stderr = _run(
-        ["uv", "run", "pytest", "tests/", "--tb=short", "-q", "--no-header"],
-        timeout=600,
-    )
+def check_tests(*, quick: bool = False) -> dict[str, Any]:
+    """Run pytest with per-test timeout and fail-fast."""
+    cmd = [
+        "uv", "run", "pytest", "tests/",
+        "--tb=short", "-q", "--no-header",
+        "--timeout=30", "-x",
+    ]
+    if quick:
+        cmd.extend(["-m", "not slow and not gate"])
+    code, stdout, stderr = _run(cmd, timeout=300)
     output = stdout + stderr
     passed = failed = errors = skipped = warnings = 0
     failed_tests: list[str] = []
@@ -742,7 +746,7 @@ def generate_ai_repair_prompt(report: dict[str, Any]) -> str:
 # Report generation — orchestration
 # ---------------------------------------------------------------------------
 
-def generate_report(output_dir: Path) -> dict[str, Any]:
+def generate_report(output_dir: Path, *, quick: bool = False) -> dict[str, Any]:
     """Generate a comprehensive health report."""
     print("🔍 Running AI governance health check (v2.0)...\n")
 
@@ -756,7 +760,7 @@ def generate_report(output_dir: Path) -> dict[str, Any]:
     checks: list[tuple[str, Any]] = [
         ("ruff", check_ruff),
         ("mypy", check_mypy),
-        ("pytest", check_tests),
+        ("pytest", lambda: check_tests(quick=quick)),
         ("architecture", check_architecture),
         ("forbidden_patterns", check_forbidden_patterns),
         ("governance_files", check_governance_files),
@@ -888,6 +892,7 @@ def main() -> None:
     output_dir = DEFAULT_OUTPUT_DIR
     report_for_ai = False
     compare_only = False
+    quick = False
 
     args = sys.argv[1:]
     i = 0
@@ -900,6 +905,9 @@ def main() -> None:
             i += 1
         elif args[i] == "--compare":
             compare_only = True
+            i += 1
+        elif args[i] == "--quick":
+            quick = True
             i += 1
         else:
             i += 1
@@ -915,7 +923,7 @@ def main() -> None:
         print(json.dumps(drift, indent=2, default=str))
         sys.exit(0)
 
-    report = generate_report(output_dir)
+    report = generate_report(output_dir, quick=quick)
 
     if report_for_ai:
         prompt = generate_ai_repair_prompt(report)

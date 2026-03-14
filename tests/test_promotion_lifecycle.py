@@ -14,7 +14,8 @@ from mind.kernel.store import SQLiteMemoryStore
 from mind.offline import OfflineJobKind, new_offline_job
 from mind.offline.scheduler import OfflineJobScheduler
 from mind.offline.service import OfflineMaintenanceService
-from mind.offline_jobs import OfflineJob, VerifyProposalJobPayload
+from mind.offline_jobs import VerifyProposalJobPayload
+from tests.conftest import FakeJobStoreStub
 
 FIXED_TIMESTAMP = datetime(2026, 3, 13, 12, 0, tzinfo=UTC)
 
@@ -79,43 +80,7 @@ def _raw_object(
     }
 
 
-class _FakeJobStore:
-    def __init__(self) -> None:
-        self._jobs: list[OfflineJob] = []
 
-    def enqueue_offline_job(self, job: OfflineJob | dict[str, Any]) -> None:
-        self._jobs.append(OfflineJob.model_validate(job))
-
-    def iter_offline_jobs(
-        self,
-        *,
-        statuses: Any = (),
-    ) -> list[OfflineJob]:
-        return list(self._jobs)
-
-    def claim_offline_job(
-        self, *, worker_id: str, now: Any, job_kinds: Any = (),
-    ) -> OfflineJob | None:
-        return None
-
-    def complete_offline_job(
-        self, job_id: str, *, worker_id: str, completed_at: Any, result: Any,
-    ) -> None:
-        pass
-
-    def fail_offline_job(
-        self, job_id: str, *, worker_id: str, failed_at: Any, error: Any,
-    ) -> None:
-        pass
-
-    def cancel_offline_job(
-        self,
-        job_id: str,
-        *,
-        cancelled_at: Any = None,
-        error: Any = None,
-    ) -> None:
-        pass
 
 
 # ---------------------------------------------------------------------------
@@ -247,7 +212,7 @@ def test_raw_record_not_affected_by_proposal_filter() -> None:
 
 def test_scheduler_on_schema_promoted_enqueues_verify_proposal() -> None:
     """β-4: on_schema_promoted enqueues VERIFY_PROPOSAL job."""
-    job_store = _FakeJobStore()
+    job_store = FakeJobStoreStub()
     scheduler = OfflineJobScheduler(job_store, clock=lambda: FIXED_TIMESTAMP)
     job_id = scheduler.on_schema_promoted("schema-001")
     assert job_id is not None
