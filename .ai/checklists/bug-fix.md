@@ -7,6 +7,7 @@ Use this checklist when fixing a bug.
 ## Investigation
 
 - [ ] Reproduce the bug with a test (write a failing test FIRST)
+- [ ] If the fix will span more than 5 files, multiple subsystems, or more than one commit, create or update `PLANS.md` from `.ai/templates/PLANS.md`
 - [ ] Identify the root cause (not just the symptom)
 - [ ] Check if the bug exists in related code paths
 

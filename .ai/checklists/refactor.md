@@ -9,6 +9,7 @@ Use this checklist when refactoring existing code.
 - [ ] Define the refactoring goal in one sentence
 - [ ] Confirm the refactoring is requested or clearly necessary (not "nice to have")
 - [ ] Ensure full test suite passes BEFORE starting (`uv run pytest tests/ -x`)
+- [ ] If the refactor spans more than 5 files, multiple subsystems, or more than one commit, create or update `PLANS.md` from `.ai/templates/PLANS.md`
 - [ ] If the target file is over 400 lines, define the extraction boundary before editing
 
 ## Scope

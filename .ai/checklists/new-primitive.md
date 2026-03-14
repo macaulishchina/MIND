@@ -8,6 +8,7 @@ Use this checklist when adding a new primitive operation to `mind/primitives/`.
 
 - [ ] Read `.ai/rules/primitives.md`
 - [ ] Read `.ai/rules/kernel.md` (if new store methods needed)
+- [ ] If this change spans more than 5 files or multiple subsystems, create or update `PLANS.md` from `.ai/templates/PLANS.md`
 - [ ] Define the primitive's purpose in one sentence
 - [ ] Confirm it doesn't overlap with existing primitives
 

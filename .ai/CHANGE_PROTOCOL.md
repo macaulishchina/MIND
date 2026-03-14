@@ -130,7 +130,19 @@
 
 ---
 
-## 12. Documentation Sync Rules
+## 12. Planning a Large Change
+
+| Step | File(s) to change |
+|------|--------------------|
+| 1. Create or update a repo-root plan | `PLANS.md` from `.ai/templates/PLANS.md` |
+| 2. Record scope and constraints | Goal, constraints, non-goals, affected areas |
+| 3. Break work into verifiable slices | `## Steps` + `## Verification` |
+| 4. Keep plan current during execution | `## Progress Log`, `## Decisions`, `## Open Questions` |
+| 5. Close or archive the plan after the work lands | Update final status and follow-ups |
+
+---
+
+## 13. Documentation Sync Rules
 
 From `docs/docs-authoring.md`:
 
@@ -144,7 +156,7 @@ From `docs/docs-authoring.md`:
 
 ---
 
-## 13. Verification Checklist (After Any Change)
+## 14. Verification Checklist (After Any Change)
 
 - [ ] `uv run ruff check mind/ tests/ scripts/` — zero errors
 - [ ] `uv run mypy mind/ tests/ scripts/` — zero errors

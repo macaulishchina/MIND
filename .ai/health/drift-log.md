@@ -37,3 +37,14 @@
 - **Resolution**: Added global AI workflow constraints, expanded the routing
   table, added `domain-services.md`, `transport.md`, `telemetry.md`, and
   extended `CHANGE_PROTOCOL.md` with the missing synchronization maps.
+
+### 2026-03-14 — Agent-native planning and instruction assets were implicit
+
+- **Type**: blind-spot
+- **Rule**: `CONSTITUTION.md` §3, `CHANGE_PROTOCOL.md`, agent entrypoint files
+- **Detail**: The repo had solid code rules, but plan-driven execution,
+  root-level agent entrypoint guidance, and health-check validation for plan
+  assets were still mostly implicit.
+- **Resolution**: Added `PLANS.md` template guidance, created `AGENTS.md`,
+  aligned `CLAUDE.md`, added `app-core.md`, and extended
+  `scripts/ai_health_check.py` with agent-asset and placeholder-code checks.

@@ -4,6 +4,10 @@ Use this checklist when adding a REST API, MCP tool, or CLI command.
 
 ---
 
+## Pre-work
+
+- [ ] If this change spans more than 5 files or multiple subsystems, create or update `PLANS.md` from `.ai/templates/PLANS.md`
+
 ## REST API Endpoint
 
 - [ ] Read `.ai/rules/api.md`

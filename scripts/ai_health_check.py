@@ -38,10 +38,14 @@ REQUIRED_AI_FILES = [
     ".ai/CONVENTIONS.md",
     ".ai/CURRENT_STATE.md",
     ".ai/CHANGE_PROTOCOL.md",
+    ".ai/rules/app-core.md",
     ".ai/rules/kernel.md",
     ".ai/rules/primitives.md",
+    ".ai/rules/domain-services.md",
     ".ai/rules/app-services.md",
     ".ai/rules/api.md",
+    ".ai/rules/transport.md",
+    ".ai/rules/telemetry.md",
     ".ai/rules/testing.md",
     ".ai/rules/migration.md",
     ".ai/rules/docs.md",
@@ -62,6 +66,17 @@ REQUIRED_HUMAN_FILES = [
     ".human/规则维护.md",
     ".human/自纠机制.md",
 ]
+
+ROOT_AGENT_ENTRYPOINT_FILES = ("AGENTS.md", "CLAUDE.md", "GEMINI.md")
+PLANS_TEMPLATE_PATH = Path(".ai/templates/PLANS.md")
+PLAN_TEMPLATE_REQUIRED_SECTIONS = (
+    "# Execution Plan",
+    "## Goal",
+    "## Constraints",
+    "## Steps",
+    "## Verification",
+    "## Progress Log",
+)
 
 # Architecture layer definition  (lower index = lower layer)
 # §2.1: Upper layers call down only.
@@ -441,6 +456,22 @@ def check_forbidden_patterns() -> dict[str, Any]:
                     fix_hint="Log the exception or re-raise.",
                 ))
 
+            # --- TODO / FIXME / HACK / XXX markers in production code ---
+            if re.search(r"#.*\b(TODO|FIXME|HACK|XXX)\b", line):
+                items.append(_v(
+                    fstr, i, "forbidden/placeholder-marker",
+                    f"Placeholder marker in production code: {stripped}",
+                    fix_hint="Resolve it or record the follow-up in a plan/drift log.",
+                ))
+
+            # --- raise NotImplementedError ---
+            if re.search(r"raise\s+NotImplementedError(?:\(|\b)", stripped):
+                items.append(_v(
+                    fstr, i, "forbidden/not-implemented",
+                    "raise NotImplementedError in production code",
+                    fix_hint="Use an abstract base class or provide the final implementation.",
+                ))
+
             # --- print() in non-CLI modules ---
             if fstr not in CLI_MODULES and re.match(r"print\s*\(", stripped):
                 # Exclude comments and strings (rough heuristic)
@@ -531,6 +562,7 @@ def check_governance_files() -> dict[str, Any]:
     return {
         "check": "governance_files",
         "passed": len(items) == 0,
+        "violation_count": len(items),
         "total_required": len(all_required),
         "missing_count": len(missing),
         "empty_count": len(empty),
@@ -538,6 +570,96 @@ def check_governance_files() -> dict[str, Any]:
         "constitution_limit": CONSTITUTION_LINE_LIMIT,
         "missing_files": missing,
         "empty_files": empty,
+        "violations": items,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Check: agent assets  (repo-native instructions + plan template)
+# ---------------------------------------------------------------------------
+
+def check_agent_assets() -> dict[str, Any]:
+    """Verify agent entrypoint files and plan template exist and stay useful."""
+    items: list[Violation] = []
+    present_files = [Path(name) for name in ROOT_AGENT_ENTRYPOINT_FILES if Path(name).exists()]
+    entrypoint_texts: dict[str, str] = {}
+
+    if not present_files:
+        items.append(_v(
+            ".",
+            0,
+            "agent/missing-entrypoint",
+            "No root agent instruction file found (expected AGENTS.md, CLAUDE.md, or GEMINI.md).",
+            fix_hint="Add a root agent instruction file that points to .ai/CONSTITUTION.md.",
+        ))
+    else:
+        for path in present_files:
+            text = path.read_text().strip()
+            entrypoint_texts[str(path)] = text
+            if not text:
+                items.append(_v(
+                    str(path),
+                    0,
+                    "agent/empty-entrypoint",
+                    f"Agent instruction file is empty: {path}",
+                    fix_hint=(
+                        "Add a short repo-specific entrypoint that points to "
+                        ".ai/CONSTITUTION.md."
+                    ),
+                ))
+
+        if not any(".ai/CONSTITUTION.md" in text for text in entrypoint_texts.values()):
+            items.append(_v(
+                ".",
+                0,
+                "agent/missing-constitution-reference",
+                "No root agent instruction file references .ai/CONSTITUTION.md.",
+                fix_hint="Point at .ai/CONSTITUTION.md from AGENTS.md, CLAUDE.md, or GEMINI.md.",
+            ))
+
+        if not any(".ai/templates/PLANS.md" in text for text in entrypoint_texts.values()):
+            items.append(_v(
+                ".",
+                0,
+                "agent/missing-plan-reference",
+                "No root agent instruction file references .ai/templates/PLANS.md.",
+                fix_hint="Tell agents when to create PLANS.md from the template.",
+            ))
+
+    if not PLANS_TEMPLATE_PATH.exists():
+        items.append(_v(
+            str(PLANS_TEMPLATE_PATH),
+            0,
+            "agent/missing-plan-template",
+            "Missing plan template: .ai/templates/PLANS.md",
+            fix_hint="Add the execution plan template under .ai/templates/PLANS.md.",
+        ))
+    else:
+        plan_text = PLANS_TEMPLATE_PATH.read_text().strip()
+        if not plan_text:
+            items.append(_v(
+                str(PLANS_TEMPLATE_PATH),
+                0,
+                "agent/empty-plan-template",
+                "Plan template exists but is empty.",
+                fix_hint="Populate the plan template with required sections.",
+            ))
+        else:
+            for heading in PLAN_TEMPLATE_REQUIRED_SECTIONS:
+                if heading not in plan_text:
+                    items.append(_v(
+                        str(PLANS_TEMPLATE_PATH),
+                        0,
+                        "agent/plan-template-missing-section",
+                        f"Plan template missing section: {heading}",
+                        fix_hint="Add the missing heading to keep execution plans consistent.",
+                    ))
+
+    return {
+        "check": "agent_assets",
+        "passed": len(items) == 0,
+        "violation_count": len(items),
+        "entrypoint_count": len(present_files),
         "violations": items,
     }
 
@@ -554,7 +676,8 @@ def compute_score(checks: dict[str, Any]) -> dict[str, Any]:
       mypy:           20  (each error costs 0.1 pt, max deduction 20)
       pytest:         30  (proportional to pass rate; 0 tests = 0 pts)
       architecture:   15  (each violation costs 3 pts, max deduction 15)
-      governance:     10  (proportional to files present & constitution ok)
+      governance:      5  (proportional to files present & constitution ok)
+      agent_assets:    5  (repo-native instructions and plan template)
       forbidden:       5  (each violation costs 0.5 pt, max deduction 5)
     """
     scores: dict[str, float] = {}
@@ -586,12 +709,17 @@ def compute_score(checks: dict[str, Any]) -> dict[str, Any]:
     gov = checks.get("governance_files", {})
     total_req = gov.get("total_required", 25)
     present = total_req - gov.get("missing_count", 0) - gov.get("empty_count", 0)
-    gov_score = 10.0 * present / total_req if total_req > 0 else 0.0
+    gov_score = 5.0 * present / total_req if total_req > 0 else 0.0
     const_lines = gov.get("constitution_lines", 0)
     const_limit = gov.get("constitution_limit", CONSTITUTION_LINE_LIMIT)
     if const_lines > const_limit:
         gov_score = max(0.0, gov_score - 2.0)
     scores["governance"] = gov_score
+
+    # agent assets
+    agent = checks.get("agent_assets", {})
+    agent_v = agent.get("violation_count", 0)
+    scores["agent_assets"] = max(0.0, 5.0 - agent_v * 1.0)
 
     # forbidden patterns
     fp = checks.get("forbidden_patterns", {})
@@ -635,6 +763,7 @@ def compare_reports(
         ("arch_violations", ("checks", "architecture", "violation_count")),
         ("forbidden_violations", ("checks", "forbidden_patterns", "violation_count")),
         ("governance_missing", ("checks", "governance_files", "missing_count")),
+        ("agent_asset_violations", ("checks", "agent_assets", "violation_count")),
         ("score", ("score", "total")),
     ]
 
@@ -720,8 +849,8 @@ def generate_ai_repair_prompt(report: dict[str, Any]) -> str:
         category = rule.split("/")[0] if "/" in rule else rule
         by_rule.setdefault(category, []).append(v)
 
-    # Priority order: pytest > arch > forbidden > mypy > ruff > governance
-    priority = ["pytest", "arch", "forbidden", "mypy", "ruff", "governance"]
+    # Priority order: pytest > arch > forbidden > mypy > ruff > agent > governance
+    priority = ["pytest", "arch", "forbidden", "mypy", "ruff", "agent", "governance"]
     ordered_cats = sorted(
         by_rule.keys(), key=lambda c: priority.index(c) if c in priority else 99,
     )
@@ -759,11 +888,11 @@ def generate_ai_repair_prompt(report: dict[str, Any]) -> str:
 
 def generate_report(output_dir: Path, *, quick: bool = False) -> dict[str, Any]:
     """Generate a comprehensive health report."""
-    print("🔍 Running AI governance health check (v2.0)...\n")
+    print("🔍 Running AI governance health check (v2.1)...\n")
 
     results: dict[str, Any] = {
         "timestamp": datetime.now(UTC).isoformat(),
-        "version": "2.0.0",
+        "version": "2.1.0",
         "checks": {},
     }
 
@@ -775,6 +904,7 @@ def generate_report(output_dir: Path, *, quick: bool = False) -> dict[str, Any]:
         ("architecture", check_architecture),
         ("forbidden_patterns", check_forbidden_patterns),
         ("governance_files", check_governance_files),
+        ("agent_assets", check_agent_assets),
     ]
 
     all_passed = True
@@ -857,6 +987,11 @@ def _check_summary(name: str, result: dict[str, Any]) -> str:
             f"{result.get('empty_count', 0)} empty, "
             f"constitution {result.get('constitution_lines', 0)}"
             f"/{result.get('constitution_limit', 500)} lines"
+        )
+    if name == "agent_assets":
+        return (
+            f"{result.get('entrypoint_count', 0)} entrypoints, "
+            f"{result.get('violation_count', 0)} asset issues"
         )
     return str(result.get("passed", "?"))
 

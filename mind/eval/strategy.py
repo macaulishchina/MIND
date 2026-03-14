@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from dataclasses import dataclass
 
@@ -20,11 +21,12 @@ class StrategyStepDecision:
     selected_ids: tuple[str, ...]
 
 
-class MindStrategy:
+class MindStrategy(ABC):
     """Interface implemented by fixed-rule and optimized strategies."""
 
     strategy_id = "abstract"
 
+    @abstractmethod
     def select_step_handles(
         self,
         *,
@@ -34,8 +36,7 @@ class MindStrategy:
         step: LongHorizonStep,
         candidate_ids: tuple[str, ...],
         ranking_by_id: Mapping[str, float],
-    ) -> StrategyStepDecision:
-        raise NotImplementedError
+    ) -> StrategyStepDecision: ...
 
 
 @dataclass(frozen=True)

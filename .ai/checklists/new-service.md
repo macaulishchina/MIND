@@ -7,6 +7,7 @@ Use this checklist when creating a brand new service under `mind/app/services/`.
 ## Pre-work
 
 - [ ] Read `.ai/rules/app-services.md`
+- [ ] If this change spans more than 5 files or multiple subsystems, create or update `PLANS.md` from `.ai/templates/PLANS.md`
 - [ ] Determine which domain service or primitive this wraps
 - [ ] Confirm the service doesn't already exist (check `mind/app/services/`)
 
