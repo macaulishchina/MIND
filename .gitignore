@@ -7,7 +7,7 @@ artifacts/dev/
 artifacts/docs-release/
 code-plans/
 site/
-uv.lock
+.ai/health/latest-report.json
 
 # 实际环境变量 (含密钥, 勿提交)
 # 模板文件 .env.example / .env.dev / .env.prod 保留在版本控制中
