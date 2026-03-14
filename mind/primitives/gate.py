@@ -135,9 +135,11 @@ def evaluate_primitive_gate(
                 before_logs = len(store.iter_primitive_call_logs())
                 before_budget_events = len(store.iter_budget_events())
 
+                cap_port = _StubCapabilityPort()
                 service = _FaultInjectingPrimitiveService(
                     store,
                     clock=clock.now,
+                    capability_service=cap_port,
                     inject_fault_for=call.primitive if call.expectation.inject_fault else None,
                 )
                 method = getattr(service, call.primitive.value)
@@ -239,6 +241,48 @@ def assert_primitive_gate(result: PrimitiveGateResult) -> None:
             "C-5 failed: rollback atomicity "
             f"({result.rollback_atomic_count}/{result.rollback_total})"
         )
+
+
+class _StubCapabilityPort:
+    """Deterministic CapabilityPort for gate evaluation (no capabilities import)."""
+
+    def summarize_text(
+        self,
+        *,
+        request_id: str,
+        source_text: str,
+        source_refs: list[str],
+        instruction: str | None = None,
+        provider_config: Any = None,
+    ) -> str:
+        words = source_text.split()[:24]
+        return " ".join(words) + ("..." if len(source_text.split()) > 24 else "")
+
+    def reflect_text(
+        self,
+        *,
+        request_id: str,
+        focus: str | dict[str, Any],
+        evidence_text: str,
+        episode_id: str | None = None,
+        outcome_hint: str | None = None,
+        evidence_refs: list[str] | None = None,
+        provider_config: Any = None,
+    ) -> str:
+        f = focus if isinstance(focus, str) else json.dumps(focus, sort_keys=True)
+        if outcome_hint in {"success", "failure"}:
+            prefix = "Episode succeeded" if outcome_hint == "success" else "Episode failed"
+            return f"{prefix}; reflection focus: {f[:120]}"
+        words = evidence_text.split()[:20]
+        return f"{f}: {' '.join(words)}{'...' if len(evidence_text.split()) > 20 else ''}"
+
+    def resolve_provider_config(
+        self,
+        *,
+        selection: Any = None,
+        env: Any = None,
+    ) -> Any:
+        return None
 
 
 class _FaultInjectingPrimitiveService(PrimitiveService):

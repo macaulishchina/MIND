@@ -10,9 +10,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
+from mind.kernel.contracts import RetrieveQueryMode
 from mind.kernel.priority import effective_priority_or_base
 from mind.kernel.schema import strip_control_plane_metadata
-from mind.primitives.contracts import RetrieveQueryMode
 
 EMBEDDING_DIM = 64
 _CJK_BLOCK = r"\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff"

@@ -9,16 +9,6 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
-from mind.capabilities import (
-    CapabilityService,
-    resolve_capability_provider_config,
-)
-from mind.capabilities import (
-    ReflectRequest as CapabilityReflectRequest,
-)
-from mind.capabilities import (
-    SummarizeRequest as CapabilitySummarizeRequest,
-)
 from mind.kernel.provenance import build_direct_provenance_record, build_provenance_summary
 from mind.kernel.retrieval import (
     build_query_embedding,
@@ -34,6 +24,7 @@ from .contracts import (
     BudgetCost,
     BudgetEvent,
     Capability,
+    CapabilityPort,
     LinkRequest,
     LinkResponse,
     MemoryObject,
@@ -86,7 +77,7 @@ class PrimitiveService:
         clock: Callable[[], datetime] | None = None,
         vector_retriever: VectorRetriever | None = None,
         query_embedder: QueryEmbedder | None = None,
-        capability_service: CapabilityService | None = None,
+        capability_service: CapabilityPort | None = None,
         telemetry_recorder: TelemetryRecorder | None = None,
         provider_env_resolver: ProviderEnvResolver | None = None,
     ) -> None:
@@ -99,7 +90,7 @@ class PrimitiveService:
         )
         self._vector_retriever = vector_retriever
         self._query_embedder = query_embedder
-        self._capability_service = capability_service or CapabilityService(clock=self._clock)
+        self._capability_service = capability_service
         self._provider_env_resolver = provider_env_resolver
 
     def write_raw(
@@ -633,15 +624,13 @@ class PrimitiveService:
         source_objects = self._read_existing_objects(request.input_refs, transaction)
         combined_text = " ".join(self._object_text(obj) for obj in source_objects)
         provider_config = self._capability_provider_config(context)
-        summary_text = self._capability_service.summarize(
-            CapabilitySummarizeRequest(
-                request_id=f"primitive-summarize-{uuid4().hex[:8]}",
-                source_text=combined_text,
-                source_refs=list(request.input_refs),
-                instruction=f"summary_scope={request.summary_scope};target_kind={request.target_kind}",
-            ),
+        summary_text = self._require_capability_port().summarize_text(
+            request_id=f"primitive-summarize-{uuid4().hex[:8]}",
+            source_text=combined_text,
+            source_refs=list(request.input_refs),
+            instruction=f"summary_scope={request.summary_scope};target_kind={request.target_kind}",
             provider_config=provider_config,
-        ).summary_text
+        )
         costs = [
             BudgetCost(category=PrimitiveCostCategory.GENERATION, amount=2.0),
             BudgetCost(category=PrimitiveCostCategory.MAINTENANCE, amount=0.5),
@@ -787,17 +776,15 @@ class PrimitiveService:
         source_refs = [request.episode_id] + [record["id"] for record in raw_records[-2:]]
         evidence_text = " ".join(self._object_text(record) for record in raw_records[-2:])
         provider_config = self._capability_provider_config(context)
-        reflection_summary = self._capability_service.reflect(
-            CapabilityReflectRequest(
-                request_id=f"primitive-reflect-{uuid4().hex[:8]}",
-                focus=request.focus,
-                evidence_text=evidence_text,
-                episode_id=request.episode_id,
-                outcome_hint="success" if success else "failure",
-                evidence_refs=source_refs,
-            ),
+        reflection_summary = self._require_capability_port().reflect_text(
+            request_id=f"primitive-reflect-{uuid4().hex[:8]}",
+            focus=request.focus,
+            evidence_text=evidence_text,
+            episode_id=request.episode_id,
+            outcome_hint="success" if success else "failure",
+            evidence_refs=source_refs,
             provider_config=provider_config,
-        ).reflection_text
+        )
         reflection_object = {
             "id": reflection_object_id,
             "type": "ReflectionNote",
@@ -1218,6 +1205,11 @@ class PrimitiveService:
         text = " ".join(str(content).split())
         return text[:77] + "..." if len(text) > 80 else text
 
+    def _require_capability_port(self) -> CapabilityPort:
+        if self._capability_service is None:
+            raise RuntimeError("No CapabilityPort configured on PrimitiveService")
+        return self._capability_service
+
     def _capability_provider_config(
         self,
         context: PrimitiveExecutionContext,
@@ -1225,7 +1217,7 @@ class PrimitiveService:
         if not context.provider_selection:
             return None
         try:
-            return resolve_capability_provider_config(
+            return self._require_capability_port().resolve_provider_config(
                 selection=context.provider_selection,
                 env=self._provider_env_resolver()
                 if self._provider_env_resolver is not None

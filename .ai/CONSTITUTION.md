@@ -120,6 +120,17 @@ All primitive operations use typed Pydantic contracts (`mind/primitives/contract
 - Format: Google-style docstrings (one-liner or multi-line).
 - **MUST NOT**: Add docstrings to code you did not change (avoid noise).
 
+### 3.7 Change Scope & File Growth
+- **MUST**: Shape work as the smallest viable change. If a task would touch
+  more than 5 files, split it into smaller tasks unless the extra files are
+  required by `CHANGE_PROTOCOL.md`.
+- **MUST NOT**: Mix feature work, refactoring, and unrelated cleanup in the
+  same change.
+- **MUST**: If a target file is already over 400 lines, prefer extracting a
+  sibling module instead of adding another responsibility to the file.
+- **MUST**: If a file is already over 500 lines, only make minimal bug-fix
+  edits or split it as part of the change.
+
 ---
 
 ## 4. Product Constraints (MUST respect)
@@ -143,6 +154,8 @@ All primitive operations use typed Pydantic contracts (`mind/primitives/contract
 - ❌ `print()` for logging — use `logging.getLogger(__name__)`.
 - ❌ Nested functions deeper than 2 levels.
 - ❌ Files longer than 500 lines — split into modules.
+- ❌ Placeholder production code (`TODO`, `FIXME`, `NotImplementedError`,
+  `pass`, temporary fallback) as the final implementation.
 - ❌ Circular imports — if you get one, the layering is wrong.
 
 ---
@@ -155,8 +168,11 @@ All primitive operations use typed Pydantic contracts (`mind/primitives/contract
 |---------------------------------|-----------------------------------------|
 | `mind/kernel/`                  | `.ai/rules/kernel.md`                   |
 | `mind/primitives/`             | `.ai/rules/primitives.md`               |
+| `mind/access/`, `mind/governance/`, `mind/capabilities/`, `mind/offline/`, `mind/workspace/` | `.ai/rules/domain-services.md` |
 | `mind/app/services/`           | `.ai/rules/app-services.md`             |
 | `mind/api/`                    | `.ai/rules/api.md`                      |
+| `mind/mcp/`, `mind/frontend/`, `mind/cli.py`, `mind/product_cli.py` | `.ai/rules/transport.md` |
+| `mind/telemetry/`              | `.ai/rules/telemetry.md`                |
 | `tests/`                       | `.ai/rules/testing.md`                  |
 | `alembic/versions/`           | `.ai/rules/migration.md`               |
 | `docs/`                        | `.ai/rules/docs.md`                     |

@@ -6,8 +6,13 @@ from collections.abc import Mapping
 from typing import Any
 from uuid import uuid4
 
-from mind.app.context import PrincipalContext, PrincipalKind, SessionContext, SourceChannel
-from mind.primitives.contracts import Capability
+from mind.app.context import (
+    Capability,
+    PrincipalContext,
+    PrincipalKind,
+    SessionContext,
+    SourceChannel,
+)
 
 
 def map_mcp_session(

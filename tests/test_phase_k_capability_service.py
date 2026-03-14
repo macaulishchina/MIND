@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -19,10 +20,9 @@ from mind.capabilities import (
     OfflineReconstructRequest,
     OfflineReconstructResponse,
     ReflectRequest,
-    ReflectResponse,
     SummarizeRequest,
-    SummarizeResponse,
     build_capability_adapters_from_environment,
+    resolve_capability_provider_config,
 )
 from mind.fixtures.golden_episode_set import build_core_object_showcase, build_golden_episode_set
 from mind.kernel.store import SQLiteMemoryStore
@@ -212,21 +212,27 @@ def test_build_capability_adapters_from_environment_returns_only_configured_prov
 
 
 def test_primitive_summarize_delegates_to_capability_service(tmp_path: Path) -> None:
-    captured: dict[str, SummarizeRequest] = {}
+    captured: dict[str, Any] = {}
 
-    class _FakeCapabilityService:
-        def summarize(
+    class _FakeCapabilityPort:
+        def summarize_text(
             self,
-            request: SummarizeRequest,
             *,
-            provider_config: CapabilityProviderConfig | None = None,
-        ) -> SummarizeResponse:
-            captured["request"] = request
-            return SummarizeResponse(
-                summary_text="capability summary output",
-                source_refs=list(request.source_refs),
-                trace=_trace(),
-            )
+            request_id: str,
+            source_text: str,
+            source_refs: list[str],
+            instruction: str | None = None,
+            provider_config: Any = None,
+        ) -> str:
+            captured["source_refs"] = source_refs
+            captured["instruction"] = instruction
+            return "capability summary output"
+
+        def reflect_text(self, **kwargs: Any) -> str:
+            raise NotImplementedError
+
+        def resolve_provider_config(self, **kwargs: Any) -> Any:
+            return None
 
     showcase = build_core_object_showcase()
     with SQLiteMemoryStore(tmp_path / "phase_k_summarize.sqlite3") as store:
@@ -234,7 +240,7 @@ def test_primitive_summarize_delegates_to_capability_service(tmp_path: Path) -> 
         service = PrimitiveService(
             store,
             clock=_fixed_clock,
-            capability_service=_FakeCapabilityService(),  # type: ignore[arg-type]
+            capability_service=_FakeCapabilityPort(),
         )
 
         result = service.summarize(
@@ -247,8 +253,7 @@ def test_primitive_summarize_delegates_to_capability_service(tmp_path: Path) -> 
         )
 
         assert result.outcome is PrimitiveOutcome.SUCCESS
-        assert captured["request"].capability is CapabilityName.SUMMARIZE
-        assert captured["request"].source_refs == [showcase[0]["id"]]
+        assert captured["source_refs"] == [showcase[0]["id"]]
         assert result.response is not None
         stored = store.read_object(result.response["summary_object_id"])
         assert stored is not None
@@ -260,20 +265,29 @@ def test_primitive_summarize_passes_provider_selection_to_capability_service(
 ) -> None:
     captured: dict[str, Any] = {}
 
-    class _FakeCapabilityService:
-        def summarize(
+    class _FakeCapabilityPort:
+        def summarize_text(
             self,
-            request: SummarizeRequest,
             *,
-            provider_config: CapabilityProviderConfig | None = None,
-        ) -> SummarizeResponse:
-            captured["request"] = request
+            request_id: str,
+            source_text: str,
+            source_refs: list[str],
+            instruction: str | None = None,
+            provider_config: Any = None,
+        ) -> str:
             captured["provider_config"] = provider_config
-            return SummarizeResponse(
-                summary_text="provider-selected summary",
-                source_refs=list(request.source_refs),
-                trace=_trace(),
-            )
+            return "provider-selected summary"
+
+        def reflect_text(self, **kwargs: Any) -> str:
+            raise NotImplementedError
+
+        def resolve_provider_config(
+            self,
+            *,
+            selection: Any = None,
+            env: Mapping[str, str] | None = None,
+        ) -> Any:
+            return resolve_capability_provider_config(selection=selection, env=env)
 
     showcase = build_core_object_showcase()
     with SQLiteMemoryStore(tmp_path / "phase_k_summarize_provider_selection.sqlite3") as store:
@@ -281,7 +295,7 @@ def test_primitive_summarize_passes_provider_selection_to_capability_service(
         service = PrimitiveService(
             store,
             clock=_fixed_clock,
-            capability_service=_FakeCapabilityService(),  # type: ignore[arg-type]
+            capability_service=_FakeCapabilityPort(),
         )
 
         result = service.summarize(
@@ -333,32 +347,39 @@ def test_primitive_summarize_rejects_invalid_provider_selection(tmp_path: Path) 
 
 
 def test_primitive_reflect_delegates_to_capability_service(tmp_path: Path) -> None:
-    captured: dict[str, ReflectRequest] = {}
+    captured: dict[str, Any] = {}
     episode = next(
         fixture for fixture in build_golden_episode_set() if fixture.episode_id == "episode-004"
     )
 
-    class _FakeCapabilityService:
-        def reflect(
+    class _FakeCapabilityPort:
+        def summarize_text(self, **kwargs: Any) -> str:
+            raise NotImplementedError
+
+        def reflect_text(
             self,
-            request: ReflectRequest,
             *,
-            provider_config: CapabilityProviderConfig | None = None,
-        ) -> ReflectResponse:
-            captured["request"] = request
-            return ReflectResponse(
-                reflection_text="Episode failed; reflection focus: delegated",
-                claims=["failure", "delegated"],
-                evidence_refs=list(request.evidence_refs),
-                trace=_trace(),
-            )
+            request_id: str,
+            focus: str | dict[str, Any],
+            evidence_text: str,
+            episode_id: str | None = None,
+            outcome_hint: str | None = None,
+            evidence_refs: list[str] | None = None,
+            provider_config: Any = None,
+        ) -> str:
+            captured["episode_id"] = episode_id
+            captured["outcome_hint"] = outcome_hint
+            return "Episode failed; reflection focus: delegated"
+
+        def resolve_provider_config(self, **kwargs: Any) -> Any:
+            return None
 
     with SQLiteMemoryStore(tmp_path / "phase_k_reflect.sqlite3") as store:
         store.insert_objects(episode.objects)
         service = PrimitiveService(
             store,
             clock=_fixed_clock,
-            capability_service=_FakeCapabilityService(),  # type: ignore[arg-type]
+            capability_service=_FakeCapabilityPort(),
         )
 
         result = service.reflect(
@@ -370,9 +391,8 @@ def test_primitive_reflect_delegates_to_capability_service(tmp_path: Path) -> No
         )
 
         assert result.outcome is PrimitiveOutcome.SUCCESS
-        assert captured["request"].capability is CapabilityName.REFLECT
-        assert captured["request"].episode_id == episode.episode_id
-        assert captured["request"].outcome_hint == "failure"
+        assert captured["episode_id"] == episode.episode_id
+        assert captured["outcome_hint"] == "failure"
         assert result.response is not None
         stored = store.read_object(result.response["reflection_object_id"])
         assert stored is not None
@@ -387,28 +407,38 @@ def test_primitive_reflect_passes_provider_selection_to_capability_service(
         fixture for fixture in build_golden_episode_set() if fixture.episode_id == "episode-004"
     )
 
-    class _FakeCapabilityService:
-        def reflect(
+    class _FakeCapabilityPort:
+        def summarize_text(self, **kwargs: Any) -> str:
+            raise NotImplementedError
+
+        def reflect_text(
             self,
-            request: ReflectRequest,
             *,
-            provider_config: CapabilityProviderConfig | None = None,
-        ) -> ReflectResponse:
-            captured["request"] = request
+            request_id: str,
+            focus: str | dict[str, Any],
+            evidence_text: str,
+            episode_id: str | None = None,
+            outcome_hint: str | None = None,
+            evidence_refs: list[str] | None = None,
+            provider_config: Any = None,
+        ) -> str:
             captured["provider_config"] = provider_config
-            return ReflectResponse(
-                reflection_text="provider-selected reflection",
-                claims=["delegated"],
-                evidence_refs=list(request.evidence_refs),
-                trace=_trace(),
-            )
+            return "provider-selected reflection"
+
+        def resolve_provider_config(
+            self,
+            *,
+            selection: Any = None,
+            env: Mapping[str, str] | None = None,
+        ) -> Any:
+            return resolve_capability_provider_config(selection=selection, env=env)
 
     with SQLiteMemoryStore(tmp_path / "phase_k_reflect_provider_selection.sqlite3") as store:
         store.insert_objects(episode.objects)
         service = PrimitiveService(
             store,
             clock=_fixed_clock,
-            capability_service=_FakeCapabilityService(),  # type: ignore[arg-type]
+            capability_service=_FakeCapabilityPort(),
         )
 
         result = service.reflect(

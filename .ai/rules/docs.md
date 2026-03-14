@@ -45,7 +45,7 @@ docs/
 ## Rules
 
 1. **Sync with code**: When code changes, update the corresponding docs
-   immediately (see CHANGE_PROTOCOL.md §8).
+   immediately (see `CHANGE_PROTOCOL.md`, "Documentation Sync Rules").
 
 2. **Language**: Documentation is in **Chinese** (matches existing docs and
    `mkdocs.yml` lang=zh setting). Code comments and `.ai/` files are in English.

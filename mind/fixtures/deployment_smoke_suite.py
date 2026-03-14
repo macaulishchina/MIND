@@ -2,14 +2,28 @@
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
 
-import yaml  # type: ignore[import-untyped]
-
+from .deployment_smoke_helpers import (
+    depends_on_healthy,
+    dockerfile_ref,
+    env_file_ref,
+    healthcheck_command,
+    load_yaml,
+    parse_compose_file,  # noqa: F401
+    parse_dockerfile,  # noqa: F401
+    parse_dockerfile_instructions,
+    postgres_password_ref,
+    read_deployment_smoke_report_json,  # noqa: F401
+    read_env_var_names,
+    read_text,
+    render_deployment_smoke_report_markdown,  # noqa: F401
+    worker_command,
+    write_deployment_smoke_report_json,  # noqa: F401
+    write_deployment_smoke_report_markdown,  # noqa: F401
+)
 from .product_transport_audit import (
     ProductTransportAuditReport,
     evaluate_runtime_product_transport_audit_report,
@@ -194,9 +208,9 @@ def evaluate_deployment_smoke_suite(
 ) -> DeploymentSmokeReport:
     """Evaluate the deployment smoke suite against the repository root."""
 
-    compose_data = _load_yaml(root / "compose.yaml")
-    compose_dev_data = _load_yaml(root / "compose.dev.yaml")
-    compose_docs_data = _load_yaml(root / "compose.docs.yaml")
+    compose_data = load_yaml(root / "compose.yaml")
+    compose_dev_data = load_yaml(root / "compose.dev.yaml")
+    compose_docs_data = load_yaml(root / "compose.docs.yaml")
     compose_services = compose_data.get("services", {}) if isinstance(compose_data, dict) else {}
     compose_dev_services = (
         compose_dev_data.get("services", {}) if isinstance(compose_dev_data, dict) else {}
@@ -218,11 +232,11 @@ def evaluate_deployment_smoke_suite(
     dockerfile_worker = root / "Dockerfile.worker"
     env_example = root / ".env.example"
     entrypoint = root / "scripts" / "entrypoint-api.sh"
-    api_instructions = _parse_dockerfile_instructions(dockerfile_api)
-    docs_instructions = _parse_dockerfile_instructions(dockerfile_docs)
-    docs_dev_instructions = _parse_dockerfile_instructions(dockerfile_docs_dev)
-    _parse_dockerfile_instructions(dockerfile_worker)
-    env_vars = _read_env_var_names(env_example)
+    api_instructions = parse_dockerfile_instructions(dockerfile_api)
+    docs_instructions = parse_dockerfile_instructions(dockerfile_docs)
+    docs_dev_instructions = parse_dockerfile_instructions(dockerfile_docs_dev)
+    parse_dockerfile_instructions(dockerfile_worker)
+    env_vars = read_env_var_names(env_example)
     runtime_product_transport_checks = _build_runtime_product_transport_checks(
         runtime_product_transport_report
     )
@@ -236,20 +250,20 @@ def evaluate_deployment_smoke_suite(
         "compose_docs_exists": (root / "compose.docs.yaml").exists(),
         "compose_docs_has_service": "docs" in compose_docs_services,
         "compose_dev_has_docs_service": "docs" in compose_dev_services,
-        "compose_uses_runtime_env_file": _env_file_ref(api) == "${MIND_ENV_FILE:-.env}"
-        and _env_file_ref(worker) == "${MIND_ENV_FILE:-.env}",
+        "compose_uses_runtime_env_file": env_file_ref(api) == "${MIND_ENV_FILE:-.env}"
+        and env_file_ref(worker) == "${MIND_ENV_FILE:-.env}",
         "postgres_healthcheck": bool(postgres.get("healthcheck")),
-        "postgres_uses_configured_password": _postgres_password_ref(postgres)
+        "postgres_uses_configured_password": postgres_password_ref(postgres)
         == "${MIND_POSTGRES_PASSWORD:-postgres}",
         "api_healthcheck": bool(api.get("healthcheck")),
-        "api_healthcheck_endpoint": "/v1/system/health" in _healthcheck_command(api),
+        "api_healthcheck_endpoint": "/v1/system/health" in healthcheck_command(api),
         "worker_healthcheck": bool(worker.get("healthcheck")),
         "docs_healthcheck": bool(docs.get("healthcheck")),
-        "api_depends_on_postgres_healthy": _depends_on_healthy(api, "postgres"),
-        "worker_depends_on_postgres_healthy": _depends_on_healthy(worker, "postgres"),
-        "api_builds_dockerfile_api": _dockerfile_ref(api) == "Dockerfile.api",
-        "docs_builds_dockerfile_docs": _dockerfile_ref(docs) == "Dockerfile.docs",
-        "worker_builds_dockerfile_worker": _dockerfile_ref(worker) == "Dockerfile.worker",
+        "api_depends_on_postgres_healthy": depends_on_healthy(api, "postgres"),
+        "worker_depends_on_postgres_healthy": depends_on_healthy(worker, "postgres"),
+        "api_builds_dockerfile_api": dockerfile_ref(api) == "Dockerfile.api",
+        "docs_builds_dockerfile_docs": dockerfile_ref(docs) == "Dockerfile.docs",
+        "worker_builds_dockerfile_worker": dockerfile_ref(worker) == "Dockerfile.worker",
         "api_exposes_18600": "18600:18600" in list(api.get("ports", [])),
         "dev_api_mounts_frontend": any(
             "frontend" in str(volume)
@@ -269,16 +283,16 @@ def evaluate_deployment_smoke_suite(
             "18606:5678" in str(port)
             for port in list(compose_dev_services.get("api", {}).get("ports", []))
         ),
-        "worker_runs_loop": "mindtest-offline-worker-once" in _worker_command(worker),
+        "worker_runs_loop": "mindtest-offline-worker-once" in worker_command(worker),
         "dockerfile_api_exists": dockerfile_api.exists(),
-        "dockerfile_api_installs_api": "requirements-api.txt" in _read_text(dockerfile_api)
-        and "optional-dependencies" in _read_text(dockerfile_api)
-        and '.get("api", [])' in _read_text(dockerfile_api),
+        "dockerfile_api_installs_api": "requirements-api.txt" in read_text(dockerfile_api)
+        and "optional-dependencies" in read_text(dockerfile_api)
+        and '.get("api", [])' in read_text(dockerfile_api),
         "dockerfile_api_bundles_frontend": any(
             line.startswith("COPY frontend ") for line in api_instructions
         ),
         "dockerfile_api_uses_pip_cache_mount": "--mount=type=cache,target=/root/.cache/pip"
-        in _read_text(dockerfile_api),
+        in read_text(dockerfile_api),
         "dockerfile_api_entrypoint": any(
             "entrypoint-api.sh" in line.lower() for line in api_instructions
         ),
@@ -293,11 +307,11 @@ def evaluate_deployment_smoke_suite(
         ),
         "dockerfile_worker_exists": dockerfile_worker.exists(),
         "dockerfile_worker_installs_project": "pip install --no-build-isolation --no-deps ."
-        in _read_text(dockerfile_worker),
+        in read_text(dockerfile_worker),
         "dockerfile_worker_uses_pip_cache_mount": "--mount=type=cache,target=/root/.cache/pip"
-        in _read_text(dockerfile_worker),
+        in read_text(dockerfile_worker),
         "dockerfile_docs_dev_uses_pip_cache_mount": "--mount=type=cache,target=/root/.cache/pip"
-        in _read_text(dockerfile_docs_dev),
+        in read_text(dockerfile_docs_dev),
         "env_example_exists": env_example.exists(),
         "env_example_required_vars": {
             "MIND_POSTGRES_USER",
@@ -311,14 +325,14 @@ def evaluate_deployment_smoke_suite(
             "MIND_DEV_MODE",
         }.issubset(env_vars),
         "entrypoint_exists": entrypoint.exists(),
-        "entrypoint_runs_migration": "alembic upgrade head" in _read_text(entrypoint),
+        "entrypoint_runs_migration": "alembic upgrade head" in read_text(entrypoint),
         "entrypoint_runs_uvicorn": "uvicorn mind.api.app:create_app --factory"
-        in _read_text(entrypoint),
+        in read_text(entrypoint),
         "deploy_script_builds_docs_site": "build_docs_site"
-        in _read_text(root / "scripts" / "deploy.sh")
-        and "mkdocs build --strict" in _read_text(root / "scripts" / "deploy.sh"),
+        in read_text(root / "scripts" / "deploy.sh")
+        and "mkdocs build --strict" in read_text(root / "scripts" / "deploy.sh"),
         "deploy_script_includes_docs_overlay": 'DOCS_FILE="compose.docs.yaml"'
-        in _read_text(root / "scripts" / "deploy.sh"),
+        in read_text(root / "scripts" / "deploy.sh"),
         **runtime_product_transport_checks,
     }
 
@@ -336,147 +350,6 @@ def evaluate_deployment_smoke_suite(
         suite_version=_SUITE_VERSION,
         results=results,
     )
-
-
-def write_deployment_smoke_report_json(path: str | Path, report: DeploymentSmokeReport) -> Path:
-    """Persist the full deployment smoke report as JSON."""
-
-    output_path = Path(path)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(
-        json.dumps(_report_to_dict(report), indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
-    return output_path
-
-
-def render_deployment_smoke_report_markdown(
-    report: DeploymentSmokeReport,
-    *,
-    title: str = "Deployment Smoke Report",
-) -> str:
-    """Render the deployment smoke report as Markdown."""
-
-    lines = [
-        f"# {title}",
-        "",
-        f"- Generated at: `{report.generated_at}`",
-        f"- Suite version: `{report.suite_version}`",
-        f"- Status: `{'PASS' if report.passed else 'FAIL'}`",
-        f"- Pass rate: `{report.passed_count}/{report.scenario_count}` (`{report.pass_rate:.4f}`)",
-        "",
-        "| Scenario | Status | Description |",
-        "| --- | --- | --- |",
-    ]
-    for result in report.results:
-        lines.append(
-            f"| {result.name} | {'PASS' if result.passed else 'FAIL'} | {result.description} |"
-        )
-    if report.failure_ids:
-        lines.extend(
-            [
-                "",
-                f"Failing scenarios: `{','.join(report.failure_ids)}`",
-            ]
-        )
-    return "\n".join(lines) + "\n"
-
-
-def write_deployment_smoke_report_markdown(
-    path: str | Path,
-    report: DeploymentSmokeReport,
-    *,
-    title: str = "Deployment Smoke Report",
-) -> Path:
-    """Persist the deployment smoke report as Markdown."""
-
-    output_path = Path(path)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(
-        render_deployment_smoke_report_markdown(report, title=title),
-        encoding="utf-8",
-    )
-    return output_path
-
-
-def read_deployment_smoke_report_json(path: str | Path) -> DeploymentSmokeReport:
-    """Load a previously persisted deployment smoke report."""
-
-    payload = json.loads(Path(path).read_text(encoding="utf-8"))
-    if payload.get("schema_version") != _SCHEMA_VERSION:
-        raise ValueError(
-            f"unexpected deployment smoke report schema_version ({payload.get('schema_version')!r})"
-        )
-    return _report_from_dict(payload)
-
-
-def parse_compose_file(path: Path) -> dict[str, Any]:
-    """Parse compose.yaml into a dictionary."""
-
-    data = _load_yaml(path)
-    if not isinstance(data, dict):
-        raise ValueError("compose.yaml must parse to a mapping")
-    return data
-
-
-def parse_dockerfile(path: Path) -> list[str]:
-    """Return normalized Dockerfile instruction lines."""
-
-    return _parse_dockerfile_instructions(path)
-
-
-def _load_yaml(path: Path) -> Any:
-    if not path.exists():
-        return {}
-    return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-
-
-def _parse_dockerfile_instructions(path: Path) -> list[str]:
-    if not path.exists():
-        return []
-    instructions: list[str] = []
-    buffer = ""
-    heredoc_terminator: str | None = None
-    for raw_line in path.read_text(encoding="utf-8").splitlines():
-        stripped = raw_line.strip()
-        if heredoc_terminator is not None:
-            if stripped == heredoc_terminator:
-                heredoc_terminator = None
-            continue
-        if not stripped or stripped.startswith("#"):
-            continue
-
-        if buffer:
-            buffer = f"{buffer} {stripped}"
-        else:
-            buffer = stripped
-
-        if "<<" in stripped:
-            marker = stripped.split("<<", 1)[1].strip()
-            heredoc_terminator = marker.strip("'\"")
-
-        if buffer.endswith("\\"):
-            buffer = buffer[:-1].rstrip()
-            continue
-
-        instructions.append(buffer)
-        buffer = ""
-
-    if buffer:
-        instructions.append(buffer)
-    return instructions
-
-
-def _read_env_var_names(path: Path) -> set[str]:
-    if not path.exists():
-        return set()
-    env_vars: set[str] = set()
-    for raw_line in path.read_text(encoding="utf-8").splitlines():
-        stripped = raw_line.strip()
-        if not stripped or stripped.startswith("#") or "=" not in stripped:
-            continue
-        env_vars.add(stripped.split("=", 1)[0])
-    return env_vars
 
 
 def _build_runtime_product_transport_checks(
@@ -498,98 +371,3 @@ def _build_runtime_product_transport_checks(
         "runtime_product_transport_rest_mcp": runtime_report.rest_mcp_pass_rate >= 0.95,
         "runtime_product_transport_rest_cli": runtime_report.rest_cli_pass_rate >= 0.95,
     }
-
-
-def _report_to_dict(report: DeploymentSmokeReport) -> dict[str, Any]:
-    return {
-        "schema_version": report.schema_version,
-        "generated_at": report.generated_at,
-        "suite_version": report.suite_version,
-        "scenario_count": report.scenario_count,
-        "passed_count": report.passed_count,
-        "pass_rate": report.pass_rate,
-        "passed": report.passed,
-        "failure_ids": list(report.failure_ids),
-        "results": [
-            {
-                "name": result.name,
-                "description": result.description,
-                "passed": result.passed,
-            }
-            for result in report.results
-        ],
-    }
-
-
-def _report_from_dict(payload: dict[str, Any]) -> DeploymentSmokeReport:
-    return DeploymentSmokeReport(
-        schema_version=str(payload["schema_version"]),
-        generated_at=str(payload["generated_at"]),
-        suite_version=str(payload["suite_version"]),
-        results=tuple(
-            DeploymentSmokeResult(
-                name=str(result["name"]),
-                description=str(result["description"]),
-                passed=bool(result["passed"]),
-            )
-            for result in payload.get("results", [])
-        ),
-    )
-
-
-def _depends_on_healthy(service: dict[str, Any], dependency: str) -> bool:
-    depends_on = service.get("depends_on", {})
-    if not isinstance(depends_on, dict):
-        return False
-    dependency_config = depends_on.get(dependency, {})
-    if not isinstance(dependency_config, dict):
-        return False
-    return dependency_config.get("condition") == "service_healthy"
-
-
-def _dockerfile_ref(service: dict[str, Any]) -> str | None:
-    build = service.get("build", {})
-    if not isinstance(build, dict):
-        return None
-    dockerfile = build.get("dockerfile")
-    return str(dockerfile) if dockerfile is not None else None
-
-
-def _env_file_ref(service: dict[str, Any]) -> str | None:
-    env_file = service.get("env_file")
-    if isinstance(env_file, list) and env_file:
-        return str(env_file[0])
-    if isinstance(env_file, str):
-        return env_file
-    return None
-
-
-def _worker_command(service: dict[str, Any]) -> str:
-    command = service.get("command", [])
-    if isinstance(command, list):
-        return "\n".join(str(part) for part in command)
-    return str(command)
-
-
-def _healthcheck_command(service: dict[str, Any]) -> str:
-    healthcheck = service.get("healthcheck", {})
-    if not isinstance(healthcheck, dict):
-        return ""
-    test = healthcheck.get("test", [])
-    if isinstance(test, list):
-        return "\n".join(str(part) for part in test)
-    return str(test)
-
-
-def _postgres_password_ref(service: dict[str, Any]) -> str | None:
-    environment = service.get("environment", {})
-    if not isinstance(environment, dict):
-        return None
-    password = environment.get("POSTGRES_PASSWORD")
-    return str(password) if password is not None else None
-
-
-def _read_text(path: Path) -> str:
-    if not path.exists():
-        return ""
-    return path.read_text(encoding="utf-8")

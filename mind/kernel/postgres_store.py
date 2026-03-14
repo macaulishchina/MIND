@@ -18,10 +18,10 @@ from sqlalchemy.engine.url import URL, make_url
 
 from alembic import command
 from alembic.config import Config
+from mind.kernel.contracts import BudgetEvent, PrimitiveCallLog, RetrieveQueryMode
 from mind.kernel.governance import ConcealmentRecord, GovernanceAuditRecord
 from mind.kernel.provenance import DirectProvenanceRecord
 from mind.offline_jobs import OfflineJob, OfflineJobKind, OfflineJobStatus
-from mind.primitives.contracts import BudgetEvent, PrimitiveCallLog, RetrieveQueryMode
 
 from .pgvector import Vector
 from .retrieval import EMBEDDING_DIM, RetrievalMatch, build_object_embedding, build_search_text

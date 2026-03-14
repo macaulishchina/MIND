@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from mind.capabilities import (
+    CapabilityPortAdapter,
     CapabilityService,
     OfflineReconstructRequest,
     resolve_capability_provider_config,
@@ -63,7 +64,7 @@ class OfflineMaintenanceService:
             store,
             clock=self._clock,
             query_embedder=build_query_embedding,
-            capability_service=self._capability_service,
+            capability_service=CapabilityPortAdapter(service=self._capability_service),
             telemetry_recorder=telemetry_recorder,
             provider_env_resolver=provider_env_resolver,
         )

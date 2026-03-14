@@ -9,6 +9,7 @@ Use this checklist when refactoring existing code.
 - [ ] Define the refactoring goal in one sentence
 - [ ] Confirm the refactoring is requested or clearly necessary (not "nice to have")
 - [ ] Ensure full test suite passes BEFORE starting (`uv run pytest tests/ -x`)
+- [ ] If the target file is over 400 lines, define the extraction boundary before editing
 
 ## Scope
 
@@ -21,6 +22,9 @@ Use this checklist when refactoring existing code.
 - [ ] Make changes in small, verifiable steps
 - [ ] Run tests after each step — never batch large changes
 - [ ] Preserve all existing behavior (tests should pass without modification)
+- [ ] If the target file is already over 500 lines, do not add a new
+      responsibility without reducing file size or recording the debt in
+      `.ai/health/drift-log.md`
 
 ## Testing
 

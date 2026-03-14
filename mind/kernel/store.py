@@ -11,10 +11,10 @@ from pathlib import Path
 from types import TracebackType
 from typing import Any, Protocol, runtime_checkable
 
+from mind.kernel.contracts import BudgetEvent, PrimitiveCallLog, RetrieveQueryMode
 from mind.kernel.governance import ConcealmentRecord, GovernanceAuditRecord
 from mind.kernel.provenance import DirectProvenanceRecord
 from mind.offline_jobs import OfflineJob, OfflineJobKind, OfflineJobStatus
-from mind.primitives.contracts import BudgetEvent, PrimitiveCallLog, RetrieveQueryMode
 
 from .retrieval import RetrievalMatch, latest_objects, matches_retrieval_filters, search_objects
 from .schema import ensure_valid_object

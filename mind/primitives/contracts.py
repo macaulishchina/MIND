@@ -2,12 +2,24 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from collections.abc import Mapping
 from enum import StrEnum
-from typing import Any
+from typing import Any, Protocol, runtime_checkable
 
-from pydantic import BaseModel, ConfigDict, Field, NonNegativeFloat, model_validator
+from pydantic import Field, NonNegativeFloat, model_validator
 
+from mind.kernel.contracts import (  # noqa: F401  re-export for backward compat
+    BudgetCost,
+    BudgetEvent,
+    ContractModel,
+    PrimitiveCallLog,
+    PrimitiveCostCategory,
+    PrimitiveError,
+    PrimitiveErrorCode,
+    PrimitiveName,
+    PrimitiveOutcome,
+    RetrieveQueryMode,
+)
 from mind.kernel.provenance import DirectProvenanceInput, ProvenanceSummary
 from mind.kernel.schema import (
     CORE_OBJECT_TYPES,
@@ -15,63 +27,6 @@ from mind.kernel.schema import (
     VALID_STATUS,
     ensure_valid_object,
 )
-
-
-class ContractModel(BaseModel):
-    """Strict base model shared by primitive contracts."""
-
-    model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
-
-
-class PrimitiveName(StrEnum):
-    WRITE_RAW = "write_raw"
-    READ = "read"
-    RETRIEVE = "retrieve"
-    SUMMARIZE = "summarize"
-    LINK = "link"
-    REFLECT = "reflect"
-    REORGANIZE_SIMPLE = "reorganize_simple"
-    RECORD_FEEDBACK = "record_feedback"
-
-
-class PrimitiveOutcome(StrEnum):
-    SUCCESS = "success"
-    FAILURE = "failure"
-    REJECTED = "rejected"
-    ROLLED_BACK = "rolled_back"
-
-
-class PrimitiveErrorCode(StrEnum):
-    CAPABILITY_REQUIRED = "capability_required"
-    BUDGET_EXHAUSTED = "budget_exhausted"
-    EMPTY_INPUT_REFS = "empty_input_refs"
-    EPISODE_MISSING = "episode_missing"
-    EVIDENCE_MISSING = "evidence_missing"
-    INSUFFICIENT_EVIDENCE = "insufficient_evidence"
-    INTERNAL_ERROR = "internal_error"
-    INVALID_REFS = "invalid_refs"
-    MISSING_EPISODE_CONTEXT = "missing_episode_context"
-    OBJECT_INACCESSIBLE = "object_inaccessible"
-    OBJECT_NOT_FOUND = "object_not_found"
-    REFLECTION_VALIDATION_FAILED = "reflection_validation_failed"
-    RETRIEVAL_BACKEND_UNAVAILABLE = "retrieval_backend_unavailable"
-    ROLLBACK_FAILED = "rollback_failed"
-    SCHEMA_INVALID = "schema_invalid"
-    SELF_LINK_NOT_ALLOWED = "self_link_not_allowed"
-    SUMMARY_VALIDATION_FAILED = "summary_validation_failed"
-    UNSAFE_STATE_TRANSITION = "unsafe_state_transition"
-    UNSUPPORTED_OPERATION = "unsupported_operation"
-    UNSUPPORTED_QUERY_MODE = "unsupported_query_mode"
-    UNSUPPORTED_SCOPE = "unsupported_scope"
-
-
-class PrimitiveCostCategory(StrEnum):
-    GENERATION = "generation"
-    MAINTENANCE = "maintenance"
-    READ = "read"
-    RETRIEVAL = "retrieval"
-    STORAGE = "storage"
-    WRITE = "write"
 
 
 class Capability(StrEnum):
@@ -82,23 +37,11 @@ class Capability(StrEnum):
     GOVERNANCE_APPROVE_FULL_ERASE = "governance_approve_full_erase"
 
 
-class RetrieveQueryMode(StrEnum):
-    KEYWORD = "keyword"
-    TIME_WINDOW = "time_window"
-    VECTOR = "vector"
-
-
 class ReorganizeOperation(StrEnum):
     ARCHIVE = "archive"
     DEPRECATE = "deprecate"
     REPRIORITIZE = "reprioritize"
     SYNTHESIZE_SCHEMA = "synthesize_schema"
-
-
-class BudgetCost(ContractModel):
-    category: PrimitiveCostCategory
-    amount: NonNegativeFloat
-    unit: str = Field(default="cost_units", min_length=1)
 
 
 class BudgetConstraint(ContractModel):
@@ -110,13 +53,6 @@ class BudgetConstraint(ContractModel):
         if self.max_cost is None and self.max_candidates is None:
             raise ValueError("budget constraint must define at least one limit")
         return self
-
-
-class PrimitiveError(ContractModel):
-    code: PrimitiveErrorCode
-    message: str = Field(min_length=1)
-    retryable: bool = False
-    details: dict[str, Any] = Field(default_factory=dict)
 
 
 class PrimitiveExecutionContext(ContractModel):
@@ -301,36 +237,43 @@ class PrimitiveExecutionResult(ContractModel):
         return self
 
 
-class PrimitiveCallLog(ContractModel):
-    call_id: str = Field(min_length=1)
-    primitive: PrimitiveName
-    actor: str = Field(min_length=1)
-    timestamp: datetime
-    target_ids: list[str] = Field(default_factory=list)
-    cost: list[BudgetCost] = Field(default_factory=list)
-    outcome: PrimitiveOutcome
-    request: dict[str, Any]
-    response: dict[str, Any] | None = None
-    error: PrimitiveError | None = None
-
-    @model_validator(mode="after")
-    def enforce_log_shape(self) -> PrimitiveCallLog:
-        if self.outcome is PrimitiveOutcome.SUCCESS:
-            if self.response is None or self.error is not None:
-                raise ValueError("successful log requires response and forbids error")
-        else:
-            if self.response is not None or self.error is None:
-                raise ValueError("non-success log requires error and forbids response")
-        return self
+# ---------------------------------------------------------------------------
+# Capability port (dependency-inversion boundary)
+# ---------------------------------------------------------------------------
 
 
-class BudgetEvent(ContractModel):
-    event_id: str = Field(min_length=1)
-    call_id: str = Field(min_length=1)
-    scope_id: str = Field(min_length=1)
-    primitive: PrimitiveName
-    actor: str = Field(min_length=1)
-    timestamp: datetime
-    outcome: PrimitiveOutcome
-    cost: list[BudgetCost] = Field(min_length=1)
-    metadata: dict[str, Any] = Field(default_factory=dict)
+@runtime_checkable
+class CapabilityPort(Protocol):
+    """Abstract port for capability invocations used by PrimitiveService.
+
+    Implemented by ``mind.capabilities.adapter.CapabilityPortAdapter``.
+    """
+
+    def summarize_text(
+        self,
+        *,
+        request_id: str,
+        source_text: str,
+        source_refs: list[str],
+        instruction: str | None = None,
+        provider_config: Any = None,
+    ) -> str: ...
+
+    def reflect_text(
+        self,
+        *,
+        request_id: str,
+        focus: str | dict[str, Any],
+        evidence_text: str,
+        episode_id: str | None = None,
+        outcome_hint: str | None = None,
+        evidence_refs: list[str] | None = None,
+        provider_config: Any = None,
+    ) -> str: ...
+
+    def resolve_provider_config(
+        self,
+        *,
+        selection: Any = None,
+        env: Mapping[str, str] | None = None,
+    ) -> Any: ...

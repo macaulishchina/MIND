@@ -23,7 +23,11 @@ from mind.app.services.jobs import OfflineJobAppService
 from mind.app.services.query import MemoryQueryService
 from mind.app.services.system import SystemStatusService
 from mind.app.services.user_state import UserStateService
-from mind.capabilities import CapabilityService, resolve_capability_provider_config
+from mind.capabilities import (
+    CapabilityPortAdapter,
+    CapabilityService,
+    resolve_capability_provider_config,
+)
 from mind.cli_config import CliBackend, ResolvedCliConfig, resolve_cli_config
 from mind.governance.service import GovernanceService
 from mind.kernel.store import MemoryStore, SQLiteMemoryStore
@@ -153,7 +157,7 @@ def build_app_registry(
     )
     primitive_service = PrimitiveService(
         store,
-        capability_service=capability_service,
+        capability_service=CapabilityPortAdapter(service=capability_service),
         telemetry_recorder=effective_telemetry_recorder,
         provider_env_resolver=runtime_manager.current_provider_env,
     )

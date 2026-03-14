@@ -81,7 +81,7 @@ async def system_status(
     registry = get_registry(request)
     app_req = build_app_request(request, principal)
     if detailed:
-        from mind.kernel.health import compute_health_report
+        from mind.app.services.system import compute_health_report
 
         report = compute_health_report(registry.store)
         response = registry.system_status_service.health(app_req)

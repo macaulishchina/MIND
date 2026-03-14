@@ -14,6 +14,7 @@ from mind.capabilities import (
     CapabilityProviderFamily,
     resolve_capability_provider_config,
 )
+from mind.kernel.health import compute_health_report  # noqa: F401  re-export for transport
 from mind.kernel.store import MemoryStore
 from mind.telemetry import resolve_dev_telemetry_path
 

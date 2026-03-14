@@ -7,9 +7,8 @@ from typing import Annotated
 
 from fastapi import Header
 
-from mind.app.context import PrincipalContext, PrincipalKind
+from mind.app.context import Capability, PrincipalContext, PrincipalKind
 from mind.app.errors import AuthorizationError
-from mind.primitives.contracts import Capability
 
 APIKeyHeader = Annotated[str | None, Header(alias="X-API-Key")]
 

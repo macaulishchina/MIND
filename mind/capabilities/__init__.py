@@ -60,6 +60,7 @@ from .gate import (
 )
 from .gemini_adapter import GeminiCapabilityAdapter
 from .openai_adapter import OpenAICapabilityAdapter
+from .port_adapter import CapabilityPortAdapter as CapabilityPortAdapter
 from .reporting import (
     CapabilityProviderCompatibilityReport,
     CapabilityProviderCompatibilitySummary,

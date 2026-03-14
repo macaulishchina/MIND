@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from os import environ
-from pathlib import Path
 from typing import Any, Protocol
 
 from pydantic import ValidationError as PydanticValidationError
@@ -12,169 +10,21 @@ from pydantic import ValidationError as PydanticValidationError
 from mind.app._service_utils import new_response
 from mind.app.contracts import AppError, AppErrorCode, AppRequest, AppResponse, AppStatus
 from mind.app.runtime import SYSTEM_RUNTIME_PRINCIPAL_ID, GlobalRuntimeManager
+from mind.app.services.frontend_debug_service import (  # noqa: F401
+    FrontendDebugAppService,
+)
+from mind.app.services.frontend_experience_service import (  # noqa: F401
+    FrontendExperienceAppService,
+)
 from mind.app.services.system import build_config_summary_payload, build_provider_status_payload
 from mind.capabilities import resolve_capability_provider_config
-from mind.telemetry import JsonlTelemetryRecorder, TelemetryEvent, resolve_dev_telemetry_path
+from mind.telemetry import TelemetryEvent
 
 _TRUE_ENV_VALUES = frozenset({"1", "true", "yes", "on"})
 
 
 class _TelemetryEventSource(Protocol):
     def iter_events(self) -> Sequence[TelemetryEvent]: ...
-
-
-class FrontendExperienceAppService:
-    """Project product app services into the frozen Phase M frontend contracts."""
-
-    def __init__(
-        self,
-        *,
-        memory_ingest_service: Any,
-        memory_query_service: Any,
-        memory_access_service: Any,
-        offline_job_app_service: Any,
-        request_defaults_resolver: Any = None,
-    ) -> None:
-        self._memory_ingest_service = memory_ingest_service
-        self._memory_query_service = memory_query_service
-        self._memory_access_service = memory_access_service
-        self._offline_job_app_service = offline_job_app_service
-        self._request_defaults_resolver = request_defaults_resolver
-
-    def ingest(self, req: AppRequest) -> AppResponse:
-        from mind.frontend.experience import FrontendIngestRequest, build_frontend_ingest_result
-
-        req = self._apply_request_defaults(req, include_provider_selection=False)
-        validated = self._validate(req, FrontendIngestRequest)
-        if isinstance(validated, AppResponse):
-            return validated
-        inner_req = req.model_copy(update={"input": validated.model_dump(mode="json")})
-        response = self._memory_ingest_service.remember(inner_req)
-        return self._project(req, response, build_frontend_ingest_result)
-
-    def retrieve(self, req: AppRequest) -> AppResponse:
-        from mind.frontend.experience import FrontendRetrieveRequest, build_frontend_retrieve_result
-
-        req = self._apply_request_defaults(req, include_provider_selection=False)
-        validated = self._validate(req, FrontendRetrieveRequest)
-        if isinstance(validated, AppResponse):
-            return validated
-
-        filters: dict[str, Any] = {}
-        if validated.episode_id is not None:
-            filters["episode_id"] = validated.episode_id
-        inner_req = req.model_copy(
-            update={
-                "input": {
-                    "query": validated.query,
-                    "query_modes": list(validated.query_modes),
-                    "max_candidates": validated.max_candidates,
-                    "filters": filters,
-                }
-            }
-        )
-        response = self._memory_query_service.recall(inner_req)
-        return self._project(req, response, build_frontend_retrieve_result)
-
-    def access(self, req: AppRequest) -> AppResponse:
-        from mind.frontend.experience import FrontendAccessRequest, build_frontend_access_result
-
-        req = self._apply_request_defaults(req, include_provider_selection=True)
-        validated = self._validate(req, FrontendAccessRequest)
-        if isinstance(validated, AppResponse):
-            return validated
-
-        requested_mode = "recall" if validated.depth == "focus" else validated.depth
-        inner_input: dict[str, Any] = {
-            "query": validated.query,
-            "mode": requested_mode,
-            "query_modes": list(validated.query_modes),
-            "capture_raw_exchange": True,
-        }
-        if validated.episode_id is not None:
-            inner_input["episode_id"] = validated.episode_id
-        if validated.task_id is not None:
-            inner_input["task_id"] = validated.task_id
-        inner_req = req.model_copy(update={"input": inner_input})
-        response = (
-            self._memory_access_service.explain_access(inner_req)
-            if validated.explain
-            else self._memory_access_service.run_access(inner_req)
-        )
-        return self._project(
-            req,
-            response,
-            lambda projected_response: build_frontend_access_result(
-                projected_response,
-                frontend_request=validated,
-                runtime_provider=(
-                    req.provider_selection.provider if req.provider_selection is not None else None
-                ),
-            ),
-        )
-
-    def submit_offline(self, req: AppRequest) -> AppResponse:
-        from mind.frontend.experience import (
-            FrontendOfflineSubmitRequest,
-            build_frontend_offline_submit_result,
-        )
-
-        req = self._apply_request_defaults(req, include_provider_selection=True)
-        validated = self._validate(req, FrontendOfflineSubmitRequest)
-        if isinstance(validated, AppResponse):
-            return validated
-        inner_req = req.model_copy(update={"input": validated.model_dump(mode="json")})
-        response = self._offline_job_app_service.submit_job(inner_req)
-        return self._project(req, response, build_frontend_offline_submit_result)
-
-    def gate_demo(self, req: AppRequest) -> AppResponse:
-        from mind.frontend.experience import build_frontend_gate_demo_page
-
-        response = new_response(req)
-        response.status = AppStatus.OK
-        response.result = build_frontend_gate_demo_page().model_dump(mode="json")
-        return response
-
-    def _project(
-        self,
-        req: AppRequest,
-        response: AppResponse,
-        projector: Any,
-    ) -> AppResponse:
-        if response.status is not AppStatus.OK or response.result is None:
-            return response
-        projected = new_response(req)
-        projected.status = AppStatus.OK
-        projected.result = projector(response).model_dump(mode="json")
-        projected.trace_ref = response.trace_ref
-        return projected
-
-    def _apply_request_defaults(
-        self,
-        req: AppRequest,
-        *,
-        include_provider_selection: bool,
-    ) -> AppRequest:
-        if self._request_defaults_resolver is None:
-            return req
-        return self._request_defaults_resolver(
-            req,
-            include_provider_selection=include_provider_selection,
-            respect_request_policy=True,
-        )
-
-    def _validate(self, req: AppRequest, model_type: Any) -> Any:
-        try:
-            return model_type.model_validate(req.input)
-        except PydanticValidationError as exc:
-            response = new_response(req)
-            response.status = AppStatus.ERROR
-            response.error = AppError(
-                code=AppErrorCode.VALIDATION_ERROR,
-                message="request validation failed",
-                details={"errors": [dict(error) for error in exc.errors()]},
-            )
-            return response
 
 
 class FrontendSettingsAppService:
@@ -201,7 +51,7 @@ class FrontendSettingsAppService:
         return response
 
     def preview(self, req: AppRequest) -> AppResponse:
-        from mind.frontend.settings import (
+        from mind.app.frontend_settings import (
             load_frontend_llm_state,
             preview_frontend_settings_update,
         )
@@ -220,7 +70,7 @@ class FrontendSettingsAppService:
         return response
 
     def apply(self, req: AppRequest) -> AppResponse:
-        from mind.frontend.settings import (
+        from mind.app.frontend_settings import (
             apply_frontend_llm_state_update,
             build_frontend_settings_mutation_result,
             build_frontend_settings_snapshot,
@@ -276,7 +126,7 @@ class FrontendSettingsAppService:
         return response
 
     def restore(self, req: AppRequest) -> AppResponse:
-        from mind.frontend.settings import (
+        from mind.app.frontend_settings import (
             apply_frontend_llm_state_update,
             build_frontend_settings_mutation_result,
             build_frontend_settings_snapshot,
@@ -341,7 +191,7 @@ class FrontendSettingsAppService:
         return response
 
     def upsert_llm_service(self, req: AppRequest) -> AppResponse:
-        from mind.frontend.settings import (
+        from mind.app.frontend_settings import (
             FrontendLlmServiceMutationResult,
             FrontendLlmServiceUpsertRequest,
             dump_frontend_llm_state,
@@ -377,7 +227,7 @@ class FrontendSettingsAppService:
         return response
 
     def discover_llm_models(self, req: AppRequest) -> AppResponse:
-        from mind.frontend.settings import (
+        from mind.app.frontend_settings import (
             FrontendLlmModelDiscoveryRequest,
             FrontendLlmModelDiscoveryResult,
             discover_frontend_llm_models,
@@ -436,7 +286,7 @@ class FrontendSettingsAppService:
         return response
 
     def activate_llm_service(self, req: AppRequest) -> AppResponse:
-        from mind.frontend.settings import (
+        from mind.app.frontend_settings import (
             FrontendLlmServiceActivateRequest,
             FrontendLlmServiceActivationResult,
             activate_frontend_llm_service,
@@ -481,7 +331,7 @@ class FrontendSettingsAppService:
         return response
 
     def delete_llm_service(self, req: AppRequest) -> AppResponse:
-        from mind.frontend.settings import (
+        from mind.app.frontend_settings import (
             FrontendLlmServiceDeleteRequest,
             FrontendLlmServiceMutationResult,
             delete_frontend_llm_service,
@@ -525,7 +375,7 @@ class FrontendSettingsAppService:
         return response
 
     def _build_settings_page(self, req: AppRequest) -> Any:
-        from mind.frontend.settings import (
+        from mind.app.frontend_settings import (
             build_frontend_settings_page,
             load_frontend_llm_state,
             load_frontend_settings_snapshot_state,
@@ -617,51 +467,3 @@ class FrontendSettingsAppService:
                 details={"errors": [dict(error) for error in exc.errors()]},
             )
             return response
-
-
-class FrontendDebugAppService:
-    """Resolve and query telemetry-backed debug timelines for frontend consumers."""
-
-    def __init__(
-        self,
-        *,
-        telemetry_source: _TelemetryEventSource | None = None,
-        telemetry_path: str | Path | None = None,
-        env: Mapping[str, str] | None = None,
-        dev_mode_resolver: Any = None,
-    ) -> None:
-        self._telemetry_source = telemetry_source
-        self._telemetry_path = resolve_dev_telemetry_path(telemetry_path=telemetry_path, env=env)
-        self._env = env
-        self._dev_mode_resolver = dev_mode_resolver
-
-    def query_timeline(
-        self,
-        query: Any,
-        *,
-        dev_mode: bool | None = None,
-    ) -> Any:
-        """Return a frontend-facing debug timeline."""
-
-        from mind.frontend.debug import build_frontend_debug_timeline
-
-        return build_frontend_debug_timeline(
-            self._iter_events(),
-            query,
-            dev_mode=self._resolve_dev_mode(dev_mode),
-        )
-
-    def _iter_events(self) -> Sequence[TelemetryEvent]:
-        if self._telemetry_source is not None:
-            return tuple(self._telemetry_source.iter_events())
-        if self._telemetry_path is None:
-            return ()
-        return JsonlTelemetryRecorder(self._telemetry_path).iter_events()
-
-    def _resolve_dev_mode(self, override: bool | None) -> bool:
-        if override is not None:
-            return override
-        if self._dev_mode_resolver is not None:
-            return bool(self._dev_mode_resolver())
-        active_env = self._env or environ
-        return active_env.get("MIND_DEV_MODE", "").strip().lower() in _TRUE_ENV_VALUES
