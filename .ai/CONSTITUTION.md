@@ -222,7 +222,7 @@ This project has an automated health check script: `scripts/ai_health_check.py`.
 **When to run it:**
 - After completing a batch of code changes (before committing)
 - After fixing bugs or refactoring
-- When the user asks for a health assessment
+- When the user asks for a health assessment, full check, AI health test, 全面检查, 健康检测, or similar
 - When you are unsure whether your changes introduced regressions
 
 **How to run:**
