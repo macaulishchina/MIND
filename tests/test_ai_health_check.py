@@ -32,7 +32,7 @@ def test_build_pytest_command_uses_quick_parallel_defaults(
     assert "-m" in command
     assert "not slow and not gate" in command
     assert "-n" in command
-    assert command[command.index("-n") + 1] == "4"
+    assert command[command.index("-n") + 1] == str(health_check._pytest_worker_count())
     assert "--dist" in command
     assert command[command.index("--dist") + 1] == "loadfile"
 
