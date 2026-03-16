@@ -59,11 +59,13 @@ def compute_health_report(store: MemoryStore) -> HealthReport:
             if ref and ref not in known_ids:
                 report.orphan_refs.append(ref)
 
-    # Pending job count.
+    # Pending job count — requires OfflineJobStore interface.
     try:
-        pending_jobs = list(store.iter_latest_objects(statuses=["pending"]))
+        from mind.offline_jobs import OfflineJobStatus
+
+        pending_jobs = store.iter_offline_jobs(statuses=[OfflineJobStatus.PENDING])  # type: ignore[attr-defined]
         report.pending_jobs = len(pending_jobs)
     except Exception:
-        pass  # store may not support jobs
+        pass  # store may not expose job queue interface
 
     return report

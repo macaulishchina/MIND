@@ -98,16 +98,27 @@ class FeedbackService:
         response: dict[str, Any],
         feedback_req: dict[str, Any],
     ) -> None:
-        """Best-effort call to scheduler.on_feedback_recorded."""
+        """Best-effort call to scheduler.on_feedback_recorded.
+
+        Queries the store for the real accumulated ``feedback_positive_count``
+        on each helpful object so the scheduler threshold works correctly.
+        """
         if self._scheduler is None:
             return
         try:
+            store = self._primitive.store
             helpful = feedback_req.get("helpful_object_ids", [])
             for oid in helpful:
+                # Read the target object to get its true positive count.
+                try:
+                    obj = store.read_object(oid)
+                    count = int(obj.get("metadata", {}).get("feedback_positive_count", 0))
+                except Exception:
+                    count = 1
                 self._scheduler.on_feedback_recorded(
                     feedback_object=response,
                     object_id=oid,
-                    positive_feedback_count=1,  # simplistic; real count from store
+                    positive_feedback_count=count,
                 )
         except Exception:
             _log.warning("scheduler.on_feedback_recorded failed", exc_info=True)

@@ -119,10 +119,28 @@ class MemoryIngestService:
         episode_id: str,
         response: dict[str, Any],
     ) -> None:
-        """Best-effort enqueue of REFLECT_EPISODE via the scheduler."""
+        """Best-effort enqueue of REFLECT_EPISODE via the scheduler.
+
+        The *response* dict is the write_raw primitive result (object_id, version,
+        provenance_id).  We read the actual episode object from the store so the
+        scheduler can inspect ``metadata.result`` to decide whether the episode is
+        completed.
+        """
         if self._scheduler is None:
             return
         try:
-            self._scheduler.on_episode_completed(episode_id, response)
+            # Try to read the TaskEpisode for this episode from the store so
+            # the scheduler can check metadata.result.
+            store = self._primitive.store
+            episodes = store.iter_latest_objects(
+                object_types=("TaskEpisode",),
+                episode_id=episode_id,
+            )
+            if episodes:
+                episode_obj = episodes[0]
+            else:
+                # Fallback: wrap write-raw response as best-effort episode stub.
+                episode_obj = response
+            self._scheduler.on_episode_completed(episode_id, episode_obj)
         except Exception:
             _log.warning("scheduler.on_episode_completed failed for %s", episode_id, exc_info=True)
