@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import json
 import tempfile
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 from mind.fixtures.access_depth_bench import build_access_depth_bench_v1
 from mind.fixtures.retrieval_benchmark import build_canonical_seed_objects
@@ -15,6 +16,7 @@ from mind.kernel.store import MemoryStoreFactory, SQLiteMemoryStore
 from mind.primitives.contracts import Capability, PrimitiveExecutionContext
 
 from .benchmark import (
+    AccessBenchmarkResult,
     AccessFrontierComparison,
     AccessModeFamilyAggregate,
     evaluate_access_benchmark,
@@ -30,6 +32,7 @@ from .service import AccessService
 
 _SCHEMA_VERSION = "access_gate_report_v1"
 _FIXED_TIMESTAMP = datetime(2026, 3, 10, 18, 0, tzinfo=UTC)
+_AuditResultT = TypeVar("_AuditResultT")
 
 
 @dataclass(frozen=True)
@@ -150,87 +153,118 @@ def evaluate_access_gate(
 ) -> AccessGateResult:
     """Run the formal runtime access gate."""
 
-    def default_store_factory(store_path: Path) -> SQLiteMemoryStore:
-        return SQLiteMemoryStore(store_path)
+    benchmark_result = evaluate_access_benchmark(
+        db_path=_derived_access_benchmark_path(db_path),
+        store_factory=store_factory,
+    )
+    fixed_runs = evaluate_access_fixed_lock_audit(
+        db_path=db_path,
+        store_factory=store_factory,
+    )
+    auto_audit = evaluate_access_auto_audit(
+        db_path=db_path,
+        store_factory=store_factory,
+    )
+    return build_access_gate_result(
+        benchmark_result=benchmark_result,
+        fixed_runs=fixed_runs,
+        auto_audit=auto_audit,
+    )
 
-    def run(store_path: Path, active_store_factory: MemoryStoreFactory) -> AccessGateResult:
-        benchmark_result = evaluate_access_benchmark(
-            db_path=store_path.with_name(f"{store_path.stem}_bench.sqlite3"),
-            store_factory=active_store_factory,
+
+def evaluate_access_fixed_lock_audit(
+    db_path: str | Path | None = None,
+    store_factory: MemoryStoreFactory | None = None,
+    requested_modes: tuple[AccessMode, ...] | None = None,
+) -> tuple[AccessRunResponse, ...]:
+    """Run the explicit-mode lock audit used by phase I."""
+
+    return _evaluate_seeded_access_service_runs(
+        db_path=db_path,
+        store_factory=store_factory,
+        run_audit=lambda access_service: tuple(
+            _run_fixed_lock_audit(access_service, requested_modes=requested_modes)
+        ),
+    )
+
+
+def evaluate_access_auto_audit(
+    db_path: str | Path | None = None,
+    store_factory: MemoryStoreFactory | None = None,
+) -> AccessAutoAuditResult:
+    """Run the auto-mode switch audit used by phase I."""
+
+    return _evaluate_seeded_access_service_runs(
+        db_path=db_path,
+        store_factory=store_factory,
+        run_audit=_run_auto_audit,
+    )
+
+
+def build_access_gate_result(
+    *,
+    benchmark_result: AccessBenchmarkResult,
+    fixed_runs: tuple[AccessRunResponse, ...],
+    auto_audit: AccessAutoAuditResult,
+) -> AccessGateResult:
+    """Assemble a phase-I gate result from benchmark and audit components."""
+
+    aggregate_lookup = {
+        (aggregate.requested_mode, aggregate.task_family): aggregate
+        for aggregate in benchmark_result.mode_family_aggregates
+    }
+    flash_speed = aggregate_lookup[(AccessMode.FLASH, AccessTaskFamily.SPEED_SENSITIVE)]
+    recall_balanced = aggregate_lookup[(AccessMode.RECALL, AccessTaskFamily.BALANCED)]
+    reconstruct_high = aggregate_lookup[(AccessMode.RECONSTRUCT, AccessTaskFamily.HIGH_CORRECTNESS)]
+    reflective_high = aggregate_lookup[
+        (AccessMode.REFLECTIVE_ACCESS, AccessTaskFamily.HIGH_CORRECTNESS)
+    ]
+    average_aqs_drop = round(
+        sum(comparison.auto_aqs_drop for comparison in benchmark_result.frontier_comparisons)
+        / float(len(benchmark_result.frontier_comparisons)),
+        4,
+    )
+    auto_cost_regression_count = sum(
+        comparison.auto_cost_efficiency_score < comparison.family_best_fixed_cost_efficiency_score
+        for comparison in benchmark_result.frontier_comparisons
+    )
+    trace_total = len(fixed_runs) + auto_audit.audited_run_count
+    trace_coverage_count = sum(_trace_is_complete(run) for run in fixed_runs)
+    trace_coverage_count += auto_audit.audited_run_count
+    fixed_lock_override_count = sum(_fixed_lock_overridden(run) for run in fixed_runs)
+    callable_modes = tuple(
+        sorted(
+            {
+                *(run.trace.requested_mode for run in fixed_runs),
+                AccessMode.AUTO,
+            },
+            key=lambda mode: mode.value,
         )
-        aggregate_lookup = {
-            (aggregate.requested_mode, aggregate.task_family): aggregate
-            for aggregate in benchmark_result.mode_family_aggregates
-        }
-        flash_speed = aggregate_lookup[(AccessMode.FLASH, AccessTaskFamily.SPEED_SENSITIVE)]
-        recall_balanced = aggregate_lookup[(AccessMode.RECALL, AccessTaskFamily.BALANCED)]
-        reconstruct_high = aggregate_lookup[
-            (AccessMode.RECONSTRUCT, AccessTaskFamily.HIGH_CORRECTNESS)
-        ]
-        reflective_high = aggregate_lookup[
-            (AccessMode.REFLECTIVE_ACCESS, AccessTaskFamily.HIGH_CORRECTNESS)
-        ]
-        average_aqs_drop = round(
-            sum(comparison.auto_aqs_drop for comparison in benchmark_result.frontier_comparisons)
-            / float(len(benchmark_result.frontier_comparisons)),
-            4,
-        )
-        auto_cost_regression_count = sum(
-            comparison.auto_cost_efficiency_score
-            < comparison.family_best_fixed_cost_efficiency_score
-            for comparison in benchmark_result.frontier_comparisons
-        )
+    )
 
-        with active_store_factory(store_path) as store:
-            store.insert_objects(build_canonical_seed_objects())
-            access_service = AccessService(store, clock=lambda: _FIXED_TIMESTAMP)
-            fixed_runs = _run_fixed_lock_audit(access_service)
-            auto_audit = _run_auto_audit(access_service)
-
-        trace_total = len(fixed_runs) + auto_audit.audited_run_count
-        trace_coverage_count = sum(_trace_is_complete(run) for run in fixed_runs)
-        trace_coverage_count += auto_audit.audited_run_count
-        fixed_lock_override_count = sum(_fixed_lock_overridden(run) for run in fixed_runs)
-        callable_modes = tuple(
-            sorted(
-                {
-                    *(run.trace.requested_mode for run in fixed_runs),
-                    AccessMode.AUTO,
-                },
-                key=lambda mode: mode.value,
-            )
-        )
-
-        return AccessGateResult(
-            case_count=benchmark_result.case_count,
-            benchmark_run_count=benchmark_result.run_count,
-            callable_modes=callable_modes,
-            trace_coverage_count=trace_coverage_count,
-            trace_total=trace_total,
-            fixed_lock_run_count=len(fixed_runs),
-            fixed_lock_override_count=fixed_lock_override_count,
-            flash_time_budget_hit_rate=flash_speed.time_budget_hit_rate,
-            flash_constraint_satisfaction=flash_speed.constraint_satisfaction,
-            recall_answer_quality_score=recall_balanced.answer_quality_score,
-            recall_memory_use_score=recall_balanced.memory_use_score,
-            reconstruct_answer_faithfulness=reconstruct_high.answer_faithfulness,
-            reconstruct_gold_fact_coverage=reconstruct_high.gold_fact_coverage,
-            reflective_answer_faithfulness=reflective_high.answer_faithfulness,
-            reflective_gold_fact_coverage=reflective_high.gold_fact_coverage,
-            reflective_constraint_satisfaction=reflective_high.constraint_satisfaction,
-            auto_frontier_average_aqs_drop=average_aqs_drop,
-            auto_frontier_cost_regression_count=auto_cost_regression_count,
-            auto_audit=auto_audit,
-            mode_family_aggregates=benchmark_result.mode_family_aggregates,
-            frontier_comparisons=benchmark_result.frontier_comparisons,
-        )
-
-    active_factory = store_factory or default_store_factory
-    if db_path is not None:
-        return run(Path(db_path), active_factory)
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        return run(Path(tmpdir) / "access_gate.sqlite3", active_factory)
+    return AccessGateResult(
+        case_count=benchmark_result.case_count,
+        benchmark_run_count=benchmark_result.run_count,
+        callable_modes=callable_modes,
+        trace_coverage_count=trace_coverage_count,
+        trace_total=trace_total,
+        fixed_lock_run_count=len(fixed_runs),
+        fixed_lock_override_count=fixed_lock_override_count,
+        flash_time_budget_hit_rate=flash_speed.time_budget_hit_rate,
+        flash_constraint_satisfaction=flash_speed.constraint_satisfaction,
+        recall_answer_quality_score=recall_balanced.answer_quality_score,
+        recall_memory_use_score=recall_balanced.memory_use_score,
+        reconstruct_answer_faithfulness=reconstruct_high.answer_faithfulness,
+        reconstruct_gold_fact_coverage=reconstruct_high.gold_fact_coverage,
+        reflective_answer_faithfulness=reflective_high.answer_faithfulness,
+        reflective_gold_fact_coverage=reflective_high.gold_fact_coverage,
+        reflective_constraint_satisfaction=reflective_high.constraint_satisfaction,
+        auto_frontier_average_aqs_drop=average_aqs_drop,
+        auto_frontier_cost_regression_count=auto_cost_regression_count,
+        auto_audit=auto_audit,
+        mode_family_aggregates=benchmark_result.mode_family_aggregates,
+        frontier_comparisons=benchmark_result.frontier_comparisons,
+    )
 
 
 def assert_access_gate(result: AccessGateResult) -> None:
@@ -318,15 +352,50 @@ def write_access_gate_report_json(
     return output_path
 
 
-def _run_fixed_lock_audit(access_service: AccessService) -> list[AccessRunResponse]:
+def _derived_access_benchmark_path(db_path: str | Path | None) -> Path | None:
+    if db_path is None:
+        return None
+    store_path = Path(db_path)
+    return store_path.with_name(f"{store_path.stem}_bench.sqlite3")
+
+
+def _evaluate_seeded_access_service_runs(
+    *,
+    db_path: str | Path | None,
+    store_factory: MemoryStoreFactory | None,
+    run_audit: Callable[[AccessService], _AuditResultT],
+) -> _AuditResultT:
+    def default_store_factory(store_path: Path) -> SQLiteMemoryStore:
+        return SQLiteMemoryStore(store_path)
+
+    def run(store_path: Path, active_store_factory: MemoryStoreFactory) -> _AuditResultT:
+        with active_store_factory(store_path) as store:
+            store.insert_objects(build_canonical_seed_objects())
+            access_service = AccessService(store, clock=lambda: _FIXED_TIMESTAMP)
+            return run_audit(access_service)
+
+    active_factory = store_factory or default_store_factory
+    if db_path is not None:
+        return run(Path(db_path), active_factory)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        return run(Path(tmpdir) / "access_gate.sqlite3", active_factory)
+
+
+def _run_fixed_lock_audit(
+    access_service: AccessService,
+    *,
+    requested_modes: tuple[AccessMode, ...] | None = None,
+) -> list[AccessRunResponse]:
     fixed_runs: list[AccessRunResponse] = []
     cases = build_access_depth_bench_v1()
-    for requested_mode in (
+    modes = requested_modes or (
         AccessMode.FLASH,
         AccessMode.RECALL,
         AccessMode.RECONSTRUCT,
         AccessMode.REFLECTIVE_ACCESS,
-    ):
+    )
+    for requested_mode in modes:
         for case in cases:
             fixed_runs.append(
                 access_service.run(

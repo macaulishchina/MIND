@@ -248,16 +248,23 @@ def build_frontier_comparisons(
         family_aggregates = [
             aggregate for aggregate in aggregates if aggregate.task_family is task_family
         ]
+        if not family_aggregates:
+            continue
         auto_aggregate = next(
-            aggregate
-            for aggregate in family_aggregates
-            if aggregate.requested_mode is AccessMode.AUTO
+            (
+                aggregate
+                for aggregate in family_aggregates
+                if aggregate.requested_mode is AccessMode.AUTO
+            ),
+            None,
         )
         fixed_candidates = [
             aggregate
             for aggregate in family_aggregates
             if aggregate.requested_mode is not AccessMode.AUTO
         ]
+        if auto_aggregate is None or not fixed_candidates:
+            continue
         eligible_candidates = [
             aggregate
             for aggregate in fixed_candidates

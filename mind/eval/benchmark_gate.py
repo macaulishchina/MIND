@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections import Counter
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -10,6 +11,8 @@ from statistics import mean
 from typing import Any
 
 from ..fixtures.long_horizon_eval import (
+    LongHorizonEvalManifest,
+    LongHorizonEvalSequence,
     build_long_horizon_eval_manifest_v1,
     build_long_horizon_eval_v1,
 )
@@ -188,6 +191,70 @@ def evaluate_benchmark_comparison(*, repeat_count: int = 3) -> BenchmarkComparis
     )
 
 
+def evaluate_benchmark_baseline_comparison(
+    *,
+    baseline_system_id: str,
+    repeat_count: int = 3,
+    families: tuple[str, ...] | None = None,
+    sequence_ids: tuple[str, ...] | None = None,
+) -> ComparisonInterval:
+    """Compare MIND against one frozen baseline."""
+
+    sequences, manifest = _benchmark_sequences_and_manifest(families, sequence_ids)
+    runner = LongHorizonBenchmarkRunner(sequences=sequences, manifest=manifest)
+    mind_system = MindLongHorizonSystem()
+    baseline_system = _build_baseline_system(baseline_system_id)
+    try:
+        suite_report = build_benchmark_suite_report(
+            runs_by_system={
+                "mind": runner.run_many(
+                    system_id="mind",
+                    system=mind_system,
+                    repeat_count=repeat_count,
+                ),
+                baseline_system_id: runner.run_many(
+                    system_id=baseline_system_id,
+                    system=baseline_system,
+                    repeat_count=repeat_count,
+                ),
+            }
+        )
+    finally:
+        mind_system.close()
+
+    report_by_system = {report.system_id: report for report in suite_report.system_reports}
+    return _comparison_interval(
+        report_by_system["mind"].pus.raw_values,
+        report_by_system[baseline_system_id].pus.raw_values,
+    )
+
+
+def evaluate_benchmark_baseline_run_comparison(
+    *,
+    baseline_system_id: str,
+    run_id: int = 1,
+    families: tuple[str, ...] | None = None,
+    sequence_ids: tuple[str, ...] | None = None,
+) -> ComparisonInterval:
+    """Compare MIND against one frozen baseline for a single benchmark run."""
+
+    sequences, manifest = _benchmark_sequences_and_manifest(families, sequence_ids)
+    runner = LongHorizonBenchmarkRunner(sequences=sequences, manifest=manifest)
+    mind_system = MindLongHorizonSystem()
+    baseline_system = _build_baseline_system(baseline_system_id)
+    try:
+        mind_run = runner.run_once(system_id="mind", system=mind_system, run_id=run_id)
+        baseline_run = runner.run_once(
+            system_id=baseline_system_id,
+            system=baseline_system,
+            run_id=run_id,
+        )
+    finally:
+        mind_system.close()
+
+    return _comparison_interval((mind_run.average_pus,), (baseline_run.average_pus,))
+
+
 def assert_benchmark_comparison(result: BenchmarkComparisonResult) -> None:
     if not result.f2_pass:
         raise RuntimeError("F-2 failed: not all required systems are present")
@@ -216,45 +283,104 @@ def evaluate_benchmark_gate(*, repeat_count: int = 3) -> BenchmarkGateResult:
 
     manifest = build_long_horizon_eval_manifest_v1()
     comparison_result = evaluate_benchmark_comparison(repeat_count=repeat_count)
-    sequences = build_long_horizon_eval_v1()
-    runner = LongHorizonBenchmarkRunner(sequences=sequences, manifest=manifest)
-
-    full_mind = next(
-        system_report
-        for system_report in comparison_result.suite_report.system_reports
-        if system_report.system_id == "mind"
-    )
-
-    workspace_ablation_system = MindLongHorizonSystem(use_workspace=False)
-    offline_ablation_system = MindLongHorizonSystem(use_offline_maintenance=False)
-    try:
-        workspace_ablation_runs = runner.run_many(
-            system_id="mind_without_workspace",
-            system=workspace_ablation_system,
-            repeat_count=repeat_count,
-        )
-        offline_ablation_runs = runner.run_many(
-            system_id="mind_without_offline_maintenance",
-            system=offline_ablation_system,
-            repeat_count=repeat_count,
-        )
-    finally:
-        workspace_ablation_system.close()
-        offline_ablation_system.close()
-
-    workspace_ablation = _comparison_interval(
-        full_mind.pus.raw_values,
-        tuple(run.average_pus for run in workspace_ablation_runs),
-    )
-    offline_maintenance_ablation = _comparison_interval(
-        full_mind.pus.raw_values,
-        tuple(run.average_pus for run in offline_ablation_runs),
-    )
-    return BenchmarkGateResult(
+    workspace_ablation = evaluate_workspace_ablation(repeat_count=repeat_count)
+    offline_maintenance_ablation = evaluate_offline_maintenance_ablation(repeat_count=repeat_count)
+    return build_benchmark_gate_result(
         manifest_hash=manifest.fixture_hash,
         manifest_sequence_count=manifest.sequence_count,
         manifest_min_step_count=manifest.min_step_count,
         manifest_max_step_count=manifest.max_step_count,
+        comparison_result=comparison_result,
+        workspace_ablation=workspace_ablation,
+        offline_maintenance_ablation=offline_maintenance_ablation,
+    )
+
+
+def evaluate_workspace_ablation(
+    *,
+    repeat_count: int = 3,
+    families: tuple[str, ...] | None = None,
+    sequence_ids: tuple[str, ...] | None = None,
+) -> ComparisonInterval:
+    """Measure the workspace component ablation against the full MIND system."""
+
+    return _evaluate_component_ablation(
+        system_id="mind_without_workspace",
+        build_system=lambda: MindLongHorizonSystem(use_workspace=False),
+        families=families,
+        sequence_ids=sequence_ids,
+        repeat_count=repeat_count,
+    )
+
+
+def evaluate_workspace_ablation_run(
+    *,
+    run_id: int = 1,
+    families: tuple[str, ...] | None = None,
+    sequence_ids: tuple[str, ...] | None = None,
+) -> ComparisonInterval:
+    """Measure the workspace ablation against the full MIND system for one run."""
+
+    return _evaluate_component_ablation_run(
+        system_id="mind_without_workspace",
+        build_system=lambda: MindLongHorizonSystem(use_workspace=False),
+        families=families,
+        sequence_ids=sequence_ids,
+        run_id=run_id,
+    )
+
+
+def evaluate_offline_maintenance_ablation(
+    *,
+    repeat_count: int = 3,
+    families: tuple[str, ...] | None = None,
+    sequence_ids: tuple[str, ...] | None = None,
+) -> ComparisonInterval:
+    """Measure the offline-maintenance ablation against the full MIND system."""
+
+    return _evaluate_component_ablation(
+        system_id="mind_without_offline_maintenance",
+        build_system=lambda: MindLongHorizonSystem(use_offline_maintenance=False),
+        families=families,
+        sequence_ids=sequence_ids,
+        repeat_count=repeat_count,
+    )
+
+
+def evaluate_offline_maintenance_ablation_run(
+    *,
+    run_id: int = 1,
+    families: tuple[str, ...] | None = None,
+    sequence_ids: tuple[str, ...] | None = None,
+) -> ComparisonInterval:
+    """Measure the offline-maintenance ablation against the full MIND system for one run."""
+
+    return _evaluate_component_ablation_run(
+        system_id="mind_without_offline_maintenance",
+        build_system=lambda: MindLongHorizonSystem(use_offline_maintenance=False),
+        families=families,
+        sequence_ids=sequence_ids,
+        run_id=run_id,
+    )
+
+
+def build_benchmark_gate_result(
+    *,
+    manifest_hash: str,
+    manifest_sequence_count: int,
+    manifest_min_step_count: int,
+    manifest_max_step_count: int,
+    comparison_result: BenchmarkComparisonResult,
+    workspace_ablation: ComparisonInterval,
+    offline_maintenance_ablation: ComparisonInterval,
+) -> BenchmarkGateResult:
+    """Assemble a phase-F benchmark gate result from its components."""
+
+    return BenchmarkGateResult(
+        manifest_hash=manifest_hash,
+        manifest_sequence_count=manifest_sequence_count,
+        manifest_min_step_count=manifest_min_step_count,
+        manifest_max_step_count=manifest_max_step_count,
         comparison_result=comparison_result,
         workspace_ablation=workspace_ablation,
         offline_maintenance_ablation=offline_maintenance_ablation,
@@ -446,3 +572,110 @@ def _suite_report_to_dict(report: BenchmarkSuiteReport) -> dict[str, Any]:
             for system_report in report.system_reports
         ],
     }
+
+
+def _build_baseline_system(
+    baseline_system_id: str,
+) -> NoMemoryBaselineSystem | FixedSummaryMemoryBaselineSystem | PlainRagBaselineSystem:
+    if baseline_system_id == "no_memory":
+        return NoMemoryBaselineSystem()
+    if baseline_system_id == "fixed_summary_memory":
+        return FixedSummaryMemoryBaselineSystem()
+    if baseline_system_id == "plain_rag":
+        return PlainRagBaselineSystem()
+    raise ValueError(f"unsupported baseline_system_id: {baseline_system_id}")
+
+
+def _evaluate_component_ablation(
+    *,
+    system_id: str,
+    build_system: Any,
+    families: tuple[str, ...] | None,
+    sequence_ids: tuple[str, ...] | None,
+    repeat_count: int,
+) -> ComparisonInterval:
+    sequences, manifest = _benchmark_sequences_and_manifest(families, sequence_ids)
+    runner = LongHorizonBenchmarkRunner(sequences=sequences, manifest=manifest)
+    full_mind_system = MindLongHorizonSystem()
+    ablation_system = build_system()
+    try:
+        full_mind_runs = runner.run_many(
+            system_id="mind",
+            system=full_mind_system,
+            repeat_count=repeat_count,
+        )
+        ablation_runs = runner.run_many(
+            system_id=system_id,
+            system=ablation_system,
+            repeat_count=repeat_count,
+        )
+    finally:
+        full_mind_system.close()
+        ablation_system.close()
+    return _comparison_interval(
+        tuple(run.average_pus for run in full_mind_runs),
+        tuple(run.average_pus for run in ablation_runs),
+    )
+
+
+def _evaluate_component_ablation_run(
+    *,
+    system_id: str,
+    build_system: Any,
+    families: tuple[str, ...] | None,
+    sequence_ids: tuple[str, ...] | None,
+    run_id: int,
+) -> ComparisonInterval:
+    sequences, manifest = _benchmark_sequences_and_manifest(families, sequence_ids)
+    runner = LongHorizonBenchmarkRunner(sequences=sequences, manifest=manifest)
+    full_mind_system = MindLongHorizonSystem()
+    ablation_system = build_system()
+    try:
+        full_mind_run = runner.run_once(system_id="mind", system=full_mind_system, run_id=run_id)
+        ablation_run = runner.run_once(
+            system_id=system_id,
+            system=ablation_system,
+            run_id=run_id,
+        )
+    finally:
+        full_mind_system.close()
+        ablation_system.close()
+    return _comparison_interval((full_mind_run.average_pus,), (ablation_run.average_pus,))
+
+
+def _benchmark_sequences_and_manifest(
+    families: tuple[str, ...] | None,
+    sequence_ids: tuple[str, ...] | None = None,
+) -> tuple[tuple[LongHorizonEvalSequence, ...], LongHorizonEvalManifest]:
+    manifest = build_long_horizon_eval_manifest_v1()
+    allowed_families = set(families or ())
+    allowed_sequence_ids = set(sequence_ids or ())
+    sequences = tuple(
+        sequence
+        for sequence in build_long_horizon_eval_v1()
+        if (not allowed_families or sequence.family in allowed_families)
+        and (not allowed_sequence_ids or sequence.sequence_id in allowed_sequence_ids)
+    )
+    if not sequences:
+        if allowed_sequence_ids:
+            raise ValueError("sequence_ids filter removed all benchmark sequences")
+        raise ValueError("families filter removed all benchmark sequences")
+    if allowed_families or allowed_sequence_ids:
+        manifest = _filtered_manifest(manifest, sequences)
+    return sequences, manifest
+
+
+def _filtered_manifest(
+    manifest: LongHorizonEvalManifest,
+    sequences: tuple[LongHorizonEvalSequence, ...],
+) -> LongHorizonEvalManifest:
+    family_counts = Counter(sequence.family for sequence in sequences)
+    step_counts = [len(sequence.steps) for sequence in sequences]
+    return LongHorizonEvalManifest(
+        fixture_name=manifest.fixture_name,
+        fixture_hash=manifest.fixture_hash,
+        sequence_count=len(sequences),
+        min_step_count=min(step_counts),
+        max_step_count=max(step_counts),
+        family_counts=tuple(sorted(family_counts.items())),
+    )

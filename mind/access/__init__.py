@@ -6,6 +6,7 @@ from .benchmark import (
     AccessFrontierComparison,
     AccessModeFamilyAggregate,
     evaluate_access_benchmark,
+    merge_access_benchmark_results,
 )
 from .contracts import (
     AccessContextKind,
@@ -24,6 +25,9 @@ from .gate import (
     AccessAutoAuditResult,
     AccessGateResult,
     assert_access_gate,
+    build_access_gate_result,
+    evaluate_access_auto_audit,
+    evaluate_access_fixed_lock_audit,
     evaluate_access_gate,
     write_access_gate_report_json,
 )
@@ -50,7 +54,11 @@ __all__ = [
     "AccessTraceKind",
     "AccessGateResult",
     "assert_access_gate",
+    "build_access_gate_result",
     "evaluate_access_benchmark",
+    "evaluate_access_auto_audit",
+    "evaluate_access_fixed_lock_audit",
     "evaluate_access_gate",
+    "merge_access_benchmark_results",
     "write_access_gate_report_json",
 ]

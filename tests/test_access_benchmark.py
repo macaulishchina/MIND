@@ -1,81 +1,80 @@
 from __future__ import annotations
 
 from collections import Counter
-from functools import lru_cache
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, cast
 
 import pytest
 
-from mind.access import (
-    AccessBenchmarkResult,
-    AccessMode,
-    AccessTaskFamily,
-    evaluate_access_benchmark,
-)
+from mind.access import AccessBenchmarkResult, AccessMode, AccessTaskFamily
 from mind.access import benchmark as access_benchmark
+from mind.access.benchmark import AccessBenchmarkRun, merge_access_benchmark_results
 
 
-@lru_cache(maxsize=1)
-def _benchmark_result() -> AccessBenchmarkResult:
-    return evaluate_access_benchmark()
-
-
-def test_access_benchmark_runs_all_modes_across_all_cases() -> None:
-    result = _benchmark_result()
-
-    assert result.case_count == 60
-    assert result.run_count == 300
-    assert Counter(run.requested_mode for run in result.runs) == {
-        AccessMode.FLASH: 60,
-        AccessMode.RECALL: 60,
-        AccessMode.RECONSTRUCT: 60,
-        AccessMode.REFLECTIVE_ACCESS: 60,
-        AccessMode.AUTO: 60,
-    }
-    assert len(result.mode_family_aggregates) == 15
-    assert len(result.frontier_comparisons) == 3
-
-
-def test_access_benchmark_frontier_comparison_uses_expected_fixed_families() -> None:
-    result = _benchmark_result()
-    comparison_by_family = {
-        comparison.task_family: comparison for comparison in result.frontier_comparisons
-    }
-
-    assert (
-        comparison_by_family[AccessTaskFamily.SPEED_SENSITIVE].family_best_fixed_mode
-        is AccessMode.FLASH
+def test_access_benchmark_merge_reassembles_disjoint_results() -> None:
+    left = AccessBenchmarkResult(
+        case_count=1,
+        run_count=1,
+        runs=(_run(case_id="speed-1", task_family=AccessTaskFamily.SPEED_SENSITIVE),),
+        mode_family_aggregates=(),
+        frontier_comparisons=(),
     )
-    assert (
-        comparison_by_family[AccessTaskFamily.BALANCED].family_best_fixed_mode is AccessMode.RECALL
+    right = AccessBenchmarkResult(
+        case_count=1,
+        run_count=1,
+        runs=(_run(case_id="balanced-1", task_family=AccessTaskFamily.BALANCED),),
+        mode_family_aggregates=(),
+        frontier_comparisons=(),
     )
-    assert comparison_by_family[AccessTaskFamily.HIGH_CORRECTNESS].family_best_fixed_mode in {
-        AccessMode.RECONSTRUCT,
-        AccessMode.REFLECTIVE_ACCESS,
-    }
+
+    merged = merge_access_benchmark_results((left, right))
+
+    assert merged.case_count == 2
+    assert merged.run_count == 2
+    assert {run.case_id for run in merged.runs} == {"speed-1", "balanced-1"}
+    assert len(merged.mode_family_aggregates) == 2
+    assert len(merged.frontier_comparisons) == 0
 
 
-def test_access_benchmark_auto_aggregates_exist_for_all_task_families() -> None:
-    result = _benchmark_result()
-    auto_aggregates = {
-        aggregate.task_family: aggregate
-        for aggregate in result.mode_family_aggregates
-        if aggregate.requested_mode is AccessMode.AUTO
-    }
+def test_access_benchmark_merge_preserves_unique_case_count_across_mode_slices() -> None:
+    speed_flash = AccessBenchmarkResult(
+        case_count=1,
+        run_count=1,
+        runs=(
+            _run(
+                case_id="speed-1",
+                task_family=AccessTaskFamily.SPEED_SENSITIVE,
+                mode=AccessMode.FLASH,
+            ),
+        ),
+        mode_family_aggregates=(),
+        frontier_comparisons=(),
+    )
+    speed_auto = AccessBenchmarkResult(
+        case_count=1,
+        run_count=1,
+        runs=(
+            _run(
+                case_id="speed-1",
+                task_family=AccessTaskFamily.SPEED_SENSITIVE,
+                mode=AccessMode.AUTO,
+            ),
+        ),
+        mode_family_aggregates=(),
+        frontier_comparisons=(),
+    )
 
-    assert set(auto_aggregates) == {
-        AccessTaskFamily.SPEED_SENSITIVE,
-        AccessTaskFamily.BALANCED,
-        AccessTaskFamily.HIGH_CORRECTNESS,
+    merged = merge_access_benchmark_results((speed_flash, speed_auto))
+
+    assert merged.case_count == 1
+    assert merged.run_count == 2
+    assert Counter(run.requested_mode for run in merged.runs) == {
+        AccessMode.FLASH: 1,
+        AccessMode.AUTO: 1,
     }
-    assert all(
-        0.0 <= aggregate.cost_efficiency_score <= 1.0 for aggregate in auto_aggregates.values()
-    )
-    assert all(
-        0.0 <= aggregate.answer_quality_score <= 1.0 for aggregate in auto_aggregates.values()
-    )
+    assert len(merged.mode_family_aggregates) == 2
+    assert len(merged.frontier_comparisons) == 1
 
 
 def test_access_benchmark_reuses_per_case_baseline(
@@ -83,8 +82,8 @@ def test_access_benchmark_reuses_per_case_baseline(
     tmp_path: Path,
 ) -> None:
     cases = [
-        SimpleNamespace(case_id="case-1"),
-        SimpleNamespace(case_id="case-2"),
+        SimpleNamespace(case_id="case-1", task_family=AccessTaskFamily.BALANCED),
+        SimpleNamespace(case_id="case-2", task_family=AccessTaskFamily.BALANCED),
     ]
     baseline_calls: list[str] = []
     baselines: dict[str, access_benchmark._BaselineExecution] = {}
@@ -132,36 +131,10 @@ def test_access_benchmark_reuses_per_case_baseline(
     ) -> access_benchmark.AccessBenchmarkRun:
         assert baseline is baselines[case.case_id]
         assert isinstance(access_service, FakeAccessService)
-        return access_benchmark.AccessBenchmarkRun(
+        return _run(
             case_id=case.case_id,
-            requested_mode=requested_mode,
-            resolved_mode=requested_mode,
             task_family=AccessTaskFamily.BALANCED,
-            context_kind=access_benchmark.AccessContextKind.RAW_TOPK,
-            answer_text="answer",
-            support_ids=(),
-            candidate_ids=(),
-            context_object_ids=(),
-            read_object_ids=(),
-            expanded_object_ids=(),
-            selected_object_ids=(),
-            task_completion_score=1.0,
-            constraint_satisfaction=1.0,
-            gold_fact_coverage=1.0,
-            answer_faithfulness=1.0,
-            answer_quality_score=1.0,
-            needed_memory_recall_at_20=1.0,
-            workspace_support_precision=1.0,
-            answer_trace_support=1.0,
-            memory_use_score=1.0,
-            estimated_latency_ms=1,
-            time_budget_hit=True,
-            context_cost_ratio=1.0,
-            generation_token_ratio=1.0,
-            read_count_ratio=1.0,
-            latency_ratio=1.0,
-            online_cost_ratio=1.0,
-            cost_efficiency_score=1.0,
+            mode=requested_mode,
         )
 
     monkeypatch.setattr(access_benchmark, "build_access_depth_bench_v1", lambda: cases)
@@ -181,3 +154,114 @@ def test_access_benchmark_reuses_per_case_baseline(
     assert baseline_calls == ["case-1", "case-2"]
     assert result.case_count == 2
     assert result.run_count == 10
+
+
+def test_access_benchmark_default_modes_include_all_runtime_modes(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    cases = [SimpleNamespace(case_id="case-1", task_family=AccessTaskFamily.BALANCED)]
+    requested_modes: list[AccessMode] = []
+
+    class FakeStore:
+        def __enter__(self) -> FakeStore:
+            return self
+
+        def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+            del exc_type, exc, tb
+
+        def insert_objects(self, objects: Any) -> None:
+            self.objects = tuple(objects)
+
+    class FakeAccessService:
+        def __init__(self, store: FakeStore) -> None:
+            self.store = store
+
+    class FakePrimitiveService:
+        def __init__(self, store: FakeStore) -> None:
+            self.store = store
+
+    def fake_evaluate_case(
+        *,
+        case: SimpleNamespace,
+        requested_mode: AccessMode,
+        access_service: object,
+        baseline: object,
+    ) -> access_benchmark.AccessBenchmarkRun:
+        del access_service, baseline
+        requested_modes.append(requested_mode)
+        return _run(case_id=case.case_id, task_family=case.task_family, mode=requested_mode)
+
+    monkeypatch.setattr(access_benchmark, "build_access_depth_bench_v1", lambda: cases)
+    monkeypatch.setattr(access_benchmark, "build_canonical_seed_objects", lambda: ())
+    monkeypatch.setattr(access_benchmark, "AccessService", FakeAccessService)
+    monkeypatch.setattr(access_benchmark, "PrimitiveService", FakePrimitiveService)
+    monkeypatch.setattr(
+        access_benchmark,
+        "_baseline_execution",
+        lambda case, primitive_service, store: access_benchmark._BaselineExecution(
+            context_token_count=1,
+            answer_token_count=1,
+            read_count=1,
+            estimated_latency_ms=1,
+        ),
+    )
+    monkeypatch.setattr(
+        access_benchmark,
+        "_evaluate_case",
+        fake_evaluate_case,
+    )
+    monkeypatch.setattr(access_benchmark, "_aggregate_runs", lambda runs: ())
+    monkeypatch.setattr(access_benchmark, "_build_frontier_comparisons", lambda aggregates: ())
+
+    access_benchmark.evaluate_access_benchmark(
+        db_path=tmp_path / "benchmark.sqlite3",
+        store_factory=cast(Any, lambda _path: FakeStore()),
+    )
+
+    assert requested_modes == [
+        AccessMode.FLASH,
+        AccessMode.RECALL,
+        AccessMode.RECONSTRUCT,
+        AccessMode.REFLECTIVE_ACCESS,
+        AccessMode.AUTO,
+    ]
+
+
+def _run(
+    *,
+    case_id: str,
+    task_family: AccessTaskFamily,
+    mode: AccessMode = AccessMode.AUTO,
+) -> AccessBenchmarkRun:
+    return access_benchmark.AccessBenchmarkRun(
+        case_id=case_id,
+        requested_mode=mode,
+        resolved_mode=mode,
+        task_family=task_family,
+        context_kind=access_benchmark.AccessContextKind.RAW_TOPK,
+        answer_text="answer",
+        support_ids=(),
+        candidate_ids=(),
+        context_object_ids=(),
+        read_object_ids=(),
+        expanded_object_ids=(),
+        selected_object_ids=(),
+        task_completion_score=1.0,
+        constraint_satisfaction=1.0,
+        gold_fact_coverage=1.0,
+        answer_faithfulness=1.0,
+        answer_quality_score=1.0,
+        needed_memory_recall_at_20=1.0,
+        workspace_support_precision=1.0,
+        answer_trace_support=1.0,
+        memory_use_score=1.0,
+        estimated_latency_ms=1,
+        time_budget_hit=True,
+        context_cost_ratio=1.0,
+        generation_token_ratio=1.0,
+        read_count_ratio=1.0,
+        latency_ratio=1.0,
+        online_cost_ratio=1.0,
+        cost_efficiency_score=1.0,
+    )

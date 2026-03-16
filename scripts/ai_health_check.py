@@ -6,7 +6,9 @@ that an AI agent can consume to self-diagnose and self-repair.
 
 Usage:
     uv run python scripts/ai_health_check.py                 # quick scan (default)
-    uv run python scripts/ai_health_check.py --full         # full scan
+    uv run python scripts/ai_health_check.py --full         # full scan (parallel)
+    uv run python scripts/ai_health_check.py --serial       # quick scan (single worker)
+    uv run python scripts/ai_health_check.py --full --serial # full scan (single worker)
     uv run python scripts/ai_health_check.py --report-for-ai # emit AI repair prompt
     uv run python scripts/ai_health_check.py --compare       # diff latest vs baseline
     uv run python scripts/ai_health_check.py --output-dir .ai/health
@@ -15,6 +17,7 @@ Usage:
 from __future__ import annotations
 
 import ast
+import importlib.util
 import json
 import os
 import re
@@ -24,6 +27,24 @@ from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+_PROGRESS_SPEC = importlib.util.spec_from_file_location(
+    "ai_health_progress",
+    SCRIPT_DIR / "ai_health_progress.py",
+)
+assert _PROGRESS_SPEC is not None
+assert _PROGRESS_SPEC.loader is not None
+ai_health_progress = importlib.util.module_from_spec(_PROGRESS_SPEC)
+sys.modules[_PROGRESS_SPEC.name] = ai_health_progress
+_PROGRESS_SPEC.loader.exec_module(ai_health_progress)
+
+build_verbose_command = ai_health_progress.build_verbose_command
+collect_test_count = ai_health_progress.collect_test_count
+detect_worker_count = ai_health_progress.detect_worker_count
+run_with_progress = ai_health_progress.run_with_progress
+_PytestProgressBar = ai_health_progress.PytestProgressBar
+time = ai_health_progress.time
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -138,24 +159,25 @@ def _run(
 
 def _pytest_worker_count() -> int:
     """Return the default worker count for quick pytest runs."""
-    return 2 * max(10, os.cpu_count() or 1)
+    return max(4, os.cpu_count() or 1)
 
 
-def build_pytest_command(*, full: bool) -> list[str]:
+# ---------------------------------------------------------------------------
+# Pytest command builder
+# ---------------------------------------------------------------------------
+
+def build_pytest_command(*, full: bool, serial: bool = False) -> list[str]:
     """Build the pytest command for quick or full health-check runs."""
     cmd = [
         "uv", "run", "pytest", "tests/",
+        "--ignore=tests/test_ai_health_check.py",
         "--tb=short", "-q", "--no-header",
         f"--timeout={PYTEST_TEST_TIMEOUT_SECONDS}", "-x",
     ]
     if not full:
-        cmd.extend(
-            [
-                "-m", "not slow and not gate",
-                "-n", str(_pytest_worker_count()),
-                "--dist", "loadfile",
-            ]
-        )
+        cmd.extend(["-m", "not slow and not gate"])
+    if not serial:
+        cmd.extend(["-n", str(_pytest_worker_count()), "--dist", "loadfile"])
     return cmd
 
 
@@ -183,6 +205,7 @@ def _load_pytest_timing_summary(path: Path) -> dict[str, Any]:
     return {
         "timing_available": True,
         "timing_path": str(path),
+        "scheduler_mode": payload.get("scheduler_mode"),
         "timing_totals": payload.get("totals", {}),
         "phase_summaries": payload.get("phase_summaries", []),
         "slowest_tests": slowest_tests,
@@ -323,22 +346,33 @@ def check_mypy() -> dict[str, Any]:
 # Check: pytest  (quick by default; full available via --full)
 # ---------------------------------------------------------------------------
 
-def check_tests(output_dir: Path, *, full: bool = False) -> dict[str, Any]:
+def check_tests(
+    output_dir: Path, *, full: bool = False, serial: bool = False
+) -> dict[str, Any]:
     """Run pytest with timing capture and fail-fast behavior."""
-    cmd = build_pytest_command(full=full)
+    cmd = build_pytest_command(full=full, serial=serial)
     timing_path = _pytest_timing_path(output_dir)
     timing_path.parent.mkdir(parents=True, exist_ok=True)
-    if timing_path.exists():
-        timing_path.unlink()
 
     env = dict(os.environ)
     env["MIND_PYTEST_TIMING_PATH"] = str(timing_path)
-    code, stdout, stderr = _run(
-        cmd,
-        timeout=PYTEST_RUN_TIMEOUT_SECONDS,
-        env=env,
-    )
-    output = stdout + stderr
+
+    use_progress = sys.stdout.isatty()
+    if use_progress:
+        total = collect_test_count(cmd, env, _run)
+        worker_count = detect_worker_count(cmd)
+        verbose_cmd = build_verbose_command(cmd)
+        code, output = run_with_progress(
+            verbose_cmd, total, worker_count,
+            env=env, timeout=PYTEST_RUN_TIMEOUT_SECONDS,
+        )
+    else:
+        code, stdout, stderr = _run(
+            cmd,
+            timeout=PYTEST_RUN_TIMEOUT_SECONDS,
+            env=env,
+        )
+        output = stdout + stderr
     passed = failed = errors = skipped = warnings = 0
     failed_tests: list[str] = []
 
@@ -378,6 +412,7 @@ def check_tests(output_dir: Path, *, full: bool = False) -> dict[str, Any]:
         "tool": "pytest",
         "passed": code == 0,
         "execution_mode": "full" if full else "quick",
+        "concurrency_mode": "serial" if serial else "parallel",
         "command": cmd,
         "tests_passed": passed,
         "tests_failed": failed,
@@ -959,10 +994,13 @@ def generate_ai_repair_prompt(report: dict[str, Any]) -> str:
 # Report generation — orchestration
 # ---------------------------------------------------------------------------
 
-def generate_report(output_dir: Path, *, full: bool = False) -> dict[str, Any]:
+def generate_report(
+    output_dir: Path, *, full: bool = False, serial: bool = False
+) -> dict[str, Any]:
     """Generate a comprehensive health report."""
     mode = "full" if full else "quick"
-    print(f"🔍 Running AI governance health check (v2.1, {mode})...\n")
+    concurrency = "serial" if serial else "parallel"
+    print(f"🔍 Running AI governance health check (v2.1, {mode}, {concurrency})...\n")
 
     results: dict[str, Any] = {
         "timestamp": datetime.now(UTC).isoformat(),
@@ -974,7 +1012,7 @@ def generate_report(output_dir: Path, *, full: bool = False) -> dict[str, Any]:
     checks: list[tuple[str, Any]] = [
         ("ruff", check_ruff),
         ("mypy", check_mypy),
-        ("pytest", lambda: check_tests(output_dir, full=full)),
+        ("pytest", lambda: check_tests(output_dir, full=full, serial=serial)),
         ("architecture", check_architecture),
         ("forbidden_patterns", check_forbidden_patterns),
         ("governance_files", check_governance_files),
@@ -1080,6 +1118,9 @@ def _print_pytest_timing_summary(result: dict[str, Any]) -> None:
 
     timing_path = result.get("timing_path", "?")
     print(f"    ⏱️  Timing log: {timing_path}")
+    scheduler_mode = result.get("scheduler_mode")
+    if scheduler_mode:
+        print(f"    ⚙️  Scheduling: {scheduler_mode}")
 
     phase_summaries = result.get("phase_summaries", [])
     if phase_summaries:
@@ -1137,12 +1178,13 @@ def _slim_report(results: dict[str, Any]) -> dict[str, Any]:
 # CLI
 # ---------------------------------------------------------------------------
 
-def _parse_cli_args(args: list[str]) -> tuple[Path, bool, bool, bool]:
-    """Parse CLI args into (output_dir, report_for_ai, compare_only, full)."""
+def _parse_cli_args(args: list[str]) -> tuple[Path, bool, bool, bool, bool]:
+    """Parse CLI args into (output_dir, report_for_ai, compare_only, full, serial)."""
     output_dir = DEFAULT_OUTPUT_DIR
     report_for_ai = False
     compare_only = False
     full = False
+    serial = False
 
     i = 0
     while i < len(args):
@@ -1161,15 +1203,21 @@ def _parse_cli_args(args: list[str]) -> tuple[Path, bool, bool, bool]:
         elif args[i] == "--quick":
             full = False
             i += 1
+        elif args[i] == "--serial":
+            serial = True
+            i += 1
+        elif args[i] == "--parallel":
+            serial = False
+            i += 1
         else:
             i += 1
 
-    return output_dir, report_for_ai, compare_only, full
+    return output_dir, report_for_ai, compare_only, full, serial
 
 
 def main() -> None:
     """Entry point."""
-    output_dir, report_for_ai, compare_only, full = _parse_cli_args(sys.argv[1:])
+    output_dir, report_for_ai, compare_only, full, serial = _parse_cli_args(sys.argv[1:])
 
     if compare_only:
         latest = output_dir / "latest-report.json"
@@ -1182,7 +1230,7 @@ def main() -> None:
         print(json.dumps(drift, indent=2, default=str))
         sys.exit(0)
 
-    report = generate_report(output_dir, full=full)
+    report = generate_report(output_dir, full=full, serial=serial)
 
     if report_for_ai:
         prompt = generate_ai_repair_prompt(report)

@@ -190,23 +190,6 @@ def test_access_run_auto_can_jump_to_reflective_access(
     assert "select_mode:reflective_access:jump:evidence_conflict:0" in output
 
 
-def test_access_benchmark_prints_frontier_summary(
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    exit_code = mind_main(["access", "benchmark"])
-
-    assert exit_code == 0
-    output = capsys.readouterr().out
-    assert "backend=sqlite" in output
-    assert "storage_scope=isolated" in output
-    assert "case_count=60" in output
-    assert "run_count=300" in output
-    assert "aggregate_count=15" in output
-    assert "frontier_count=3" in output
-    assert "speed_sensitive" in output
-    assert "high_correctness" in output
-
-
 def test_access_benchmark_uses_isolated_postgres_backend(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],

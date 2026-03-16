@@ -149,10 +149,32 @@ class _BaselineExecution:
 def evaluate_access_benchmark(
     db_path: str | Path | None = None,
     store_factory: MemoryStoreFactory | None = None,
+    task_families: tuple[AccessTaskFamily, ...] | None = None,
+    requested_modes: tuple[AccessMode, ...] | None = None,
+    episode_ids: tuple[str, ...] | None = None,
 ) -> AccessBenchmarkResult:
     """Run AccessDepthBench v1 across fixed modes and auto."""
 
-    cases = build_access_depth_bench_v1()
+    allowed_families = set(task_families or ())
+    allowed_episode_ids = set(episode_ids or ())
+    active_modes = tuple(
+        dict.fromkeys(
+            requested_modes
+            or (
+                AccessMode.FLASH,
+                AccessMode.RECALL,
+                AccessMode.RECONSTRUCT,
+                AccessMode.REFLECTIVE_ACCESS,
+                AccessMode.AUTO,
+            )
+        )
+    )
+    cases = tuple(
+        case
+        for case in build_access_depth_bench_v1()
+        if (not allowed_families or case.task_family in allowed_families)
+        and (not allowed_episode_ids or case.episode_id in allowed_episode_ids)
+    )
     seed_objects = build_canonical_seed_objects()
 
     def default_store_factory(store_path: Path) -> SQLiteMemoryStore:
@@ -166,13 +188,7 @@ def evaluate_access_benchmark(
             runs: list[AccessBenchmarkRun] = []
             for case in cases:
                 baseline = _baseline_execution(case, primitive_service, store)
-                for requested_mode in (
-                    AccessMode.FLASH,
-                    AccessMode.RECALL,
-                    AccessMode.RECONSTRUCT,
-                    AccessMode.REFLECTIVE_ACCESS,
-                    AccessMode.AUTO,
-                ):
+                for requested_mode in active_modes:
                     runs.append(
                         _evaluate_case(
                             case=case,
@@ -198,6 +214,23 @@ def evaluate_access_benchmark(
 
     with tempfile.TemporaryDirectory() as tmpdir:
         return run(Path(tmpdir) / "access_benchmark.sqlite3", active_factory)
+
+
+def merge_access_benchmark_results(
+    results: tuple[AccessBenchmarkResult, ...],
+) -> AccessBenchmarkResult:
+    """Merge disjoint benchmark slices into a single aggregate result."""
+
+    runs = tuple(run for result in results for run in result.runs)
+    aggregates = tuple(_aggregate_runs(list(runs)))
+    frontier = tuple(_build_frontier_comparisons(aggregates))
+    return AccessBenchmarkResult(
+        case_count=len({run.case_id for run in runs}),
+        run_count=len(runs),
+        runs=runs,
+        mode_family_aggregates=aggregates,
+        frontier_comparisons=frontier,
+    )
 
 
 def _evaluate_case(
@@ -462,4 +495,3 @@ def _find_support_id(
             best_id = object_id
             best_score = score
     return best_id if best_score > 0 else None
-

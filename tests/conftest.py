@@ -3,12 +3,12 @@ from __future__ import annotations
 import json
 import os
 import re
-from collections import Counter
+from collections import Counter, OrderedDict
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
@@ -18,6 +18,11 @@ from mind.offline_jobs import (
     OfflineJobKind,
     OfflineJobStatus,
 )
+
+try:
+    from xdist.scheduler.loadfile import LoadFileScheduling  # type: ignore[import-untyped]
+except ImportError:  # pragma: no cover - xdist is installed for health checks
+    LoadFileScheduling = None
 
 DEFAULT_PYTEST_TIMING_PATH = Path(".ai/health/pytest-timing-latest.json")
 _GATE_TEST_PATH_RE = re.compile(r"(^|.*/)test_phase_[^/]+_gate\.py$")
@@ -63,6 +68,14 @@ def _timing_output_path() -> Path:
     """Return the configured pytest timing output path."""
     raw = os.environ.get("MIND_PYTEST_TIMING_PATH")
     return Path(raw) if raw else DEFAULT_PYTEST_TIMING_PATH
+
+
+def _scheduler_mode(config: pytest.Config) -> str:
+    return str(getattr(cast(Any, config), "_mind_pytest_scheduler_mode", "serial"))
+
+
+def _set_scheduler_mode(config: pytest.Config, mode: str) -> None:
+    cast(Any, config)._mind_pytest_scheduler_mode = mode
 
 
 def _configured_worker_count(config: pytest.Config) -> int:
@@ -123,6 +136,7 @@ def _timing_payload(config: pytest.Config) -> dict[str, Any]:
         "generated_at": datetime.now(UTC).isoformat(),
         "worker_count": worker_count,
         "xdist_enabled": xdist_enabled,
+        "scheduler_mode": _scheduler_mode(config),
         "totals": {
             "test_case_count": len(sorted_cases),
             "passed": totals.get("passed", 0),
@@ -144,11 +158,128 @@ def _timing_payload(config: pytest.Config) -> dict[str, Any]:
     }
 
 
+def _load_weighted_file_durations(path: Path) -> dict[str, tuple[float, int]]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+    file_totals: dict[str, list[float | int]] = {}
+    for case in payload.get("test_cases", []):
+        nodeid = case.get("nodeid")
+        if not isinstance(nodeid, str) or not nodeid:
+            continue
+        file_path = nodeid.split("::", 1)[0]
+        duration_seconds = float(case.get("duration_seconds", 0.0))
+        bucket = file_totals.setdefault(file_path, [0.0, 0])
+        bucket[0] += duration_seconds
+        bucket[1] += 1
+    return {
+        file_path: (round(float(duration), 6), int(case_count))
+        for file_path, (duration, case_count) in file_totals.items()
+    }
+
+
+if LoadFileScheduling is not None:
+    class _WeightedLoadFileScheduling(LoadFileScheduling):
+        def __init__(
+            self,
+            config: pytest.Config,
+            log: Any,
+            file_weights: dict[str, tuple[float, int]],
+        ) -> None:
+            super().__init__(config, log)
+            self._file_weights = file_weights
+
+        def schedule(self) -> None:
+            assert self.collection_is_completed
+
+            if getattr(self, "collection", None) is not None:
+                for node in self.nodes:
+                    self._reschedule(node)
+                return
+
+            if not self._check_nodes_have_same_collection():
+                self.log("**Different tests collected, aborting run**")
+                return
+
+            collection = cast(
+                list[str],
+                list(next(iter(self.registered_collections.values()))),
+            )
+            self.__dict__["collection"] = collection
+            if not collection:
+                return
+
+            unsorted_workqueue: dict[str, dict[str, bool]] = {}
+            for nodeid in collection:
+                scope = self._split_scope(nodeid)
+                work_unit = unsorted_workqueue.setdefault(scope, {})
+                work_unit[nodeid] = False
+
+            self.workqueue = OrderedDict(
+                sorted(
+                    unsorted_workqueue.items(),
+                    key=lambda item: self._weighted_scope_key(item[0], item[1]),
+                )
+            )
+
+            extra_nodes = len(self.nodes) - len(self.workqueue)
+            if extra_nodes > 0:
+                self.log(f"Shutting down {extra_nodes} nodes")
+                for _ in range(extra_nodes):
+                    unused_node, assigned = self.assigned_work.popitem()
+                    self.log(f"Shutting down unused node {unused_node}")
+                    unused_node.shutdown()
+
+            for node in self.nodes:
+                self._assign_work_unit(node)
+
+            for node in self.nodes:
+                self._reschedule(node)
+
+            if not self.workqueue:
+                for node in self.nodes:
+                    node.shutdown()
+
+        def _weighted_scope_key(
+            self,
+            scope: str,
+            work_unit: dict[str, bool],
+        ) -> tuple[int, float, int, int, str]:
+            if scope in self._file_weights:
+                duration_seconds, case_count = self._file_weights[scope]
+                return (0, -duration_seconds, -case_count, 0, scope)
+            return (1, 0.0, 0, -len(work_unit), scope)
+
+
 def pytest_configure(config: pytest.Config) -> None:
     """Initialize shared timing state for the pytest session."""
     global _TIMING_STATE
-    if not hasattr(config, "workerinput"):
-        _TIMING_STATE = _TimingState(cases={})
+    if hasattr(config, "workerinput"):
+        return
+
+    if _configured_worker_count(config) <= 1:
+        _set_scheduler_mode(config, "serial")
+    elif getattr(config.option, "dist", "") == "loadfile":
+        _set_scheduler_mode(config, "loadfile")
+    else:
+        _set_scheduler_mode(config, str(getattr(config.option, "dist", "parallel")))
+    _TIMING_STATE = _TimingState(cases={})
+
+
+def pytest_xdist_make_scheduler(config: pytest.Config, log: Any) -> Any:
+    if LoadFileScheduling is None:
+        return None
+    if getattr(config.option, "dist", "") != "loadfile":
+        return None
+
+    file_weights = _load_weighted_file_durations(_timing_output_path())
+    if not file_weights:
+        return None
+
+    _set_scheduler_mode(config, "loadfile(weighted)")
+    return _WeightedLoadFileScheduling(config, log, file_weights)
 
 
 def pytest_collection_modifyitems(
@@ -197,6 +328,7 @@ def pytest_terminal_summary(
     payload = _timing_payload(config)
     terminalreporter.section("Pytest timing summary")
     terminalreporter.write_line(f"Timing log: {_timing_output_path()}")
+    terminalreporter.write_line(f"Scheduling: {payload['scheduler_mode']}")
 
     for summary in payload["phase_summaries"][:5]:
         terminalreporter.write_line(

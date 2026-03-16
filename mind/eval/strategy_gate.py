@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections import Counter
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -10,6 +11,8 @@ from statistics import mean
 from typing import Any
 
 from ..fixtures.long_horizon_eval import (
+    LongHorizonEvalManifest,
+    LongHorizonEvalSequence,
     build_long_horizon_eval_manifest_v1,
     build_long_horizon_eval_v1,
 )
@@ -79,11 +82,15 @@ class StrategyGateResult:
         return self.g1_pass and self.g2_pass and self.g3_pass and self.g4_pass and self.g5_pass
 
 
-def evaluate_strategy_gate(*, repeat_count: int = 3) -> StrategyGateResult:
+def evaluate_strategy_gate(
+    *,
+    repeat_count: int = 3,
+    families: tuple[str, ...] | None = None,
+    sequence_ids: tuple[str, ...] | None = None,
+) -> StrategyGateResult:
     """Run the formal strategy optimization gate on LongHorizonEval v1."""
 
-    manifest = build_long_horizon_eval_manifest_v1()
-    sequences = build_long_horizon_eval_v1()
+    sequences, manifest = _strategy_sequences_and_manifest(families, sequence_ids)
     runner = LongHorizonBenchmarkRunner(sequences=sequences, manifest=manifest)
     fixed_system = MindLongHorizonSystem(strategy=FixedRuleMindStrategy())
     optimized_system = MindLongHorizonSystem(strategy=OptimizedMindStrategy())
@@ -154,6 +161,83 @@ def evaluate_strategy_gate(*, repeat_count: int = 3) -> StrategyGateResult:
         pollution_rate_delta=_comparison_interval(
             optimized_report.pollution_rate.raw_values,
             fixed_report.pollution_rate.raw_values,
+        ),
+    )
+
+
+def evaluate_strategy_family_run(
+    *,
+    family: str,
+    run_id: int = 1,
+    sequence_ids: tuple[str, ...] | None = None,
+) -> StrategyGateResult:
+    """Run one fixed-vs-optimized comparison for a single family and run id."""
+
+    sequences, manifest = _strategy_sequences_and_manifest((family,), sequence_ids)
+    runner = LongHorizonBenchmarkRunner(sequences=sequences, manifest=manifest)
+    fixed_system = MindLongHorizonSystem(strategy=FixedRuleMindStrategy())
+    optimized_system = MindLongHorizonSystem(strategy=OptimizedMindStrategy())
+    try:
+        fixed_run = runner.run_once(
+            system_id="mind_fixed_rule",
+            system=fixed_system,
+            run_id=run_id,
+        )
+        optimized_run = runner.run_once(
+            system_id="mind_optimized_v1",
+            system=optimized_system,
+            run_id=run_id,
+        )
+        fixed_snapshot = fixed_system.cost_snapshot(fixed_run.run_id)
+        optimized_snapshot = optimized_system.cost_snapshot(optimized_run.run_id)
+    finally:
+        fixed_system.close()
+        optimized_system.close()
+
+    suite_report = build_benchmark_suite_report(
+        runs_by_system={
+            "mind_fixed_rule": (fixed_run,),
+            "mind_optimized_v1": (optimized_run,),
+        }
+    )
+    budget_profile = build_cost_budget_profile(
+        profile_id="strategy_fixed_rule_budget_v1",
+        fixture_name=manifest.fixture_name,
+        fixture_hash=manifest.fixture_hash,
+        runs=(fixed_run,),
+        snapshots=(fixed_snapshot,),
+    )
+    fixed_rule_cost_report = build_strategy_cost_report(
+        system_id="mind_fixed_rule",
+        strategy_id="fixed_rule_v1",
+        runs=(fixed_run,),
+        snapshots=(fixed_snapshot,),
+        budget_profile=budget_profile,
+    )
+    optimized_cost_report = build_strategy_cost_report(
+        system_id="mind_optimized_v1",
+        strategy_id="optimized_v1",
+        runs=(optimized_run,),
+        snapshots=(optimized_snapshot,),
+        budget_profile=budget_profile,
+    )
+
+    return StrategyGateResult(
+        manifest_hash=manifest.fixture_hash,
+        repeat_count=1,
+        suite_report=suite_report,
+        fixed_rule_cost_report=fixed_rule_cost_report,
+        optimized_cost_report=optimized_cost_report,
+        pus_improvement=_comparison_interval(
+            (optimized_run.average_pus,),
+            (fixed_run.average_pus,),
+        ),
+        family_improvements=(
+            _family_improvement(family, (fixed_run,), (optimized_run,)),
+        ),
+        pollution_rate_delta=_comparison_interval(
+            (optimized_run.average_pollution_rate,),
+            (fixed_run.average_pollution_rate,),
         ),
     )
 
@@ -278,6 +362,44 @@ def _system_report(
 
 def _budget_bias_within_limit(interval: Any) -> bool:
     return max(abs(interval.ci_lower), abs(interval.ci_upper)) <= 0.05
+
+
+def _filtered_manifest(
+    manifest: LongHorizonEvalManifest,
+    sequences: tuple[LongHorizonEvalSequence, ...],
+) -> LongHorizonEvalManifest:
+    family_counts = Counter(sequence.family for sequence in sequences)
+    step_counts = [len(sequence.steps) for sequence in sequences]
+    return LongHorizonEvalManifest(
+        fixture_name=manifest.fixture_name,
+        fixture_hash=manifest.fixture_hash,
+        sequence_count=len(sequences),
+        min_step_count=min(step_counts),
+        max_step_count=max(step_counts),
+        family_counts=tuple(sorted(family_counts.items())),
+    )
+
+
+def _strategy_sequences_and_manifest(
+    families: tuple[str, ...] | None,
+    sequence_ids: tuple[str, ...] | None = None,
+) -> tuple[tuple[LongHorizonEvalSequence, ...], LongHorizonEvalManifest]:
+    manifest = build_long_horizon_eval_manifest_v1()
+    allowed_families = set(families or ())
+    allowed_sequence_ids = set(sequence_ids or ())
+    sequences = tuple(
+        sequence
+        for sequence in build_long_horizon_eval_v1()
+        if (not allowed_families or sequence.family in allowed_families)
+        and (not allowed_sequence_ids or sequence.sequence_id in allowed_sequence_ids)
+    )
+    if not sequences:
+        if allowed_sequence_ids:
+            raise ValueError("sequence_ids filter removed all benchmark sequences")
+        raise ValueError("families filter removed all benchmark sequences")
+    if allowed_families or allowed_sequence_ids:
+        manifest = _filtered_manifest(manifest, sequences)
+    return sequences, manifest
 
 
 # Use the shared benchmark comparison helpers to avoid duplication.

@@ -117,8 +117,17 @@ class PrimitiveGateResult:
 def evaluate_primitive_gate(
     db_path: str | Path | None = None,
     store_factory: MemoryStoreFactory | None = None,
+    include_tags: tuple[str, ...] | None = None,
+    exclude_tags: tuple[str, ...] | None = None,
 ) -> PrimitiveGateResult:
-    calls = build_primitive_golden_calls_v1()
+    include_tag_set = set(include_tags or ())
+    exclude_tag_set = set(exclude_tags or ())
+    calls = tuple(
+        call
+        for call in build_primitive_golden_calls_v1()
+        if (not include_tag_set or include_tag_set.intersection(call.expectation.tags))
+        and not exclude_tag_set.intersection(call.expectation.tags)
+    )
     seed_objects = build_primitive_seed_objects()
 
     def default_store_factory(store_path: Path) -> SQLiteMemoryStore:
