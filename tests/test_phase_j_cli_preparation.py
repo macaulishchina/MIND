@@ -191,52 +191,8 @@ def test_access_run_auto_can_jump_to_reflective_access(
 
 
 def test_access_benchmark_prints_frontier_summary(
-    monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    aggregates = tuple(
-        SimpleNamespace(
-            requested_mode=SimpleNamespace(value=f"mode_{index}"),
-            task_family=SimpleNamespace(value=f"family_{index}"),
-            answer_quality_score=0.8,
-            cost_efficiency_score=0.9,
-            time_budget_hit_rate=1.0,
-        )
-        for index in range(15)
-    )
-    frontier_comparisons = (
-        SimpleNamespace(
-            task_family=SimpleNamespace(value="speed_sensitive"),
-            family_best_fixed_mode=SimpleNamespace(value="flash"),
-            auto_aqs=0.8,
-            auto_cost_efficiency_score=0.9,
-            auto_aqs_drop=0.1,
-        ),
-        SimpleNamespace(
-            task_family=SimpleNamespace(value="balanced"),
-            family_best_fixed_mode=SimpleNamespace(value="recall"),
-            auto_aqs=0.8,
-            auto_cost_efficiency_score=0.9,
-            auto_aqs_drop=0.1,
-        ),
-        SimpleNamespace(
-            task_family=SimpleNamespace(value="high_correctness"),
-            family_best_fixed_mode=SimpleNamespace(value="reflective_access"),
-            auto_aqs=0.8,
-            auto_cost_efficiency_score=0.9,
-            auto_aqs_drop=0.1,
-        ),
-    )
-    monkeypatch.setattr(
-        "mind.cli_primitive_cmds.evaluate_access_benchmark",
-        lambda *args, **kwargs: SimpleNamespace(
-            case_count=60,
-            run_count=300,
-            mode_family_aggregates=aggregates,
-            frontier_comparisons=frontier_comparisons,
-        ),
-    )
-
     exit_code = mind_main(["access", "benchmark"])
 
     assert exit_code == 0
