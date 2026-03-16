@@ -159,7 +159,16 @@ def _run(
 
 def _pytest_worker_count() -> int:
     """Return the default worker count for quick pytest runs."""
-    return max(4, os.cpu_count() or 1)
+    override = os.getenv("MIND_PYTEST_WORKERS", "").strip()
+    if override:
+        try:
+            worker_count = int(override)
+        except ValueError:
+            worker_count = 0
+        if worker_count > 0:
+            return worker_count
+    cpu_count = os.cpu_count() or 1
+    return min(20, max(8, cpu_count * 2))
 
 
 # ---------------------------------------------------------------------------

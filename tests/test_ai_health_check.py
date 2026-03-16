@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import importlib.util
+import io
 import json
+import os
 from pathlib import Path
 from types import ModuleType
 
@@ -24,11 +26,21 @@ health_check = _load_health_check_module()
 def test_pytest_worker_count_uses_cpu_count_with_floor(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.delenv("MIND_PYTEST_WORKERS", raising=False)
     monkeypatch.setattr(health_check.os, "cpu_count", lambda: 2)
-    assert health_check._pytest_worker_count() == 4
+    assert health_check._pytest_worker_count() == 8
 
     monkeypatch.setattr(health_check.os, "cpu_count", lambda: 6)
-    assert health_check._pytest_worker_count() == 6
+    assert health_check._pytest_worker_count() == 12
+
+
+def test_pytest_worker_count_honors_env_override(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("MIND_PYTEST_WORKERS", "9")
+    monkeypatch.setattr(health_check.os, "cpu_count", lambda: 2)
+
+    assert health_check._pytest_worker_count() == 9
 
 
 def test_build_pytest_command_uses_quick_parallel_defaults(
@@ -273,6 +285,29 @@ def test_pytest_progress_bar_reports_worker_summary_and_counts(
     assert "   0%  waiting" in lines[5]
     assert lines[6].startswith("          │ gw3:  0 [")
     assert "   0%  waiting" in lines[6]
+
+
+def test_pytest_progress_bar_render_uses_visual_rows_for_wrapped_lines(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    stream = io.StringIO()
+    monkeypatch.setattr(health_check.sys, "stdout", stream)
+    monkeypatch.setattr(
+        health_check.ai_health_progress.shutil,
+        "get_terminal_size",
+        lambda fallback=(120, 24): os.terminal_size((20, 24)),
+    )
+    bar = health_check._PytestProgressBar(total=10, worker_count=1)
+    monkeypatch.setattr(
+        bar,
+        "_build_lines",
+        lambda: ["  🧵 workers │ total 1", "x" * 30],
+    )
+
+    bar.render()
+    bar.render()
+
+    assert "\x1b[4F" in stream.getvalue()
 
 
 def test_pytest_progress_bar_shows_collecting_state_before_results() -> None:

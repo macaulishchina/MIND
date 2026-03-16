@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 import re
 import selectors
+import shutil
 import subprocess
 import sys
 import time
@@ -21,6 +22,7 @@ _SERIAL_RESULT_RE = re.compile(
     r"(\S+::\S+)\s+(PASSED|FAILED|SKIPPED|ERROR|XFAIL|XPASS)\s+\[\s*\d+%\]",
 )
 _PYTEST_START_RE = re.compile(r"^(\S+::\S+)\s*$")
+_ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 
 
 @dataclass
@@ -50,7 +52,7 @@ class PytestProgressBar:
         self.errors = 0
         self.workers: dict[str, WorkerState] = {}
         self.start = time.monotonic()
-        self._prev_line_count = 0
+        self._prev_visual_rows = 0
         self.finalizing = False
         self.started_tests: dict[str, float] = {}
         self.longest_observed_test: tuple[str, float] | None = None
@@ -91,23 +93,21 @@ class PytestProgressBar:
     def render(self) -> None:
         """Redraw the entire progress display in place."""
         lines = self._build_lines()
-        while len(lines) < self._prev_line_count:
-            lines.append("")
-        if self._prev_line_count > 0:
-            sys.stdout.write(f"\x1b[{self._prev_line_count}F")
+        visual_rows = sum(self._visual_rows(line) for line in lines)
+        if self._prev_visual_rows > 0:
+            sys.stdout.write(f"\x1b[{self._prev_visual_rows}F")
+            sys.stdout.write("\x1b[J")
         for line in lines:
             sys.stdout.write(f"\x1b[2K{line}\n")
         sys.stdout.flush()
-        self._prev_line_count = len(lines)
+        self._prev_visual_rows = visual_rows
 
     def finish(self) -> None:
         """Collapse the multi-line display into a single summary line."""
         elapsed = time.monotonic() - self.start
-        if self._prev_line_count > 0:
-            sys.stdout.write(f"\x1b[{self._prev_line_count}F")
-            for _ in range(self._prev_line_count):
-                sys.stdout.write("\x1b[2K\n")
-            sys.stdout.write(f"\x1b[{self._prev_line_count}F")
+        if self._prev_visual_rows > 0:
+            sys.stdout.write(f"\x1b[{self._prev_visual_rows}F")
+            sys.stdout.write("\x1b[J")
         summary = (
             f"  ⏳ {self.completed}/{self.total} tests"
             f" ({self.worker_count}w, {elapsed:.1f}s)"
@@ -115,7 +115,7 @@ class PytestProgressBar:
         )
         sys.stdout.write(f"\x1b[2K{summary}\n")
         sys.stdout.flush()
-        self._prev_line_count = 0
+        self._prev_visual_rows = 0
 
     def set_finalizing(self, finalizing: bool) -> None:
         """Mark whether pytest is finalizing after all test results arrived."""
@@ -309,6 +309,14 @@ class PytestProgressBar:
         if pct >= 1.0:
             return "100%"
         return f"{math.floor(pct * 100):>2d}%"
+
+    def _visual_rows(self, line: str) -> int:
+        width = self._terminal_columns()
+        visible = _ANSI_ESCAPE_RE.sub("", line)
+        return max(1, math.ceil(max(len(visible), 1) / width))
+
+    def _terminal_columns(self) -> int:
+        return max(shutil.get_terminal_size(fallback=(120, 24)).columns, 20)
 
     def _longest_observed_test(self) -> tuple[str, float] | None:
         active_longest: tuple[str, float] | None = None
