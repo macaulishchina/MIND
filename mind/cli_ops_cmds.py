@@ -33,6 +33,7 @@ from .cli_phase_gates import (
     benchmark_report_main,
     deployment_smoke_report_main,
     product_readiness_report_main,
+    public_dataset_report_main,
     strategy_cost_report_main,
 )
 from .kernel.postgres_store import (
@@ -417,6 +418,15 @@ def _run_acceptance_report(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_public_dataset_report(args: argparse.Namespace) -> int:
+    forwarded = [str(args.dataset)]
+    if args.source is not None:
+        forwarded.extend(("--source", str(args.source)))
+    if args.output is not None:
+        forwarded.extend(("--output", str(args.output)))
+    return public_dataset_report_main(forwarded)
+
+
 def _configure_report_commands(command_parser: argparse.ArgumentParser) -> None:
     report_subparsers = command_parser.add_subparsers(
         dest="report_command",
@@ -605,6 +615,30 @@ def _configure_report_commands(command_parser: argparse.ArgumentParser) -> None:
             (("output", "--output"), ("markdown_output", "--markdown-output")),
         )
     )
+
+    public_dataset_parser = report_subparsers.add_parser(
+        "public-dataset",
+        help="Run the unified public-dataset evaluation report.",
+        description=(
+            "Run unified retrieval, workspace, and long-horizon evaluation for one "
+            "public dataset fixture."
+        ),
+    )
+    public_dataset_parser.add_argument(
+        "dataset",
+        help="Dataset adapter name, for example locomo.",
+    )
+    public_dataset_parser.add_argument(
+        "--source",
+        default=None,
+        help="Optional local JSON slice path used instead of the built-in sample fixture.",
+    )
+    public_dataset_parser.add_argument(
+        "--output",
+        default=None,
+        help="Optional JSON output path for the persisted evaluation report.",
+    )
+    public_dataset_parser.set_defaults(_mind_handler=_run_public_dataset_report)
 
     acceptance_parser = report_subparsers.add_parser(
         "acceptance",

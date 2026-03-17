@@ -47,6 +47,10 @@ from .fixtures.product_readiness_report import (
     write_product_readiness_report_json,
     write_product_readiness_report_markdown,
 )
+from .fixtures.public_datasets import (
+    evaluate_public_dataset,
+    write_public_dataset_evaluation_report_json,
+)
 from .frontend import (
     assert_frontend_gate,
     evaluate_frontend_gate,
@@ -54,6 +58,59 @@ from .frontend import (
 )
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+def public_dataset_report_main(argv: Sequence[str] | None = None) -> int:
+    """Run unified evaluation for one public dataset fixture."""
+
+    parser = argparse.ArgumentParser(
+        prog="mindtest-public-dataset-report",
+        description=(
+            "Run unified retrieval, workspace, and long-horizon evaluation for one "
+            "public dataset fixture."
+        ),
+    )
+    parser.add_argument("dataset", help="Dataset adapter name, for example locomo.")
+    parser.add_argument(
+        "--source",
+        default=None,
+        help="Optional local JSON slice path used instead of the built-in sample fixture.",
+    )
+    parser.add_argument(
+        "--output",
+        default=None,
+        help="Optional JSON output path for the persisted evaluation report.",
+    )
+    args = parser.parse_args(list(argv) if argv is not None else None)
+
+    report = evaluate_public_dataset(args.dataset, source_path=args.source)
+    output_path = write_public_dataset_evaluation_report_json(
+        args.output or f"artifacts/public_datasets/{args.dataset}_evaluation_report.json",
+        report,
+    )
+
+    print("Public dataset report")
+    print(f"dataset_name={report.dataset_name}")
+    if report.source_path is not None:
+        print(f"source_path={report.source_path}")
+    print(f"report_path={output_path}")
+    print(f"fixture_name={report.fixture_name}")
+    print(f"fixture_hash={report.fixture_hash}")
+    print(f"object_count={report.object_count}")
+    print(f"retrieval_case_count={report.retrieval_case_count}")
+    print(f"answer_case_count={report.answer_case_count}")
+    print(f"long_horizon_sequence_count={report.long_horizon_sequence_count}")
+    print(f"candidate_recall_at_20={report.workspace.candidate_recall_at_20:.4f}")
+    print(
+        "workspace_answer_quality_score="
+        f"{report.workspace.workspace_answer_quality_score:.4f}"
+    )
+    print(f"average_pus={report.long_horizon.average_pus:.4f}")
+    print(f"finding_count={len(report.findings)}")
+    for index, finding in enumerate(report.findings, start=1):
+        print(f"finding_{index}={finding}")
+    print("public_dataset_report=PASS")
+    return 0
 
 
 def deployment_smoke_report_main(argv: Sequence[str] | None = None) -> int:

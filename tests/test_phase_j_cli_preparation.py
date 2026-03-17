@@ -755,6 +755,7 @@ def test_report_help_lists_real_report_subcommands(capsys: pytest.CaptureFixture
     assert "product-transport" in output
     assert "deployment-smoke" in output
     assert "product-readiness" in output
+    assert "public-dataset" in output
     assert "acceptance" in output
 
 
@@ -956,6 +957,42 @@ def test_report_product_readiness_forwards_output_and_markdown(
         "/tmp/product_readiness_report.json",
         "--markdown-output",
         "/tmp/product_readiness_report.md",
+    ]
+
+
+def test_report_public_dataset_forwards_dataset_source_and_output(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Sequence[str] | None] = {"argv": None}
+
+    def fake_public_dataset_report_main(argv: Sequence[str] | None = None) -> int:
+        captured["argv"] = argv
+        return 0
+
+    monkeypatch.setattr(
+        "mind.cli_ops_cmds.public_dataset_report_main",
+        fake_public_dataset_report_main,
+    )
+
+    exit_code = mind_main(
+        [
+            "report",
+            "public-dataset",
+            "locomo",
+            "--source",
+            "/tmp/locomo.json",
+            "--output",
+            "/tmp/public_dataset_report.json",
+        ]
+    )
+
+    assert exit_code == 0
+    assert captured["argv"] == [
+        "locomo",
+        "--source",
+        "/tmp/locomo.json",
+        "--output",
+        "/tmp/public_dataset_report.json",
     ]
 
 

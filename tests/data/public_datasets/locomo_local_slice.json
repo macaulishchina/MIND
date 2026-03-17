@@ -1,0 +1,172 @@
+{
+  "dataset_version": "local-slice-v1",
+  "bundles": [
+    {
+      "bundle_id": "locomo_local_bundle_passport",
+      "task_id": "locomo-local-task-001",
+      "episode_id": "locomo-local-episode-001",
+      "day_offset": 30,
+      "goal": "Remember where the traveler stored the passport before the station trip.",
+      "result": "The passport was stored in the red travel pouch.",
+      "success": true,
+      "summary": "The passport was placed in the red travel pouch before leaving for the station.",
+      "reflection": {
+        "kind": "success",
+        "claims": [
+          "passport location remained stable across follow-up recall"
+        ],
+        "summary": "Stable travel-memory fact about the passport location."
+      },
+      "raw_records": [
+        {
+          "kind": "user_message",
+          "text": "I put my passport in the red travel pouch before heading to the station."
+        },
+        {
+          "kind": "assistant_message",
+          "text": "Stored memory: your passport is in the red travel pouch."
+        }
+      ],
+      "retrieval_specs": [
+        {
+          "case_key": "passport_location",
+          "query": "Where was the passport stored before the station trip?",
+          "query_modes": ["keyword"],
+          "filters": {
+            "object_types": ["TaskEpisode", "SummaryNote"]
+          },
+          "gold_candidate_refs": ["episode", "summary"],
+          "gold_fact_refs": ["episode", "summary"],
+          "slot_limit": 2
+        },
+        {
+          "case_key": "passport_time_window",
+          "query": {
+            "start": "2026-03-03T00:00:00+00:00",
+            "end": "2026-03-03T00:03:30+00:00"
+          },
+          "query_modes": ["time_window"],
+          "filters": {
+            "object_types": ["RawRecord", "TaskEpisode", "SummaryNote"]
+          },
+          "gold_candidate_refs": ["record:1", "record:2", "episode", "summary"],
+          "gold_fact_refs": ["record:1", "record:2", "episode"],
+          "slot_limit": 4
+        }
+      ],
+      "answer_specs": [
+        {
+          "case_key": "passport_location",
+          "prompt": "Where did the traveler store the passport before leaving for the station?",
+          "answer_kind": "task_result",
+          "required_fragments": ["red travel pouch"],
+          "gold_fact_refs": ["episode", "summary"],
+          "gold_memory_refs": ["episode", "summary"],
+          "max_answer_tokens": 12
+        }
+      ],
+      "tags": ["public_dataset", "locomo", "local"]
+    },
+    {
+      "bundle_id": "locomo_local_bundle_departure",
+      "task_id": "locomo-local-task-002",
+      "episode_id": "locomo-local-episode-002",
+      "day_offset": 31,
+      "goal": "Remember the departure time and meeting gate for the station pickup.",
+      "result": "The train leaves at 7:10 PM from gate 9 where Mara will meet the traveler.",
+      "success": true,
+      "summary": "The train departs at 7:10 PM from gate 9, and Mara will be waiting there.",
+      "reflection": {
+        "kind": "success",
+        "claims": [
+          "departure and pickup details stayed consistent in the recap"
+        ],
+        "summary": "Stable schedule memory for the station pickup."
+      },
+      "raw_records": [
+        {
+          "kind": "user_message",
+          "text": "Please remember that the train leaves at 7:10 PM and Mara will meet me at gate 9."
+        },
+        {
+          "kind": "assistant_message",
+          "text": "Stored memory: depart at 7:10 PM and meet Mara at gate 9."
+        }
+      ],
+      "retrieval_specs": [
+        {
+          "case_key": "departure_plan",
+          "query": "When does the train leave and where will Mara meet the traveler?",
+          "query_modes": ["keyword"],
+          "filters": {
+            "object_types": ["TaskEpisode", "SummaryNote"]
+          },
+          "gold_candidate_refs": ["episode", "summary"],
+          "gold_fact_refs": ["episode", "summary"],
+          "slot_limit": 2
+        }
+      ],
+      "answer_specs": [
+        {
+          "case_key": "departure_plan",
+          "prompt": "State the departure time and gate for the meetup with Mara.",
+          "answer_kind": "result_and_summary",
+          "required_fragments": ["7:10 PM", "gate 9", "Mara"],
+          "gold_fact_refs": ["episode", "summary"],
+          "gold_memory_refs": ["episode", "summary"],
+          "max_answer_tokens": 18
+        }
+      ],
+      "tags": ["public_dataset", "locomo", "local"]
+    }
+  ],
+  "sequence_specs": [
+    {
+      "sequence_key": "travel_followup_local",
+      "family": "conversation_memory",
+      "candidate_ids": [
+        "locomo-local-episode-001-summary",
+        "locomo-local-episode-001",
+        "locomo-local-episode-001-reflection",
+        "locomo-local-episode-002-summary",
+        "locomo-local-episode-002",
+        "locomo-local-episode-002-reflection"
+      ],
+      "steps": [
+        {
+          "step_key": "step_01",
+          "task_id": "locomo-local-task-001",
+          "needed_object_ids": ["locomo-local-episode-001-summary"]
+        },
+        {
+          "step_key": "step_02",
+          "task_id": "locomo-local-task-002",
+          "needed_object_ids": ["locomo-local-episode-002-summary"]
+        },
+        {
+          "step_key": "step_03",
+          "task_id": "locomo-local-task-001+locomo-local-task-002",
+          "needed_object_ids": ["locomo-local-episode-001", "locomo-local-episode-002"]
+        },
+        {
+          "step_key": "step_04",
+          "task_id": "locomo-local-task-002",
+          "needed_object_ids": ["locomo-local-episode-001-reflection"]
+        },
+        {
+          "step_key": "step_05",
+          "task_id": "locomo-local-task-001+locomo-local-task-002",
+          "needed_object_ids": [
+            "locomo-local-episode-001-summary",
+            "locomo-local-episode-002-summary"
+          ]
+        }
+      ],
+      "tags": ["public_dataset", "locomo", "local"],
+      "maintenance_target_refs": [
+        "locomo-local-episode-001-reflection",
+        "locomo-local-episode-002-reflection"
+      ]
+    }
+  ]
+}
