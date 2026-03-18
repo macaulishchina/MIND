@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 
@@ -10,11 +11,13 @@ from mind.app.context import SessionContext
 from mind.app.contracts import AppRequest
 from mind.frontend import (
     FrontendAccessRequest,
+    FrontendMemoryLifecycleBenchmarkLaunchRequest,
     FrontendOfflineSubmitRequest,
     build_frontend_access_result,
     build_frontend_experience_catalog,
     build_frontend_gate_demo_page,
     build_frontend_ingest_result,
+    build_frontend_memory_lifecycle_benchmark_result,
     build_frontend_offline_submit_result,
     build_frontend_retrieve_result,
 )
@@ -29,6 +32,12 @@ def _request(input_payload: dict[str, Any], *, request_id: str) -> AppRequest:
     )
 
 
+@pytest.fixture(autouse=True)
+def _isolate_from_repo_config() -> None:  # type: ignore[misc]
+    with patch("mind.capabilities.config_file.load_mind_toml", return_value={}):
+        yield
+
+
 def test_frontend_experience_catalog_projects_frozen_bench() -> None:
     page = build_frontend_experience_catalog()
 
@@ -38,6 +47,7 @@ def test_frontend_experience_catalog_projects_frozen_bench() -> None:
         "retrieve",
         "access",
         "offline",
+        "benchmark",
         "gate_demo",
     ]
 
@@ -85,6 +95,80 @@ def test_frontend_offline_submit_request_validates_payload_shape() -> None:
 
     assert request.job_kind is OfflineJobKind.PROMOTE_SCHEMA
     assert request.priority == 0.5
+
+
+def test_frontend_benchmark_launch_request_requires_dataset_and_source() -> None:
+    with pytest.raises(ValueError, match="dataset_name"):
+        FrontendMemoryLifecycleBenchmarkLaunchRequest(dataset_name="", source_path="slice.json")
+
+    request = FrontendMemoryLifecycleBenchmarkLaunchRequest(
+        dataset_name="locomo",
+        source_path="tests/data/public_datasets/locomo_local_slice.json",
+    )
+
+    assert request.dataset_name == "locomo"
+
+
+def test_frontend_benchmark_projection_projects_stage_report() -> None:
+    result = build_frontend_memory_lifecycle_benchmark_result(
+        {
+            "dataset_name": "locomo",
+            "source_path": "tests/data/public_datasets/locomo_local_slice.json",
+            "fixture_name": "locomo local-slice-v1",
+            "run_id": "req-front-benchmark",
+            "report_path": (
+                "artifacts/dev/memory_lifecycle_benchmark/"
+                "req-front-benchmark/report.json"
+            ),
+            "telemetry_path": (
+                "artifacts/dev/memory_lifecycle_benchmark/"
+                "req-front-benchmark/telemetry.jsonl"
+            ),
+            "store_path": (
+                "artifacts/dev/memory_lifecycle_benchmark/"
+                "req-front-benchmark/benchmark.sqlite3"
+            ),
+            "bundle_count": 2,
+            "answer_case_count": 2,
+            "frontend_debug_query": {"run_id": "req-front-benchmark"},
+            "notes": ["query telemetry by run_id"],
+            "stage_reports": [
+                {
+                    "stage_name": "remember_only",
+                    "ask": {
+                        "answer_case_count": 2,
+                        "average_answer_quality": 0.5,
+                        "task_success_rate": 0.5,
+                        "candidate_hit_rate": 0.5,
+                        "selected_hit_rate": 0.5,
+                        "reuse_rate": 0.25,
+                        "pollution_rate": 0.1,
+                    },
+                    "memory": {
+                        "active_object_count": 6,
+                        "total_object_versions": 6,
+                        "active_object_counts": {"RawRecord": 4, "TaskEpisode": 2},
+                    },
+                    "cost": {
+                        "total_cost": 0.0,
+                        "generation_cost": 0.0,
+                        "maintenance_cost": 0.0,
+                        "retrieval_cost": 0.0,
+                        "read_cost": 0.0,
+                        "write_cost": 0.0,
+                        "storage_cost": 0.0,
+                        "offline_job_count": 0,
+                    },
+                    "operation_notes": ["wrote 4 raw records"],
+                }
+            ],
+        }
+    )
+
+    assert result.run_id == "req-front-benchmark"
+    assert result.stage_count == 1
+    assert result.latest_stage_name == "remember_only"
+    assert result.stage_reports[0].memory.active_object_counts["RawRecord"] == 4
 
 
 def test_frontend_access_result_aliases_recall_to_focus() -> None:

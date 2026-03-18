@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 
@@ -34,6 +35,12 @@ def _primitive_context(*, run_id: str, dev_mode: bool) -> PrimitiveExecutionCont
         dev_mode=dev_mode,
         telemetry_run_id=run_id,
     )
+
+
+@pytest.fixture(autouse=True)
+def _isolate_from_repo_config() -> None:  # type: ignore[misc]
+    with patch("mind.capabilities.config_file.load_mind_toml", return_value={}):
+        yield
 
 
 def test_frontend_debug_app_service_rejects_without_dev_mode() -> None:
@@ -191,6 +198,46 @@ def test_registry_exposes_frontend_experience_service(tmp_path: Path) -> None:
     assert offline.status is AppStatus.OK
     assert offline.result is not None
     assert offline.result == {"job_id": offline.result["job_id"], "status": "pending"}
+
+
+def test_registry_exposes_frontend_benchmark_launch_and_reload(tmp_path: Path) -> None:
+    from mind.app.registry import build_app_registry
+    from mind.cli_config import resolve_cli_config
+
+    config = resolve_cli_config(
+        backend="sqlite",
+        sqlite_path=str(tmp_path / "frontend_benchmark_registry.sqlite3"),
+        allow_sqlite=True,
+    )
+
+    with build_app_registry(config) as registry:
+        launched = registry.frontend_experience_service.run_memory_lifecycle_benchmark(
+            _request(
+                {
+                    "dataset_name": "locomo",
+                    "source_path": str(
+                        Path(__file__).resolve().parent
+                        / "data"
+                        / "public_datasets"
+                        / "locomo_local_slice.json"
+                    ),
+                },
+                request_id="req-front-benchmark-service",
+                dev_mode=False,
+            )
+        )
+        reloaded = registry.frontend_experience_service.load_memory_lifecycle_benchmark_report(
+            _request({}, request_id="req-front-benchmark-reload", dev_mode=False)
+        )
+
+    assert launched.status is AppStatus.OK
+    assert launched.result is not None
+    assert launched.result["run_id"] == "req-front-benchmark-service"
+    assert launched.result["stage_count"] == 5
+    assert Path(launched.result["report_path"]).exists()
+    assert reloaded.status is AppStatus.OK
+    assert reloaded.result is not None
+    assert reloaded.result["run_id"] == "req-front-benchmark-service"
 
 
 def test_frontend_access_uses_activated_openai_compatible_service(

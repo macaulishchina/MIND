@@ -996,6 +996,58 @@ def test_report_public_dataset_forwards_dataset_source_and_output(
     ]
 
 
+def test_report_public_dataset_forwards_provider_and_strategy_flags(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Sequence[str] | None] = {"argv": None}
+
+    def fake_public_dataset_report_main(argv: Sequence[str] | None = None) -> int:
+        captured["argv"] = argv
+        return 0
+
+    monkeypatch.setattr(
+        "mind.cli_ops_cmds.public_dataset_report_main",
+        fake_public_dataset_report_main,
+    )
+
+    exit_code = mind_main(
+        [
+            "report",
+            "public-dataset",
+            "hotpotqa",
+            "--provider",
+            "openai",
+            "--model",
+            "gpt-4.1-mini",
+            "--endpoint",
+            "https://api.openai.com/v1/responses",
+            "--timeout-ms",
+            "12000",
+            "--retry-policy",
+            "none",
+            "--strategy",
+            "optimized",
+        ]
+    )
+
+    assert exit_code == 0
+    assert captured["argv"] == [
+        "hotpotqa",
+        "--provider",
+        "openai",
+        "--model",
+        "gpt-4.1-mini",
+        "--endpoint",
+        "https://api.openai.com/v1/responses",
+        "--timeout-ms",
+        "12000",
+        "--retry-policy",
+        "none",
+        "--strategy",
+        "optimized",
+    ]
+
+
 def test_report_acceptance_prints_frozen_phase_report_path(
     capsys: pytest.CaptureFixture[str],
 ) -> None:

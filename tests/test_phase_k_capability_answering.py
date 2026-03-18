@@ -4,6 +4,8 @@ import json
 from datetime import UTC, datetime
 from types import SimpleNamespace
 
+from pytest import MonkeyPatch
+
 from mind.access.benchmark import _generate_answer
 from mind.access.contracts import AccessContextKind
 from mind.capabilities import (
@@ -122,6 +124,57 @@ def test_raw_topk_answer_path_delegates_to_capability_service() -> None:
     assert captured["request"].question == case.prompt
     assert captured["request"].context_text == "task-001: success"
     assert captured["request"].support_ids == ["episode-001"]
+
+
+def test_workspace_answer_falls_back_to_draft_when_generated_text_drops_required_fragments(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    def _degraded_answer_text(**_: object) -> str:
+        return (
+            "task-001: the claim is refuted because the evidence does not support "
+            "universal cold prevention from daily vitamin c."
+        )
+
+    monkeypatch.setattr(
+        "mind.workspace.answer_benchmark.generate_answer_text",
+        _degraded_answer_text,
+    )
+
+    case = EpisodeAnswerBenchCase(
+        case_id="workspace-task-result-fidelity",
+        task_id="task-001",
+        episode_id="episode-001",
+        prompt="What is the verdict for the vitamin C claim?",
+        answer_kind=AnswerKind.TASK_RESULT,
+        required_fragments=("Refuted", "vitamin C", "seasonal cold"),
+        gold_fact_ids=("episode-001",),
+        gold_memory_refs=("episode-001",),
+        max_answer_tokens=16,
+    )
+    context = SerializedContext(
+        protocol="mind.phase_d_context.v1",
+        kind="workspace",
+        object_ids=("episode-001",),
+        text=json.dumps(
+            {
+                "selected_object_ids": ["episode-001"],
+                "slots": [
+                    {
+                        "summary": (
+                            "episode-001 [Refuted: daily vitamin C does not "
+                            "prevent every seasonal cold.]"
+                        ),
+                        "source_refs": ["episode-001"],
+                    }
+                ],
+            }
+        ),
+        token_count=11,
+    )
+
+    answer = answer_from_workspace(case, context)
+
+    assert answer.text == "task-001: Refuted: daily vitamin C does not prevent every seasonal cold."
 
 
 def test_access_benchmark_answer_generation_delegates_to_capability_service() -> None:

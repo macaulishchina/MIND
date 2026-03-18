@@ -28,6 +28,7 @@ export const ENTRYPOINT_LABELS = {
   retrieve: { title: "召回检索", mode: "查找", summary: "快速找回可能相关的已保存内容。" },
   access: { title: "访问问答", mode: "整理", summary: "整合已有内容，生成更完整的回答。" },
   offline: { title: "后台任务", mode: "整理", summary: "把整理任务交给系统在后台慢慢完成。" },
+  benchmark: { title: "生命周期基准", mode: "验证", summary: "真实跑写入、整理、提炼与 ask，并回看阶段报告。" },
   gate_demo: { title: "示例摘要", mode: "查看", summary: "集中查看常用示例、检查结果和说明内容。" },
 };
 
@@ -145,6 +146,18 @@ export const OPERATION_CHAIN_CONFIG = {
       { id: "receive", label: "接收整理请求", summary: "系统接收任务类型、分组或目标内容以及优先级。" },
       { id: "create", label: "创建后台任务", summary: "系统为这次整理请求创建一个后台任务。" },
       { id: "result", label: "返回任务编号", summary: "系统返回任务编号和当前状态，后续会在后台继续处理。" },
+    ],
+  },
+  "module-benchmark": {
+    title: "生命周期基准",
+    apiPath: "/v1/frontend/benchmark:run",
+    idleSummary: "系统会执行真实 memory lifecycle benchmark，并把报告、telemetry、store 落盘后返回阶段摘要。",
+    steps: [
+      { id: "receive", label: "接收数据集", summary: "系统接收数据集名和本地 slice 路径。" },
+      { id: "ingest", label: "写入原始内容", summary: "系统真实执行 write_raw 并补齐可反思的 episode。" },
+      { id: "maintain", label: "运行维护阶段", summary: "系统依次执行 summarize、reflect、reorganize 和 schema promotion。" },
+      { id: "ask", label: "分阶段 ask", summary: "系统在每个阶段跑 ask 并统计质量、命中、复用和污染指标。", highlighted: true },
+      { id: "result", label: "返回报告", summary: "系统保存 report/telemetry/store，并返回 run_id 和阶段报告。" },
     ],
   },
 };

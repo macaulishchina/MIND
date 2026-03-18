@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from pydantic import ValidationError as PydanticValidationError
@@ -21,12 +22,14 @@ class FrontendExperienceAppService:
         memory_access_service: Any,
         offline_job_app_service: Any,
         request_defaults_resolver: Any = None,
+        benchmark_artifact_root: str | Path = "artifacts/dev/memory_lifecycle_benchmark",
     ) -> None:
         self._memory_ingest_service = memory_ingest_service
         self._memory_query_service = memory_query_service
         self._memory_access_service = memory_access_service
         self._offline_job_app_service = offline_job_app_service
         self._request_defaults_resolver = request_defaults_resolver
+        self._benchmark_artifact_root = Path(benchmark_artifact_root)
 
     def ingest(self, req: AppRequest) -> AppResponse:
         from mind.app.frontend_experience import FrontendIngestRequest, build_frontend_ingest_result
@@ -125,6 +128,84 @@ class FrontendExperienceAppService:
         response.result = build_frontend_gate_demo_page().model_dump(mode="json")
         return response
 
+    def run_memory_lifecycle_benchmark(self, req: AppRequest) -> AppResponse:
+        from mind.app.frontend_experience_benchmark import (
+            FrontendMemoryLifecycleBenchmarkLaunchRequest,
+            build_frontend_memory_lifecycle_benchmark_result,
+        )
+        from mind.eval import (
+            evaluate_memory_lifecycle_benchmark,
+            persist_memory_lifecycle_benchmark_report,
+            prepare_memory_lifecycle_benchmark_artifacts,
+        )
+
+        req = self._apply_request_defaults(req, include_provider_selection=True)
+        validated = self._validate(req, FrontendMemoryLifecycleBenchmarkLaunchRequest)
+        if isinstance(validated, AppResponse):
+            return validated
+
+        artifacts = prepare_memory_lifecycle_benchmark_artifacts(
+            self._benchmark_artifact_root,
+            run_id=req.request_id,
+        )
+        try:
+            report = evaluate_memory_lifecycle_benchmark(
+                validated.dataset_name,
+                source_path=validated.source_path,
+                provider_selection=req.provider_selection,
+                telemetry_path=artifacts.telemetry_path,
+                store_path=artifacts.store_path,
+                run_id=req.request_id,
+            )
+            persist_memory_lifecycle_benchmark_report(artifacts, report)
+        except FileNotFoundError as exc:
+            return self._error_response(req, AppErrorCode.NOT_FOUND, str(exc))
+        except ValueError as exc:
+            return self._error_response(req, AppErrorCode.VALIDATION_ERROR, str(exc))
+        except RuntimeError as exc:
+            return self._error_response(req, AppErrorCode.INTERNAL_ERROR, str(exc))
+
+        response = new_response(req)
+        response.status = AppStatus.OK
+        response.result = build_frontend_memory_lifecycle_benchmark_result(
+            {
+                **_report_to_payload(report),
+                "report_path": str(artifacts.report_path),
+            }
+        ).model_dump(mode="json")
+        return response
+
+    def load_memory_lifecycle_benchmark_report(self, req: AppRequest) -> AppResponse:
+        from mind.app.frontend_experience_benchmark import (
+            FrontendMemoryLifecycleBenchmarkQueryRequest,
+            build_frontend_memory_lifecycle_benchmark_result,
+        )
+        from mind.eval import load_memory_lifecycle_benchmark_report
+
+        validated = self._validate(req, FrontendMemoryLifecycleBenchmarkQueryRequest)
+        if isinstance(validated, AppResponse):
+            return validated
+
+        try:
+            report, report_path = load_memory_lifecycle_benchmark_report(
+                self._benchmark_artifact_root,
+                run_id=validated.run_id,
+            )
+        except FileNotFoundError as exc:
+            return self._error_response(req, AppErrorCode.NOT_FOUND, str(exc))
+        except ValueError as exc:
+            return self._error_response(req, AppErrorCode.VALIDATION_ERROR, str(exc))
+
+        response = new_response(req)
+        response.status = AppStatus.OK
+        response.result = build_frontend_memory_lifecycle_benchmark_result(
+            {
+                **_report_to_payload(report),
+                "report_path": str(report_path),
+            }
+        ).model_dump(mode="json")
+        return response
+
     def _project(
         self,
         req: AppRequest,
@@ -165,3 +246,55 @@ class FrontendExperienceAppService:
                 details={"errors": [dict(error) for error in exc.errors()]},
             )
             return response
+
+    def _error_response(self, req: AppRequest, code: AppErrorCode, message: str) -> AppResponse:
+        response = new_response(req)
+        response.status = AppStatus.ERROR
+        response.error = AppError(code=code, message=message)
+        return response
+
+
+def _report_to_payload(report: Any) -> dict[str, Any]:
+    return {
+        "dataset_name": report.dataset_name,
+        "source_path": report.source_path,
+        "fixture_name": report.fixture_name,
+        "run_id": report.run_id,
+        "telemetry_path": report.telemetry_path,
+        "store_path": report.store_path,
+        "bundle_count": report.bundle_count,
+        "answer_case_count": report.answer_case_count,
+        "frontend_debug_query": dict(report.frontend_debug_query),
+        "notes": list(report.notes),
+        "stage_reports": [
+            {
+                "stage_name": stage.stage_name,
+                "ask": {
+                    "answer_case_count": stage.ask.answer_case_count,
+                    "average_answer_quality": stage.ask.average_answer_quality,
+                    "task_success_rate": stage.ask.task_success_rate,
+                    "candidate_hit_rate": stage.ask.candidate_hit_rate,
+                    "selected_hit_rate": stage.ask.selected_hit_rate,
+                    "reuse_rate": stage.ask.reuse_rate,
+                    "pollution_rate": stage.ask.pollution_rate,
+                },
+                "memory": {
+                    "active_object_count": stage.memory.active_object_count,
+                    "total_object_versions": stage.memory.total_object_versions,
+                    "active_object_counts": dict(stage.memory.active_object_counts),
+                },
+                "cost": {
+                    "total_cost": stage.cost.total_cost,
+                    "generation_cost": stage.cost.generation_cost,
+                    "maintenance_cost": stage.cost.maintenance_cost,
+                    "retrieval_cost": stage.cost.retrieval_cost,
+                    "read_cost": stage.cost.read_cost,
+                    "write_cost": stage.cost.write_cost,
+                    "storage_cost": stage.cost.storage_cost,
+                    "offline_job_count": stage.cost.offline_job_count,
+                },
+                "operation_notes": list(stage.operation_notes),
+            }
+            for stage in report.stage_reports
+        ],
+    }

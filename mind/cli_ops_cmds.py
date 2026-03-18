@@ -424,6 +424,18 @@ def _run_public_dataset_report(args: argparse.Namespace) -> int:
         forwarded.extend(("--source", str(args.source)))
     if args.output is not None:
         forwarded.extend(("--output", str(args.output)))
+    if args.provider is not None:
+        forwarded.extend(("--provider", str(args.provider)))
+    if args.model is not None:
+        forwarded.extend(("--model", str(args.model)))
+    if args.endpoint is not None:
+        forwarded.extend(("--endpoint", str(args.endpoint)))
+    if args.timeout_ms is not None:
+        forwarded.extend(("--timeout-ms", str(args.timeout_ms)))
+    if args.retry_policy is not None:
+        forwarded.extend(("--retry-policy", str(args.retry_policy)))
+    if args.strategy not in (None, "public-dataset"):
+        forwarded.extend(("--strategy", str(args.strategy)))
     return public_dataset_report_main(forwarded)
 
 
@@ -637,6 +649,38 @@ def _configure_report_commands(command_parser: argparse.ArgumentParser) -> None:
         "--output",
         default=None,
         help="Optional JSON output path for the persisted evaluation report.",
+    )
+    public_dataset_parser.add_argument(
+        "--provider",
+        choices=_LIVE_CAPABILITY_PROVIDER_CHOICES,
+        default=None,
+        help="Optional answer provider, for example openai.",
+    )
+    public_dataset_parser.add_argument(
+        "--model",
+        default=None,
+        help="Optional answer model name.",
+    )
+    public_dataset_parser.add_argument(
+        "--endpoint",
+        default=None,
+        help="Optional provider endpoint override.",
+    )
+    public_dataset_parser.add_argument(
+        "--timeout-ms",
+        type=int,
+        default=None,
+        help="Optional provider timeout override in milliseconds.",
+    )
+    public_dataset_parser.add_argument(
+        "--retry-policy",
+        default=None,
+        help="Optional provider retry policy label.",
+    )
+    public_dataset_parser.add_argument(
+        "--strategy",
+        default="public-dataset",
+        help="Long-horizon strategy: fixed, optimized, or public-dataset.",
     )
     public_dataset_parser.set_defaults(_mind_handler=_run_public_dataset_report)
 

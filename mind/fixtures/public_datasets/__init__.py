@@ -24,6 +24,10 @@ from .evaluation import (
     evaluate_public_dataset,
     write_public_dataset_evaluation_report_json,
 )
+from .raw_import import (
+    compile_public_dataset_local_slice,
+    write_public_dataset_local_slice_json,
+)
 from .registry import (
     PublicDatasetAdapter,
     UnknownPublicDatasetError,
@@ -63,9 +67,11 @@ __all__ = [
     "compile_long_horizon_sequences",
     "compile_objects",
     "compile_retrieval_cases",
+    "compile_public_dataset_local_slice",
     "evaluate_public_dataset",
     "get_public_dataset_adapter",
     "list_public_dataset_descriptors",
     "load_public_dataset_fixture_from_path",
+    "write_public_dataset_local_slice_json",
     "write_public_dataset_evaluation_report_json",
 ]

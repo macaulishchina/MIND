@@ -5,15 +5,24 @@ from __future__ import annotations
 import json
 import statistics
 import tempfile
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
+from mind.capabilities import CapabilityService, resolve_capability_provider_config
 from mind.eval.runner import (
     LongHorizonBenchmarkRun,
     LongHorizonBenchmarkRunner,
     LongHorizonScoreCard,
 )
-from mind.eval.strategy import FixedRuleMindStrategy, covered_needed_ids
+from mind.eval.strategy import (
+    FixedRuleMindStrategy,
+    MindStrategy,
+    OptimizedMindStrategy,
+    PublicDatasetMindStrategy,
+    covered_needed_ids,
+)
 from mind.fixtures.episode_answer_bench import EpisodeAnswerBenchCase
 from mind.fixtures.long_horizon_eval import LongHorizonEvalManifest, LongHorizonEvalSequence
 from mind.fixtures.public_datasets.registry import (
@@ -87,6 +96,10 @@ class PublicDatasetEvaluationReport:
     retrieval_case_count: int
     answer_case_count: int
     long_horizon_sequence_count: int
+    answer_provider: str
+    answer_model: str
+    answer_provider_configured: bool
+    long_horizon_strategy: str
     workspace: PublicDatasetWorkspaceSummary
     long_horizon: PublicDatasetLongHorizonSummary
     findings: tuple[str, ...]
@@ -96,6 +109,8 @@ def evaluate_public_dataset(
     dataset_name: str,
     *,
     source_path: str | Path | None = None,
+    provider_selection: Mapping[str, object] | Any | None = None,
+    long_horizon_strategy: str = "public-dataset",
 ) -> PublicDatasetEvaluationReport:
     """Evaluate one public dataset fixture through unified benchmark summaries."""
 
@@ -105,8 +120,23 @@ def evaluate_public_dataset(
     retrieval_cases = build_public_dataset_retrieval_cases(dataset_name, source_path=source_path)
     answer_cases = build_public_dataset_answer_cases(dataset_name, source_path=source_path)
     sequences = build_public_dataset_long_horizon_sequences(dataset_name, source_path=source_path)
-    workspace_summary = _evaluate_workspace_summary(objects, retrieval_cases, answer_cases)
-    long_horizon_run = _evaluate_long_horizon_summary(objects, sequences, manifest)
+    capability_service = CapabilityService(
+        provider_config=resolve_capability_provider_config(selection=provider_selection),
+    )
+    strategy = _long_horizon_strategy(long_horizon_strategy)
+    workspace_summary = _evaluate_workspace_summary(
+        objects,
+        retrieval_cases,
+        answer_cases,
+        capability_service=capability_service,
+    )
+    long_horizon_run = _evaluate_long_horizon_summary(
+        objects,
+        sequences,
+        manifest,
+        strategy=strategy,
+    )
+    provider_summary = capability_service.provider_config.redacted_summary()
     long_horizon_summary = PublicDatasetLongHorizonSummary(
         sequence_count=long_horizon_run.sequence_count,
         average_task_success_rate=long_horizon_run.average_task_success_rate,
@@ -126,9 +156,18 @@ def evaluate_public_dataset(
         retrieval_case_count=len(retrieval_cases),
         answer_case_count=len(answer_cases),
         long_horizon_sequence_count=len(sequences),
+        answer_provider=str(provider_summary["provider"]),
+        answer_model=str(provider_summary["model"]),
+        answer_provider_configured=bool(provider_summary["auth"]["configured"]),
+        long_horizon_strategy=strategy.strategy_id,
         workspace=workspace_summary,
         long_horizon=long_horizon_summary,
-        findings=_build_findings(workspace_summary, long_horizon_summary),
+        findings=_build_findings(
+            workspace_summary,
+            long_horizon_summary,
+            provider=provider_summary["provider"],
+            provider_configured=bool(provider_summary["auth"]["configured"]),
+        ),
     )
     return report
 
@@ -152,6 +191,8 @@ def _evaluate_workspace_summary(
     objects: list[dict[str, object]],
     retrieval_cases: list[RetrievalBenchmarkCase],
     answer_cases: list[EpisodeAnswerBenchCase],
+    *,
+    capability_service: CapabilityService,
 ) -> PublicDatasetWorkspaceSummary:
     answer_case_map = {case.case_id: case for case in answer_cases}
 
@@ -166,6 +207,7 @@ def _evaluate_workspace_summary(
                     answer_case=answer_case_map.get(case.case_id),
                     service=service,
                     builder=builder,
+                    capability_service=capability_service,
                     store=store,
                 )
                 for case in retrieval_cases
@@ -174,6 +216,7 @@ def _evaluate_workspace_summary(
     keyword_case_count = sum(_has_mode(run, "keyword") for run in runs)
     time_window_case_count = sum(_has_mode(run, "time_window") for run in runs)
     vector_case_count = sum(_has_mode(run, "vector") for run in runs)
+    answer_runs = [run for run in runs if run.case_id in answer_case_map]
     return PublicDatasetWorkspaceSummary(
         case_count=len(retrieval_cases),
         answer_case_count=len(answer_cases),
@@ -189,13 +232,14 @@ def _evaluate_workspace_summary(
             4,
         ) if runs else 0.0,
         workspace_answer_quality_score=round(
-            sum(run.workspace_answer_quality_score for run in runs) / float(len(runs)),
+            sum(run.workspace_answer_quality_score for run in answer_runs)
+            / float(len(answer_runs)),
             4,
-        ) if runs else 0.0,
+        ) if answer_runs else 0.0,
         workspace_task_success_rate=round(
-            sum(run.workspace_task_success for run in runs) / float(len(runs)),
+            sum(run.workspace_task_success for run in answer_runs) / float(len(answer_runs)),
             4,
-        ) if runs else 0.0,
+        ) if answer_runs else 0.0,
         median_token_cost_ratio=round(
             float(statistics.median(run.token_cost_ratio for run in runs)),
             4,
@@ -207,9 +251,11 @@ def _evaluate_long_horizon_summary(
     objects: list[dict[str, object]],
     sequences: list[LongHorizonEvalSequence],
     manifest: LongHorizonEvalManifest,
+    *,
+    strategy: MindStrategy,
 ) -> LongHorizonBenchmarkRun:
     runner = LongHorizonBenchmarkRunner(sequences=sequences, manifest=manifest)
-    system = _FixtureLongHorizonSystem(objects)
+    system = _FixtureLongHorizonSystem(objects, strategy=strategy)
     try:
         return runner.run_once(system_id="public_dataset_fixture", system=system, run_id=1)
     finally:
@@ -222,6 +268,7 @@ def _evaluate_retrieval_case(
     answer_case: EpisodeAnswerBenchCase | None,
     service: PrimitiveService,
     builder: WorkspaceBuilder,
+    capability_service: CapabilityService,
     store: MemoryStore,
 ) -> RetrievalBenchmarkRun:
     result = service.retrieve(
@@ -246,7 +293,14 @@ def _evaluate_retrieval_case(
     raw_gold_fact_coverage = _coverage(raw_top20_ids, case.gold_fact_ids)
     raw_context = build_raw_topk_context(store, raw_top20_ids)
     raw_answer_score = (
-        score_answer(answer_case, answer_from_raw_topk(answer_case, raw_context))
+        score_answer(
+            answer_case,
+            answer_from_raw_topk(
+                answer_case,
+                raw_context,
+                capability_service=capability_service,
+            ),
+        )
         if answer_case is not None
         else _empty_answer_score()
     )
@@ -274,13 +328,18 @@ def _evaluate_retrieval_case(
             workspace = workspace_result.workspace
             slots = workspace["metadata"]["slots"]
             workspace_selected_ids = workspace_result.selected_ids
-            workspace_gold_fact_coverage = _coverage(workspace_selected_ids, case.gold_fact_ids)
+            workspace_fact_ids = _workspace_fact_ids(workspace_selected_ids, slots)
+            workspace_gold_fact_coverage = _coverage(workspace_fact_ids, case.gold_fact_ids)
             workspace_context = build_workspace_context(workspace)
             workspace_token_cost = workspace_context.token_count
             if answer_case is not None:
                 workspace_answer_score = score_answer(
                     answer_case,
-                    answer_from_workspace(answer_case, workspace_context),
+                    answer_from_workspace(
+                        answer_case,
+                        workspace_context,
+                        capability_service=capability_service,
+                    ),
                 )
             token_cost_ratio = _safe_ratio(workspace_token_cost, raw_context.token_count)
             workspace_task_success_proxy = workspace_gold_fact_coverage == 1.0
@@ -313,14 +372,29 @@ def _evaluate_retrieval_case(
     )
 
 
+def _workspace_fact_ids(
+    selected_ids: tuple[str, ...],
+    slots: list[dict[str, object]],
+) -> tuple[str, ...]:
+    fact_ids = set(selected_ids)
+    for slot in slots:
+        evidence_refs = slot.get("evidence_refs")
+        if not isinstance(evidence_refs, list):
+            continue
+        for ref in evidence_refs:
+            if isinstance(ref, str) and ref:
+                fact_ids.add(ref)
+    return tuple(sorted(fact_ids))
+
+
 class _FixtureLongHorizonSystem:
     """Long-horizon system runner backed directly by a public fixture object set."""
 
-    def __init__(self, objects: list[dict[str, object]]) -> None:
+    def __init__(self, objects: list[dict[str, object]], *, strategy: MindStrategy) -> None:
         self._tempdir = tempfile.TemporaryDirectory(prefix="public_dataset_long_horizon_")
         self._store = SQLiteMemoryStore(Path(self._tempdir.name) / "long_horizon.sqlite3")
         self._store.insert_objects(objects)
-        self._strategy = FixedRuleMindStrategy()
+        self._strategy = strategy
 
     def run_sequence(
         self,
@@ -389,8 +463,16 @@ class _FixtureLongHorizonSystem:
 def _build_findings(
     workspace: PublicDatasetWorkspaceSummary,
     long_horizon: PublicDatasetLongHorizonSummary,
+    *,
+    provider: object,
+    provider_configured: bool,
 ) -> tuple[str, ...]:
     findings: list[str] = []
+    if str(provider) != "stub" and not provider_configured:
+        findings.append(
+            "selected answer provider is not configured, so answer generation "
+            "can fall back to deterministic"
+        )
     if workspace.candidate_recall_at_20 >= 0.85:
         findings.append("retrieval recall stays above the Phase D baseline")
     else:
@@ -416,6 +498,10 @@ def _report_to_dict(report: PublicDatasetEvaluationReport) -> dict[str, object]:
         "retrieval_case_count": report.retrieval_case_count,
         "answer_case_count": report.answer_case_count,
         "long_horizon_sequence_count": report.long_horizon_sequence_count,
+        "answer_provider": report.answer_provider,
+        "answer_model": report.answer_model,
+        "answer_provider_configured": report.answer_provider_configured,
+        "long_horizon_strategy": report.long_horizon_strategy,
         "workspace": {
             "case_count": report.workspace.case_count,
             "answer_case_count": report.workspace.answer_case_count,
@@ -467,3 +553,17 @@ def _safe_ratio(numerator: int | float, denominator: int | float) -> float:
     if denominator <= 0:
         return 0.0
     return round(float(numerator) / float(denominator), 4)
+
+
+def _long_horizon_strategy(strategy_name: str) -> MindStrategy:
+    normalized = strategy_name.strip().lower()
+    if normalized == "fixed":
+        return FixedRuleMindStrategy()
+    if normalized == "optimized":
+        return OptimizedMindStrategy()
+    if normalized in {"public-dataset", "public_dataset", "public"}:
+        return PublicDatasetMindStrategy()
+    raise ValueError(
+        "unsupported long-horizon strategy "
+        f"'{strategy_name}'; expected fixed, optimized, or public-dataset"
+    )

@@ -207,6 +207,10 @@ def build_app_registry(
         memory_access_service=memory_access_service,
         offline_job_app_service=offline_job_app_service,
         request_defaults_resolver=runtime_manager.apply_request_defaults,
+        benchmark_artifact_root=(
+            (config.sqlite_path.parent if config.sqlite_path is not None else Path("artifacts/dev"))
+            / "memory_lifecycle_benchmark"
+        ),
     )
     frontend_debug_service = FrontendDebugAppService(
         telemetry_source=(

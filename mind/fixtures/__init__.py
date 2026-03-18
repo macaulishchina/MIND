@@ -67,11 +67,13 @@ from .public_datasets import (
     build_public_dataset_long_horizon_sequences,
     build_public_dataset_objects,
     build_public_dataset_retrieval_cases,
+    compile_public_dataset_local_slice,
     evaluate_public_dataset,
     get_public_dataset_adapter,
     list_public_dataset_descriptors,
     load_public_dataset_fixture_from_path,
     write_public_dataset_evaluation_report_json,
+    write_public_dataset_local_slice_json,
 )
 from .user_state_scenarios import UserStateScenario, build_user_state_scenarios_v1
 
@@ -112,6 +114,7 @@ __all__ = [
     "build_public_dataset_long_horizon_sequences",
     "build_public_dataset_objects",
     "build_public_dataset_retrieval_cases",
+    "compile_public_dataset_local_slice",
     "evaluate_public_dataset",
     "evaluate_deployment_smoke_suite",
     "evaluate_product_readiness_report",
@@ -130,6 +133,7 @@ __all__ = [
     "read_deployment_smoke_report_json",
     "read_product_readiness_report_json",
     "read_product_transport_audit_json",
+    "write_public_dataset_local_slice_json",
     "write_public_dataset_evaluation_report_json",
     "write_deployment_smoke_report_markdown",
     "write_deployment_smoke_report_json",

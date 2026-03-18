@@ -156,3 +156,25 @@ mind --color always status
 - 跑 primitive/access/governance/offline 开发面
 - 做回归或基准测试
 - 排查实现级问题，而不是产品集成问题
+
+### `mindtest report public-dataset`
+
+公开数据集验证走开发/验收 CLI：
+
+```bash
+uv run mindtest report public-dataset hotpotqa \
+	--source tests/data/public_datasets/hotpotqa_local_slice.json \
+	--provider openai \
+	--model gpt-4.1-mini \
+	--strategy public-dataset \
+	--output artifacts/dev/public_datasets/hotpotqa_openai_report.json
+```
+
+常用参数：
+
+- `--source`：指定本地编译好的 slice JSON。
+- `--provider` / `--model` / `--endpoint` / `--timeout-ms` / `--retry-policy`：显式指定 answer capability 的 provider 配置。
+- `--strategy`：长时程复用策略，可选 `fixed`、`optimized`、`public-dataset`。
+- `--output`：持久化 JSON 报告。
+
+报告输出会额外打印 `answer_provider_configured`。如果你选择了 `openai` / `claude` / `gemini` 但这里是 `false`，说明当前环境没有可用凭据，answer 路径可能按默认策略回退到 deterministic provider。

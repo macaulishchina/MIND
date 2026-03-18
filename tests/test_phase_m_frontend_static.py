@@ -55,6 +55,7 @@ async def test_static_frontend_index_is_mounted(
     assert 'id="retrieve-form"' in response.text
     assert 'id="access-form"' in response.text
     assert 'id="offline-form"' in response.text
+    assert 'id="benchmark-form"' in response.text
     assert 'id="ops-chain-shell"' in response.text
     assert 'id="ops-chain-backdrop"' in response.text
     assert 'id="ops-chain-head"' in response.text
@@ -65,6 +66,7 @@ async def test_static_frontend_index_is_mounted(
     assert 'data-open-chain="module-retrieve"' in response.text
     assert 'data-open-chain="module-access"' in response.text
     assert 'data-open-chain="module-offline"' in response.text
+    assert 'data-open-chain="module-benchmark"' in response.text
     assert 'id="workspace-settings"' in response.text
     assert 'id="settings-form"' in response.text
     assert 'id="settings-tab-general"' in response.text
@@ -158,6 +160,8 @@ async def test_static_frontend_assets_are_served(
     assert "submitRetrieve" in app_js.text
     assert "submitAccess" in app_js.text
     assert "submitOffline" in app_js.text
+    assert "runMemoryLifecycleBenchmark" in app_js.text
+    assert "loadMemoryLifecycleBenchmarkReport" in app_js.text
     assert "回答详情" in app_js.text
     assert "syncAuthSubmitLabel" in app_js.text
     assert "GATE_KIND_LABELS" in constants_js.text
@@ -197,6 +201,8 @@ async def test_static_frontend_assets_are_served(
     assert "createUiActionRunner" in core_actions_js.text
     assert "../../api.js" in core_api_client_js.text
     assert '"/v1/frontend/access"' in api_js.text
+    assert '"/v1/frontend/benchmark:run"' in api_js.text
+    assert '"/v1/frontend/benchmark:report"' in api_js.text
     assert "loadWorkbenchContext" in workbench_state_js.text
     assert "resolveInitialWorkbenchContext" in workbench_state_js.text
     assert "createWorkbenchRouter" in workbench_navigation_js.text

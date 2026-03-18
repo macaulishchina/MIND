@@ -1,0 +1,183 @@
+llm_provider=openai
+llm_model=deepseek-chat
+llm_endpoint=https://api.deepseek.com
+
+## scifact run 1
+- raw_topk | scifact_scifact-raw-episode-101_claim_101_keyword | stub=scifact-raw-task-101: Supported: Moderate exercise improves sleep quality in older adults. | llm=Supported | stub_aqs=0.8667 | llm_aqs=0.5000
+- workspace | scifact_scifact-raw-episode-101_claim_101_keyword | stub=scifact-raw-task-101: Supported: Moderate exercise improves sleep quality in older adults. | llm=Supported | stub_aqs=0.8667 | llm_aqs=0.5000
+- raw_topk | scifact_scifact-raw-episode-102_claim_102_keyword | stub=scifact-raw-task-102: Refuted: Daily vitamin C prevents every seasonal cold. | llm=Refuted | stub_aqs=0.8667 | llm_aqs=0.5000
+- workspace | scifact_scifact-raw-episode-102_claim_102_keyword | stub=scifact-raw-task-102: Refuted: Daily vitamin C prevents every seasonal cold. | llm=Refuted | stub_aqs=0.8667 | llm_aqs=0.5000
+
+## scifact run 2
+- raw_topk | scifact_scifact-raw-episode-101_claim_101_keyword | stub=scifact-raw-task-101: Supported: Moderate exercise improves sleep quality in older adults. | llm=Supported | stub_aqs=0.8667 | llm_aqs=0.5000
+- workspace | scifact_scifact-raw-episode-101_claim_101_keyword | stub=scifact-raw-task-101: Supported: Moderate exercise improves sleep quality in older adults. | llm=Supported | stub_aqs=0.8667 | llm_aqs=0.5000
+- raw_topk | scifact_scifact-raw-episode-102_claim_102_keyword | stub=scifact-raw-task-102: Refuted: Daily vitamin C prevents every seasonal cold. | llm=Refuted | stub_aqs=0.8667 | llm_aqs=0.5000
+- workspace | scifact_scifact-raw-episode-102_claim_102_keyword | stub=scifact-raw-task-102: Refuted: Daily vitamin C prevents every seasonal cold. | llm=Refuted | stub_aqs=0.8667 | llm_aqs=0.5000
+
+## scifact run 3
+- raw_topk | scifact_scifact-raw-episode-101_claim_101_keyword | stub=scifact-raw-task-101: Supported: Moderate exercise improves sleep quality in older adults. | llm=Supported | stub_aqs=0.8667 | llm_aqs=0.5000
+- workspace | scifact_scifact-raw-episode-101_claim_101_keyword | stub=scifact-raw-task-101: Supported: Moderate exercise improves sleep quality in older adults. | llm=Supported | stub_aqs=0.8667 | llm_aqs=0.5000
+- raw_topk | scifact_scifact-raw-episode-102_claim_102_keyword | stub=scifact-raw-task-102: Refuted: Daily vitamin C prevents every seasonal cold. | llm=Refuted | stub_aqs=0.8667 | llm_aqs=0.5000
+- workspace | scifact_scifact-raw-episode-102_claim_102_keyword | stub=scifact-raw-task-102: Refuted: Daily vitamin C prevents every seasonal cold. | llm=Refuted | stub_aqs=0.8667 | llm_aqs=0.5000
+
+## scifact run 4
+- raw_topk | scifact_scifact-raw-episode-101_claim_101_keyword | stub=scifact-raw-task-101: Supported: Moderate exercise improves sleep quality in older adults. | llm=Supported | stub_aqs=0.8667 | llm_aqs=0.5000
+- workspace | scifact_scifact-raw-episode-101_claim_101_keyword | stub=scifact-raw-task-101: Supported: Moderate exercise improves sleep quality in older adults. | llm=Supported | stub_aqs=0.8667 | llm_aqs=0.5000
+- raw_topk | scifact_scifact-raw-episode-102_claim_102_keyword | stub=scifact-raw-task-102: Refuted: Daily vitamin C prevents every seasonal cold. | llm=Refuted | stub_aqs=0.8667 | llm_aqs=0.5000
+- workspace | scifact_scifact-raw-episode-102_claim_102_keyword | stub=scifact-raw-task-102: Refuted: Daily vitamin C prevents every seasonal cold. | llm=Refuted | stub_aqs=0.8667 | llm_aqs=0.5000
+
+## scifact run 5
+- raw_topk | scifact_scifact-raw-episode-101_claim_101_keyword | stub=scifact-raw-task-101: Supported: Moderate exercise improves sleep quality in older adults. | llm=Supported | stub_aqs=0.8667 | llm_aqs=0.5000
+- workspace | scifact_scifact-raw-episode-101_claim_101_keyword | stub=scifact-raw-task-101: Supported: Moderate exercise improves sleep quality in older adults. | llm=Supported | stub_aqs=0.8667 | llm_aqs=0.5000
+- raw_topk | scifact_scifact-raw-episode-102_claim_102_keyword | stub=scifact-raw-task-102: Refuted: Daily vitamin C prevents every seasonal cold. | llm=Refuted | stub_aqs=0.8667 | llm_aqs=0.5000
+- workspace | scifact_scifact-raw-episode-102_claim_102_keyword | stub=scifact-raw-task-102: Refuted: Daily vitamin C prevents every seasonal cold. | llm=Refuted | stub_aqs=0.8667 | llm_aqs=0.5000
+
+## scifact run 6
+- raw_topk | scifact_scifact-raw-episode-101_claim_101_keyword | stub=scifact-raw-task-101: Supported: Moderate exercise improves sleep quality in older adults. | llm=Supported | stub_aqs=0.8667 | llm_aqs=0.5000
+- workspace | scifact_scifact-raw-episode-101_claim_101_keyword | stub=scifact-raw-task-101: Supported: Moderate exercise improves sleep quality in older adults. | llm=Supported | stub_aqs=0.8667 | llm_aqs=0.5000
+- raw_topk | scifact_scifact-raw-episode-102_claim_102_keyword | stub=scifact-raw-task-102: Refuted: Daily vitamin C prevents every seasonal cold. | llm=Refuted | stub_aqs=0.8667 | llm_aqs=0.5000
+- workspace | scifact_scifact-raw-episode-102_claim_102_keyword | stub=scifact-raw-task-102: Refuted: Daily vitamin C prevents every seasonal cold. | llm=Refuted | stub_aqs=0.8667 | llm_aqs=0.5000
+
+## scifact run 7
+- raw_topk | scifact_scifact-raw-episode-101_claim_101_keyword | stub=scifact-raw-task-101: Supported: Moderate exercise improves sleep quality in older adults. | llm=Supported | stub_aqs=0.8667 | llm_aqs=0.5000
+- workspace | scifact_scifact-raw-episode-101_claim_101_keyword | stub=scifact-raw-task-101: Supported: Moderate exercise improves sleep quality in older adults. | llm=Supported | stub_aqs=0.8667 | llm_aqs=0.5000
+- raw_topk | scifact_scifact-raw-episode-102_claim_102_keyword | stub=scifact-raw-task-102: Refuted: Daily vitamin C prevents every seasonal cold. | llm=Refuted | stub_aqs=0.8667 | llm_aqs=0.5000
+- workspace | scifact_scifact-raw-episode-102_claim_102_keyword | stub=scifact-raw-task-102: Refuted: Daily vitamin C prevents every seasonal cold. | llm=Refuted | stub_aqs=0.8667 | llm_aqs=0.5000
+
+## scifact run 8
+- raw_topk | scifact_scifact-raw-episode-101_claim_101_keyword | stub=scifact-raw-task-101: Supported: Moderate exercise improves sleep quality in older adults. | llm=Supported | stub_aqs=0.8667 | llm_aqs=0.5000
+- workspace | scifact_scifact-raw-episode-101_claim_101_keyword | stub=scifact-raw-task-101: Supported: Moderate exercise improves sleep quality in older adults. | llm=Supported | stub_aqs=0.8667 | llm_aqs=0.5000
+- raw_topk | scifact_scifact-raw-episode-102_claim_102_keyword | stub=scifact-raw-task-102: Refuted: Daily vitamin C prevents every seasonal cold. | llm=Refuted | stub_aqs=0.8667 | llm_aqs=0.5000
+- workspace | scifact_scifact-raw-episode-102_claim_102_keyword | stub=scifact-raw-task-102: Refuted: Daily vitamin C prevents every seasonal cold. | llm=Refuted | stub_aqs=0.8667 | llm_aqs=0.5000
+
+## scifact run 9
+- raw_topk | scifact_scifact-raw-episode-101_claim_101_keyword | stub=scifact-raw-task-101: Supported: Moderate exercise improves sleep quality in older adults. | llm=Supported | stub_aqs=0.8667 | llm_aqs=0.5000
+- workspace | scifact_scifact-raw-episode-101_claim_101_keyword | stub=scifact-raw-task-101: Supported: Moderate exercise improves sleep quality in older adults. | llm=Supported | stub_aqs=0.8667 | llm_aqs=0.5000
+- raw_topk | scifact_scifact-raw-episode-102_claim_102_keyword | stub=scifact-raw-task-102: Refuted: Daily vitamin C prevents every seasonal cold. | llm=Refuted | stub_aqs=0.8667 | llm_aqs=0.5000
+- workspace | scifact_scifact-raw-episode-102_claim_102_keyword | stub=scifact-raw-task-102: Refuted: Daily vitamin C prevents every seasonal cold. | llm=Refuted | stub_aqs=0.8667 | llm_aqs=0.5000
+
+## scifact run 10
+- raw_topk | scifact_scifact-raw-episode-101_claim_101_keyword | stub=scifact-raw-task-101: Supported: Moderate exercise improves sleep quality in older adults. | llm=Supported | stub_aqs=0.8667 | llm_aqs=0.5000
+- workspace | scifact_scifact-raw-episode-101_claim_101_keyword | stub=scifact-raw-task-101: Supported: Moderate exercise improves sleep quality in older adults. | llm=Supported | stub_aqs=0.8667 | llm_aqs=0.5000
+- raw_topk | scifact_scifact-raw-episode-102_claim_102_keyword | stub=scifact-raw-task-102: Refuted: Daily vitamin C prevents every seasonal cold. | llm=Refuted | stub_aqs=0.8667 | llm_aqs=0.5000
+- workspace | scifact_scifact-raw-episode-102_claim_102_keyword | stub=scifact-raw-task-102: Refuted: Daily vitamin C prevents every seasonal cold. | llm=Refuted | stub_aqs=0.8667 | llm_aqs=0.5000
+
+## hotpotqa run 1
+- raw_topk | hotpotqa_hotpotqa-raw-episode-5a8b57f25542995d1e6f1371_5a8b57f25542995d1e6f1371_answer | stub=hotpotqa-raw-task-5a8b57f25542995d1e6f1371: J. R. R. Tolkien: J. R. R. Tolkien studied at the University of Oxford. University of Oxford: The University of Oxford is located | llm=England | stub_aqs=0.7834 | llm_aqs=0.5667
+- workspace | hotpotqa_hotpotqa-raw-episode-5a8b57f25542995d1e6f1371_5a8b57f25542995d1e6f1371_answer | stub=hotpotqa-raw-task-5a8b57f25542995d1e6f1371: J. R. R. Tolkien: J. R. R. Tolkien studied at the University of Oxford. University of Oxford: The University of Oxford is located | llm=England | stub_aqs=0.7834 | llm_aqs=0.5667
+- raw_topk | hotpotqa_hotpotqa-raw-episode-5a7a06935542990198eaf050_5a7a06935542990198eaf050_answer | stub=hotpotqa-raw-task-5a7a06935542990198eaf050: Marie Curie: Marie Curie taught at the University of Paris. University of Paris: The University of Paris is in Paris, France. Therefore the | llm=Paris | stub_aqs=0.9333 | llm_aqs=0.5667
+- workspace | hotpotqa_hotpotqa-raw-episode-5a7a06935542990198eaf050_5a7a06935542990198eaf050_answer | stub=hotpotqa-raw-task-5a7a06935542990198eaf050: England | llm=Paris | stub_aqs=0.2000 | llm_aqs=0.2833
+
+## hotpotqa run 2
+- raw_topk | hotpotqa_hotpotqa-raw-episode-5a8b57f25542995d1e6f1371_5a8b57f25542995d1e6f1371_answer | stub=hotpotqa-raw-task-5a8b57f25542995d1e6f1371: J. R. R. Tolkien: J. R. R. Tolkien studied at the University of Oxford. University of Oxford: The University of Oxford is located | llm=England | stub_aqs=0.7834 | llm_aqs=0.5667
+- workspace | hotpotqa_hotpotqa-raw-episode-5a8b57f25542995d1e6f1371_5a8b57f25542995d1e6f1371_answer | stub=hotpotqa-raw-task-5a8b57f25542995d1e6f1371: J. R. R. Tolkien: J. R. R. Tolkien studied at the University of Oxford. University of Oxford: The University of Oxford is located | llm=England | stub_aqs=0.7834 | llm_aqs=0.5667
+- raw_topk | hotpotqa_hotpotqa-raw-episode-5a7a06935542990198eaf050_5a7a06935542990198eaf050_answer | stub=hotpotqa-raw-task-5a7a06935542990198eaf050: Marie Curie: Marie Curie taught at the University of Paris. University of Paris: The University of Paris is in Paris, France. Therefore the | llm=Paris | stub_aqs=0.9333 | llm_aqs=0.5667
+- workspace | hotpotqa_hotpotqa-raw-episode-5a7a06935542990198eaf050_5a7a06935542990198eaf050_answer | stub=hotpotqa-raw-task-5a7a06935542990198eaf050: England | llm=Paris | stub_aqs=0.2000 | llm_aqs=0.2833
+
+## hotpotqa run 3
+- raw_topk | hotpotqa_hotpotqa-raw-episode-5a8b57f25542995d1e6f1371_5a8b57f25542995d1e6f1371_answer | stub=hotpotqa-raw-task-5a8b57f25542995d1e6f1371: J. R. R. Tolkien: J. R. R. Tolkien studied at the University of Oxford. University of Oxford: The University of Oxford is located | llm=England | stub_aqs=0.7834 | llm_aqs=0.5667
+- workspace | hotpotqa_hotpotqa-raw-episode-5a8b57f25542995d1e6f1371_5a8b57f25542995d1e6f1371_answer | stub=hotpotqa-raw-task-5a8b57f25542995d1e6f1371: J. R. R. Tolkien: J. R. R. Tolkien studied at the University of Oxford. University of Oxford: The University of Oxford is located | llm=England | stub_aqs=0.7834 | llm_aqs=0.5667
+- raw_topk | hotpotqa_hotpotqa-raw-episode-5a7a06935542990198eaf050_5a7a06935542990198eaf050_answer | stub=hotpotqa-raw-task-5a7a06935542990198eaf050: Marie Curie: Marie Curie taught at the University of Paris. University of Paris: The University of Paris is in Paris, France. Therefore the | llm=Paris | stub_aqs=0.9333 | llm_aqs=0.5667
+- workspace | hotpotqa_hotpotqa-raw-episode-5a7a06935542990198eaf050_5a7a06935542990198eaf050_answer | stub=hotpotqa-raw-task-5a7a06935542990198eaf050: England | llm=Paris | stub_aqs=0.2000 | llm_aqs=0.2833
+
+## hotpotqa run 4
+- raw_topk | hotpotqa_hotpotqa-raw-episode-5a8b57f25542995d1e6f1371_5a8b57f25542995d1e6f1371_answer | stub=hotpotqa-raw-task-5a8b57f25542995d1e6f1371: J. R. R. Tolkien: J. R. R. Tolkien studied at the University of Oxford. University of Oxford: The University of Oxford is located | llm=England | stub_aqs=0.7834 | llm_aqs=0.5667
+- workspace | hotpotqa_hotpotqa-raw-episode-5a8b57f25542995d1e6f1371_5a8b57f25542995d1e6f1371_answer | stub=hotpotqa-raw-task-5a8b57f25542995d1e6f1371: J. R. R. Tolkien: J. R. R. Tolkien studied at the University of Oxford. University of Oxford: The University of Oxford is located | llm=England | stub_aqs=0.7834 | llm_aqs=0.5667
+- raw_topk | hotpotqa_hotpotqa-raw-episode-5a7a06935542990198eaf050_5a7a06935542990198eaf050_answer | stub=hotpotqa-raw-task-5a7a06935542990198eaf050: Marie Curie: Marie Curie taught at the University of Paris. University of Paris: The University of Paris is in Paris, France. Therefore the | llm=Paris | stub_aqs=0.9333 | llm_aqs=0.5667
+- workspace | hotpotqa_hotpotqa-raw-episode-5a7a06935542990198eaf050_5a7a06935542990198eaf050_answer | stub=hotpotqa-raw-task-5a7a06935542990198eaf050: England | llm=Paris | stub_aqs=0.2000 | llm_aqs=0.2833
+
+## hotpotqa run 5
+- raw_topk | hotpotqa_hotpotqa-raw-episode-5a8b57f25542995d1e6f1371_5a8b57f25542995d1e6f1371_answer | stub=hotpotqa-raw-task-5a8b57f25542995d1e6f1371: J. R. R. Tolkien: J. R. R. Tolkien studied at the University of Oxford. University of Oxford: The University of Oxford is located | llm=England | stub_aqs=0.7834 | llm_aqs=0.5667
+- workspace | hotpotqa_hotpotqa-raw-episode-5a8b57f25542995d1e6f1371_5a8b57f25542995d1e6f1371_answer | stub=hotpotqa-raw-task-5a8b57f25542995d1e6f1371: J. R. R. Tolkien: J. R. R. Tolkien studied at the University of Oxford. University of Oxford: The University of Oxford is located | llm=England | stub_aqs=0.7834 | llm_aqs=0.5667
+- raw_topk | hotpotqa_hotpotqa-raw-episode-5a7a06935542990198eaf050_5a7a06935542990198eaf050_answer | stub=hotpotqa-raw-task-5a7a06935542990198eaf050: Marie Curie: Marie Curie taught at the University of Paris. University of Paris: The University of Paris is in Paris, France. Therefore the | llm=Paris | stub_aqs=0.9333 | llm_aqs=0.5667
+- workspace | hotpotqa_hotpotqa-raw-episode-5a7a06935542990198eaf050_5a7a06935542990198eaf050_answer | stub=hotpotqa-raw-task-5a7a06935542990198eaf050: England | llm=Paris | stub_aqs=0.2000 | llm_aqs=0.2833
+
+## hotpotqa run 6
+- raw_topk | hotpotqa_hotpotqa-raw-episode-5a8b57f25542995d1e6f1371_5a8b57f25542995d1e6f1371_answer | stub=hotpotqa-raw-task-5a8b57f25542995d1e6f1371: J. R. R. Tolkien: J. R. R. Tolkien studied at the University of Oxford. University of Oxford: The University of Oxford is located | llm=England | stub_aqs=0.7834 | llm_aqs=0.5667
+- workspace | hotpotqa_hotpotqa-raw-episode-5a8b57f25542995d1e6f1371_5a8b57f25542995d1e6f1371_answer | stub=hotpotqa-raw-task-5a8b57f25542995d1e6f1371: J. R. R. Tolkien: J. R. R. Tolkien studied at the University of Oxford. University of Oxford: The University of Oxford is located | llm=England | stub_aqs=0.7834 | llm_aqs=0.5667
+- raw_topk | hotpotqa_hotpotqa-raw-episode-5a7a06935542990198eaf050_5a7a06935542990198eaf050_answer | stub=hotpotqa-raw-task-5a7a06935542990198eaf050: Marie Curie: Marie Curie taught at the University of Paris. University of Paris: The University of Paris is in Paris, France. Therefore the | llm=Paris | stub_aqs=0.9333 | llm_aqs=0.5667
+- workspace | hotpotqa_hotpotqa-raw-episode-5a7a06935542990198eaf050_5a7a06935542990198eaf050_answer | stub=hotpotqa-raw-task-5a7a06935542990198eaf050: England | llm=Paris | stub_aqs=0.2000 | llm_aqs=0.2833
+
+## hotpotqa run 7
+- raw_topk | hotpotqa_hotpotqa-raw-episode-5a8b57f25542995d1e6f1371_5a8b57f25542995d1e6f1371_answer | stub=hotpotqa-raw-task-5a8b57f25542995d1e6f1371: J. R. R. Tolkien: J. R. R. Tolkien studied at the University of Oxford. University of Oxford: The University of Oxford is located | llm=England | stub_aqs=0.7834 | llm_aqs=0.5667
+- workspace | hotpotqa_hotpotqa-raw-episode-5a8b57f25542995d1e6f1371_5a8b57f25542995d1e6f1371_answer | stub=hotpotqa-raw-task-5a8b57f25542995d1e6f1371: J. R. R. Tolkien: J. R. R. Tolkien studied at the University of Oxford. University of Oxford: The University of Oxford is located | llm=England | stub_aqs=0.7834 | llm_aqs=0.5667
+- raw_topk | hotpotqa_hotpotqa-raw-episode-5a7a06935542990198eaf050_5a7a06935542990198eaf050_answer | stub=hotpotqa-raw-task-5a7a06935542990198eaf050: Marie Curie: Marie Curie taught at the University of Paris. University of Paris: The University of Paris is in Paris, France. Therefore the | llm=Paris | stub_aqs=0.9333 | llm_aqs=0.5667
+- workspace | hotpotqa_hotpotqa-raw-episode-5a7a06935542990198eaf050_5a7a06935542990198eaf050_answer | stub=hotpotqa-raw-task-5a7a06935542990198eaf050: England | llm=Paris | stub_aqs=0.2000 | llm_aqs=0.2833
+
+## hotpotqa run 8
+- raw_topk | hotpotqa_hotpotqa-raw-episode-5a8b57f25542995d1e6f1371_5a8b57f25542995d1e6f1371_answer | stub=hotpotqa-raw-task-5a8b57f25542995d1e6f1371: J. R. R. Tolkien: J. R. R. Tolkien studied at the University of Oxford. University of Oxford: The University of Oxford is located | llm=England | stub_aqs=0.7834 | llm_aqs=0.5667
+- workspace | hotpotqa_hotpotqa-raw-episode-5a8b57f25542995d1e6f1371_5a8b57f25542995d1e6f1371_answer | stub=hotpotqa-raw-task-5a8b57f25542995d1e6f1371: J. R. R. Tolkien: J. R. R. Tolkien studied at the University of Oxford. University of Oxford: The University of Oxford is located | llm=England | stub_aqs=0.7834 | llm_aqs=0.5667
+- raw_topk | hotpotqa_hotpotqa-raw-episode-5a7a06935542990198eaf050_5a7a06935542990198eaf050_answer | stub=hotpotqa-raw-task-5a7a06935542990198eaf050: Marie Curie: Marie Curie taught at the University of Paris. University of Paris: The University of Paris is in Paris, France. Therefore the | llm=Paris | stub_aqs=0.9333 | llm_aqs=0.5667
+- workspace | hotpotqa_hotpotqa-raw-episode-5a7a06935542990198eaf050_5a7a06935542990198eaf050_answer | stub=hotpotqa-raw-task-5a7a06935542990198eaf050: England | llm=Paris | stub_aqs=0.2000 | llm_aqs=0.2833
+
+## hotpotqa run 9
+- raw_topk | hotpotqa_hotpotqa-raw-episode-5a8b57f25542995d1e6f1371_5a8b57f25542995d1e6f1371_answer | stub=hotpotqa-raw-task-5a8b57f25542995d1e6f1371: J. R. R. Tolkien: J. R. R. Tolkien studied at the University of Oxford. University of Oxford: The University of Oxford is located | llm=England | stub_aqs=0.7834 | llm_aqs=0.5667
+- workspace | hotpotqa_hotpotqa-raw-episode-5a8b57f25542995d1e6f1371_5a8b57f25542995d1e6f1371_answer | stub=hotpotqa-raw-task-5a8b57f25542995d1e6f1371: J. R. R. Tolkien: J. R. R. Tolkien studied at the University of Oxford. University of Oxford: The University of Oxford is located | llm=England | stub_aqs=0.7834 | llm_aqs=0.5667
+- raw_topk | hotpotqa_hotpotqa-raw-episode-5a7a06935542990198eaf050_5a7a06935542990198eaf050_answer | stub=hotpotqa-raw-task-5a7a06935542990198eaf050: Marie Curie: Marie Curie taught at the University of Paris. University of Paris: The University of Paris is in Paris, France. Therefore the | llm=Paris | stub_aqs=0.9333 | llm_aqs=0.5667
+- workspace | hotpotqa_hotpotqa-raw-episode-5a7a06935542990198eaf050_5a7a06935542990198eaf050_answer | stub=hotpotqa-raw-task-5a7a06935542990198eaf050: England | llm=Paris | stub_aqs=0.2000 | llm_aqs=0.2833
+
+## hotpotqa run 10
+- raw_topk | hotpotqa_hotpotqa-raw-episode-5a8b57f25542995d1e6f1371_5a8b57f25542995d1e6f1371_answer | stub=hotpotqa-raw-task-5a8b57f25542995d1e6f1371: J. R. R. Tolkien: J. R. R. Tolkien studied at the University of Oxford. University of Oxford: The University of Oxford is located | llm=England | stub_aqs=0.7834 | llm_aqs=0.5667
+- workspace | hotpotqa_hotpotqa-raw-episode-5a8b57f25542995d1e6f1371_5a8b57f25542995d1e6f1371_answer | stub=hotpotqa-raw-task-5a8b57f25542995d1e6f1371: J. R. R. Tolkien: J. R. R. Tolkien studied at the University of Oxford. University of Oxford: The University of Oxford is located | llm=England | stub_aqs=0.7834 | llm_aqs=0.5667
+- raw_topk | hotpotqa_hotpotqa-raw-episode-5a7a06935542990198eaf050_5a7a06935542990198eaf050_answer | stub=hotpotqa-raw-task-5a7a06935542990198eaf050: Marie Curie: Marie Curie taught at the University of Paris. University of Paris: The University of Paris is in Paris, France. Therefore the | llm=Paris | stub_aqs=0.9333 | llm_aqs=0.5667
+- workspace | hotpotqa_hotpotqa-raw-episode-5a7a06935542990198eaf050_5a7a06935542990198eaf050_answer | stub=hotpotqa-raw-task-5a7a06935542990198eaf050: England | llm=Paris | stub_aqs=0.2000 | llm_aqs=0.2833
+
+## locomo run 1
+- raw_topk | locomo_locomo-raw-episode-passport_passport_keyword | stub=locomo-raw-task-passport: The passport was stored in the red travel pouch. | llm=in the red travel pouch | stub_aqs=0.9000 | llm_aqs=0.8333
+- workspace | locomo_locomo-raw-episode-passport_passport_keyword | stub=locomo-raw-task-passport: The passport was stored in the red travel pouch. | llm=The traveler stored the passport in the red travel pouch. | stub_aqs=0.9000 | llm_aqs=0.8333
+- raw_topk | locomo_locomo-raw-episode-departure_departure_keyword | stub=locomo-raw-task-departure: The train leaves at 7:10 PM from gate 9 where Mara will meet the traveler. | llm=The departure time is 7:10 PM and the gate is 9. | stub_aqs=1.0000 | llm_aqs=0.6333
+- workspace | locomo_locomo-raw-episode-departure_departure_keyword | stub=locomo-raw-task-departure: The train leaves at 7:10 PM from gate 9 where Mara will meet the traveler. | llm=The departure time is 7:10 PM and the gate is 9. | stub_aqs=1.0000 | llm_aqs=0.6333
+
+## locomo run 2
+- raw_topk | locomo_locomo-raw-episode-passport_passport_keyword | stub=locomo-raw-task-passport: The passport was stored in the red travel pouch. | llm=in the red travel pouch | stub_aqs=0.9000 | llm_aqs=0.8333
+- workspace | locomo_locomo-raw-episode-passport_passport_keyword | stub=locomo-raw-task-passport: The passport was stored in the red travel pouch. | llm=in the red travel pouch | stub_aqs=0.9000 | llm_aqs=0.8333
+- raw_topk | locomo_locomo-raw-episode-departure_departure_keyword | stub=locomo-raw-task-departure: The train leaves at 7:10 PM from gate 9 where Mara will meet the traveler. | llm=The departure time is 7:10 PM and the gate is 9. | stub_aqs=1.0000 | llm_aqs=0.6333
+- workspace | locomo_locomo-raw-episode-departure_departure_keyword | stub=locomo-raw-task-departure: The train leaves at 7:10 PM from gate 9 where Mara will meet the traveler. | llm=The departure time is 7:10 PM and the gate is gate 9. | stub_aqs=1.0000 | llm_aqs=0.7834
+
+## locomo run 3
+- raw_topk | locomo_locomo-raw-episode-passport_passport_keyword | stub=locomo-raw-task-passport: The passport was stored in the red travel pouch. | llm=in the red travel pouch | stub_aqs=0.9000 | llm_aqs=0.8333
+- workspace | locomo_locomo-raw-episode-passport_passport_keyword | stub=locomo-raw-task-passport: The passport was stored in the red travel pouch. | llm=in the red travel pouch | stub_aqs=0.9000 | llm_aqs=0.8333
+- raw_topk | locomo_locomo-raw-episode-departure_departure_keyword | stub=locomo-raw-task-departure: The train leaves at 7:10 PM from gate 9 where Mara will meet the traveler. | llm=The departure time is 7:10 PM and the gate is 9. | stub_aqs=1.0000 | llm_aqs=0.6333
+- workspace | locomo_locomo-raw-episode-departure_departure_keyword | stub=locomo-raw-task-departure: The train leaves at 7:10 PM from gate 9 where Mara will meet the traveler. | llm=The departure time is 7:10 PM and the gate is gate 9. | stub_aqs=1.0000 | llm_aqs=0.7834
+
+## locomo run 4
+- raw_topk | locomo_locomo-raw-episode-passport_passport_keyword | stub=locomo-raw-task-passport: The passport was stored in the red travel pouch. | llm=in the red travel pouch | stub_aqs=0.9000 | llm_aqs=0.8333
+- workspace | locomo_locomo-raw-episode-passport_passport_keyword | stub=locomo-raw-task-passport: The passport was stored in the red travel pouch. | llm=in the red travel pouch | stub_aqs=0.9000 | llm_aqs=0.8333
+- raw_topk | locomo_locomo-raw-episode-departure_departure_keyword | stub=locomo-raw-task-departure: The train leaves at 7:10 PM from gate 9 where Mara will meet the traveler. | llm=The departure time is 7:10 PM and the gate is gate 9. | stub_aqs=1.0000 | llm_aqs=0.7834
+- workspace | locomo_locomo-raw-episode-departure_departure_keyword | stub=locomo-raw-task-departure: The train leaves at 7:10 PM from gate 9 where Mara will meet the traveler. | llm=The departure time is 7:10 PM and the gate is 9. | stub_aqs=1.0000 | llm_aqs=0.6333
+
+## locomo run 5
+- raw_topk | locomo_locomo-raw-episode-passport_passport_keyword | stub=locomo-raw-task-passport: The passport was stored in the red travel pouch. | llm=in the red travel pouch | stub_aqs=0.9000 | llm_aqs=0.8333
+- workspace | locomo_locomo-raw-episode-passport_passport_keyword | stub=locomo-raw-task-passport: The passport was stored in the red travel pouch. | llm=The traveler stored the passport in the red travel pouch. | stub_aqs=0.9000 | llm_aqs=0.8333
+- raw_topk | locomo_locomo-raw-episode-departure_departure_keyword | stub=locomo-raw-task-departure: The train leaves at 7:10 PM from gate 9 where Mara will meet the traveler. | llm=The departure time is 7:10 PM and the gate is 9. | stub_aqs=1.0000 | llm_aqs=0.6333
+- workspace | locomo_locomo-raw-episode-departure_departure_keyword | stub=locomo-raw-task-departure: The train leaves at 7:10 PM from gate 9 where Mara will meet the traveler. | llm=The departure time is 7:10 PM and the gate is gate 9. | stub_aqs=1.0000 | llm_aqs=0.7834
+
+## locomo run 6
+- raw_topk | locomo_locomo-raw-episode-passport_passport_keyword | stub=locomo-raw-task-passport: The passport was stored in the red travel pouch. | llm=The traveler stored the passport in the red travel pouch. | stub_aqs=0.9000 | llm_aqs=0.8333
+- workspace | locomo_locomo-raw-episode-passport_passport_keyword | stub=locomo-raw-task-passport: The passport was stored in the red travel pouch. | llm=in the red travel pouch | stub_aqs=0.9000 | llm_aqs=0.8333
+- raw_topk | locomo_locomo-raw-episode-departure_departure_keyword | stub=locomo-raw-task-departure: The train leaves at 7:10 PM from gate 9 where Mara will meet the traveler. | llm=The departure time is 7:10 PM and the gate is gate 9. | stub_aqs=1.0000 | llm_aqs=0.7834
+- workspace | locomo_locomo-raw-episode-departure_departure_keyword | stub=locomo-raw-task-departure: The train leaves at 7:10 PM from gate 9 where Mara will meet the traveler. | llm=The departure time is 7:10 PM and the gate is 9. | stub_aqs=1.0000 | llm_aqs=0.6333
+
+## locomo run 7
+- raw_topk | locomo_locomo-raw-episode-passport_passport_keyword | stub=locomo-raw-task-passport: The passport was stored in the red travel pouch. | llm=in the red travel pouch | stub_aqs=0.9000 | llm_aqs=0.8333
+- workspace | locomo_locomo-raw-episode-passport_passport_keyword | stub=locomo-raw-task-passport: The passport was stored in the red travel pouch. | llm=The traveler stored the passport in the red travel pouch. | stub_aqs=0.9000 | llm_aqs=0.8333
+- raw_topk | locomo_locomo-raw-episode-departure_departure_keyword | stub=locomo-raw-task-departure: The train leaves at 7:10 PM from gate 9 where Mara will meet the traveler. | llm=The departure time is 7:10 PM and the gate is 9. | stub_aqs=1.0000 | llm_aqs=0.6333
+- workspace | locomo_locomo-raw-episode-departure_departure_keyword | stub=locomo-raw-task-departure: The train leaves at 7:10 PM from gate 9 where Mara will meet the traveler. | llm=The departure time is 7:10 PM and the gate is gate 9. | stub_aqs=1.0000 | llm_aqs=0.7834
+
+## locomo run 8
+- raw_topk | locomo_locomo-raw-episode-passport_passport_keyword | stub=locomo-raw-task-passport: The passport was stored in the red travel pouch. | llm=The traveler stored the passport in the red travel pouch before leaving for the station. | stub_aqs=0.9000 | llm_aqs=0.8333
+- workspace | locomo_locomo-raw-episode-passport_passport_keyword | stub=locomo-raw-task-passport: The passport was stored in the red travel pouch. | llm=The traveler stored the passport in the red travel pouch before leaving for the station. | stub_aqs=0.9000 | llm_aqs=0.8333
+- raw_topk | locomo_locomo-raw-episode-departure_departure_keyword | stub=locomo-raw-task-departure: The train leaves at 7:10 PM from gate 9 where Mara will meet the traveler. | llm=The departure time is 7:10 PM and the gate is 9. | stub_aqs=1.0000 | llm_aqs=0.6333
+- workspace | locomo_locomo-raw-episode-departure_departure_keyword | stub=locomo-raw-task-departure: The train leaves at 7:10 PM from gate 9 where Mara will meet the traveler. | llm=The departure time is 7:10 PM and the gate is gate 9. | stub_aqs=1.0000 | llm_aqs=0.7834
+
+## locomo run 9
+- raw_topk | locomo_locomo-raw-episode-passport_passport_keyword | stub=locomo-raw-task-passport: The passport was stored in the red travel pouch. | llm=in the red travel pouch | stub_aqs=0.9000 | llm_aqs=0.8333
+- workspace | locomo_locomo-raw-episode-passport_passport_keyword | stub=locomo-raw-task-passport: The passport was stored in the red travel pouch. | llm=in the red travel pouch | stub_aqs=0.9000 | llm_aqs=0.8333
+- raw_topk | locomo_locomo-raw-episode-departure_departure_keyword | stub=locomo-raw-task-departure: The train leaves at 7:10 PM from gate 9 where Mara will meet the traveler. | llm=The departure time is 7:10 PM and the gate is 9. | stub_aqs=1.0000 | llm_aqs=0.6333
+- workspace | locomo_locomo-raw-episode-departure_departure_keyword | stub=locomo-raw-task-departure: The train leaves at 7:10 PM from gate 9 where Mara will meet the traveler. | llm=The departure time is 7:10 PM and the gate is gate 9. | stub_aqs=1.0000 | llm_aqs=0.7834
+
+## locomo run 10
+- raw_topk | locomo_locomo-raw-episode-passport_passport_keyword | stub=locomo-raw-task-passport: The passport was stored in the red travel pouch. | llm=The traveler stored the passport in the red travel pouch before leaving for the station. | stub_aqs=0.9000 | llm_aqs=0.8333
+- workspace | locomo_locomo-raw-episode-passport_passport_keyword | stub=locomo-raw-task-passport: The passport was stored in the red travel pouch. | llm=The traveler stored the passport in the red travel pouch before leaving for the station. | stub_aqs=0.9000 | llm_aqs=0.8333
+- raw_topk | locomo_locomo-raw-episode-departure_departure_keyword | stub=locomo-raw-task-departure: The train leaves at 7:10 PM from gate 9 where Mara will meet the traveler. | llm=The departure time is 7:10 PM and the gate is 9. | stub_aqs=1.0000 | llm_aqs=0.6333
+- workspace | locomo_locomo-raw-episode-departure_departure_keyword | stub=locomo-raw-task-departure: The train leaves at 7:10 PM from gate 9 where Mara will meet the traveler. | llm=The departure time is 7:10 PM and the gate is 9. | stub_aqs=1.0000 | llm_aqs=0.6333

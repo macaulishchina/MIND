@@ -1,0 +1,40 @@
+# MIND configuration file
+# Priority: CLI args > environment variables > this file > code defaults
+#
+# Uncomment and edit the sections you need. All fields are optional.
+# CLI flags always override values set here.
+
+# ── Provider settings ────────────────────────────────────────────────
+# Controls which LLM backend is used for answer evaluation.
+#
+# provider: "openai" | "claude" | "gemini" | "stub" (deterministic)
+# model:    model name, e.g. "gpt-4.1-mini", "claude-3-7-sonnet"
+# endpoint: base URL (path suffix auto-appended); e.g. "https://api.deepseek.com"
+# timeout_ms: request timeout in milliseconds (>= 100)
+# retry_policy: retry strategy label, e.g. "default", "aggressive"
+# api_version: protocol version override (rarely needed)
+# api_key:  LLM API key; overrides env vars (OPENAI_API_KEY etc.)
+#           ⚠ Do NOT commit secrets — keep mind.toml in .gitignore.
+
+[provider]
+# provider = "openai"
+# model = "deepseek-chat"
+# endpoint = "https://api.deepseek.com"
+# api_key = ""
+# timeout_ms = 30000
+# retry_policy = "default"
+# api_version = "v1"
+
+# ── Evaluation defaults ─────────────────────────────────────────────
+# Controls how public-dataset evaluation behaves by default.
+#
+# dataset:  default dataset name, e.g. "scifact", "hotpotqa", "locomo"
+# strategy: long-horizon strategy: "public-dataset", "fixed", "optimized"
+# source:   optional local JSON slice path (omit to use built-in samples)
+# output:   default JSON report output path
+
+[evaluation]
+# dataset = "scifact"
+# strategy = "public-dataset"
+# source = ""
+# output = ""

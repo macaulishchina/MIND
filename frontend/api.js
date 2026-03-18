@@ -70,6 +70,22 @@ export async function submitOffline(apiKey, body) {
   });
 }
 
+export async function runMemoryLifecycleBenchmark(apiKey, body) {
+  return fetchJson("/v1/frontend/benchmark:run", {
+    method: "POST",
+    headers: authHeaders(apiKey),
+    body: JSON.stringify(body),
+  });
+}
+
+export async function loadMemoryLifecycleBenchmarkReport(apiKey, body = {}) {
+  return fetchJson("/v1/frontend/benchmark:report", {
+    method: "POST",
+    headers: authHeaders(apiKey),
+    body: JSON.stringify(body),
+  });
+}
+
 export async function loadSettings(apiKey) {
   return fetchJson("/v1/frontend/settings", {
     headers: authHeaders(apiKey),

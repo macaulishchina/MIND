@@ -1,0 +1,24 @@
+[
+  {
+    "_id": "5a8b57f25542995d1e6f1371",
+    "question": "In which country is the university attended by the author of The Hobbit?",
+    "answer": "England",
+    "supporting_facts": [["J. R. R. Tolkien", 0], ["University of Oxford", 0]],
+    "context": [
+      ["J. R. R. Tolkien", ["J. R. R. Tolkien studied at the University of Oxford."]],
+      ["University of Oxford", ["The University of Oxford is located in England."]],
+      ["The Hobbit", ["The Hobbit is a novel by J. R. R. Tolkien."]]
+    ]
+  },
+  {
+    "_id": "5a7a06935542990198eaf050",
+    "question": "Which city is associated with the university where Marie Curie taught?",
+    "answer": "Paris",
+    "supporting_facts": [["Marie Curie", 0], ["University of Paris", 0]],
+    "context": [
+      ["Marie Curie", ["Marie Curie taught at the University of Paris."]],
+      ["University of Paris", ["The University of Paris is in Paris, France."]],
+      ["Paris", ["Paris is the capital of France."]]
+    ]
+  }
+]

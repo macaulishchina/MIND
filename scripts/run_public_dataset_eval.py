@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from mind.app.context import ProviderSelection  # noqa: E402
 from mind.fixtures.public_datasets.evaluation import (  # noqa: E402
     evaluate_public_dataset,
     write_public_dataset_evaluation_report_json,
@@ -30,9 +31,26 @@ def main() -> int:
         "-o",
         help="Optional JSON output path. If omitted, the report is printed to stdout.",
     )
+    parser.add_argument("--provider", default=None, help="Optional answer provider.")
+    parser.add_argument("--model", default=None, help="Optional answer model.")
+    parser.add_argument("--endpoint", default=None, help="Optional provider endpoint override.")
+    parser.add_argument("--timeout-ms", type=int, default=None, help="Optional provider timeout.")
+    parser.add_argument("--retry-policy", default=None, help="Optional provider retry policy.")
+    parser.add_argument(
+        "--strategy",
+        default="public-dataset",
+        help="Long-horizon strategy: fixed, optimized, or public-dataset.",
+    )
     args = parser.parse_args()
 
-    report = evaluate_public_dataset(args.dataset, source_path=args.source)
+    provider_selection = _provider_selection_from_namespace(args)
+
+    report = evaluate_public_dataset(
+        args.dataset,
+        source_path=args.source,
+        provider_selection=provider_selection,
+        long_horizon_strategy=args.strategy,
+    )
     if args.output:
         output_path = write_public_dataset_evaluation_report_json(args.output, report)
         print(f"Wrote report to {output_path}")
@@ -47,6 +65,10 @@ def main() -> int:
         "retrieval_case_count": report.retrieval_case_count,
         "answer_case_count": report.answer_case_count,
         "long_horizon_sequence_count": report.long_horizon_sequence_count,
+        "answer_provider": report.answer_provider,
+        "answer_model": report.answer_model,
+        "answer_provider_configured": report.answer_provider_configured,
+        "long_horizon_strategy": report.long_horizon_strategy,
         "workspace": {
             "case_count": report.workspace.case_count,
             "answer_case_count": report.workspace.answer_case_count,
@@ -72,6 +94,19 @@ def main() -> int:
         "findings": list(report.findings),
     }, indent=2, sort_keys=True))
     return 0
+
+def _provider_selection_from_namespace(args: argparse.Namespace) -> ProviderSelection | None:
+    values = {
+        "provider": getattr(args, "provider", None),
+        "model": getattr(args, "model", None),
+        "endpoint": getattr(args, "endpoint", None),
+        "timeout_ms": getattr(args, "timeout_ms", None),
+        "retry_policy": getattr(args, "retry_policy", None),
+    }
+    if all(value in (None, "") for value in values.values()):
+        return None
+    payload = {key: value for key, value in values.items() if value not in (None, "")}
+    return ProviderSelection.model_validate(payload)
 
 
 if __name__ == "__main__":

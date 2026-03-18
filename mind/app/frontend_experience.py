@@ -33,6 +33,7 @@ class FrontendExperienceEntrypoint(StrEnum):
     RETRIEVE = "retrieve"
     ACCESS = "access"
     OFFLINE = "offline"
+    BENCHMARK = "benchmark"
     GATE_DEMO = "gate_demo"
 
 
@@ -375,6 +376,7 @@ def build_frontend_experience_catalog(
         FrontendExperienceEntrypoint.RETRIEVE,
         FrontendExperienceEntrypoint.ACCESS,
         FrontendExperienceEntrypoint.OFFLINE,
+        FrontendExperienceEntrypoint.BENCHMARK,
         FrontendExperienceEntrypoint.GATE_DEMO,
     ]
     entries: list[FrontendExperienceCatalogEntry] = []
@@ -405,6 +407,7 @@ _ENTRYPOINT_TITLES = {
     FrontendExperienceEntrypoint.RETRIEVE: "Retrieve",
     FrontendExperienceEntrypoint.ACCESS: "Access",
     FrontendExperienceEntrypoint.OFFLINE: "Offline Jobs",
+    FrontendExperienceEntrypoint.BENCHMARK: "Lifecycle Benchmark",
     FrontendExperienceEntrypoint.GATE_DEMO: "Gate / Demo",
 }
 
@@ -421,11 +424,25 @@ _ENTRYPOINT_SUMMARIES = {
     FrontendExperienceEntrypoint.OFFLINE: (
         "Submit offline maintenance jobs without changing runtime semantics implicitly."
     ),
+    FrontendExperienceEntrypoint.BENCHMARK: (
+        "Run the staged memory lifecycle benchmark and reload its persisted report artifacts."
+    ),
     FrontendExperienceEntrypoint.GATE_DEMO: (
         "Expose gate, report, and demo entry summaries "
         "without coupling the UI to raw developer CLI."
     ),
 }
+
+from mind.app.frontend_experience_benchmark import (  # noqa: E402, F401
+    FrontendMemoryLifecycleAskMetricsView,
+    FrontendMemoryLifecycleBenchmarkLaunchRequest,
+    FrontendMemoryLifecycleBenchmarkQueryRequest,
+    FrontendMemoryLifecycleBenchmarkResult,
+    FrontendMemoryLifecycleCostSnapshotView,
+    FrontendMemoryLifecycleMemorySnapshotView,
+    FrontendMemoryLifecycleStageView,
+    build_frontend_memory_lifecycle_benchmark_result,
+)
 
 # Re-export for backward compatibility
 from mind.app.frontend_experience_helpers import (  # noqa: E402, F401

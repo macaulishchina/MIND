@@ -4,9 +4,11 @@ import {
   deleteLlmService,
   discoverLlmModels,
   loadCatalog,
+  loadMemoryLifecycleBenchmarkReport,
   loadDebugTimeline,
   loadGateDemo,
   loadSettings,
+  runMemoryLifecycleBenchmark,
   submitAccess,
   submitIngest,
   submitOffline,
@@ -91,6 +93,7 @@ const store = createStore({
     "module-retrieve": null,
     "module-access": null,
     "module-offline": null,
+    "module-benchmark": null,
   },
   operationChainDrawerOpen: false,
   operationChainHidden: false,
@@ -306,6 +309,9 @@ function syncActionAvailability() {
   const offlineSubmitDisabled = offlineNeedsEpisode
     ? !elements.offlineEpisodeId.value.trim()
     : getOfflineTargetRefs().length < 2 || !elements.offlineReason.value.trim();
+  const benchmarkRunDisabled = !elements.benchmarkDatasetName.value.trim()
+    || !elements.benchmarkSourcePath.value.trim();
+  const benchmarkLoadDisabled = !state.apiKey;
   const llmDraft = getSelectedLlmDraft();
   const llmCanSave = Boolean(
     state.apiKey
@@ -331,6 +337,8 @@ function syncActionAvailability() {
   );
   setButtonRuleDisabled(elements.accessSubmit, !elements.accessQuery.value.trim());
   setButtonRuleDisabled(elements.offlineSubmit, offlineSubmitDisabled);
+  setButtonRuleDisabled(elements.benchmarkSubmit, benchmarkRunDisabled);
+  setButtonRuleDisabled(elements.benchmarkRefresh, benchmarkLoadDisabled);
   setButtonRuleDisabled(
     elements.settingsProvider,
     !state.apiKey || (elements.settingsProvider.value === "llm" && !canSwitchToLlm),
@@ -703,6 +711,53 @@ function renderOfflineResult(result) {
   `;
 }
 
+function renderBenchmarkResult(result) {
+  const stages = result.stage_reports || [];
+  const latestStage = stages[stages.length - 1] || null;
+  elements.benchmarkResult.innerHTML = `
+    <div class="status status-ok">生命周期基准已完成，可继续按 run_id 重新加载。</div>
+    ${renderMetricList([
+      { label: "运行编号", value: result.run_id },
+      { label: "数据集", value: result.dataset_name },
+      { label: "数据分组数", value: result.bundle_count },
+      { label: "问答样例数", value: result.answer_case_count },
+      { label: "阶段数", value: result.stage_count },
+      { label: "当前阶段", value: result.latest_stage_name },
+      { label: "报告路径", value: result.report_path },
+      { label: "调试 run_id", value: result.frontend_debug_query?.run_id || result.run_id },
+    ])}
+    <div class="result-grid">
+      ${stages.map((stage) => `
+        <div class="result-block">
+          <h3>${escapeHtml(stage.stage_name)}</h3>
+          ${renderMetricList([
+            { label: "回答质量", value: stage.ask.average_answer_quality },
+            { label: "任务成功率", value: stage.ask.task_success_rate },
+            { label: "候选命中率", value: stage.ask.candidate_hit_rate },
+            { label: "采用命中率", value: stage.ask.selected_hit_rate },
+            { label: "复用率", value: stage.ask.reuse_rate },
+            { label: "污染率", value: stage.ask.pollution_rate },
+            { label: "活跃对象数", value: stage.memory.active_object_count },
+            { label: "版本总数", value: stage.memory.total_object_versions },
+            { label: "累计成本", value: stage.cost.total_cost },
+            { label: "离线任务数", value: stage.cost.offline_job_count },
+          ])}
+          <p class="meta">对象构成：${escapeHtml(formatValue(stage.memory.active_object_counts))}</p>
+          <p class="meta">阶段说明：${escapeHtml((stage.operation_notes || []).join(" / ") || "无")}</p>
+        </div>
+      `).join("")}
+    </div>
+    ${latestStage?.cost
+      ? `<p class="meta">telemetry：${escapeHtml(result.telemetry_path || "未落盘")} / store：${escapeHtml(result.store_path || "未落盘")}</p>`
+      : ""
+    }
+    ${result.notes?.length
+      ? `<div class="result-panel"><h3>补充说明</h3><ul class="notes-list">${result.notes.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></div>`
+      : ""
+    }
+  `;
+}
+
 function renderDebugTimeline(result) {
   const timeline = result.timeline || [];
   const deltas = result.object_deltas || [];
@@ -882,6 +937,12 @@ function resetOfflineForm() {
   syncOfflineMode();
 }
 
+function resetBenchmarkForm() {
+  elements.benchmarkForm.reset();
+  elements.benchmarkResult.innerHTML = '<div class="empty-state">还没有生命周期基准结果。</div>';
+  syncActionAvailability();
+}
+
 function resetSettingsForm() {
   elements.settingsForm.reset();
   elements.settingsResult.innerHTML = state.settingsPage
@@ -917,6 +978,7 @@ function clearLoadedState() {
   resetRetrieveForm();
   resetAccessForm();
   resetOfflineForm();
+  resetBenchmarkForm();
   resetSettingsForm();
   resetDebugForm();
   updateShellSignals();
@@ -1013,6 +1075,26 @@ function collectOfflineRequest() {
     reason,
   };
   return body;
+}
+
+function collectBenchmarkLaunchRequest() {
+  const datasetName = elements.benchmarkDatasetName.value.trim();
+  const sourcePath = elements.benchmarkSourcePath.value.trim();
+  if (!datasetName) {
+    throw new Error("请先填写数据集名称。");
+  }
+  if (!sourcePath) {
+    throw new Error("请先填写本地 slice 路径。");
+  }
+  return {
+    dataset_name: datasetName,
+    source_path: sourcePath,
+  };
+}
+
+function collectBenchmarkReportRequest() {
+  const runId = elements.benchmarkRunId.value.trim();
+  return runId ? { run_id: runId } : {};
 }
 
 function collectSettingsApplyRequest() {
@@ -1358,6 +1440,67 @@ bindClickAction(elements.offlineReset, "offline-reset", {
   },
 });
 elements.offlineJobKind.addEventListener("change", syncOfflineMode);
+
+bindFormAction(elements.benchmarkForm, "benchmark-submit", {
+  button: elements.benchmarkSubmit,
+  before: () => {
+    navigate({
+      activeWorkspace: "workspace-operations",
+      activeOperation: "module-benchmark",
+    });
+  },
+  busyLabel: "运行中",
+  minBusyMs: MIN_BUSY_MS.submit,
+  work: async () => {
+    const request = collectBenchmarkLaunchRequest();
+    const submittedAt = new Date().toISOString();
+    setOperationChainSnapshot("module-benchmark", buildRunningOperationChain("module-benchmark", request, submittedAt));
+    try {
+      const result = await runMemoryLifecycleBenchmark(state.apiKey, request);
+      elements.benchmarkRunId.value = result.run_id || "";
+      elements.debugRunId.value = result.frontend_debug_query?.run_id || result.run_id || "";
+      renderBenchmarkResult(result);
+      setOperationChainSnapshot("module-benchmark", buildSuccessfulOperationChain("module-benchmark", request, result, submittedAt));
+    } catch (error) {
+      setOperationChainSnapshot("module-benchmark", buildErrorOperationChain("module-benchmark", request, error, submittedAt));
+      throw error;
+    }
+  },
+});
+
+bindClickAction(elements.benchmarkRefresh, "benchmark-refresh", {
+  before: () => {
+    navigate({
+      activeWorkspace: "workspace-operations",
+      activeOperation: "module-benchmark",
+    });
+  },
+  busyLabel: "读取中",
+  minBusyMs: MIN_BUSY_MS.refresh,
+  work: async () => {
+    const request = collectBenchmarkReportRequest();
+    const submittedAt = new Date().toISOString();
+    setOperationChainSnapshot("module-benchmark", buildRunningOperationChain("module-benchmark", request, submittedAt));
+    try {
+      const result = await loadMemoryLifecycleBenchmarkReport(state.apiKey, request);
+      elements.benchmarkRunId.value = result.run_id || elements.benchmarkRunId.value;
+      elements.debugRunId.value = result.frontend_debug_query?.run_id || result.run_id || "";
+      renderBenchmarkResult(result);
+      setOperationChainSnapshot("module-benchmark", buildSuccessfulOperationChain("module-benchmark", request, result, submittedAt));
+    } catch (error) {
+      setOperationChainSnapshot("module-benchmark", buildErrorOperationChain("module-benchmark", request, error, submittedAt));
+      throw error;
+    }
+  },
+});
+
+bindClickAction(elements.benchmarkReset, "benchmark-reset", {
+  busyLabel: "重置中",
+  minBusyMs: MIN_BUSY_MS.reset,
+  work: async () => {
+    resetBenchmarkForm();
+  },
+});
 
 function setSettingsControlsBusy(busy) {
   const locked = busy || !state.apiKey;
@@ -1787,6 +1930,9 @@ function bindAvailabilitySync(control) {
   elements.offlineTargetRefs,
   elements.offlineReason,
   elements.offlinePriority,
+  elements.benchmarkDatasetName,
+  elements.benchmarkSourcePath,
+  elements.benchmarkRunId,
   elements.settingsProvider,
   elements.settingsDevMode,
   elements.llmServiceName,

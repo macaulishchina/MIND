@@ -30,6 +30,22 @@ from .costing import (
     read_strategy_cost_report_json,
     write_strategy_cost_report_json,
 )
+from .memory_lifecycle import (
+    MemoryLifecycleAskMetrics,
+    MemoryLifecycleBenchmarkReport,
+    MemoryLifecycleCostSnapshot,
+    MemoryLifecycleMemorySnapshot,
+    MemoryLifecycleStageReport,
+    evaluate_memory_lifecycle_benchmark,
+    write_memory_lifecycle_benchmark_report_json,
+)
+from .memory_lifecycle_reports import (
+    MemoryLifecycleBenchmarkArtifactPaths,
+    load_memory_lifecycle_benchmark_report,
+    persist_memory_lifecycle_benchmark_report,
+    prepare_memory_lifecycle_benchmark_artifacts,
+    read_memory_lifecycle_benchmark_report_json,
+)
 from .mind_system import MindLongHorizonSystem, MindRunCostSnapshot
 from .reporting import (
     BenchmarkSuiteReport,
@@ -51,7 +67,9 @@ from .strategy import (
     FixedRuleMindStrategy,
     MindStrategy,
     OptimizedMindStrategy,
+    PublicDatasetMindStrategy,
     StrategyStepDecision,
+    public_dataset_budget_schedule,
 )
 from .strategy_gate import (
     StrategyFamilyImprovement,
@@ -82,12 +100,25 @@ __all__ = [
     "OptimizedMindStrategy",
     "BenchmarkComparisonResult",
     "BenchmarkGateResult",
+    "PublicDatasetMindStrategy",
     "StrategyFamilyImprovement",
     "StrategyCostReport",
     "StrategyGateResult",
     "PlainRagBaselineSystem",
     "StrategyStepDecision",
     "assert_benchmark_comparison",
+    "MemoryLifecycleAskMetrics",
+    "MemoryLifecycleBenchmarkArtifactPaths",
+    "MemoryLifecycleBenchmarkReport",
+    "MemoryLifecycleCostSnapshot",
+    "MemoryLifecycleMemorySnapshot",
+    "MemoryLifecycleStageReport",
+    "evaluate_memory_lifecycle_benchmark",
+    "load_memory_lifecycle_benchmark_report",
+    "persist_memory_lifecycle_benchmark_report",
+    "prepare_memory_lifecycle_benchmark_artifacts",
+    "read_memory_lifecycle_benchmark_report_json",
+    "write_memory_lifecycle_benchmark_report_json",
     "assert_benchmark_gate",
     "assert_strategy_gate",
     "build_benchmark_gate_result",
@@ -104,6 +135,7 @@ __all__ = [
     "evaluate_strategy_gate",
     "evaluate_workspace_ablation",
     "evaluate_workspace_ablation_run",
+    "public_dataset_budget_schedule",
     "read_benchmark_suite_report_json",
     "read_strategy_cost_report_json",
     "write_benchmark_suite_report_json",

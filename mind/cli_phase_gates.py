@@ -6,6 +6,7 @@ import argparse
 from collections.abc import Sequence
 from pathlib import Path
 
+from .app.context import ProviderSelection
 from .capabilities import (
     CapabilityAdapter,
     CapabilityProviderFamily,
@@ -81,9 +82,49 @@ def public_dataset_report_main(argv: Sequence[str] | None = None) -> int:
         default=None,
         help="Optional JSON output path for the persisted evaluation report.",
     )
+    parser.add_argument(
+        "--provider",
+        default=None,
+        help="Optional answer provider, for example openai.",
+    )
+    parser.add_argument("--model", default=None, help="Optional answer model name.")
+    parser.add_argument("--endpoint", default=None, help="Optional provider endpoint override.")
+    parser.add_argument(
+        "--timeout-ms",
+        type=int,
+        default=None,
+        help="Optional provider timeout override in milliseconds.",
+    )
+    parser.add_argument(
+        "--retry-policy",
+        default=None,
+        help="Optional provider retry policy label.",
+    )
+    parser.add_argument(
+        "--strategy",
+        default="public-dataset",
+        help="Long-horizon strategy: fixed, optimized, or public-dataset.",
+    )
     args = parser.parse_args(list(argv) if argv is not None else None)
 
-    report = evaluate_public_dataset(args.dataset, source_path=args.source)
+    # Apply mind.toml [evaluation] defaults for fields not set via CLI.
+    from mind.capabilities.config_file import get_evaluation_config, load_mind_toml
+
+    eval_cfg = get_evaluation_config(load_mind_toml())
+    if args.source is None and eval_cfg.get("source"):
+        args.source = eval_cfg["source"]
+    if args.output is None and eval_cfg.get("output"):
+        args.output = eval_cfg["output"]
+    if args.strategy == "public-dataset" and eval_cfg.get("strategy"):
+        args.strategy = eval_cfg["strategy"]
+
+    provider_selection = _provider_selection_from_namespace(args)
+    report = evaluate_public_dataset(
+        args.dataset,
+        source_path=args.source,
+        provider_selection=provider_selection,
+        long_horizon_strategy=args.strategy,
+    )
     output_path = write_public_dataset_evaluation_report_json(
         args.output or f"artifacts/public_datasets/{args.dataset}_evaluation_report.json",
         report,
@@ -96,6 +137,10 @@ def public_dataset_report_main(argv: Sequence[str] | None = None) -> int:
     print(f"report_path={output_path}")
     print(f"fixture_name={report.fixture_name}")
     print(f"fixture_hash={report.fixture_hash}")
+    print(f"answer_provider={report.answer_provider}")
+    print(f"answer_model={report.answer_model}")
+    print(f"answer_provider_configured={str(report.answer_provider_configured).lower()}")
+    print(f"long_horizon_strategy={report.long_horizon_strategy}")
     print(f"object_count={report.object_count}")
     print(f"retrieval_case_count={report.retrieval_case_count}")
     print(f"answer_case_count={report.answer_case_count}")
@@ -111,6 +156,20 @@ def public_dataset_report_main(argv: Sequence[str] | None = None) -> int:
         print(f"finding_{index}={finding}")
     print("public_dataset_report=PASS")
     return 0
+
+
+def _provider_selection_from_namespace(args: argparse.Namespace) -> ProviderSelection | None:
+    values = {
+        "provider": getattr(args, "provider", None),
+        "model": getattr(args, "model", None),
+        "endpoint": getattr(args, "endpoint", None),
+        "timeout_ms": getattr(args, "timeout_ms", None),
+        "retry_policy": getattr(args, "retry_policy", None),
+    }
+    if all(value in (None, "") for value in values.values()):
+        return None
+    payload = {key: value for key, value in values.items() if value not in (None, "")}
+    return ProviderSelection.model_validate(payload)
 
 
 def deployment_smoke_report_main(argv: Sequence[str] | None = None) -> int:

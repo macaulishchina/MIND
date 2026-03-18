@@ -87,6 +87,24 @@ def build_frontend_experience_bench_v1() -> list[FrontendExperienceScenario]:
             False,
             "Mobile offline flow submits a promote_schema job without changing semantics.",
         ),
+            FrontendExperienceScenario(
+                "benchmark_launch_desktop",
+                "experience",
+                "benchmark",
+                "desktop",
+                False,
+                "Desktop benchmark flow launches the staged lifecycle benchmark "
+                "and returns a persisted report summary.",
+            ),
+            FrontendExperienceScenario(
+                "benchmark_reload_mobile",
+                "experience",
+                "benchmark",
+                "mobile",
+                False,
+                "Mobile benchmark flow can reload the most recent persisted "
+                "lifecycle report by run id.",
+            ),
         FrontendExperienceScenario(
             "gate_demo_catalog_desktop",
             "experience",
@@ -193,6 +211,7 @@ def build_frontend_experience_bench_v1() -> list[FrontendExperienceScenario]:
         "retrieve",
         "access",
         "offline",
+        "benchmark",
         "gate_demo",
         "config_backend",
         "config_provider",
@@ -217,8 +236,9 @@ def build_frontend_experience_bench_v1() -> list[FrontendExperienceScenario]:
         raise RuntimeError(
             f"FrontendExperienceBench v1 entrypoint mismatch: missing={missing}, extra={extra}"
         )
-    if len(scenarios) != 20:
+    if len(scenarios) != 22:
         raise RuntimeError(
-            f"FrontendExperienceBench v1 expected 20 scenarios, got {len(scenarios)}"
+            "FrontendExperienceBench v1 fixture drifted: expected 22 scenarios, "
+            f"got {len(scenarios)}"
         )
     return scenarios

@@ -1,0 +1,41 @@
+{
+  "answer_case_count": 2,
+  "answer_model": "deepseek-chat",
+  "answer_provider": "openai",
+  "answer_provider_configured": true,
+  "dataset_name": "scifact",
+  "findings": [
+    "retrieval recall stays above the Phase D baseline",
+    "workspace answers remain high quality on the compiled public cases",
+    "long-horizon reuse remains directionally positive on the public fixture"
+  ],
+  "fixture_hash": "839a9cdbf0234deac205eeff900e10b5393cd74f0db522fa373bfc1c706c7dc6",
+  "fixture_name": "scifact raw-slice-v1",
+  "long_horizon": {
+    "average_context_cost_ratio": 0.1,
+    "average_gold_fact_coverage": 0.75,
+    "average_maintenance_cost_ratio": 1.0,
+    "average_pollution_rate": 0.0,
+    "average_pus": 0.465,
+    "average_reuse_rate": 0.0,
+    "average_task_success_rate": 0.75,
+    "sequence_count": 1
+  },
+  "long_horizon_sequence_count": 1,
+  "long_horizon_strategy": "public_dataset_optimized_v1",
+  "object_count": 8,
+  "retrieval_case_count": 2,
+  "source_path": "artifacts/dev/public_datasets/scifact_raw_compiled_slice.json",
+  "workspace": {
+    "answer_case_count": 2,
+    "candidate_recall_at_20": 1.0,
+    "case_count": 2,
+    "keyword_case_count": 2,
+    "median_token_cost_ratio": 0.2493,
+    "time_window_case_count": 0,
+    "vector_case_count": 0,
+    "workspace_answer_quality_score": 0.8667,
+    "workspace_gold_fact_coverage": 1.0,
+    "workspace_task_success_rate": 1.0
+  }
+}

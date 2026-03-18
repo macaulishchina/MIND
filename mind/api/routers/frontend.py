@@ -89,6 +89,32 @@ async def frontend_offline(
     return app_json_response(response)
 
 
+@router.post("/frontend/benchmark:run")
+async def frontend_benchmark_run(
+    request: Request,
+    principal: Annotated[PrincipalContext, Depends(require_api_key)],
+    payload: PayloadBody = None,
+) -> JSONResponse:
+    response = get_registry(request).frontend_experience_service.run_memory_lifecycle_benchmark(
+        build_app_request(request, principal, payload=payload)
+    )
+    return app_json_response(response)
+
+
+@router.post("/frontend/benchmark:report")
+async def frontend_benchmark_report(
+    request: Request,
+    principal: Annotated[PrincipalContext, Depends(require_api_key)],
+    payload: PayloadBody = None,
+) -> JSONResponse:
+    response = get_registry(
+        request
+    ).frontend_experience_service.load_memory_lifecycle_benchmark_report(
+        build_app_request(request, principal, payload=payload)
+    )
+    return app_json_response(response)
+
+
 @router.get("/frontend/settings")
 async def frontend_settings(
     request: Request,

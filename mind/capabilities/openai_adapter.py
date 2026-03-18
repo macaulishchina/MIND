@@ -173,7 +173,9 @@ def _prompt_for_request(request: CapabilityRequest) -> str:
     if isinstance(request, AnswerRequest):
         return (
             "You are the MIND answer capability.\n"
-            "Return JSON only.\n"
+                "Return JSON only.\n"
+            'Return JSON only with key "answer_text",'
+            ' e.g. {"answer_text": "your answer"}.\n'
             f"Question: {request.question}\n"
             f"Hard constraints: {json.dumps(request.hard_constraints, ensure_ascii=True)}\n"
             f"Support ids: {json.dumps(request.support_ids, ensure_ascii=True)}\n"
@@ -249,8 +251,6 @@ def _json_schema_format(
 def _max_output_tokens(request: CapabilityRequest) -> int | None:
     if isinstance(request, SummarizeRequest):
         return request.max_output_tokens
-    if isinstance(request, AnswerRequest):
-        return request.max_answer_tokens
     return None
 
 

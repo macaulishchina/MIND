@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 import httpx
 import pytest
@@ -37,6 +38,12 @@ async def api_client(
             base_url="http://testserver",
         ) as client:
             yield client
+
+
+@pytest.fixture(autouse=True)
+def _isolate_from_repo_config() -> None:  # type: ignore[misc]
+    with patch("mind.capabilities.config_file.load_mind_toml", return_value={}):
+        yield
 
 
 @pytest.mark.anyio
@@ -657,6 +664,42 @@ async def test_frontend_experience_routes_project_product_flows(
     )
     assert offline.status_code == 200
     assert offline.json()["result"]["status"] == "pending"
+
+
+@pytest.mark.anyio
+async def test_frontend_benchmark_routes_launch_and_reload_report(
+    api_client: httpx.AsyncClient,
+) -> None:
+    run = await api_client.post(
+        "/v1/frontend/benchmark:run",
+        headers=_auth_headers(),
+        json={
+            "dataset_name": "locomo",
+            "source_path": str(
+                Path(__file__).resolve().parent
+                / "data"
+                / "public_datasets"
+                / "locomo_local_slice.json"
+            ),
+        },
+    )
+
+    assert run.status_code == 200
+    run_result = run.json()["result"]
+    assert run_result["run_id"]
+    assert run_result["stage_count"] == 5
+    assert run_result["latest_stage_name"] == "schema_promoted"
+
+    reload = await api_client.post(
+        "/v1/frontend/benchmark:report",
+        headers=_auth_headers(),
+        json={"run_id": run_result["run_id"]},
+    )
+
+    assert reload.status_code == 200
+    reload_result = reload.json()["result"]
+    assert reload_result["run_id"] == run_result["run_id"]
+    assert reload_result["report_path"].endswith("report.json")
 
 
 @pytest.mark.anyio

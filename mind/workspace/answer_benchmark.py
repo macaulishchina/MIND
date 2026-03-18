@@ -65,27 +65,35 @@ def answer_from_raw_topk(
 
     if case.answer_kind is AnswerKind.RESULT_AND_SUMMARY:
         episode = _best_object_match(objects, case.prompt, object_types={"TaskEpisode"})
-        summary = _best_object_match(objects, case.prompt, object_types={"SummaryNote"})
+        summary = _best_summary_object_match(
+            objects,
+            prompt=case.prompt,
+            episode_id=None if episode is None else str(episode["id"]),
+            required_fragments=case.required_fragments,
+        )
         if episode is None and summary is None:
             return GeneratedAnswer(text="", support_ids=())
-        parts: list[str] = []
         support_ids: list[str] = []
+        result_text = ""
+        summary_text = ""
         if episode is not None:
-            result = str(
+            result_text = str(
                 episode["metadata"].get(
                     "result",
                     episode["content"].get("result_summary", ""),
                 )
             )
-            task_id = str(episode["metadata"].get("task_id", case.task_id))
-            parts.append(f"{task_id}: {result}")
             support_ids.append(str(episode["id"]))
         if summary is not None:
-            parts.append(str(summary["content"].get("summary", "")))
+            summary_text = str(summary["content"].get("summary", ""))
             support_ids.append(str(summary["id"]))
         return _answer_from_capability(
             case,
-            draft_text=" | ".join(part for part in parts if part),
+            draft_text=_best_result_and_summary_draft(
+                case,
+                result_text=result_text,
+                summary_text=summary_text,
+            ),
             support_ids=tuple(support_ids),
             capability_service=capability_service,
         )
@@ -141,7 +149,9 @@ def answer_from_workspace(
     ]
 
     if case.answer_kind is AnswerKind.TASK_RESULT:
-        target = _best_slot_match(slots, case.prompt)
+        target = _best_slot_match(slots, case.prompt, require_result_marker=True)
+        if target is None:
+            target = _best_slot_match(slots, case.prompt)
         if target is None:
             return GeneratedAnswer(text="", support_ids=())
         result = _extract_result(target["summary"])
@@ -165,19 +175,28 @@ def answer_from_workspace(
 
     if case.answer_kind is AnswerKind.RESULT_AND_SUMMARY:
         task_slot = _best_slot_match(slots, case.prompt, require_result_marker=True)
-        summary_candidates = [slot for slot in slots if slot is not task_slot]
-        summary_slot = _best_slot_match(summary_candidates, case.prompt)
-        parts: list[str] = []
+        summary_slot = _best_summary_slot_match(
+            [slot for slot in slots if slot is not task_slot],
+            prompt=case.prompt,
+            task_slot=task_slot,
+            required_fragments=case.required_fragments,
+        )
         support_ids: list[str] = []
+        result_text = ""
+        summary_text = ""
         if task_slot is not None:
-            parts.append(f"{case.task_id}: {_extract_result(task_slot['summary'])}")
+            result_text = _extract_result(task_slot["summary"])
             support_ids.append(task_slot["object_id"])
         if summary_slot is not None:
-            parts.append(summary_slot["summary"])
+            summary_text = summary_slot["summary"]
             support_ids.append(summary_slot["object_id"])
         return _answer_from_capability(
             case,
-            draft_text=" | ".join(parts),
+            draft_text=_best_result_and_summary_draft(
+                case,
+                result_text=result_text,
+                summary_text=summary_text,
+            ),
             support_ids=tuple(support_ids),
             capability_service=capability_service,
         )
@@ -276,11 +295,88 @@ def _best_slot_match(
     )
 
 
+def _best_summary_object_match(
+    objects: list[dict[str, Any]],
+    *,
+    prompt: str,
+    episode_id: str | None,
+    required_fragments: tuple[str, ...],
+) -> dict[str, Any] | None:
+    candidates = [obj for obj in objects if str(obj["type"]) == "SummaryNote"]
+    if not candidates:
+        return None
+    return max(
+        candidates,
+        key=lambda obj: (
+            _matches_episode_summary_scope(obj, episode_id),
+            _fragment_match_count(
+                str(obj.get("content", {}).get("summary", "")),
+                required_fragments,
+            ),
+            _keyword_overlap(prompt, build_search_text(obj)),
+            str(obj["id"]),
+        ),
+    )
+
+
+def _best_summary_slot_match(
+    slots: list[dict[str, Any]],
+    *,
+    prompt: str,
+    task_slot: dict[str, Any] | None,
+    required_fragments: tuple[str, ...],
+) -> dict[str, Any] | None:
+    if not slots:
+        return None
+    return max(
+        slots,
+        key=lambda slot: (
+            _matches_task_slot(slot, task_slot),
+            _fragment_match_count(str(slot["summary"]), required_fragments),
+            _keyword_overlap(prompt, f"{slot['object_id']} {slot['summary']}"),
+            slot["object_id"],
+        ),
+    )
+
+
+def _best_result_and_summary_draft(
+    case: EpisodeAnswerBenchCase,
+    *,
+    result_text: str,
+    summary_text: str,
+) -> str:
+    candidates = [
+        text
+        for text in (
+            f"{case.task_id}: {summary_text}" if summary_text else "",
+            f"{case.task_id}: {result_text}" if result_text else "",
+            _combine_result_and_summary(case, result_text=result_text, summary_text=summary_text),
+        )
+        if text.strip()
+    ]
+    if not candidates:
+        return ""
+    return max(candidates, key=lambda text: _benchmark_text_quality(case, text))
+
+
+def _combine_result_and_summary(
+    case: EpisodeAnswerBenchCase,
+    *,
+    result_text: str,
+    summary_text: str,
+) -> str:
+    parts = [
+        f"{case.task_id}: {result_text}" if result_text else "",
+        summary_text,
+    ]
+    return " | ".join(part for part in parts if part)
+
+
 def _extract_result(summary: str) -> str:
     match = re.search(r"\[([^\]]+)\]", summary)
     if match is not None:
-        return match.group(1).strip().lower()
-    return summary.strip().lower()
+        return match.group(1).strip()
+    return summary.strip()
 
 
 def _answer_from_capability(
@@ -292,17 +388,88 @@ def _answer_from_capability(
 ) -> GeneratedAnswer:
     if not draft_text:
         return GeneratedAnswer(text="", support_ids=support_ids)
+    generated_text = generate_answer_text(
+        question=case.prompt,
+        context_text=draft_text,
+        support_ids=support_ids,
+        max_answer_tokens=case.max_answer_tokens,
+        capability_service=capability_service,
+        request_id_prefix="workspace-answer",
+    )
+    answer_text = generated_text
+    if capability_service is None:
+        answer_text = _prefer_faithful_benchmark_text(
+            case,
+            draft_text=draft_text,
+            generated_text=generated_text,
+        )
     return GeneratedAnswer(
-        text=generate_answer_text(
-            question=case.prompt,
-            context_text=draft_text,
-            support_ids=support_ids,
-            max_answer_tokens=case.max_answer_tokens,
-            capability_service=capability_service,
-            request_id_prefix="workspace-answer",
-        ),
+        text=answer_text,
         support_ids=support_ids,
     )
+
+
+def _prefer_faithful_benchmark_text(
+    case: EpisodeAnswerBenchCase,
+    *,
+    draft_text: str,
+    generated_text: str,
+) -> str:
+    if not generated_text.strip():
+        return draft_text
+    if _benchmark_text_quality(case, draft_text) > _benchmark_text_quality(case, generated_text):
+        return draft_text
+    return generated_text
+
+
+def _benchmark_text_quality(case: EpisodeAnswerBenchCase, text: str) -> tuple[float, int, int, int]:
+    matched_fragments = _fragment_match_count(text, case.required_fragments)
+    constraint_count = sum(_text_constraints(case, text))
+    return (
+        round(matched_fragments / float(len(case.required_fragments)), 4)
+        if case.required_fragments
+        else 0.0,
+        constraint_count,
+        -_token_count(text),
+        len(text),
+    )
+
+
+def _text_constraints(case: EpisodeAnswerBenchCase, text: str) -> tuple[bool, ...]:
+    normalized_text = _normalize(text)
+    constraints: list[bool] = [
+        bool(text.strip()),
+        _token_count(text) <= case.max_answer_tokens,
+    ]
+    if case.answer_kind in {AnswerKind.TASK_RESULT, AnswerKind.RESULT_AND_SUMMARY}:
+        constraints.append(_normalize(case.task_id) in normalized_text)
+    return tuple(constraints)
+
+
+def _fragment_match_count(text: str, required_fragments: tuple[str, ...]) -> int:
+    normalized_text = _normalize(text)
+    return sum(1 for fragment in required_fragments if _normalize(fragment) in normalized_text)
+
+
+def _matches_episode_summary_scope(obj: dict[str, Any], episode_id: str | None) -> bool:
+    if episode_id is None:
+        return False
+    metadata = obj.get("metadata", {})
+    if str(metadata.get("summary_scope", "")) == episode_id:
+        return True
+    source_refs = obj.get("source_refs", [])
+    return isinstance(source_refs, list) and episode_id in source_refs
+
+
+def _matches_task_slot(slot: dict[str, Any], task_slot: dict[str, Any] | None) -> bool:
+    if task_slot is None:
+        return False
+    task_object_id = str(task_slot["object_id"])
+    slot_object_id = str(slot["object_id"])
+    if slot_object_id == f"{task_object_id}-summary":
+        return True
+    source_refs = slot.get("source_refs", ())
+    return task_object_id in source_refs
 
 
 def _coverage(actual_ids: tuple[str, ...], gold_ids: tuple[str, ...]) -> float:

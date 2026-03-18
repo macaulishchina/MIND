@@ -64,6 +64,8 @@ X-API-Key: <your key>
 - `POST /v1/frontend/retrieve`
 - `POST /v1/frontend/access`
 - `POST /v1/frontend/offline`
+- `POST /v1/frontend/benchmark:run`
+- `POST /v1/frontend/benchmark:report`
 - `GET /v1/frontend/settings`
 - `POST /v1/frontend/settings:preview`
 - `POST /v1/frontend/settings:apply`
@@ -138,6 +140,27 @@ provider 语义现在是一致的。
 
 这让 frontend shell 和其他 frontend client 不需要直接依赖 raw telemetry payload，也不需要从
 `summary` 反推回答语义。
+
+`POST /v1/frontend/benchmark:run` 会同步执行 memory lifecycle benchmark：真实走
+`write_raw`、`summarize`、`reflect`、`reorganize_simple`、`promote_schema` 和分阶段 `ask`，
+然后把 report、telemetry、SQLite store 持久化到 benchmark artifact 目录，并返回稳定的
+frontend-facing benchmark report 投影。请求体目前包含：
+
+- `dataset_name`
+- `source_path`
+
+`POST /v1/frontend/benchmark:report` 会读取已持久化的 benchmark report。请求体可选：
+
+- `run_id`：指定某次 benchmark 运行；省略时读取最近一次持久化报告。
+
+benchmark report 结果会返回：
+
+- `run_id`
+- `report_path`
+- `telemetry_path`
+- `store_path`
+- `stage_reports[]`：每个阶段的 ask / memory / cost 指标
+- `frontend_debug_query.run_id`：可直接继续喂给 `POST /v1/frontend/debug:timeline`
 
 `provider_selection` 的结构如下：
 

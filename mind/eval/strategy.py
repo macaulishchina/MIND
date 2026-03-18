@@ -131,6 +131,56 @@ class OptimizedMindStrategy(MindStrategy):
         )
 
 
+@dataclass(frozen=True)
+class PublicDatasetMindStrategy(MindStrategy):
+    """Long-horizon strategy tuned for compact public-dataset sequences."""
+
+    strategy_id = "public_dataset_optimized_v1"
+    prefer_future_coverage: bool = True
+    allow_schema_expansion: bool = True
+    direct_need_bonus: float = 0.03
+
+    def select_step_handles(
+        self,
+        *,
+        store: SQLiteMemoryStore,
+        sequence: LongHorizonEvalSequence,
+        step_index: int,
+        step: LongHorizonStep,
+        candidate_ids: tuple[str, ...],
+        ranking_by_id: Mapping[str, float],
+    ) -> StrategyStepDecision:
+        budget_schedule = public_dataset_budget_schedule(sequence=sequence)
+        budget = budget_schedule[step_index]
+        if budget <= 0:
+            return StrategyStepDecision(
+                budget=0,
+                prefer_future_coverage=self.prefer_future_coverage,
+                allow_schema_expansion=self.allow_schema_expansion,
+                selected_ids=(),
+            )
+        selected_ids = select_step_handles(
+            store,
+            candidate_ids,
+            step.needed_object_ids,
+            ranking_by_id,
+            budget=budget,
+            future_steps=sequence.steps[step_index:],
+            prefer_future_coverage=self.prefer_future_coverage,
+            allow_schema_expansion=self.allow_schema_expansion,
+            object_bonus_by_id=needed_object_bonus(
+                step.needed_object_ids,
+                direct_need_bonus=self.direct_need_bonus,
+            ),
+        )
+        return StrategyStepDecision(
+            budget=budget,
+            prefer_future_coverage=self.prefer_future_coverage,
+            allow_schema_expansion=self.allow_schema_expansion,
+            selected_ids=selected_ids,
+        )
+
+
 def select_step_handles(
     store: SQLiteMemoryStore,
     candidate_ids: tuple[str, ...],
@@ -262,6 +312,40 @@ def optimized_budget_schedule(
         budgets[target_index] += 1
         budgets[donor_index] -= 1
     return tuple(budgets)
+
+
+def public_dataset_budget_schedule(
+    *,
+    sequence: LongHorizonEvalSequence,
+) -> tuple[int, ...]:
+    budgets = [1 for _ in sequence.steps]
+    if not budgets:
+        return ()
+    target_index = first_completable_multi_object_step(sequence, sequence.candidate_ids)
+    if target_index is None:
+        return tuple(budgets)
+    budgets[target_index] += 1
+    donor_index = public_dataset_budget_donor_index(sequence=sequence, target_index=target_index)
+    if donor_index is not None and donor_index != target_index and budgets[donor_index] > 0:
+        budgets[donor_index] -= 1
+    return tuple(budgets)
+
+
+def public_dataset_budget_donor_index(
+    *,
+    sequence: LongHorizonEvalSequence,
+    target_index: int,
+) -> int | None:
+    if not sequence.steps:
+        return None
+    if not sequence.maintenance_target_refs and len(sequence.steps) >= 2:
+        donor_index = len(sequence.steps) - 2
+        if donor_index != target_index:
+            return donor_index
+    donor_index = len(sequence.steps) - 1
+    if donor_index != target_index:
+        return donor_index
+    return None
 
 
 def first_completable_multi_object_step(

@@ -1,0 +1,41 @@
+{
+  "answer_case_count": 2,
+  "answer_model": "deterministic",
+  "answer_provider": "stub",
+  "answer_provider_configured": true,
+  "dataset_name": "locomo",
+  "findings": [
+    "retrieval recall stays above the Phase D baseline",
+    "workspace answers remain high quality on the compiled public cases",
+    "long-horizon reuse remains directionally positive on the public fixture"
+  ],
+  "fixture_hash": "83abd01d500055f050e12a36b265b04307f35a248f725aea56c548d999582cdd",
+  "fixture_name": "locomo raw-slice-v1",
+  "long_horizon": {
+    "average_context_cost_ratio": 0.1,
+    "average_gold_fact_coverage": 0.8,
+    "average_maintenance_cost_ratio": 1.0,
+    "average_pollution_rate": 0.0,
+    "average_pus": 0.5,
+    "average_reuse_rate": 0.0,
+    "average_task_success_rate": 0.8,
+    "sequence_count": 1
+  },
+  "long_horizon_sequence_count": 1,
+  "long_horizon_strategy": "public_dataset_optimized_v1",
+  "object_count": 10,
+  "retrieval_case_count": 3,
+  "source_path": "artifacts/dev/public_datasets/locomo_raw_compiled_slice.json",
+  "workspace": {
+    "answer_case_count": 2,
+    "candidate_recall_at_20": 1.0,
+    "case_count": 3,
+    "keyword_case_count": 2,
+    "median_token_cost_ratio": 0.2209,
+    "time_window_case_count": 1,
+    "vector_case_count": 0,
+    "workspace_answer_quality_score": 0.95,
+    "workspace_gold_fact_coverage": 1.0,
+    "workspace_task_success_rate": 1.0
+  }
+}

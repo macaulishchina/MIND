@@ -103,3 +103,41 @@
 - `config`
 
 它们不属于正式产品 surface。`mindtest` 仍保留 `sqlite_local` / `--sqlite-path` 等测试与验收参数，用于 gate、回归和 reference backend 校验。
+
+### `mindtest report public-dataset`
+
+用途：对一个公开数据集 slice 运行统一 retrieval/workspace/long-horizon 验证。
+
+必填：
+
+- `dataset`
+
+可选：
+
+- `--source`
+- `--output`
+- `--provider`
+- `--model`
+- `--endpoint`
+- `--timeout-ms`
+- `--retry-policy`
+- `--strategy`：`fixed` / `optimized` / `public-dataset`
+
+示例：
+
+```bash
+uv run mindtest report public-dataset scifact \
+	--source tests/data/public_datasets/scifact_local_slice.json \
+	--provider claude \
+	--model claude-3-7-sonnet \
+	--strategy optimized
+```
+
+输出摘要中的关键字段：
+
+- `answer_provider`：当前请求选择的 answer provider。
+- `answer_model`：当前请求选择的 model。
+- `answer_provider_configured`：当前 provider 是否已解析到可用认证信息。
+- `long_horizon_strategy`：本次长时程评估使用的策略实现 ID。
+
+注意：`answer_provider_configured=false` 且 provider 不是 `stub` 时，answer capability 可能因为默认 fallback 策略而回退到 deterministic provider。

@@ -91,6 +91,24 @@ X-API-Key: <key>
 | `GET` | `/v1/system/readiness` | readiness |
 | `GET` | `/v1/system/config` | config summary |
 
+## Frontend
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| `GET` | `/v1/frontend/catalog` | frontend catalog |
+| `GET` | `/v1/frontend/gate-demo` | frontend gate/demo summary |
+| `POST` | `/v1/frontend/ingest` | frontend ingest |
+| `POST` | `/v1/frontend/retrieve` | frontend retrieve |
+| `POST` | `/v1/frontend/access` | frontend access |
+| `POST` | `/v1/frontend/offline` | frontend offline submit |
+| `POST` | `/v1/frontend/benchmark:run` | run lifecycle benchmark and persist artifacts |
+| `POST` | `/v1/frontend/benchmark:report` | load persisted lifecycle benchmark report |
+| `GET` | `/v1/frontend/settings` | frontend settings page |
+| `POST` | `/v1/frontend/settings:preview` | preview settings mutation |
+| `POST` | `/v1/frontend/settings:apply` | apply settings mutation |
+| `POST` | `/v1/frontend/settings:restore` | restore previous settings snapshot |
+| `POST` | `/v1/frontend/debug:timeline` | frontend debug timeline query |
+
 ## OpenAPI
 
 启动 `mind-api` 后，OpenAPI UI 默认可在 `/docs` 查看。

@@ -156,6 +156,10 @@
                   data-operation-target="module-offline" aria-selected="false">
             <strong>后台任务</strong><span>把整理任务交给系统后台完成</span>
           </button>
+          <button class="ops-tab" role="tab" id="tab-benchmark"
+                  data-operation-target="module-benchmark" aria-selected="false">
+            <strong>生命周期基准</strong><span>真实跑完整记忆维护链路并查看阶段报告</span>
+          </button>
         </nav>
 
         <div class="ops-stage">
@@ -478,6 +482,45 @@
                 <div class="llm-service-list" id="llm-service-list">
                   <div class="empty-state">这里还没有保存的服务。</div>
                 </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="ops-panel" id="module-benchmark" data-operation-panel
+                   data-auth-required data-lock-message="需要访问口令"
+                   data-ready-message="已连接，可运行或回看基准">
+            <div class="card">
+              <div class="card-head">
+                <div>
+                  <h2>生命周期基准</h2>
+                  <p class="text-muted">真实走写入、总结、反思、重组、提炼规则和 ask，并保存可回查报告。</p>
+                </div>
+                <div class="ops-card-actions">
+                  <button class="btn btn-ghost ops-chain-toggle" data-open-chain="module-benchmark" type="button">查看链路</button>
+                  <span class="badge" data-gate-note>需要访问口令</span>
+                </div>
+              </div>
+              <form id="benchmark-form" class="form-grid">
+                <div class="field">
+                  <label for="benchmark-dataset-name"><span>数据集名称</span></label>
+                  <input id="benchmark-dataset-name" name="dataset_name" type="text" placeholder="例如 locomo">
+                </div>
+                <div class="field field-full">
+                  <label for="benchmark-source-path"><span>本地 slice 路径</span></label>
+                  <input id="benchmark-source-path" name="source_path" type="text" placeholder="例如 tests/data/public_datasets/locomo_local_slice.json">
+                </div>
+                <div class="field">
+                  <label for="benchmark-run-id"><span>报告 run_id</span></label>
+                  <input id="benchmark-run-id" name="run_id" type="text" placeholder="留空则读取最近一次报告">
+                </div>
+                <div class="form-actions">
+                  <button type="submit" class="btn btn-primary" id="benchmark-submit">运行基准</button>
+                  <button type="button" class="btn btn-outline" id="benchmark-refresh">读取报告</button>
+                  <button type="button" class="btn btn-ghost" id="benchmark-reset">重置</button>
+                </div>
+              </form>
+              <div class="result-zone" id="benchmark-result">
+                <div class="empty-state">还没有生命周期基准结果。</div>
               </div>
             </div>
           </article>

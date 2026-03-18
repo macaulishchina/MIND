@@ -22,6 +22,7 @@ export function createOverviewFeature({
       retrieve: "module-retrieve",
       access: "module-access",
       offline: "module-offline",
+      benchmark: "module-benchmark",
     };
     if (operationTargets[entrypoint]) {
       return { workspace: "workspace-operations", panel: operationTargets[entrypoint] };
@@ -67,7 +68,7 @@ export function createOverviewFeature({
     const guidance = answerMode === "llm"
       ? "当前已经启用 LLM，适合直接进行访问问答。"
       : "当前使用内建模式；需要更自然的回答时，可到配置里启用 LLM。";
-    const orderedEntries = ["ingest", "retrieve", "access", "offline"]
+    const orderedEntries = ["ingest", "retrieve", "access", "offline", "benchmark"]
       .map((entrypoint) => entries.find((entry) => entry.entrypoint === entrypoint))
       .filter(Boolean);
 
@@ -110,7 +111,7 @@ export function createOverviewFeature({
             </div>
             <div class="overview-runtime-item">
               <dt>下一步</dt>
-              <dd>先写入，再查找；需要完整回答时进入访问问答。</dd>
+              <dd>先写入，再查找；要验证整条记忆生命周期时进入生命周期基准。</dd>
             </div>
           </dl>
         </section>
@@ -126,6 +127,7 @@ export function createOverviewFeature({
             <li><strong>2. 召回检索</strong><span>确认系统里是否已经有相关内容。</span></li>
             <li><strong>3. 访问问答</strong><span>把已保存内容整理成回答。</span></li>
             <li><strong>4. 后台任务</strong><span>把需要慢慢处理的整理任务交给系统。</span></li>
+            <li><strong>5. 生命周期基准</strong><span>对真实维护链路跑阶段指标并保存可回查报告。</span></li>
           </ol>
         </section>
 

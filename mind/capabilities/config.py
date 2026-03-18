@@ -68,42 +68,64 @@ def resolve_capability_provider_config(
     *,
     selection: Any = None,
     env: Mapping[str, str] | None = None,
+    config_file: Mapping[str, Any] | None = None,
 ) -> CapabilityProviderConfig:
-    """Resolve capability provider config from context overrides and environment."""
+    """Resolve capability provider config from context overrides and environment.
+
+    Priority chain (first non-empty wins):
+    ``CLI selection  >  mind.toml [provider]  >  env vars  >  code defaults``
+    """
 
     active_env = env or environ
+
+    # Lazy-load mind.toml [provider] section when caller does not inject one.
+    if config_file is None:
+        from mind.capabilities.config_file import get_provider_config, load_mind_toml
+
+        config_file = get_provider_config(load_mind_toml())
+
+    # Priority: CLI > env > mind.toml > code defaults
     provider = _first_non_empty(
         _selection_value(selection, "provider"),
         active_env.get("MIND_PROVIDER"),
+        config_file.get("provider"),
         "stub",
     )
     family = _provider_family(provider)
     model = _first_non_empty(
         _selection_value(selection, "model"),
         active_env.get("MIND_MODEL"),
+        config_file.get("model"),
         _default_model_for_family(family),
     )
     endpoint = _first_non_empty(
         _selection_value(selection, "endpoint"),
         active_env.get("MIND_PROVIDER_ENDPOINT"),
+        config_file.get("endpoint"),
         _default_endpoint_for_family(family),
     )
     timeout_ms = _int_or_default(
         _selection_value(selection, "timeout_ms"),
         active_env.get("MIND_PROVIDER_TIMEOUT_MS"),
+        config_file.get("timeout_ms"),
         30_000,
     )
     retry_policy = _first_non_empty(
         _selection_value(selection, "retry_policy"),
         active_env.get("MIND_PROVIDER_RETRY_POLICY"),
+        config_file.get("retry_policy"),
         "default",
     )
     api_version = _first_non_empty(
         active_env.get("MIND_PROVIDER_API_VERSION"),
+        config_file.get("api_version"),
         _default_api_version_for_family(family),
     )
 
-    auth = _resolve_auth_config(family=family, env=active_env)
+    config_file_secret = config_file.get("api_key") or None
+    auth = _resolve_auth_config(
+        family=family, env=active_env, config_file_secret=config_file_secret,
+    )
     return CapabilityProviderConfig(
         provider=provider,
         provider_family=family,
@@ -120,33 +142,46 @@ def _resolve_auth_config(
     *,
     family: CapabilityProviderFamily,
     env: Mapping[str, str],
+    config_file_secret: str | None = None,
 ) -> CapabilityAuthConfig:
     if family is CapabilityProviderFamily.DETERMINISTIC:
         return CapabilityAuthConfig(mode=CapabilityAuthMode.NONE)
 
     generic_secret = env.get("MIND_PROVIDER_API_KEY")
+
+    # Priority: MIND_PROVIDER_API_KEY env > per-family env > mind.toml api_key
+    def _pick_secret(family_env_var: str) -> tuple[str, str | None]:
+        if generic_secret:
+            return "MIND_PROVIDER_API_KEY", generic_secret
+        family_value = env.get(family_env_var)
+        if family_value:
+            return family_env_var, family_value
+        if config_file_secret:
+            return "mind.toml", config_file_secret
+        return family_env_var, None
+
     if family is CapabilityProviderFamily.OPENAI:
-        secret_env = "MIND_PROVIDER_API_KEY" if generic_secret else "OPENAI_API_KEY"
+        secret_env, secret_value = _pick_secret("OPENAI_API_KEY")
         return CapabilityAuthConfig(
             mode=CapabilityAuthMode.BEARER_TOKEN,
             secret_env=secret_env,
-            secret_value=generic_secret or env.get("OPENAI_API_KEY"),
+            secret_value=secret_value,
             parameter_name="Authorization",
         )
     if family is CapabilityProviderFamily.CLAUDE:
-        secret_env = "MIND_PROVIDER_API_KEY" if generic_secret else "ANTHROPIC_API_KEY"
+        secret_env, secret_value = _pick_secret("ANTHROPIC_API_KEY")
         return CapabilityAuthConfig(
             mode=CapabilityAuthMode.API_KEY,
             secret_env=secret_env,
-            secret_value=generic_secret or env.get("ANTHROPIC_API_KEY"),
+            secret_value=secret_value,
             parameter_name="x-api-key",
         )
     if family is CapabilityProviderFamily.GEMINI:
-        secret_env = "MIND_PROVIDER_API_KEY" if generic_secret else "GOOGLE_API_KEY"
+        secret_env, secret_value = _pick_secret("GOOGLE_API_KEY")
         return CapabilityAuthConfig(
             mode=CapabilityAuthMode.API_KEY,
             secret_env=secret_env,
-            secret_value=generic_secret or env.get("GOOGLE_API_KEY"),
+            secret_value=secret_value,
             parameter_name="key",
         )
     raise RuntimeError(f"unsupported provider family {family.value}")

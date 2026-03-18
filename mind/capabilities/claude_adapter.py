@@ -161,8 +161,6 @@ def _prompt_for_request(request: CapabilityRequest) -> str:
 def _max_tokens_for_request(request: CapabilityRequest) -> int:
     if isinstance(request, SummarizeRequest) and request.max_output_tokens is not None:
         return request.max_output_tokens
-    if isinstance(request, AnswerRequest) and request.max_answer_tokens is not None:
-        return request.max_answer_tokens
     return 512
 
 

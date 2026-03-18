@@ -176,8 +176,6 @@ def _prompt_for_request(request: CapabilityRequest) -> str:
 def _max_output_tokens(request: CapabilityRequest) -> int | None:
     if isinstance(request, SummarizeRequest):
         return request.max_output_tokens
-    if isinstance(request, AnswerRequest):
-        return request.max_answer_tokens
     return None
 
 

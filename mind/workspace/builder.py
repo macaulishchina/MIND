@@ -144,6 +144,11 @@ class WorkspaceBuilder:
             )
         else:
             selected = ranked_candidates[:slot_limit]
+        selected = self._promote_episode_summaries(
+            selected,
+            ranked_candidates,
+            slot_limit=slot_limit,
+        )
 
         slots = [
             self._build_slot(index=index + 1, obj=obj, retrieval_score=score)
@@ -265,6 +270,74 @@ class WorkspaceBuilder:
             if previous is None or score > previous:
                 ranked[object_id] = float(score)
         return list(ranked.items())
+
+    @staticmethod
+    def _promote_episode_summaries(
+        selected: list[tuple[dict[str, Any], float]],
+        ranked_candidates: list[tuple[dict[str, Any], float]],
+        *,
+        slot_limit: int,
+    ) -> list[tuple[dict[str, Any], float]]:
+        if not selected:
+            return selected
+        selected_by_id = {obj["id"]: (obj, score) for obj, score in selected}
+        selected_episode_ids = {
+            obj["id"] for obj, _ in selected if str(obj.get("type")) == "TaskEpisode"
+        }
+        if not selected_episode_ids:
+            return selected
+        for episode_id in selected_episode_ids:
+            if any(
+                str(obj.get("type")) == "SummaryNote"
+                and str(obj.get("metadata", {}).get("summary_scope", "")) == episode_id
+                for obj, _ in selected
+            ):
+                continue
+            summary_candidate = next(
+                (
+                    (obj, score)
+                    for obj, score in ranked_candidates
+                    if obj["id"] not in selected_by_id
+                    and str(obj.get("type")) == "SummaryNote"
+                    and str(obj.get("metadata", {}).get("summary_scope", "")) == episode_id
+                ),
+                None,
+            )
+            if summary_candidate is None:
+                continue
+            replacement_id = WorkspaceBuilder._replacement_candidate_id(
+                selected,
+                selected_episode_ids,
+            )
+            if replacement_id is None:
+                continue
+            selected_by_id.pop(replacement_id, None)
+            selected_by_id[summary_candidate[0]["id"]] = summary_candidate
+        promoted = [
+            selected_by_id[obj["id"]]
+            for obj, _ in ranked_candidates
+            if obj["id"] in selected_by_id
+        ]
+        return promoted[:slot_limit]
+
+    @staticmethod
+    def _replacement_candidate_id(
+        selected: list[tuple[dict[str, Any], float]],
+        selected_episode_ids: set[str],
+    ) -> str | None:
+        for obj, _ in reversed(selected):
+            object_id = str(obj["id"])
+            object_type = str(obj.get("type"))
+            if object_id in selected_episode_ids:
+                continue
+            if (
+                object_type == "SummaryNote"
+                and str(obj.get("metadata", {}).get("summary_scope", ""))
+                in selected_episode_ids
+            ):
+                continue
+            return object_id
+        return None
 
     @staticmethod
     def _slot_summary(obj: dict[str, Any]) -> str:
