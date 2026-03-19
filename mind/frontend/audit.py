@@ -34,6 +34,16 @@ FRONTEND_ENTRYPOINT_MARKERS: dict[str, dict[str, tuple[str, ...]]] = {
         "js": ("submitOffline",),
         "css": (),
     },
+    "benchmark": {
+        "html": ('id="benchmark-form"', 'id="benchmark-generate-slice"'),
+        "js": (
+            "loadMemoryLifecycleBenchmarkWorkspace",
+            "generateMemoryLifecycleBenchmarkSlice",
+            "runMemoryLifecycleBenchmark",
+            "loadMemoryLifecycleBenchmarkReport",
+        ),
+        "css": (),
+    },
     "gate_demo": {
         "html": ('id="gate-demo-panel"',),
         "js": ("loadGateDemo",),
@@ -69,7 +79,7 @@ FRONTEND_ENTRYPOINT_MARKERS: dict[str, dict[str, tuple[str, ...]]] = {
     },
     "debug_timeline": {
         "html": ('id="debug-form"',),
-        "js": ("loadDebugTimeline",),
+        "js": ("loadDebugTimelineWorkspace", "loadDebugTimeline"),
         "css": (),
     },
     "debug_object_delta": {
@@ -84,7 +94,7 @@ FRONTEND_ENTRYPOINT_MARKERS: dict[str, dict[str, tuple[str, ...]]] = {
     },
     "debug_guard": {
         "html": ("需要先开启高级排查",),
-        "js": ("loadDebugTimeline",),
+        "js": ("loadDebugTimelineWorkspace", "loadDebugTimeline"),
         "css": (),
     },
 }

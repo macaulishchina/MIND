@@ -435,17 +435,26 @@ _ENTRYPOINT_SUMMARIES = {
 
 from mind.app.frontend_experience_benchmark import (  # noqa: E402, F401
     FrontendMemoryLifecycleAskMetricsView,
+    FrontendMemoryLifecycleBenchmarkDatasetOption,
     FrontendMemoryLifecycleBenchmarkLaunchRequest,
     FrontendMemoryLifecycleBenchmarkQueryRequest,
+    FrontendMemoryLifecycleBenchmarkRawSourceOption,
+    FrontendMemoryLifecycleBenchmarkReportOption,
     FrontendMemoryLifecycleBenchmarkResult,
+    FrontendMemoryLifecycleBenchmarkSliceGenerationRequest,
+    FrontendMemoryLifecycleBenchmarkSliceGenerationResult,
+    FrontendMemoryLifecycleBenchmarkSliceOption,
+    FrontendMemoryLifecycleBenchmarkWorkspaceQuery,
+    FrontendMemoryLifecycleBenchmarkWorkspaceResult,
     FrontendMemoryLifecycleCostSnapshotView,
     FrontendMemoryLifecycleMemorySnapshotView,
     FrontendMemoryLifecycleStageView,
     build_frontend_memory_lifecycle_benchmark_result,
+    build_frontend_memory_lifecycle_benchmark_slice_generation_result,
+    build_frontend_memory_lifecycle_benchmark_workspace_result,
 )
 
 # Re-export for backward compatibility
 from mind.app.frontend_experience_helpers import (  # noqa: E402, F401
     build_frontend_gate_demo_page,
 )
-

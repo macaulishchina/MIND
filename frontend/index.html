@@ -357,6 +357,90 @@
               </div>
             </div>
           </article>
+
+          <article class="ops-panel" id="module-benchmark" data-operation-panel
+                   data-auth-required data-lock-message="需要访问口令"
+                   data-ready-message="已连接，可运行或回看基准">
+            <div class="card">
+              <div class="card-head">
+                <div>
+                  <h2>生命周期基准</h2>
+                  <p class="text-muted">真实走写入、总结、反思、重组、提炼规则和 ask，并保存可回查报告。</p>
+                </div>
+                <div class="ops-card-actions">
+                  <button class="btn btn-ghost ops-chain-toggle" data-open-chain="module-benchmark" type="button">查看链路</button>
+                  <span class="badge" data-gate-note>需要访问口令</span>
+                </div>
+              </div>
+              <form id="benchmark-form" class="form-grid">
+                <div class="result-panel field-full">
+                  <h3>选择基准对象</h3>
+                  <div class="form-grid">
+                    <div class="field">
+                      <label for="benchmark-dataset-name"><span>数据集</span></label>
+                      <select id="benchmark-dataset-name" name="dataset_name">
+                        <option value="">连接后加载</option>
+                      </select>
+                      <p class="field-help" id="benchmark-dataset-help">连接后会自动列出可运行的数据集。</p>
+                    </div>
+                    <div class="field field-full">
+                      <label for="benchmark-source-path"><span>本地 slice</span></label>
+                      <select id="benchmark-source-path" name="source_path">
+                        <option value="">先选择数据集</option>
+                      </select>
+                      <p class="field-help" id="benchmark-slice-help">运行 benchmark 时会读取这里选中的 local slice。</p>
+                    </div>
+                    <div class="field">
+                      <label for="benchmark-run-id"><span>历史报告</span></label>
+                      <select id="benchmark-run-id" name="run_id">
+                        <option value="">暂无历史报告</option>
+                      </select>
+                      <p class="field-help" id="benchmark-report-help">默认会选中最近一次生命周期报告。</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="result-panel field-full">
+                  <h3>生成本地 Slice</h3>
+                  <div class="form-grid">
+                    <div class="field field-full">
+                      <label for="benchmark-raw-source-path"><span>原始数据源</span></label>
+                      <select id="benchmark-raw-source-path" name="raw_source_path">
+                        <option value="">先选择数据集</option>
+                      </select>
+                      <p class="field-help" id="benchmark-raw-source-help">系统会根据当前数据集切换样例目录或 JSON 文件。</p>
+                    </div>
+                    <div class="field field-full">
+                      <label for="benchmark-slice-selector-values"><span id="benchmark-slice-selector-label">筛选编号</span></label>
+                      <input id="benchmark-slice-selector-values" name="selector_values" type="text" placeholder="可选，多个编号用逗号分隔">
+                      <p class="field-help" id="benchmark-slice-selector-help">不填时，会按下方最大条目截取 raw 数据。</p>
+                    </div>
+                    <div class="field">
+                      <label for="benchmark-slice-max-items"><span>最多条目</span></label>
+                      <input id="benchmark-slice-max-items" name="max_items" type="number" min="1" step="1" placeholder="可选">
+                    </div>
+                    <div class="field field-full">
+                      <label for="benchmark-slice-output-path"><span>输出 slice 路径</span></label>
+                      <input id="benchmark-slice-output-path" name="output_path" type="text" placeholder="连接后自动给出推荐输出路径">
+                    </div>
+                    <div class="form-actions">
+                      <button type="button" class="btn btn-outline" id="benchmark-generate-slice">生成 slice</button>
+                    </div>
+                    <div class="field field-full">
+                      <div class="field-help" id="benchmark-slice-status">生成后会自动加入上方 slice 下拉。</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-actions">
+                  <button type="submit" class="btn btn-primary" id="benchmark-submit">运行基准</button>
+                  <button type="button" class="btn btn-outline" id="benchmark-refresh">读取报告</button>
+                  <button type="button" class="btn btn-ghost" id="benchmark-reset">重置</button>
+                </div>
+              </form>
+              <div class="result-zone" id="benchmark-result">
+                <div class="empty-state">还没有生命周期基准结果。</div>
+              </div>
+            </div>
+          </article>
         </div>
 
         <aside class="ops-chain-shell" id="ops-chain-shell" aria-live="polite">
@@ -486,44 +570,6 @@
             </div>
           </article>
 
-          <article class="ops-panel" id="module-benchmark" data-operation-panel
-                   data-auth-required data-lock-message="需要访问口令"
-                   data-ready-message="已连接，可运行或回看基准">
-            <div class="card">
-              <div class="card-head">
-                <div>
-                  <h2>生命周期基准</h2>
-                  <p class="text-muted">真实走写入、总结、反思、重组、提炼规则和 ask，并保存可回查报告。</p>
-                </div>
-                <div class="ops-card-actions">
-                  <button class="btn btn-ghost ops-chain-toggle" data-open-chain="module-benchmark" type="button">查看链路</button>
-                  <span class="badge" data-gate-note>需要访问口令</span>
-                </div>
-              </div>
-              <form id="benchmark-form" class="form-grid">
-                <div class="field">
-                  <label for="benchmark-dataset-name"><span>数据集名称</span></label>
-                  <input id="benchmark-dataset-name" name="dataset_name" type="text" placeholder="例如 locomo">
-                </div>
-                <div class="field field-full">
-                  <label for="benchmark-source-path"><span>本地 slice 路径</span></label>
-                  <input id="benchmark-source-path" name="source_path" type="text" placeholder="例如 tests/data/public_datasets/locomo_local_slice.json">
-                </div>
-                <div class="field">
-                  <label for="benchmark-run-id"><span>报告 run_id</span></label>
-                  <input id="benchmark-run-id" name="run_id" type="text" placeholder="留空则读取最近一次报告">
-                </div>
-                <div class="form-actions">
-                  <button type="submit" class="btn btn-primary" id="benchmark-submit">运行基准</button>
-                  <button type="button" class="btn btn-outline" id="benchmark-refresh">读取报告</button>
-                  <button type="button" class="btn btn-ghost" id="benchmark-reset">重置</button>
-                </div>
-              </form>
-              <div class="result-zone" id="benchmark-result">
-                <div class="empty-state">还没有生命周期基准结果。</div>
-              </div>
-            </div>
-          </article>
         </div>
       </div>
     </section>
@@ -645,22 +691,59 @@
           <form id="debug-form" class="form-grid debug-form">
             <div class="field">
               <label for="debug-run-id"><span>请求编号</span></label>
-              <input id="debug-run-id" name="run_id" type="text" placeholder="可选">
+              <input id="debug-run-id" name="run_id" type="text" list="debug-run-options" placeholder="可搜索">
+              <datalist id="debug-run-options"></datalist>
             </div>
             <div class="field">
               <label for="debug-operation-id"><span>操作编号</span></label>
-              <input id="debug-operation-id" name="operation_id" type="text" placeholder="可选">
+              <input id="debug-operation-id" name="operation_id" type="text" list="debug-operation-options" placeholder="可搜索">
+              <datalist id="debug-operation-options"></datalist>
             </div>
             <div class="field">
               <label for="debug-object-id"><span>内容编号</span></label>
-              <input id="debug-object-id" name="object_id" type="text" placeholder="可选">
+              <input id="debug-object-id" name="object_id" type="text" list="debug-object-options" placeholder="可搜索">
+              <datalist id="debug-object-options"></datalist>
+            </div>
+            <div class="field">
+              <label for="debug-job-id"><span>任务编号</span></label>
+              <input id="debug-job-id" name="job_id" type="text" list="debug-job-options" placeholder="可搜索">
+              <datalist id="debug-job-options"></datalist>
+            </div>
+            <div class="field">
+              <label for="debug-workspace-id"><span>工作区编号</span></label>
+              <input id="debug-workspace-id" name="workspace_id" type="text" list="debug-workspace-options" placeholder="可搜索">
+              <datalist id="debug-workspace-options"></datalist>
+            </div>
+            <div class="field">
+              <label for="debug-scope"><span>处理范围</span></label>
+              <select id="debug-scope" name="scope">
+                <option value="">全部范围</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="debug-event-kind"><span>步骤类型</span></label>
+              <select id="debug-event-kind" name="event_kind">
+                <option value="">全部类型</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="debug-occurred-after"><span>开始时间</span></label>
+              <input id="debug-occurred-after" name="occurred_after" type="datetime-local">
+            </div>
+            <div class="field">
+              <label for="debug-occurred-before"><span>结束时间</span></label>
+              <input id="debug-occurred-before" name="occurred_before" type="datetime-local">
             </div>
             <div class="field">
               <label for="debug-limit"><span>最多显示</span></label>
               <input id="debug-limit" name="limit" type="number" min="1" max="500" value="80">
             </div>
+            <p class="field-help field-full" id="debug-filter-summary">
+              连接后会自动加载最近请求、可搜索编号和可用时间范围。
+            </p>
             <div class="form-actions">
               <button type="submit" class="btn btn-primary" id="debug-submit">查看处理记录</button>
+              <button type="button" class="btn btn-ghost" id="debug-refresh-workspace">刷新筛选项</button>
               <button type="button" class="btn btn-ghost" id="debug-reset">重置</button>
             </div>
           </form>

@@ -703,6 +703,59 @@ async def test_frontend_benchmark_routes_launch_and_reload_report(
 
 
 @pytest.mark.anyio
+async def test_frontend_benchmark_workspace_and_slice_generation_routes(
+    tmp_path: Path,
+    api_client: httpx.AsyncClient,
+) -> None:
+    workspace = await api_client.get(
+        "/v1/frontend/benchmark:workspace",
+        headers=_auth_headers(),
+    )
+
+    assert workspace.status_code == 200
+    workspace_result = workspace.json()["result"]
+    assert workspace_result["default_dataset_name"] == "locomo"
+    assert any(item["dataset_name"] == "locomo" for item in workspace_result["datasets"])
+
+    generated_slice_path = tmp_path / "public_datasets" / "hotpotqa_route_compiled_slice.json"
+    generate = await api_client.post(
+        "/v1/frontend/benchmark:slice:generate",
+        headers=_auth_headers(),
+        json={
+            "dataset_name": "hotpotqa",
+            "raw_source_path": str(
+                Path(__file__).resolve().parent
+                / "data"
+                / "public_datasets"
+                / "raw"
+                / "hotpotqa"
+                / "dev_sample.json"
+            ),
+            "output_path": str(generated_slice_path),
+            "selector_values": [],
+            "max_items": 1,
+        },
+    )
+
+    assert generate.status_code == 200
+    generate_result = generate.json()["result"]
+    assert generate_result["dataset_name"] == "hotpotqa"
+    assert generate_result["source_path"].endswith("hotpotqa_route_compiled_slice.json")
+
+    refreshed = await api_client.get(
+        "/v1/frontend/benchmark:workspace",
+        headers=_auth_headers(),
+    )
+
+    assert refreshed.status_code == 200
+    refreshed_result = refreshed.json()["result"]
+    assert any(
+        item["source_path"].endswith("hotpotqa_route_compiled_slice.json")
+        for item in refreshed_result["slice_options"]
+    )
+
+
+@pytest.mark.anyio
 async def test_frontend_ingest_route_accepts_missing_episode_id(
     api_client: httpx.AsyncClient,
 ) -> None:
@@ -767,6 +820,10 @@ async def test_frontend_debug_route_projects_persisted_telemetry(
             )
             assert remember.status_code == 200
 
+            workspace = await client.get(
+                "/v1/frontend/debug:workspace",
+                headers=headers,
+            )
             timeline = await client.post(
                 "/v1/frontend/debug:timeline",
                 headers=headers,
@@ -776,11 +833,61 @@ async def test_frontend_debug_route_projects_persisted_telemetry(
                 },
             )
 
+    assert workspace.status_code == 200
+    assert workspace.json()["result"]["default_run_id"] == "req-front-debug-enabled"
+    assert any(
+        option["value"] == "req-front-debug-enabled"
+        for option in workspace.json()["result"]["run_options"]
+    )
     assert timeline.status_code == 200
     assert timeline.json()["result"]["returned_event_count"] >= 3
     assert len(timeline.json()["result"]["object_deltas"]) >= 1
     assert "context_views" in timeline.json()["result"]
     assert "evidence_views" in timeline.json()["result"]
+
+
+@pytest.mark.anyio
+async def test_frontend_debug_route_records_frontend_workflow_without_persisted_telemetry_path(
+    api_client: httpx.AsyncClient,
+) -> None:
+    headers = _auth_headers()
+
+    apply_response = await api_client.post(
+        "/v1/frontend/settings:apply",
+        headers=headers,
+        json={"provider": "deterministic", "model": "deterministic", "dev_mode": True},
+    )
+    ingest_response = await api_client.post(
+        "/v1/frontend/ingest",
+        headers={**headers, "X-Request-ID": "req-front-debug-inline"},
+        json={
+            "content": "frontend debug inline recorder seed",
+            "episode_id": "front-debug-inline-ep-1",
+            "timestamp_order": 1,
+        },
+    )
+    workspace = await api_client.get("/v1/frontend/debug:workspace", headers=headers)
+    timeline = await api_client.post(
+        "/v1/frontend/debug:timeline",
+        headers=headers,
+        json={
+            "run_id": "req-front-debug-inline",
+            "include_state_deltas": True,
+        },
+    )
+
+    assert apply_response.status_code == 200
+    assert ingest_response.status_code == 200
+    assert workspace.status_code == 200
+    assert workspace.json()["result"]["total_event_count"] >= 3
+    assert workspace.json()["result"]["default_run_id"] == "req-front-debug-inline"
+    assert any(
+        option["value"] == "req-front-debug-inline"
+        for option in workspace.json()["result"]["run_options"]
+    )
+    assert timeline.status_code == 200
+    assert timeline.json()["result"]["returned_event_count"] >= 3
+    assert len(timeline.json()["result"]["object_deltas"]) >= 1
 
 
 @pytest.mark.anyio

@@ -1,0 +1,58 @@
+[
+  {
+    "episode_id": "passport",
+    "task_id": "locomo-raw-task-passport",
+    "day_offset": 140,
+    "goal": "Remember where the traveler stored the passport before the station trip.",
+    "result": "The passport was stored in the red travel pouch.",
+    "summary": "The passport was placed in the red travel pouch before leaving for the station.",
+    "recall_question": "Where was the passport stored before the station trip?",
+    "answer_prompt": "Where did the traveler store the passport before leaving for the station?",
+    "answer_kind": "task_result",
+    "required_fragments": ["red travel pouch"],
+    "include_time_window": true,
+    "turns": [
+      {
+        "kind": "user_message",
+        "text": "I put my passport in the red travel pouch before heading to the station."
+      },
+      {
+        "kind": "assistant_message",
+        "text": "Stored memory: your passport is in the red travel pouch."
+      }
+    ],
+    "reflection": {
+      "kind": "success",
+      "claims": ["passport location remained stable across follow-up recall"],
+      "summary": "Stable travel-memory fact about the passport location."
+    }
+  },
+  {
+    "episode_id": "departure",
+    "task_id": "locomo-raw-task-departure",
+    "day_offset": 141,
+    "goal": "Remember the departure time and meeting gate for the station pickup.",
+    "result": "The train leaves at 7:10 PM from gate 9 where Mara will meet the traveler.",
+    "summary": "The train departs at 7:10 PM from gate 9, and Mara will be waiting there.",
+    "recall_question": "When does the train leave and where will Mara meet the traveler?",
+    "answer_prompt": "State the departure time and gate for the meetup with Mara.",
+    "answer_kind": "result_and_summary",
+    "required_fragments": ["7:10 PM", "gate 9", "Mara"],
+    "include_time_window": false,
+    "turns": [
+      {
+        "kind": "user_message",
+        "text": "Please remember that the train leaves at 7:10 PM and Mara will meet me at gate 9."
+      },
+      {
+        "kind": "assistant_message",
+        "text": "Stored memory: depart at 7:10 PM and meet Mara at gate 9."
+      }
+    ],
+    "reflection": {
+      "kind": "success",
+      "claims": ["departure and pickup details stayed consistent in the recap"],
+      "summary": "Stable schedule memory for the station pickup."
+    }
+  }
+]

@@ -101,6 +101,19 @@ async def frontend_benchmark_run(
     return app_json_response(response)
 
 
+@router.get("/frontend/benchmark:workspace")
+async def frontend_benchmark_workspace(
+    request: Request,
+    principal: Annotated[PrincipalContext, Depends(require_api_key)],
+) -> JSONResponse:
+    response = (
+        get_registry(request).frontend_experience_service.load_memory_lifecycle_benchmark_workspace(
+            build_app_request(request, principal)
+        )
+    )
+    return app_json_response(response)
+
+
 @router.post("/frontend/benchmark:report")
 async def frontend_benchmark_report(
     request: Request,
@@ -110,6 +123,20 @@ async def frontend_benchmark_report(
     response = get_registry(
         request
     ).frontend_experience_service.load_memory_lifecycle_benchmark_report(
+        build_app_request(request, principal, payload=payload)
+    )
+    return app_json_response(response)
+
+
+@router.post("/frontend/benchmark:slice:generate")
+async def frontend_benchmark_slice_generate(
+    request: Request,
+    principal: Annotated[PrincipalContext, Depends(require_api_key)],
+    payload: PayloadBody = None,
+) -> JSONResponse:
+    response = get_registry(
+        request
+    ).frontend_experience_service.generate_memory_lifecycle_benchmark_slice(
         build_app_request(request, principal, payload=payload)
     )
     return app_json_response(response)
@@ -207,6 +234,31 @@ async def frontend_settings_restore(
     response = get_registry(request).frontend_settings_service.restore(
         build_app_request(request, principal, payload=payload)
     )
+    return app_json_response(response)
+
+
+@router.get("/frontend/debug:workspace")
+async def frontend_debug_workspace(
+    request: Request,
+    principal: Annotated[PrincipalContext, Depends(require_api_key)],
+) -> JSONResponse:
+    registry = get_registry(request)
+    app_request = build_app_request(request, principal)
+
+    try:
+        result = registry.frontend_debug_service.load_workspace()
+    except RuntimeError as exc:
+        response = new_response(app_request)
+        response.status = AppStatus.ERROR
+        response.error = AppError(
+            code=AppErrorCode.UNSUPPORTED_OPERATION,
+            message=str(exc),
+        )
+        return app_json_response(response)
+
+    response = new_response(app_request)
+    response.status = AppStatus.OK
+    response.result = result.model_dump(mode="json")
     return app_json_response(response)
 
 

@@ -120,6 +120,10 @@ def _matches(event: TelemetryEvent, query: FrontendDebugTimelineQuery) -> bool:
         return False
     if query.object_id is not None and event.object_id != query.object_id:
         return False
+    if query.occurred_after is not None and event.occurred_at < query.occurred_after:
+        return False
+    if query.occurred_before is not None and event.occurred_at > query.occurred_before:
+        return False
     if query.scopes and event.scope not in query.scopes:
         return False
     if query.event_kinds and event.kind not in query.event_kinds:

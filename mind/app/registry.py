@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol, cast
 
 from mind.access.service import AccessService
 from mind.app.runtime import GlobalRuntimeManager
@@ -36,12 +36,21 @@ from mind.offline.service import OfflineMaintenanceService
 from mind.primitives.service import PrimitiveService
 from mind.telemetry import (
     CompositeTelemetryRecorder,
+    InMemoryTelemetryRecorder,
     TelemetryRecorder,
     build_dev_telemetry_recorder,
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Iterator, Sequence
+
+    from mind.telemetry import TelemetryEvent
+
+
+class _TelemetryEventSource(Protocol):
+    """Recorder-like source that can replay telemetry events."""
+
+    def iter_events(self) -> Sequence[TelemetryEvent]: ...
 
 
 @dataclass
@@ -125,13 +134,20 @@ def build_app_registry(
         telemetry_path=telemetry_path,
         env=env,
     )
+    fallback_telemetry_recorder = (
+        InMemoryTelemetryRecorder()
+        if telemetry_recorder is None and persistent_telemetry_recorder is None
+        else None
+    )
     effective_telemetry_recorder: TelemetryRecorder | None
     if telemetry_recorder is not None and persistent_telemetry_recorder is not None:
         effective_telemetry_recorder = CompositeTelemetryRecorder(
             (telemetry_recorder, persistent_telemetry_recorder)
         )
     else:
-        effective_telemetry_recorder = telemetry_recorder or persistent_telemetry_recorder
+        effective_telemetry_recorder = (
+            telemetry_recorder or persistent_telemetry_recorder or fallback_telemetry_recorder
+        )
 
     user_state_service = UserStateService(store)
     system_status_service = SystemStatusService(store, config=config)
@@ -213,10 +229,11 @@ def build_app_registry(
         ),
     )
     frontend_debug_service = FrontendDebugAppService(
-        telemetry_source=(
-            effective_telemetry_recorder  # type: ignore[arg-type]
-            if hasattr(effective_telemetry_recorder, "iter_events")
-            else None
+        telemetry_source=_resolve_frontend_debug_source(
+            effective_telemetry_recorder,
+            persistent_telemetry_recorder,
+            telemetry_recorder,
+            fallback_telemetry_recorder,
         ),
         telemetry_path=telemetry_path,
         env=env,
@@ -254,3 +271,14 @@ def build_app_registry(
         # Cleanup if store has a close method
         if hasattr(store, "close"):
             store.close()
+
+
+def _resolve_frontend_debug_source(
+    *candidates: object | None,
+) -> _TelemetryEventSource | None:
+    """Pick the first recorder-like telemetry source that can replay events."""
+
+    for candidate in candidates:
+        if candidate is not None and hasattr(candidate, "iter_events"):
+            return cast(_TelemetryEventSource, candidate)
+    return None

@@ -24,6 +24,96 @@ class FrontendMemoryLifecycleBenchmarkQueryRequest(FrontendModel):
     run_id: str | None = None
 
 
+class FrontendMemoryLifecycleBenchmarkWorkspaceQuery(FrontendModel):
+    """Frontend-facing lifecycle benchmark workspace query."""
+
+
+class FrontendMemoryLifecycleBenchmarkDatasetOption(FrontendModel):
+    """One dataset option shown in the benchmark workspace."""
+
+    dataset_name: str = Field(min_length=1)
+    label: str = Field(min_length=1)
+    summary: str = Field(min_length=1)
+    supported_outputs: list[str] = Field(default_factory=list)
+    default_slice_path: str | None = None
+    default_raw_source_path: str | None = None
+    default_output_path: str | None = None
+    raw_source_kind: str = Field(min_length=1)
+    selector_kind: str | None = None
+    selector_label: str | None = None
+    selector_placeholder: str | None = None
+
+
+class FrontendMemoryLifecycleBenchmarkRawSourceOption(FrontendModel):
+    """One raw source option that can be compiled into a local slice."""
+
+    dataset_name: str = Field(min_length=1)
+    source_path: str = Field(min_length=1)
+    label: str = Field(min_length=1)
+    origin: str = Field(min_length=1)
+    path_kind: str = Field(min_length=1)
+
+
+class FrontendMemoryLifecycleBenchmarkSliceOption(FrontendModel):
+    """One local slice option available to run through the benchmark."""
+
+    dataset_name: str = Field(min_length=1)
+    source_path: str = Field(min_length=1)
+    label: str = Field(min_length=1)
+    origin: str = Field(min_length=1)
+    bundle_count: int = Field(ge=0)
+    updated_at: str | None = None
+
+
+class FrontendMemoryLifecycleBenchmarkReportOption(FrontendModel):
+    """One persisted benchmark report option."""
+
+    run_id: str = Field(min_length=1)
+    dataset_name: str = Field(min_length=1)
+    source_path: str = Field(min_length=1)
+    label: str = Field(min_length=1)
+    report_path: str = Field(min_length=1)
+    updated_at: str = Field(min_length=1)
+    is_latest: bool = False
+
+
+class FrontendMemoryLifecycleBenchmarkWorkspaceResult(FrontendModel):
+    """Frontend-facing workspace metadata for the lifecycle benchmark page."""
+
+    datasets: list[FrontendMemoryLifecycleBenchmarkDatasetOption] = Field(default_factory=list)
+    raw_sources: list[FrontendMemoryLifecycleBenchmarkRawSourceOption] = Field(default_factory=list)
+    slice_options: list[FrontendMemoryLifecycleBenchmarkSliceOption] = Field(default_factory=list)
+    report_options: list[FrontendMemoryLifecycleBenchmarkReportOption] = Field(default_factory=list)
+    default_dataset_name: str | None = None
+    default_slice_path: str | None = None
+    default_raw_source_path: str | None = None
+    default_output_path: str | None = None
+    default_report_run_id: str | None = None
+
+
+class FrontendMemoryLifecycleBenchmarkSliceGenerationRequest(FrontendModel):
+    """Frontend-facing request for compiling a raw public dataset slice."""
+
+    dataset_name: str = Field(min_length=1)
+    raw_source_path: str = Field(min_length=1)
+    output_path: str = Field(min_length=1)
+    selector_values: list[str] = Field(default_factory=list)
+    max_items: int | None = Field(default=None, ge=1)
+
+
+class FrontendMemoryLifecycleBenchmarkSliceGenerationResult(FrontendModel):
+    """Frontend-facing result for one compiled local slice."""
+
+    dataset_name: str = Field(min_length=1)
+    raw_source_path: str = Field(min_length=1)
+    source_path: str = Field(min_length=1)
+    bundle_count: int = Field(ge=0)
+    sequence_count: int = Field(ge=0)
+    selector_kind: str | None = None
+    selector_values: list[str] = Field(default_factory=list)
+    max_items: int | None = Field(default=None, ge=1)
+
+
 class FrontendMemoryLifecycleAskMetricsView(FrontendModel):
     """Frontend-facing ask metrics for one lifecycle stage."""
 
@@ -98,6 +188,55 @@ class _ReportLike(Protocol):
     frontend_debug_query: Mapping[str, str]
     notes: tuple[str, ...]
     stage_reports: tuple[Any, ...]
+
+
+def build_frontend_memory_lifecycle_benchmark_workspace_result(
+    payload: Mapping[str, Any] | object,
+) -> FrontendMemoryLifecycleBenchmarkWorkspaceResult:
+    """Validate and project benchmark workspace metadata for the web UI."""
+
+    mapping = dict(payload if isinstance(payload, Mapping) else cast(Mapping[str, Any], payload))
+    return FrontendMemoryLifecycleBenchmarkWorkspaceResult(
+        datasets=[
+            FrontendMemoryLifecycleBenchmarkDatasetOption.model_validate(item)
+            for item in mapping.get("datasets", ())
+        ],
+        raw_sources=[
+            FrontendMemoryLifecycleBenchmarkRawSourceOption.model_validate(item)
+            for item in mapping.get("raw_sources", ())
+        ],
+        slice_options=[
+            FrontendMemoryLifecycleBenchmarkSliceOption.model_validate(item)
+            for item in mapping.get("slice_options", ())
+        ],
+        report_options=[
+            FrontendMemoryLifecycleBenchmarkReportOption.model_validate(item)
+            for item in mapping.get("report_options", ())
+        ],
+        default_dataset_name=_optional_string(mapping.get("default_dataset_name")),
+        default_slice_path=_optional_string(mapping.get("default_slice_path")),
+        default_raw_source_path=_optional_string(mapping.get("default_raw_source_path")),
+        default_output_path=_optional_string(mapping.get("default_output_path")),
+        default_report_run_id=_optional_string(mapping.get("default_report_run_id")),
+    )
+
+
+def build_frontend_memory_lifecycle_benchmark_slice_generation_result(
+    payload: Mapping[str, Any] | object,
+) -> FrontendMemoryLifecycleBenchmarkSliceGenerationResult:
+    """Validate and project one compiled local slice result."""
+
+    mapping = dict(payload if isinstance(payload, Mapping) else cast(Mapping[str, Any], payload))
+    return FrontendMemoryLifecycleBenchmarkSliceGenerationResult(
+        dataset_name=str(mapping["dataset_name"]),
+        raw_source_path=str(mapping["raw_source_path"]),
+        source_path=str(mapping["source_path"]),
+        bundle_count=int(mapping["bundle_count"]),
+        sequence_count=int(mapping["sequence_count"]),
+        selector_kind=_optional_string(mapping.get("selector_kind")),
+        selector_values=[str(item) for item in mapping.get("selector_values", ())],
+        max_items=int(mapping["max_items"]) if mapping.get("max_items") is not None else None,
+    )
 
 
 def build_frontend_memory_lifecycle_benchmark_result(
@@ -197,3 +336,10 @@ def _report_to_payload(report: _ReportLike) -> dict[str, Any]:
             for stage in report.stage_reports
         ],
     }
+
+
+def _optional_string(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None

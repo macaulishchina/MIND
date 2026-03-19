@@ -1,0 +1,144 @@
+{
+  "dataset_version": "local-slice-v1",
+  "bundles": [
+    {
+      "bundle_id": "hotpotqa_local_bundle_hobbit",
+      "task_id": "hotpotqa-local-task-001",
+      "episode_id": "hotpotqa-local-episode-001",
+      "day_offset": 40,
+      "goal": "Answer a multi-hop question about the country of the university attended by The Hobbit's author.",
+      "result": "The author of The Hobbit studied at Oxford, which is in England.",
+      "success": true,
+      "summary": "Tolkien studied at Oxford, and Oxford is located in England.",
+      "raw_records": [
+        {
+          "kind": "user_message",
+          "text": "In which country is the university attended by the author of The Hobbit?"
+        },
+        {
+          "kind": "tool_result",
+          "text": "Supporting facts: Tolkien studied at Oxford; Oxford is in England."
+        }
+      ],
+      "retrieval_specs": [
+        {
+          "case_key": "country_of_university",
+          "query": "Which country contains the university attended by the author of The Hobbit?",
+          "query_modes": ["keyword"],
+          "filters": {
+            "object_types": ["RawRecord", "TaskEpisode", "SummaryNote"]
+          },
+          "gold_candidate_refs": ["record:1", "record:2", "episode", "summary"],
+          "gold_fact_refs": ["record:2", "episode", "summary"],
+          "slot_limit": 4
+        }
+      ],
+      "answer_specs": [
+        {
+          "case_key": "country_of_university",
+          "prompt": "Answer the multi-hop question about the country of the university attended by The Hobbit's author.",
+          "answer_kind": "result_and_summary",
+          "required_fragments": ["England", "Oxford", "Tolkien"],
+          "gold_fact_refs": ["record:2", "episode", "summary"],
+          "gold_memory_refs": ["episode", "summary"],
+          "max_answer_tokens": 18
+        }
+      ],
+      "tags": ["public_dataset", "hotpotqa", "local"]
+    },
+    {
+      "bundle_id": "hotpotqa_local_bundle_curie",
+      "task_id": "hotpotqa-local-task-002",
+      "episode_id": "hotpotqa-local-episode-002",
+      "day_offset": 41,
+      "goal": "Answer a multi-hop question about the city linked to Marie Curie.",
+      "result": "Marie Curie taught at the University of Paris, which is in Paris.",
+      "success": true,
+      "summary": "Marie Curie taught at the University of Paris, so the linked city is Paris.",
+      "raw_records": [
+        {
+          "kind": "user_message",
+          "text": "Which city is associated with the university where Marie Curie taught?"
+        },
+        {
+          "kind": "tool_result",
+          "text": "Supporting facts: Marie Curie taught at the University of Paris; the university is in Paris."
+        }
+      ],
+      "retrieval_specs": [
+        {
+          "case_key": "city_of_university",
+          "query": "Which city is tied to the university where Marie Curie taught?",
+          "query_modes": ["keyword"],
+          "filters": {
+            "object_types": ["RawRecord", "TaskEpisode", "SummaryNote"]
+          },
+          "gold_candidate_refs": ["record:1", "record:2", "episode", "summary"],
+          "gold_fact_refs": ["record:2", "episode", "summary"],
+          "slot_limit": 4
+        }
+      ],
+      "answer_specs": [
+        {
+          "case_key": "city_of_university",
+          "prompt": "Answer the multi-hop question about the city linked to Marie Curie's university.",
+          "answer_kind": "result_and_summary",
+          "required_fragments": ["Paris", "University of Paris", "Marie Curie"],
+          "gold_fact_refs": ["record:2", "episode", "summary"],
+          "gold_memory_refs": ["episode", "summary"],
+          "max_answer_tokens": 18
+        }
+      ],
+      "tags": ["public_dataset", "hotpotqa", "local"]
+    }
+  ],
+  "sequence_specs": [
+    {
+      "sequence_key": "evidence_chain_local",
+      "family": "multi_hop_reasoning",
+      "candidate_ids": [
+        "hotpotqa-local-episode-001-summary",
+        "hotpotqa-local-episode-001",
+        "hotpotqa-local-episode-002-summary",
+        "hotpotqa-local-episode-002",
+        "hotpotqa-local-episode-001-raw-02",
+        "hotpotqa-local-episode-002-raw-02"
+      ],
+      "steps": [
+        {
+          "step_key": "step_01",
+          "task_id": "hotpotqa-local-task-001",
+          "needed_object_ids": ["hotpotqa-local-episode-001-summary"]
+        },
+        {
+          "step_key": "step_02",
+          "task_id": "hotpotqa-local-task-002",
+          "needed_object_ids": ["hotpotqa-local-episode-002-summary"]
+        },
+        {
+          "step_key": "step_03",
+          "task_id": "hotpotqa-local-task-001+hotpotqa-local-task-002",
+          "needed_object_ids": ["hotpotqa-local-episode-001", "hotpotqa-local-episode-002"]
+        },
+        {
+          "step_key": "step_04",
+          "task_id": "hotpotqa-local-task-001+hotpotqa-local-task-002",
+          "needed_object_ids": [
+            "hotpotqa-local-episode-001-raw-02",
+            "hotpotqa-local-episode-002-raw-02"
+          ]
+        },
+        {
+          "step_key": "step_05",
+          "task_id": "hotpotqa-local-task-001+hotpotqa-local-task-002",
+          "needed_object_ids": [
+            "hotpotqa-local-episode-001-summary",
+            "hotpotqa-local-episode-002-summary"
+          ]
+        }
+      ],
+      "tags": ["public_dataset", "hotpotqa", "local"],
+      "maintenance_target_refs": []
+    }
+  ]
+}

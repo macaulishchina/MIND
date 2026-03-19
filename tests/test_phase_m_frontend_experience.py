@@ -12,12 +12,15 @@ from mind.app.contracts import AppRequest
 from mind.frontend import (
     FrontendAccessRequest,
     FrontendMemoryLifecycleBenchmarkLaunchRequest,
+    FrontendMemoryLifecycleBenchmarkSliceGenerationRequest,
     FrontendOfflineSubmitRequest,
     build_frontend_access_result,
     build_frontend_experience_catalog,
     build_frontend_gate_demo_page,
     build_frontend_ingest_result,
     build_frontend_memory_lifecycle_benchmark_result,
+    build_frontend_memory_lifecycle_benchmark_slice_generation_result,
+    build_frontend_memory_lifecycle_benchmark_workspace_result,
     build_frontend_offline_submit_result,
     build_frontend_retrieve_result,
 )
@@ -107,6 +110,110 @@ def test_frontend_benchmark_launch_request_requires_dataset_and_source() -> None
     )
 
     assert request.dataset_name == "locomo"
+
+
+def test_frontend_benchmark_workspace_projection_projects_dropdown_metadata() -> None:
+    result = build_frontend_memory_lifecycle_benchmark_workspace_result(
+        {
+            "datasets": [
+                {
+                    "dataset_name": "locomo",
+                    "label": "LoCoMo",
+                    "summary": "Longitudinal dialogue memory slice.",
+                    "supported_outputs": ["retrieval", "answer", "long_horizon"],
+                    "default_slice_path": "tests/data/public_datasets/locomo_local_slice.json",
+                    "default_raw_source_path": (
+                        "tests/data/public_datasets/raw/locomo/conversation_sample.json"
+                    ),
+                    "default_output_path": (
+                        "artifacts/dev/public_datasets/locomo_raw_compiled_slice.json"
+                    ),
+                    "raw_source_kind": "json_file",
+                    "selector_kind": "example_ids",
+                    "selector_label": "样例编号",
+                    "selector_placeholder": "多个 example id 用逗号分隔。",
+                }
+            ],
+            "raw_sources": [
+                {
+                    "dataset_name": "locomo",
+                    "source_path": "tests/data/public_datasets/raw/locomo/conversation_sample.json",
+                    "label": "仓库样例 raw · conversation_sample.json",
+                    "origin": "sample",
+                    "path_kind": "json_file",
+                }
+            ],
+            "slice_options": [
+                {
+                    "dataset_name": "locomo",
+                    "source_path": "tests/data/public_datasets/locomo_local_slice.json",
+                    "label": "仓库样例 slice · locomo_local_slice.json",
+                    "origin": "sample",
+                    "bundle_count": 2,
+                    "updated_at": "2026-03-18T00:00:00+00:00",
+                }
+            ],
+            "report_options": [
+                {
+                    "run_id": "req-front-benchmark",
+                    "dataset_name": "locomo",
+                    "source_path": "tests/data/public_datasets/locomo_local_slice.json",
+                    "label": "locomo · req-front-benchmark · 2026-03-18 00:00:00 UTC",
+                    "report_path": (
+                        "artifacts/dev/memory_lifecycle_benchmark/"
+                        "req-front-benchmark/report.json"
+                    ),
+                    "updated_at": "2026-03-18T00:00:00+00:00",
+                    "is_latest": True,
+                }
+            ],
+            "default_dataset_name": "locomo",
+            "default_slice_path": "tests/data/public_datasets/locomo_local_slice.json",
+            "default_raw_source_path": (
+                "tests/data/public_datasets/raw/locomo/conversation_sample.json"
+            ),
+            "default_output_path": "artifacts/dev/public_datasets/locomo_raw_compiled_slice.json",
+            "default_report_run_id": "req-front-benchmark",
+        }
+    )
+
+    assert result.default_dataset_name == "locomo"
+    assert result.datasets[0].selector_kind == "example_ids"
+    assert result.slice_options[0].bundle_count == 2
+    assert result.report_options[0].is_latest is True
+
+
+def test_frontend_benchmark_slice_generation_request_accepts_selector_values() -> None:
+    request = FrontendMemoryLifecycleBenchmarkSliceGenerationRequest(
+        dataset_name="scifact",
+        raw_source_path="tests/data/public_datasets/raw/scifact",
+        output_path="artifacts/dev/public_datasets/scifact_raw_compiled_slice.json",
+        selector_values=["1", "2"],
+        max_items=2,
+    )
+
+    assert request.dataset_name == "scifact"
+    assert request.selector_values == ["1", "2"]
+    assert request.max_items == 2
+
+
+def test_frontend_benchmark_slice_generation_projection_returns_compiled_paths() -> None:
+    result = build_frontend_memory_lifecycle_benchmark_slice_generation_result(
+        {
+            "dataset_name": "locomo",
+            "raw_source_path": "tests/data/public_datasets/raw/locomo/conversation_sample.json",
+            "source_path": "artifacts/dev/public_datasets/locomo_raw_compiled_slice.json",
+            "bundle_count": 2,
+            "sequence_count": 1,
+            "selector_kind": "example_ids",
+            "selector_values": ["locomo-local-task-001"],
+            "max_items": 2,
+        }
+    )
+
+    assert result.source_path.endswith("locomo_raw_compiled_slice.json")
+    assert result.bundle_count == 2
+    assert result.selector_kind == "example_ids"
 
 
 def test_frontend_benchmark_projection_projects_stage_report() -> None:

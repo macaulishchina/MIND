@@ -80,6 +80,34 @@ def test_frontend_debug_app_service_queries_in_memory_recorder(tmp_path: Path) -
     assert any(delta.object_id == result.response["object_id"] for delta in response.object_deltas)
 
 
+def test_frontend_debug_app_service_loads_workspace_options(tmp_path: Path) -> None:
+    recorder = InMemoryTelemetryRecorder()
+
+    with SQLiteMemoryStore(tmp_path / "frontend_service_workspace.sqlite3") as store:
+        primitive = PrimitiveService(
+            store,
+            clock=lambda: FIXED_TIMESTAMP,
+            telemetry_recorder=recorder,
+        )
+        primitive.write_raw(
+            {
+                "record_kind": "user_message",
+                "content": "workspace metadata seed",
+                "episode_id": "phase-m-frontend-workspace",
+                "timestamp_order": 1,
+            },
+            _primitive_context(run_id="run-front-workspace", dev_mode=True),
+        )
+
+    service = FrontendDebugAppService(telemetry_source=recorder)
+    workspace = service.load_workspace(dev_mode=True)
+
+    assert workspace.total_event_count >= 3
+    assert workspace.default_run_id == "run-front-workspace"
+    assert any(option.value == "run-front-workspace" for option in workspace.run_options)
+    assert any(option.value == "primitive" for option in workspace.scope_options)
+
+
 def test_registry_exposes_frontend_debug_service_with_persisted_telemetry(
     tmp_path: Path,
 ) -> None:
@@ -119,6 +147,44 @@ def test_registry_exposes_frontend_debug_service_with_persisted_telemetry(
     assert telemetry_path.exists()
     assert timeline.returned_event_count >= 3
     assert len(timeline.object_deltas) >= 1
+
+
+def test_registry_exposes_frontend_debug_service_without_persisted_telemetry_path(
+    tmp_path: Path,
+) -> None:
+    from mind.app.registry import build_app_registry
+    from mind.cli_config import resolve_cli_config
+
+    config = resolve_cli_config(
+        backend="sqlite",
+        sqlite_path=str(tmp_path / "frontend_registry_no_path.sqlite3"),
+        allow_sqlite=True,
+    )
+
+    with build_app_registry(config) as registry:
+        remember = registry.memory_ingest_service.remember(
+            _request(
+                {
+                    "content": "registry-backed in-memory frontend debug flow",
+                    "episode_id": "phase-m-front-registry-inline",
+                    "timestamp_order": 1,
+                },
+                request_id="req-front-registry-inline",
+                dev_mode=True,
+            )
+        )
+
+        assert remember.status is AppStatus.OK
+        timeline = registry.frontend_debug_service.query_timeline(
+            {"run_id": "req-front-registry-inline", "include_state_deltas": True},
+            dev_mode=True,
+        )
+        workspace = registry.frontend_debug_service.load_workspace(dev_mode=True)
+
+    assert timeline.returned_event_count >= 3
+    assert len(timeline.object_deltas) >= 1
+    assert workspace.total_event_count >= timeline.returned_event_count
+    assert workspace.default_run_id == "req-front-registry-inline"
 
 
 def test_registry_exposes_frontend_experience_service(tmp_path: Path) -> None:
@@ -238,6 +304,94 @@ def test_registry_exposes_frontend_benchmark_launch_and_reload(tmp_path: Path) -
     assert reloaded.status is AppStatus.OK
     assert reloaded.result is not None
     assert reloaded.result["run_id"] == "req-front-benchmark-service"
+
+
+def test_registry_exposes_frontend_benchmark_workspace_and_slice_generation(tmp_path: Path) -> None:
+    from mind.app.registry import build_app_registry
+    from mind.cli_config import resolve_cli_config
+
+    config = resolve_cli_config(
+        backend="sqlite",
+        sqlite_path=str(tmp_path / "frontend_benchmark_workspace.sqlite3"),
+        allow_sqlite=True,
+    )
+
+    generated_slice_path = tmp_path / "public_datasets" / "locomo_compiled_from_raw.json"
+
+    with build_app_registry(config) as registry:
+        workspace = registry.frontend_experience_service.load_memory_lifecycle_benchmark_workspace(
+            _request({}, request_id="req-front-benchmark-workspace", dev_mode=False)
+        )
+        generated = registry.frontend_experience_service.generate_memory_lifecycle_benchmark_slice(
+            _request(
+                {
+                    "dataset_name": "locomo",
+                    "raw_source_path": str(
+                        Path(__file__).resolve().parent
+                        / "data"
+                        / "public_datasets"
+                        / "raw"
+                        / "locomo"
+                        / "conversation_sample.json"
+                    ),
+                    "output_path": str(generated_slice_path),
+                    "selector_values": [],
+                    "max_items": 1,
+                },
+                request_id="req-front-benchmark-slice-generate",
+                dev_mode=False,
+            )
+        )
+        refreshed_workspace = (
+            registry.frontend_experience_service.load_memory_lifecycle_benchmark_workspace(
+                _request({}, request_id="req-front-benchmark-workspace-refresh", dev_mode=False)
+            )
+        )
+
+    assert workspace.status is AppStatus.OK
+    assert workspace.result is not None
+    assert workspace.result["default_dataset_name"] == "locomo"
+    assert any(item["dataset_name"] == "locomo" for item in workspace.result["datasets"])
+    assert any(item["dataset_name"] == "locomo" for item in workspace.result["slice_options"])
+
+    assert generated.status is AppStatus.OK
+    assert generated.result is not None
+    assert generated.result["dataset_name"] == "locomo"
+    assert generated.result["source_path"] == str(generated_slice_path)
+    assert generated.result["bundle_count"] >= 1
+    assert generated_slice_path.exists()
+
+    assert refreshed_workspace.status is AppStatus.OK
+    assert refreshed_workspace.result is not None
+    assert any(
+        item["source_path"] == str(generated_slice_path)
+        for item in refreshed_workspace.result["slice_options"]
+    )
+
+
+def test_frontend_benchmark_workspace_finds_raw_sources_from_cwd_when_module_path_is_packaged(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from mind.app.registry import build_app_registry
+    from mind.app.services import frontend_experience_service as frontend_module
+    from mind.cli_config import resolve_cli_config
+
+    config = resolve_cli_config(
+        backend="sqlite",
+        sqlite_path=str(tmp_path / "frontend_benchmark_workspace_packaged.sqlite3"),
+        allow_sqlite=True,
+    )
+    monkeypatch.setattr(frontend_module, "_resolve_project_root", lambda: tmp_path)
+
+    with build_app_registry(config) as registry:
+        workspace = registry.frontend_experience_service.load_memory_lifecycle_benchmark_workspace(
+            _request({}, request_id="req-front-benchmark-workspace-packaged", dev_mode=False)
+        )
+
+    assert workspace.status is AppStatus.OK
+    assert workspace.result is not None
+    assert any(item["dataset_name"] == "locomo" for item in workspace.result["raw_sources"])
 
 
 def test_frontend_access_uses_activated_openai_compatible_service(

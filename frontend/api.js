@@ -78,8 +78,22 @@ export async function runMemoryLifecycleBenchmark(apiKey, body) {
   });
 }
 
+export async function loadMemoryLifecycleBenchmarkWorkspace(apiKey) {
+  return fetchJson("/v1/frontend/benchmark:workspace", {
+    headers: authHeaders(apiKey),
+  });
+}
+
 export async function loadMemoryLifecycleBenchmarkReport(apiKey, body = {}) {
   return fetchJson("/v1/frontend/benchmark:report", {
+    method: "POST",
+    headers: authHeaders(apiKey),
+    body: JSON.stringify(body),
+  });
+}
+
+export async function generateMemoryLifecycleBenchmarkSlice(apiKey, body) {
+  return fetchJson("/v1/frontend/benchmark:slice:generate", {
     method: "POST",
     headers: authHeaders(apiKey),
     body: JSON.stringify(body),
@@ -153,6 +167,12 @@ export async function restoreSettings(apiKey) {
     method: "POST",
     headers: authHeaders(apiKey),
     body: JSON.stringify({}),
+  });
+}
+
+export async function loadDebugTimelineWorkspace(apiKey) {
+  return fetchJson("/v1/frontend/debug:workspace", {
+    headers: authHeaders(apiKey),
   });
 }
 

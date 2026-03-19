@@ -32,6 +32,16 @@ _TRANSPORT_MARKERS: dict[str, tuple[str, ...]] = {
     "retrieve": ('"/v1/frontend/retrieve"', "submitRetrieve"),
     "access": ('"/v1/frontend/access"', "submitAccess"),
     "offline": ('"/v1/frontend/offline"', "submitOffline"),
+    "benchmark": (
+        '"/v1/frontend/benchmark:workspace"',
+        '"/v1/frontend/benchmark:run"',
+        '"/v1/frontend/benchmark:report"',
+        '"/v1/frontend/benchmark:slice:generate"',
+        "loadMemoryLifecycleBenchmarkWorkspace",
+        "generateMemoryLifecycleBenchmarkSlice",
+        "runMemoryLifecycleBenchmark",
+        "loadMemoryLifecycleBenchmarkReport",
+    ),
     "gate_demo": ('"/v1/frontend/gate-demo"', "loadGateDemo"),
     "config_backend": ('"/v1/frontend/settings"', "loadSettings"),
     "config_provider": (
@@ -48,10 +58,30 @@ _TRANSPORT_MARKERS: dict[str, tuple[str, ...]] = {
         "discoverLlmModels",
         "activateLlmService",
     ),
-    "debug_timeline": ('"/v1/frontend/debug:timeline"', "loadDebugTimeline"),
-    "debug_object_delta": ('"/v1/frontend/debug:timeline"', "loadDebugTimeline"),
-    "debug_context": ('"/v1/frontend/debug:timeline"', "loadDebugTimeline"),
-    "debug_guard": ('"/v1/frontend/debug:timeline"', "loadDebugTimeline"),
+    "debug_timeline": (
+        '"/v1/frontend/debug:workspace"',
+        '"/v1/frontend/debug:timeline"',
+        "loadDebugTimelineWorkspace",
+        "loadDebugTimeline",
+    ),
+    "debug_object_delta": (
+        '"/v1/frontend/debug:workspace"',
+        '"/v1/frontend/debug:timeline"',
+        "loadDebugTimelineWorkspace",
+        "loadDebugTimeline",
+    ),
+    "debug_context": (
+        '"/v1/frontend/debug:workspace"',
+        '"/v1/frontend/debug:timeline"',
+        "loadDebugTimelineWorkspace",
+        "loadDebugTimeline",
+    ),
+    "debug_guard": (
+        '"/v1/frontend/debug:workspace"',
+        '"/v1/frontend/debug:timeline"',
+        "loadDebugTimelineWorkspace",
+        "loadDebugTimeline",
+    ),
 }
 
 
@@ -335,7 +365,9 @@ def _missing_contract_markers(
     for field in ("provider_family", "fallback_used", "fallback_reason"):
         if field not in FrontendAccessAnswerTraceView.model_fields:
             missing.append(f"contract:model:FrontendAccessAnswerTraceView.{field}")
-    for marker in ("result.answer", "supportIds", "provider_family", "fallback_used"):
+    if app_js.count("const answer = result.answer || null;") < 2:
+        missing.append("contract:js:result.answer")
+    for marker in ("supportIds", "provider_family", "fallback_used"):
         if marker not in app_js:
             missing.append(f"contract:js:{marker}")
     return tuple(missing)

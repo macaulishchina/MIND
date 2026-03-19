@@ -101,12 +101,15 @@ X-API-Key: <key>
 | `POST` | `/v1/frontend/retrieve` | frontend retrieve |
 | `POST` | `/v1/frontend/access` | frontend access |
 | `POST` | `/v1/frontend/offline` | frontend offline submit |
+| `GET` | `/v1/frontend/benchmark:workspace` | load benchmark workspace metadata for datasets, slices, raw sources, and reports |
 | `POST` | `/v1/frontend/benchmark:run` | run lifecycle benchmark and persist artifacts |
 | `POST` | `/v1/frontend/benchmark:report` | load persisted lifecycle benchmark report |
+| `POST` | `/v1/frontend/benchmark:slice:generate` | compile a raw public dataset sample into a local benchmark slice |
 | `GET` | `/v1/frontend/settings` | frontend settings page |
 | `POST` | `/v1/frontend/settings:preview` | preview settings mutation |
 | `POST` | `/v1/frontend/settings:apply` | apply settings mutation |
 | `POST` | `/v1/frontend/settings:restore` | restore previous settings snapshot |
+| `GET` | `/v1/frontend/debug:workspace` | load debug filter metadata for searchable troubleshooting queries |
 | `POST` | `/v1/frontend/debug:timeline` | frontend debug timeline query |
 
 ## OpenAPI

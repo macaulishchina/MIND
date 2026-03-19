@@ -56,6 +56,9 @@ async def test_static_frontend_index_is_mounted(
     assert 'id="access-form"' in response.text
     assert 'id="offline-form"' in response.text
     assert 'id="benchmark-form"' in response.text
+    assert 'id="benchmark-raw-source-path"' in response.text
+    assert 'id="benchmark-generate-slice"' in response.text
+    assert 'id="benchmark-slice-output-path"' in response.text
     assert 'id="ops-chain-shell"' in response.text
     assert 'id="ops-chain-backdrop"' in response.text
     assert 'id="ops-chain-head"' in response.text
@@ -67,6 +70,9 @@ async def test_static_frontend_index_is_mounted(
     assert 'data-open-chain="module-access"' in response.text
     assert 'data-open-chain="module-offline"' in response.text
     assert 'data-open-chain="module-benchmark"' in response.text
+    benchmark_index = response.text.index('id="module-benchmark"')
+    assert benchmark_index < response.text.index('id="ops-chain-shell"')
+    assert benchmark_index < response.text.index('id="workspace-settings"')
     assert 'id="workspace-settings"' in response.text
     assert 'id="settings-form"' in response.text
     assert 'id="settings-tab-general"' in response.text
@@ -82,6 +88,11 @@ async def test_static_frontend_index_is_mounted(
     assert 'id="llm-trace-modal"' in response.text
     assert 'id="llm-trace-body"' in response.text
     assert "data-llm-trace-modal-close" in response.text
+    assert 'id="debug-refresh-workspace"' in response.text
+    assert 'id="debug-scope"' in response.text
+    assert 'id="debug-event-kind"' in response.text
+    assert 'id="debug-occurred-after"' in response.text
+    assert 'id="debug-occurred-before"' in response.text
 
 
 @pytest.mark.anyio
@@ -95,6 +106,8 @@ async def test_static_frontend_assets_are_served(
     utils_js = await static_frontend_client.get("/frontend/app/utils.js")
     operation_chain_js = await static_frontend_client.get("/frontend/app/operation-chain.js")
     feature_overview_js = await static_frontend_client.get("/frontend/app/features/overview.js")
+    feature_benchmark_js = await static_frontend_client.get("/frontend/app/features/benchmark.js")
+    feature_debug_js = await static_frontend_client.get("/frontend/app/features/debug.js")
     feature_operation_chain_js = await static_frontend_client.get(
         "/frontend/app/features/operation-chain.js"
     )
@@ -128,6 +141,8 @@ async def test_static_frontend_assets_are_served(
     assert utils_js.status_code == 200
     assert operation_chain_js.status_code == 200
     assert feature_overview_js.status_code == 200
+    assert feature_benchmark_js.status_code == 200
+    assert feature_debug_js.status_code == 200
     assert feature_operation_chain_js.status_code == 200
     assert feature_settings_general_js.status_code == 200
     assert feature_settings_llm_js.status_code == 200
@@ -151,6 +166,8 @@ async def test_static_frontend_assets_are_served(
     assert "./app/core/store.js" in app_js.text
     assert "./app/core/ui-context.js" in app_js.text
     assert "./app/core/constants.js" in app_js.text
+    assert "./app/features/benchmark.js" in app_js.text
+    assert "./app/features/debug.js" in app_js.text
     assert "./app/features/overview.js" in app_js.text
     assert "./app/features/operation-chain.js" in app_js.text
     assert "./app/features/settings-general.js" in app_js.text
@@ -160,6 +177,8 @@ async def test_static_frontend_assets_are_served(
     assert "submitRetrieve" in app_js.text
     assert "submitAccess" in app_js.text
     assert "submitOffline" in app_js.text
+    assert "loadMemoryLifecycleBenchmarkWorkspace" in app_js.text
+    assert "generateMemoryLifecycleBenchmarkSlice" in app_js.text
     assert "runMemoryLifecycleBenchmark" in app_js.text
     assert "loadMemoryLifecycleBenchmarkReport" in app_js.text
     assert "回答详情" in app_js.text
@@ -176,6 +195,16 @@ async def test_static_frontend_assets_are_served(
     assert "buildRunningOperationChain" in operation_chain_js.text
     assert "buildSuccessfulOperationChain" in operation_chain_js.text
     assert "renderOperationChain" in operation_chain_js.text
+    assert "/v1/frontend/benchmark:report" in operation_chain_js.text
+    assert "先选数据集和 slice，或直接读取历史报告" in operation_chain_js.text
+    assert "本次只读取已落盘报告" in operation_chain_js.text
+    assert "createBenchmarkFeature" in feature_benchmark_js.text
+    assert "benchmark-generate-slice" in feature_benchmark_js.text
+    assert "loadMemoryLifecycleBenchmarkWorkspace" in feature_benchmark_js.text
+    assert "generateMemoryLifecycleBenchmarkSlice" in feature_benchmark_js.text
+    assert "createDebugFeature" in feature_debug_js.text
+    assert "loadDebugTimelineWorkspace" in feature_debug_js.text
+    assert "debug-refresh-workspace" in feature_debug_js.text
     assert "createOverviewFeature" in feature_overview_js.text
     assert "renderOverview" in feature_overview_js.text
     assert "createSettingsGeneralFeature" in feature_settings_general_js.text
@@ -201,8 +230,10 @@ async def test_static_frontend_assets_are_served(
     assert "createUiActionRunner" in core_actions_js.text
     assert "../../api.js" in core_api_client_js.text
     assert '"/v1/frontend/access"' in api_js.text
+    assert '"/v1/frontend/benchmark:workspace"' in api_js.text
     assert '"/v1/frontend/benchmark:run"' in api_js.text
     assert '"/v1/frontend/benchmark:report"' in api_js.text
+    assert '"/v1/frontend/benchmark:slice:generate"' in api_js.text
     assert "loadWorkbenchContext" in workbench_state_js.text
     assert "resolveInitialWorkbenchContext" in workbench_state_js.text
     assert "createWorkbenchRouter" in workbench_navigation_js.text

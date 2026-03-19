@@ -9,6 +9,13 @@ from pydantic import ValidationError as PydanticValidationError
 
 from mind.app._service_utils import new_response
 from mind.app.contracts import AppError, AppErrorCode, AppRequest, AppResponse, AppStatus
+from mind.app.services._frontend_benchmark_helpers import (
+    _resolve_project_root,
+    build_benchmark_workspace_payload,
+    coerce_list_payload,
+    report_to_payload,
+    resolve_dataset_selector_values,
+)
 
 
 class FrontendExperienceAppService:
@@ -169,7 +176,7 @@ class FrontendExperienceAppService:
         response.status = AppStatus.OK
         response.result = build_frontend_memory_lifecycle_benchmark_result(
             {
-                **_report_to_payload(report),
+                **report_to_payload(report),
                 "report_path": str(artifacts.report_path),
             }
         ).model_dump(mode="json")
@@ -200,8 +207,76 @@ class FrontendExperienceAppService:
         response.status = AppStatus.OK
         response.result = build_frontend_memory_lifecycle_benchmark_result(
             {
-                **_report_to_payload(report),
+                **report_to_payload(report),
                 "report_path": str(report_path),
+            }
+        ).model_dump(mode="json")
+        return response
+
+    def load_memory_lifecycle_benchmark_workspace(self, req: AppRequest) -> AppResponse:
+        from mind.app.frontend_experience_benchmark import (
+            FrontendMemoryLifecycleBenchmarkWorkspaceQuery,
+            build_frontend_memory_lifecycle_benchmark_workspace_result,
+        )
+
+        validated = self._validate(req, FrontendMemoryLifecycleBenchmarkWorkspaceQuery)
+        if isinstance(validated, AppResponse):
+            return validated
+
+        response = new_response(req)
+        response.status = AppStatus.OK
+        response.result = build_frontend_memory_lifecycle_benchmark_workspace_result(
+            build_benchmark_workspace_payload(
+                self._benchmark_artifact_root,
+                project_root_resolver=_resolve_project_root,
+            )
+        ).model_dump(mode="json")
+        return response
+
+    def generate_memory_lifecycle_benchmark_slice(self, req: AppRequest) -> AppResponse:
+        from mind.app.frontend_experience_benchmark import (
+            FrontendMemoryLifecycleBenchmarkSliceGenerationRequest,
+            build_frontend_memory_lifecycle_benchmark_slice_generation_result,
+        )
+        from mind.fixtures import (
+            compile_public_dataset_local_slice,
+            write_public_dataset_local_slice_json,
+        )
+
+        validated = self._validate(req, FrontendMemoryLifecycleBenchmarkSliceGenerationRequest)
+        if isinstance(validated, AppResponse):
+            return validated
+
+        try:
+            selector_kind, claim_ids, example_ids = resolve_dataset_selector_values(
+                validated.dataset_name,
+                validated.selector_values,
+            )
+            payload = compile_public_dataset_local_slice(
+                validated.dataset_name,
+                validated.raw_source_path,
+                claim_ids=claim_ids,
+                example_ids=example_ids,
+                max_items=validated.max_items,
+            )
+            output_path = write_public_dataset_local_slice_json(validated.output_path, payload)
+        except FileNotFoundError as exc:
+            return self._error_response(req, AppErrorCode.NOT_FOUND, str(exc))
+        except ValueError as exc:
+            return self._error_response(req, AppErrorCode.VALIDATION_ERROR, str(exc))
+
+        response = new_response(req)
+        response.status = AppStatus.OK
+        response.result = build_frontend_memory_lifecycle_benchmark_slice_generation_result(
+            {
+                "dataset_name": validated.dataset_name,
+                "raw_source_path": validated.raw_source_path,
+                "source_path": str(output_path),
+                "bundle_count": len(coerce_list_payload(payload, "bundles")),
+                "sequence_count": len(coerce_list_payload(payload, "sequence_specs")),
+                "selector_kind": selector_kind,
+                "selector_values": validated.selector_values,
+                "max_items": validated.max_items,
             }
         ).model_dump(mode="json")
         return response
@@ -252,49 +327,3 @@ class FrontendExperienceAppService:
         response.status = AppStatus.ERROR
         response.error = AppError(code=code, message=message)
         return response
-
-
-def _report_to_payload(report: Any) -> dict[str, Any]:
-    return {
-        "dataset_name": report.dataset_name,
-        "source_path": report.source_path,
-        "fixture_name": report.fixture_name,
-        "run_id": report.run_id,
-        "telemetry_path": report.telemetry_path,
-        "store_path": report.store_path,
-        "bundle_count": report.bundle_count,
-        "answer_case_count": report.answer_case_count,
-        "frontend_debug_query": dict(report.frontend_debug_query),
-        "notes": list(report.notes),
-        "stage_reports": [
-            {
-                "stage_name": stage.stage_name,
-                "ask": {
-                    "answer_case_count": stage.ask.answer_case_count,
-                    "average_answer_quality": stage.ask.average_answer_quality,
-                    "task_success_rate": stage.ask.task_success_rate,
-                    "candidate_hit_rate": stage.ask.candidate_hit_rate,
-                    "selected_hit_rate": stage.ask.selected_hit_rate,
-                    "reuse_rate": stage.ask.reuse_rate,
-                    "pollution_rate": stage.ask.pollution_rate,
-                },
-                "memory": {
-                    "active_object_count": stage.memory.active_object_count,
-                    "total_object_versions": stage.memory.total_object_versions,
-                    "active_object_counts": dict(stage.memory.active_object_counts),
-                },
-                "cost": {
-                    "total_cost": stage.cost.total_cost,
-                    "generation_cost": stage.cost.generation_cost,
-                    "maintenance_cost": stage.cost.maintenance_cost,
-                    "retrieval_cost": stage.cost.retrieval_cost,
-                    "read_cost": stage.cost.read_cost,
-                    "write_cost": stage.cost.write_cost,
-                    "storage_cost": stage.cost.storage_cost,
-                    "offline_job_count": stage.cost.offline_job_count,
-                },
-                "operation_notes": list(stage.operation_notes),
-            }
-            for stage in report.stage_reports
-        ],
-    }

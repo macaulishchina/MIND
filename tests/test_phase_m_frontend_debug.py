@@ -8,7 +8,9 @@ import pytest
 from mind.frontend import (
     FrontendDebugTimelineQuery,
     FrontendDebugUnavailableError,
+    FrontendDebugWorkspaceResult,
     build_frontend_debug_timeline,
+    build_frontend_debug_workspace,
 )
 from mind.kernel.store import SQLiteMemoryStore
 from mind.primitives.contracts import Capability, PrimitiveExecutionContext
@@ -36,6 +38,15 @@ def _context(*, dev_mode: bool, run_id: str) -> PrimitiveExecutionContext:
 def test_frontend_debug_query_requires_filter() -> None:
     with pytest.raises(ValueError, match="at least one filter"):
         FrontendDebugTimelineQuery()
+
+
+def test_frontend_debug_query_rejects_inverted_time_window() -> None:
+    with pytest.raises(ValueError, match="occurred_after"):
+        FrontendDebugTimelineQuery(
+            run_id="run-time-window-001",
+            occurred_after=datetime(2026, 3, 12, 9, 0, tzinfo=UTC),
+            occurred_before=datetime(2026, 3, 12, 8, 0, tzinfo=UTC),
+        )
 
 
 def test_frontend_debug_timeline_rejects_when_dev_mode_is_disabled() -> None:
@@ -159,6 +170,151 @@ def test_frontend_debug_timeline_filters_by_scope_and_limit() -> None:
     assert response.returned_event_count == 1
     assert response.timeline[0].scope is TelemetryScope.WORKSPACE
     assert response.available_scopes == [TelemetryScope.WORKSPACE]
+
+
+def test_frontend_debug_timeline_filters_by_time_window_and_job_scope() -> None:
+    events = (
+        TelemetryEvent(
+            event_id="offline-entry-001",
+            scope=TelemetryScope.OFFLINE,
+            kind=TelemetryEventKind.ENTRY,
+            occurred_at=datetime(2026, 3, 12, 8, 0, tzinfo=UTC),
+            run_id="run-window-001",
+            operation_id="offline-op-001",
+            job_id="job-001",
+            payload={"job_kind": "reflect_episode"},
+        ),
+        TelemetryEvent(
+            event_id="offline-action-001",
+            scope=TelemetryScope.OFFLINE,
+            kind=TelemetryEventKind.ACTION_RESULT,
+            occurred_at=datetime(2026, 3, 12, 8, 15, tzinfo=UTC),
+            run_id="run-window-001",
+            operation_id="offline-op-001",
+            job_id="job-001",
+            payload={"job_kind": "reflect_episode", "summary": "job completed"},
+        ),
+        TelemetryEvent(
+            event_id="offline-action-002",
+            scope=TelemetryScope.OFFLINE,
+            kind=TelemetryEventKind.ACTION_RESULT,
+            occurred_at=datetime(2026, 3, 12, 9, 0, tzinfo=UTC),
+            run_id="run-window-001",
+            operation_id="offline-op-002",
+            job_id="job-002",
+            payload={"job_kind": "promote_schema", "summary": "later job"},
+        ),
+    )
+
+    response = build_frontend_debug_timeline(
+        events,
+        {
+            "run_id": "run-window-001",
+            "job_id": "job-001",
+            "occurred_after": datetime(2026, 3, 12, 8, 10, tzinfo=UTC),
+            "occurred_before": datetime(2026, 3, 12, 8, 20, tzinfo=UTC),
+        },
+        dev_mode=True,
+    )
+
+    assert response.total_event_count == 3
+    assert response.matched_event_count == 1
+    assert response.returned_event_count == 1
+    assert response.timeline[0].event_id == "offline-action-001"
+
+
+def test_frontend_debug_workspace_projects_searchable_filters() -> None:
+    events = (
+        TelemetryEvent(
+            event_id="entry-001",
+            scope=TelemetryScope.ACCESS,
+            kind=TelemetryEventKind.ENTRY,
+            occurred_at=datetime(2026, 3, 12, 8, 0, tzinfo=UTC),
+            run_id="run-workspace-001",
+            operation_id="access-op-001",
+            workspace_id="workspace-001",
+            object_id="obj-001",
+            payload={"summary": "first access"},
+        ),
+        TelemetryEvent(
+            event_id="action-001",
+            scope=TelemetryScope.ACCESS,
+            kind=TelemetryEventKind.ACTION_RESULT,
+            occurred_at=datetime(2026, 3, 12, 8, 5, tzinfo=UTC),
+            run_id="run-workspace-001",
+            operation_id="access-op-001",
+            workspace_id="workspace-001",
+            object_id="obj-001",
+            payload={"summary": "first result"},
+        ),
+        TelemetryEvent(
+            event_id="offline-001",
+            scope=TelemetryScope.OFFLINE,
+            kind=TelemetryEventKind.ACTION_RESULT,
+            occurred_at=datetime(2026, 3, 12, 9, 0, tzinfo=UTC),
+            run_id="run-workspace-002",
+            operation_id="offline-op-001",
+            job_id="job-002",
+            payload={"summary": "offline result", "job_kind": "reflect_episode"},
+        ),
+    )
+
+    response = build_frontend_debug_workspace(events, dev_mode=True)
+
+    assert isinstance(response, FrontendDebugWorkspaceResult)
+    assert response.total_event_count == 3
+    assert response.default_run_id == "run-workspace-002"
+    assert response.earliest_occurred_at == datetime(2026, 3, 12, 8, 0, tzinfo=UTC)
+    assert response.latest_occurred_at == datetime(2026, 3, 12, 9, 0, tzinfo=UTC)
+    assert response.run_options[0].value == "run-workspace-002"
+    assert response.run_options[1].value == "run-workspace-001"
+    assert response.operation_options[0].value == "offline-op-001"
+    assert response.job_options[0].value == "job-002"
+    assert response.workspace_options[0].value == "workspace-001"
+    assert [option.value for option in response.scope_options] == [
+        "primitive",
+        "retrieval",
+        "workspace",
+        "access",
+        "offline",
+        "governance",
+        "object_delta",
+    ]
+    assert [option.event_count for option in response.scope_options] == [0, 0, 0, 2, 1, 0, 0]
+    assert [option.value for option in response.event_kind_options] == [
+        "entry",
+        "decision",
+        "state_delta",
+        "context_result",
+        "action_result",
+    ]
+    assert [option.event_count for option in response.event_kind_options] == [1, 0, 0, 0, 2]
+
+
+def test_frontend_debug_workspace_exposes_full_filters_without_events() -> None:
+    response = build_frontend_debug_workspace((), dev_mode=True)
+
+    assert isinstance(response, FrontendDebugWorkspaceResult)
+    assert response.total_event_count == 0
+    assert response.default_run_id is None
+    assert [option.value for option in response.scope_options] == [
+        "primitive",
+        "retrieval",
+        "workspace",
+        "access",
+        "offline",
+        "governance",
+        "object_delta",
+    ]
+    assert all(option.event_count == 0 for option in response.scope_options)
+    assert [option.value for option in response.event_kind_options] == [
+        "entry",
+        "decision",
+        "state_delta",
+        "context_result",
+        "action_result",
+    ]
+    assert all(option.event_count == 0 for option in response.event_kind_options)
 
 
 def test_frontend_debug_timeline_projects_real_primitive_flow(tmp_path: Path) -> None:

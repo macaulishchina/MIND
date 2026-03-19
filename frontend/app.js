@@ -3,9 +3,12 @@ import {
   applySettings,
   deleteLlmService,
   discoverLlmModels,
+  generateMemoryLifecycleBenchmarkSlice,
   loadCatalog,
   loadMemoryLifecycleBenchmarkReport,
+  loadMemoryLifecycleBenchmarkWorkspace,
   loadDebugTimeline,
+  loadDebugTimelineWorkspace,
   loadGateDemo,
   loadSettings,
   runMemoryLifecycleBenchmark,
@@ -30,6 +33,8 @@ import { createWorkbenchRouter } from "./app/core/router.js";
 import { createStore } from "./app/core/store.js";
 import { resolveInitialWorkbenchContext } from "./app/core/ui-context.js";
 import { createOverviewFeature } from "./app/features/overview.js";
+import { createBenchmarkFeature } from "./app/features/benchmark.js";
+import { createDebugFeature } from "./app/features/debug.js";
 import { createOperationChainManager } from "./app/features/operation-chain.js";
 import { createSettingsGeneralFeature } from "./app/features/settings-general.js";
 import { createSettingsLlmFeature } from "./app/features/settings-llm.js";
@@ -103,6 +108,7 @@ const store = createStore({
 });
 const state = store.getState();
 let llmFeature;
+let debugFeature;
 
 const operationChain = createOperationChainManager({
   elements,
@@ -259,14 +265,6 @@ function getOfflineTargetRefs() {
     .filter(Boolean);
 }
 
-function hasDebugFilters() {
-  return Boolean(
-    elements.debugRunId.value.trim()
-    || elements.debugOperationId.value.trim()
-    || elements.debugObjectId.value.trim(),
-  );
-}
-
 function applyButtonDisabledState(button) {
   if (!button) {
     return;
@@ -311,7 +309,10 @@ function syncActionAvailability() {
     : getOfflineTargetRefs().length < 2 || !elements.offlineReason.value.trim();
   const benchmarkRunDisabled = !elements.benchmarkDatasetName.value.trim()
     || !elements.benchmarkSourcePath.value.trim();
-  const benchmarkLoadDisabled = !state.apiKey;
+  const benchmarkGenerateDisabled = !elements.benchmarkDatasetName.value.trim()
+    || !elements.benchmarkRawSourcePath.value.trim()
+    || !elements.benchmarkSliceOutputPath.value.trim();
+  const benchmarkLoadDisabled = !state.apiKey || !elements.benchmarkRunId.value.trim();
   const llmDraft = getSelectedLlmDraft();
   const llmCanSave = Boolean(
     state.apiKey
@@ -338,6 +339,7 @@ function syncActionAvailability() {
   setButtonRuleDisabled(elements.accessSubmit, !elements.accessQuery.value.trim());
   setButtonRuleDisabled(elements.offlineSubmit, offlineSubmitDisabled);
   setButtonRuleDisabled(elements.benchmarkSubmit, benchmarkRunDisabled);
+  setButtonRuleDisabled(elements.benchmarkGenerateSlice, benchmarkGenerateDisabled);
   setButtonRuleDisabled(elements.benchmarkRefresh, benchmarkLoadDisabled);
   setButtonRuleDisabled(
     elements.settingsProvider,
@@ -348,7 +350,14 @@ function syncActionAvailability() {
   setButtonRuleDisabled(elements.llmServiceDiscover, !llmCanDiscover);
   setButtonRuleDisabled(elements.llmServiceDelete, !state.apiKey || !llmDraft.serviceId);
   setButtonRuleDisabled(elements.llmEditorReset, !state.apiKey);
-  setButtonRuleDisabled(elements.debugSubmit, !hasDebugFilters());
+  setButtonRuleDisabled(
+    elements.debugRefreshWorkspace,
+    !state.apiKey,
+  );
+  setButtonRuleDisabled(
+    elements.debugSubmit,
+    !(debugFeature?.hasFilters() || false),
+  );
 }
 
 const uiActions = createUiActionRunner({
@@ -365,6 +374,42 @@ const {
   runUiAction,
   setButtonBusy,
 } = uiActions;
+
+const benchmarkFeature = createBenchmarkFeature({
+  state,
+  elements,
+  navigate,
+  bindClickAction,
+  bindFormAction,
+  busyTimes: MIN_BUSY_MS,
+  setOperationChainSnapshot,
+  buildRunningOperationChain,
+  buildSuccessfulOperationChain,
+  buildErrorOperationChain,
+  loadMemoryLifecycleBenchmarkWorkspace,
+  generateMemoryLifecycleBenchmarkSlice,
+  runMemoryLifecycleBenchmark,
+  loadMemoryLifecycleBenchmarkReport,
+  syncActionAvailability,
+  renderMetricList,
+  escapeHtml,
+  formatValue,
+});
+
+debugFeature = createDebugFeature({
+  state,
+  elements,
+  bindClickAction,
+  bindFormAction,
+  busyTimes: MIN_BUSY_MS,
+  defaultLimit: DEFAULTS.debugLimit,
+  setActiveWorkspace,
+  loadDebugTimelineWorkspace,
+  loadDebugTimeline,
+  syncActionAvailability,
+  escapeHtml,
+  formatDateTime,
+});
 
 function loadStoredIngestHistory() {
   try {
@@ -711,137 +756,6 @@ function renderOfflineResult(result) {
   `;
 }
 
-function renderBenchmarkResult(result) {
-  const stages = result.stage_reports || [];
-  const latestStage = stages[stages.length - 1] || null;
-  elements.benchmarkResult.innerHTML = `
-    <div class="status status-ok">生命周期基准已完成，可继续按 run_id 重新加载。</div>
-    ${renderMetricList([
-      { label: "运行编号", value: result.run_id },
-      { label: "数据集", value: result.dataset_name },
-      { label: "数据分组数", value: result.bundle_count },
-      { label: "问答样例数", value: result.answer_case_count },
-      { label: "阶段数", value: result.stage_count },
-      { label: "当前阶段", value: result.latest_stage_name },
-      { label: "报告路径", value: result.report_path },
-      { label: "调试 run_id", value: result.frontend_debug_query?.run_id || result.run_id },
-    ])}
-    <div class="result-grid">
-      ${stages.map((stage) => `
-        <div class="result-block">
-          <h3>${escapeHtml(stage.stage_name)}</h3>
-          ${renderMetricList([
-            { label: "回答质量", value: stage.ask.average_answer_quality },
-            { label: "任务成功率", value: stage.ask.task_success_rate },
-            { label: "候选命中率", value: stage.ask.candidate_hit_rate },
-            { label: "采用命中率", value: stage.ask.selected_hit_rate },
-            { label: "复用率", value: stage.ask.reuse_rate },
-            { label: "污染率", value: stage.ask.pollution_rate },
-            { label: "活跃对象数", value: stage.memory.active_object_count },
-            { label: "版本总数", value: stage.memory.total_object_versions },
-            { label: "累计成本", value: stage.cost.total_cost },
-            { label: "离线任务数", value: stage.cost.offline_job_count },
-          ])}
-          <p class="meta">对象构成：${escapeHtml(formatValue(stage.memory.active_object_counts))}</p>
-          <p class="meta">阶段说明：${escapeHtml((stage.operation_notes || []).join(" / ") || "无")}</p>
-        </div>
-      `).join("")}
-    </div>
-    ${latestStage?.cost
-      ? `<p class="meta">telemetry：${escapeHtml(result.telemetry_path || "未落盘")} / store：${escapeHtml(result.store_path || "未落盘")}</p>`
-      : ""
-    }
-    ${result.notes?.length
-      ? `<div class="result-panel"><h3>补充说明</h3><ul class="notes-list">${result.notes.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></div>`
-      : ""
-    }
-  `;
-}
-
-function renderDebugTimeline(result) {
-  const timeline = result.timeline || [];
-  const deltas = result.object_deltas || [];
-  const contextViews = result.context_views || [];
-  const evidenceViews = result.evidence_views || [];
-  elements.debugResult.innerHTML = `
-    <div class="status ${timeline.length ? "status-ok" : "status-warn"}">
-      共找到 ${timeline.length} 条处理记录
-    </div>
-    <div class="timeline-list">
-      ${timeline
-        .map(
-          (event) => `
-            <article class="event-card">
-              <h3>${escapeHtml(event.label)}</h3>
-              <p class="meta">范围：${escapeHtml(event.scope)} / 类型：${escapeHtml(event.kind)}</p>
-              <p>${escapeHtml(event.summary)}</p>
-              <p class="meta">${escapeHtml(formatDateTime(event.occurred_at))}</p>
-            </article>
-          `,
-        )
-        .join("") || '<div class="empty-state">这次没有找到相关处理记录。</div>'}
-    </div>
-    <div class="result-panel">
-      <h3>内容变化</h3>
-      <ul class="notes-list">
-        ${deltas
-          .map(
-            (delta) => `
-              <li>内容编号：${escapeHtml(delta.object_id)} / 第 ${escapeHtml(delta.object_version)} 版 / ${escapeHtml(delta.summary)}</li>
-            `,
-          )
-          .join("") || "<li>这次范围内没有发现内容变化。</li>"}
-      </ul>
-    </div>
-    <div class="result-panel">
-      <h3>选择依据</h3>
-      <ul class="stack-list">
-        ${contextViews
-          .map(
-            (view) => `
-              <li>
-                <strong>${escapeHtml(view.context_kind)}</strong>
-                <div class="meta">处理编号：${escapeHtml(view.operation_id)} / 查看范围：${escapeHtml(view.workspace_id || "当前页面")}</div>
-                <div>${escapeHtml(view.summary)}</div>
-                <div class="meta">关联内容：${escapeHtml((view.context_object_ids || []).join(", ") || "无")}</div>
-                <div class="meta">实际采用：${escapeHtml((view.selected_object_ids || []).join(", ") || "无")}</div>
-              </li>
-            `,
-          )
-          .join("") || "<li>这次范围内没有选择依据记录。</li>"}
-      </ul>
-    </div>
-    <div class="result-panel">
-      <h3>参考依据</h3>
-      <ul class="stack-list">
-        ${evidenceViews
-          .map(
-            (view) => `
-              <li>
-                <strong>内容编号：${escapeHtml(view.object_id)}</strong>
-                <div class="meta">内容类型：${escapeHtml(localizeContentType(view.object_type))} / ${view.selected ? "已用于本次结果" : "作为备选参考"}</div>
-                <div>${escapeHtml(view.summary)}</div>
-                <div class="meta">相关程度：${escapeHtml(view.score ?? "暂无")} / 优先顺序：${escapeHtml(view.priority ?? "暂无")}</div>
-                <div class="meta">引用来源：${escapeHtml((view.evidence_refs || []).join(", ") || "无")}</div>
-              </li>
-            `,
-          )
-          .join("") || "<li>这次范围内没有参考依据记录。</li>"}
-      </ul>
-    </div>
-  `;
-}
-
-function fillSelect(select, values, selectedValue) {
-  select.innerHTML = (values || [])
-    .map((item) => {
-      const value = typeof item === "string" ? item : item.value;
-      const label = typeof item === "string" ? item : item.label;
-      return `<option value="${escapeHtml(value)}"${value === selectedValue ? " selected" : ""}>${escapeHtml(label)}</option>`;
-    })
-    .join("");
-}
-
 function setPanelLocked(panel, locked, message) {
   panel.classList.toggle("panel-disabled", locked);
   panel.querySelectorAll("button, input, select, textarea").forEach((control) => {
@@ -875,7 +789,7 @@ function syncDebugGuard() {
     return;
   }
   elements.debugGuardStatus.textContent = devModeEnabled
-    ? "问题排查已开启，可查看处理记录、内容变化和参考依据。"
+    ? "问题排查已开启，可按请求、操作、内容和时间范围筛选处理记录。"
     : "如需查看处理过程，请先在设置中开启高级排查。";
 }
 
@@ -937,12 +851,6 @@ function resetOfflineForm() {
   syncOfflineMode();
 }
 
-function resetBenchmarkForm() {
-  elements.benchmarkForm.reset();
-  elements.benchmarkResult.innerHTML = '<div class="empty-state">还没有生命周期基准结果。</div>';
-  syncActionAvailability();
-}
-
 function resetSettingsForm() {
   elements.settingsForm.reset();
   elements.settingsResult.innerHTML = state.settingsPage
@@ -953,13 +861,6 @@ function resetSettingsForm() {
     renderSettingsPage(state.settingsPage);
   }
   renderLlmPage();
-  syncActionAvailability();
-}
-
-function resetDebugForm() {
-  elements.debugForm.reset();
-  elements.debugLimit.value = DEFAULTS.debugLimit;
-  elements.debugResult.innerHTML = '<div class="empty-state">还没有排查结果。</div>';
   syncActionAvailability();
 }
 
@@ -978,9 +879,9 @@ function clearLoadedState() {
   resetRetrieveForm();
   resetAccessForm();
   resetOfflineForm();
-  resetBenchmarkForm();
+  benchmarkFeature.clearWorkspace();
   resetSettingsForm();
-  resetDebugForm();
+  debugFeature.clearWorkspace();
   updateShellSignals();
   syncPanelGuards();
   renderOperationChain(state.activeOperation);
@@ -1077,26 +978,6 @@ function collectOfflineRequest() {
   return body;
 }
 
-function collectBenchmarkLaunchRequest() {
-  const datasetName = elements.benchmarkDatasetName.value.trim();
-  const sourcePath = elements.benchmarkSourcePath.value.trim();
-  if (!datasetName) {
-    throw new Error("请先填写数据集名称。");
-  }
-  if (!sourcePath) {
-    throw new Error("请先填写本地 slice 路径。");
-  }
-  return {
-    dataset_name: datasetName,
-    source_path: sourcePath,
-  };
-}
-
-function collectBenchmarkReportRequest() {
-  const runId = elements.benchmarkRunId.value.trim();
-  return runId ? { run_id: runId } : {};
-}
-
 function collectSettingsApplyRequest() {
   const answerMode = elements.settingsProvider.value || "builtin";
   if (answerMode === "builtin") {
@@ -1111,23 +992,6 @@ function collectSettingsApplyRequest() {
     throw new Error("请先在 LLM 配置里保存一项服务，并获取可用模型。");
   }
   return llmRequest;
-}
-
-function collectDebugRequest() {
-  const body = {
-    limit: Number.parseInt(elements.debugLimit.value, 10) || 80,
-    include_state_deltas: true,
-  };
-  if (elements.debugRunId.value.trim()) {
-    body.run_id = elements.debugRunId.value.trim();
-  }
-  if (elements.debugOperationId.value.trim()) {
-    body.operation_id = elements.debugOperationId.value.trim();
-  }
-  if (elements.debugObjectId.value.trim()) {
-    body.object_id = elements.debugObjectId.value.trim();
-  }
-  return body;
 }
 
 async function refreshOverview() {
@@ -1176,11 +1040,19 @@ async function refreshWorkspaceData() {
   if (!state.apiKey) {
     renderOverviewEmpty("连接后可查看当前状态和主要入口。");
     renderGateDemoEmpty("连接后可查看补充说明。");
+    benchmarkFeature.clearWorkspace();
+    debugFeature.clearWorkspace();
     updateShellSignals();
     syncPanelGuards();
     return;
   }
   await Promise.all([refreshOverview(), refreshGateDemo()]);
+  await benchmarkFeature.refreshWorkspace();
+  if (state.settingsPage?.runtime?.dev_mode) {
+    await debugFeature.refreshWorkspace();
+  } else {
+    debugFeature.clearWorkspace();
+  }
 }
 
 elements.workspaceTabs.forEach((tab) => {
@@ -1441,67 +1313,6 @@ bindClickAction(elements.offlineReset, "offline-reset", {
 });
 elements.offlineJobKind.addEventListener("change", syncOfflineMode);
 
-bindFormAction(elements.benchmarkForm, "benchmark-submit", {
-  button: elements.benchmarkSubmit,
-  before: () => {
-    navigate({
-      activeWorkspace: "workspace-operations",
-      activeOperation: "module-benchmark",
-    });
-  },
-  busyLabel: "运行中",
-  minBusyMs: MIN_BUSY_MS.submit,
-  work: async () => {
-    const request = collectBenchmarkLaunchRequest();
-    const submittedAt = new Date().toISOString();
-    setOperationChainSnapshot("module-benchmark", buildRunningOperationChain("module-benchmark", request, submittedAt));
-    try {
-      const result = await runMemoryLifecycleBenchmark(state.apiKey, request);
-      elements.benchmarkRunId.value = result.run_id || "";
-      elements.debugRunId.value = result.frontend_debug_query?.run_id || result.run_id || "";
-      renderBenchmarkResult(result);
-      setOperationChainSnapshot("module-benchmark", buildSuccessfulOperationChain("module-benchmark", request, result, submittedAt));
-    } catch (error) {
-      setOperationChainSnapshot("module-benchmark", buildErrorOperationChain("module-benchmark", request, error, submittedAt));
-      throw error;
-    }
-  },
-});
-
-bindClickAction(elements.benchmarkRefresh, "benchmark-refresh", {
-  before: () => {
-    navigate({
-      activeWorkspace: "workspace-operations",
-      activeOperation: "module-benchmark",
-    });
-  },
-  busyLabel: "读取中",
-  minBusyMs: MIN_BUSY_MS.refresh,
-  work: async () => {
-    const request = collectBenchmarkReportRequest();
-    const submittedAt = new Date().toISOString();
-    setOperationChainSnapshot("module-benchmark", buildRunningOperationChain("module-benchmark", request, submittedAt));
-    try {
-      const result = await loadMemoryLifecycleBenchmarkReport(state.apiKey, request);
-      elements.benchmarkRunId.value = result.run_id || elements.benchmarkRunId.value;
-      elements.debugRunId.value = result.frontend_debug_query?.run_id || result.run_id || "";
-      renderBenchmarkResult(result);
-      setOperationChainSnapshot("module-benchmark", buildSuccessfulOperationChain("module-benchmark", request, result, submittedAt));
-    } catch (error) {
-      setOperationChainSnapshot("module-benchmark", buildErrorOperationChain("module-benchmark", request, error, submittedAt));
-      throw error;
-    }
-  },
-});
-
-bindClickAction(elements.benchmarkReset, "benchmark-reset", {
-  busyLabel: "重置中",
-  minBusyMs: MIN_BUSY_MS.reset,
-  work: async () => {
-    resetBenchmarkForm();
-  },
-});
-
 function setSettingsControlsBusy(busy) {
   const locked = busy || !state.apiKey;
   elements.settingsProvider.disabled = locked;
@@ -1528,6 +1339,11 @@ async function applySettingsLive() {
         renderOverview(state.catalogPage, refreshedSettings);
       }
       renderSettingsMutation(mutation, refreshedSettings);
+      if (refreshedSettings.runtime?.dev_mode) {
+        await debugFeature.refreshWorkspace();
+      } else {
+        debugFeature.clearWorkspace();
+      }
       updateShellSignals();
       syncPanelGuards();
       renderOperationChain(state.activeOperation);
@@ -1827,31 +1643,6 @@ window.addEventListener("resize", () => {
   }
 });
 
-bindFormAction(elements.debugForm, "debug-submit", {
-  button: elements.debugSubmit,
-  before: () => {
-    setActiveWorkspace("workspace-debug");
-  },
-  busyLabel: "加载中",
-  minBusyMs: MIN_BUSY_MS.submit,
-  work: async () => {
-    const body = collectDebugRequest();
-    if (!body.run_id && !body.operation_id && !body.object_id) {
-      throw new Error("请至少填写一个条件：请求编号、操作编号或内容编号。");
-    }
-    const result = await loadDebugTimeline(state.apiKey, body);
-    renderDebugTimeline(result);
-  },
-});
-
-bindClickAction(elements.debugReset, "debug-reset", {
-  busyLabel: "重置中",
-  minBusyMs: MIN_BUSY_MS.reset,
-  work: async () => {
-    resetDebugForm();
-  },
-});
-
 elements.ingestContent.addEventListener("keydown", (event) => {
   if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
     return;
@@ -1931,8 +1722,12 @@ function bindAvailabilitySync(control) {
   elements.offlineReason,
   elements.offlinePriority,
   elements.benchmarkDatasetName,
+  elements.benchmarkRawSourcePath,
   elements.benchmarkSourcePath,
   elements.benchmarkRunId,
+  elements.benchmarkSliceSelectorValues,
+  elements.benchmarkSliceMaxItems,
+  elements.benchmarkSliceOutputPath,
   elements.settingsProvider,
   elements.settingsDevMode,
   elements.llmServiceName,
@@ -1943,6 +1738,12 @@ function bindAvailabilitySync(control) {
   elements.debugRunId,
   elements.debugOperationId,
   elements.debugObjectId,
+  elements.debugJobId,
+  elements.debugWorkspaceId,
+  elements.debugScope,
+  elements.debugEventKind,
+  elements.debugOccurredAfter,
+  elements.debugOccurredBefore,
   elements.debugLimit,
 ].forEach(bindAvailabilitySync);
 

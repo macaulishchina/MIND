@@ -6,7 +6,7 @@ from mind.fixtures import build_frontend_experience_bench_v1
 def test_frontend_experience_bench_v1_is_frozen_and_complete() -> None:
     scenarios = build_frontend_experience_bench_v1()
 
-    assert len(scenarios) == 20
+    assert len(scenarios) == 22
     assert {scenario.category for scenario in scenarios} == {"experience", "config", "debug"}
     assert scenarios[0].scenario_id == "ingest_basic_desktop"
     assert scenarios[-1].scenario_id == "debug_dev_mode_guard"
@@ -23,6 +23,7 @@ def test_frontend_experience_bench_v1_covers_phase_m_required_entrypoints() -> N
         "retrieve",
         "access",
         "offline",
+        "benchmark",
         "gate_demo",
     }
 

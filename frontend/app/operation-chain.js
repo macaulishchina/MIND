@@ -63,6 +63,15 @@ export function createOperationChainManager({
     return OPERATION_CHAIN_CONFIG[operationId] || OPERATION_CHAIN_CONFIG[defaults.operation];
   }
 
+  function isBenchmarkReportReload(request) {
+    return !request?.dataset_name && !request?.source_path;
+  }
+
+  function getLatestBenchmarkStage(result) {
+    const stages = result?.stage_reports || [];
+    return stages[stages.length - 1] || null;
+  }
+
   function buildOperationRuntimeContext() {
     const settings = state.settingsPage;
     const answerMode = getAnswerModeFromSettings(settings);
@@ -400,6 +409,52 @@ export function createOperationChainManager({
       });
     }
 
+    if (operationId === "module-benchmark") {
+      return buildOperationChainSnapshot(operationId, {
+        status: "idle",
+        requestSummary: compactChainDetails([
+          { label: "当前阶段", value: "先选数据集和 slice，或直接读取历史报告" },
+          { label: "数据集", value: elements.benchmarkDatasetName.value.trim() || "未选择" },
+          { label: "slice 路径", value: elements.benchmarkSourcePath.value.trim() || "未选择" },
+          { label: "报告 run_id", value: elements.benchmarkRunId.value.trim() || "当前数据集暂无报告" },
+        ]),
+        runtimeContext,
+        steps: [
+          createOperationChainStep(config.steps[0], {
+            status: "active",
+            defaultOpen: true,
+            details: compactChainDetails([
+              { label: "接口", value: config.apiPath },
+              { label: "数据集", value: elements.benchmarkDatasetName.value.trim() || "提交后显示" },
+              { label: "raw source", value: elements.benchmarkRawSourcePath.value.trim() || "可先生成 slice" },
+              { label: "slice 路径", value: elements.benchmarkSourcePath.value.trim() || "提交后显示" },
+              { label: "报告 run_id", value: elements.benchmarkRunId.value.trim() || "默认选最近一次" },
+            ]),
+          }),
+          createOperationChainStep(config.steps[1], {
+            details: compactChainDetails([
+              { label: "写入阶段", value: "执行后显示 raw record 和 episode 的写入说明" },
+            ]),
+          }),
+          createOperationChainStep(config.steps[2], {
+            details: compactChainDetails([
+              { label: "维护阶段", value: "执行后显示 summarize / reflect / reorganize / schema promotion" },
+            ]),
+          }),
+          createOperationChainStep(config.steps[3], {
+            details: compactChainDetails([
+              { label: "阶段指标", value: "执行后显示 ask 质量、命中、复用和污染指标" },
+            ]),
+          }),
+          createOperationChainStep(config.steps[4], {
+            details: compactChainDetails([
+              { label: "返回内容", value: "run_id / report_path / telemetry_path / store_path" },
+            ]),
+          }),
+        ],
+      });
+    }
+
     return buildOperationChainSnapshot(operationId, {
       status: "idle",
       requestSummary: compactChainDetails([
@@ -523,6 +578,59 @@ export function createOperationChainManager({
           createOperationChainStep(config.steps[4]),
         ],
         resultSummary: "系统正在为这次问题整理依据。",
+      });
+    }
+
+    if (operationId === "module-benchmark") {
+      const loadingReport = isBenchmarkReportReload(request);
+      const apiPath = loadingReport ? "/v1/frontend/benchmark:report" : config.apiPath;
+      return buildOperationChainSnapshot(operationId, {
+        status: "running",
+        submittedAt,
+        runtimeContext,
+        requestSummary: compactChainDetails([
+          { label: loadingReport ? "读取目标" : "数据集", value: loadingReport ? (request.run_id || "最近一次报告") : request.dataset_name },
+          { label: "slice 路径", value: loadingReport ? "本次不重跑 benchmark" : request.source_path },
+          { label: "报告 run_id", value: request.run_id || (loadingReport ? "最近一次报告" : "运行后返回") },
+        ]),
+        steps: [
+          createOperationChainStep(config.steps[0], {
+            status: "done",
+            details: compactChainDetails([
+              { label: "接口", value: apiPath },
+              { label: loadingReport ? "读取目标" : "数据集", value: loadingReport ? (request.run_id || "最近一次报告") : request.dataset_name },
+              { label: "slice 路径", value: loadingReport ? "本次不重跑 benchmark" : request.source_path },
+              { label: "报告 run_id", value: request.run_id || (loadingReport ? "最近一次报告" : "运行后返回") },
+            ]),
+          }),
+          createOperationChainStep(config.steps[1], loadingReport
+            ? {
+                status: "skipped",
+                summary: "本次只读取已落盘报告，不会重新写入内容。",
+              }
+            : {
+                status: "active",
+                defaultOpen: true,
+                details: compactChainDetails([{ label: "当前状态", value: "系统正在写入原始内容并补齐 episode" }]),
+              }),
+          createOperationChainStep(config.steps[2], {
+            status: loadingReport ? "skipped" : "upcoming",
+            summary: loadingReport ? "本次只读取已落盘报告，不会重新运行维护阶段。" : config.steps[2].summary,
+          }),
+          createOperationChainStep(config.steps[3], {
+            status: loadingReport ? "skipped" : "upcoming",
+            highlighted: true,
+            summary: loadingReport ? "本次只读取已落盘报告，不会重新计算阶段 ask 指标。" : config.steps[3].summary,
+          }),
+          createOperationChainStep(config.steps[4], loadingReport
+            ? {
+                status: "active",
+                defaultOpen: true,
+                details: compactChainDetails([{ label: "当前状态", value: "系统正在读取已持久化的 benchmark 报告" }]),
+              }
+            : {}),
+        ],
+        resultSummary: loadingReport ? "系统正在读取生命周期基准报告。" : "系统正在执行生命周期基准。",
       });
     }
 
@@ -736,6 +844,79 @@ export function createOperationChainManager({
       });
     }
 
+    if (operationId === "module-benchmark") {
+      const loadingReport = isBenchmarkReportReload(request);
+      const apiPath = loadingReport ? "/v1/frontend/benchmark:report" : config.apiPath;
+      const latestStage = getLatestBenchmarkStage(result);
+      return buildOperationChainSnapshot(operationId, {
+        status: "success",
+        submittedAt,
+        runtimeContext,
+        requestSummary: compactChainDetails([
+          { label: loadingReport ? "读取目标" : "数据集", value: loadingReport ? (request.run_id || "最近一次报告") : result.dataset_name },
+          { label: "数据分组数", value: result.bundle_count },
+          { label: "问答样例数", value: result.answer_case_count },
+          { label: "报告 run_id", value: result.run_id },
+        ]),
+        steps: [
+          createOperationChainStep(config.steps[0], {
+            status: "done",
+            details: compactChainDetails([
+              { label: "接口", value: apiPath },
+              { label: loadingReport ? "读取目标" : "数据集", value: loadingReport ? (request.run_id || "最近一次报告") : result.dataset_name },
+              { label: "slice 路径", value: loadingReport ? "本次未重跑 benchmark" : result.source_path },
+              { label: "报告 run_id", value: result.run_id },
+            ]),
+          }),
+          createOperationChainStep(config.steps[1], loadingReport
+            ? {
+                status: "skipped",
+                summary: "本次只读取已落盘报告，没有重新写入原始内容。",
+              }
+            : {
+                status: "done",
+                details: compactChainDetails([
+                  { label: "数据分组数", value: result.bundle_count },
+                  { label: "阶段说明", value: result.stage_reports?.[0]?.operation_notes || "已完成写入阶段" },
+                ]),
+              }),
+          createOperationChainStep(config.steps[2], {
+            status: loadingReport ? "skipped" : "done",
+            details: loadingReport
+              ? []
+              : compactChainDetails([
+                  { label: "阶段数", value: result.stage_count },
+                  { label: "当前阶段", value: result.latest_stage_name },
+                  { label: "阶段说明", value: latestStage?.operation_notes || "已完成维护阶段" },
+                ]),
+          }),
+          createOperationChainStep(config.steps[3], {
+            status: loadingReport ? "skipped" : "done",
+            highlighted: true,
+            details: loadingReport
+              ? []
+              : compactChainDetails([
+                  { label: "回答质量", value: latestStage?.ask?.average_answer_quality },
+                  { label: "任务成功率", value: latestStage?.ask?.task_success_rate },
+                  { label: "污染率", value: latestStage?.ask?.pollution_rate },
+                ]),
+          }),
+          createOperationChainStep(config.steps[4], {
+            status: "done",
+            defaultOpen: true,
+            details: compactChainDetails([
+              { label: "run_id", value: result.run_id },
+              { label: "report_path", value: result.report_path },
+              { label: "telemetry_path", value: result.telemetry_path || "未落盘" },
+              { label: "store_path", value: result.store_path || "未落盘" },
+              { label: "debug run_id", value: result.frontend_debug_query?.run_id || result.run_id },
+            ]),
+          }),
+        ],
+        resultSummary: loadingReport ? "生命周期基准报告已读取。" : "生命周期基准已执行完成，并返回阶段报告。",
+      });
+    }
+
     return buildOperationChainSnapshot(operationId, {
       status: "success",
       submittedAt,
@@ -868,6 +1049,56 @@ export function createOperationChainManager({
           });
         }),
         resultSummary: "系统未能完成本次回答。",
+        errorMessage: message,
+      });
+    }
+
+    if (operationId === "module-benchmark") {
+      const loadingReport = isBenchmarkReportReload(request);
+      const apiPath = loadingReport ? "/v1/frontend/benchmark:report" : config.apiPath;
+      return buildOperationChainSnapshot(operationId, {
+        status: "error",
+        submittedAt,
+        runtimeContext,
+        requestSummary: compactChainDetails([
+          { label: loadingReport ? "读取目标" : "数据集", value: loadingReport ? (request.run_id || "最近一次报告") : request.dataset_name },
+          { label: "slice 路径", value: loadingReport ? "本次不重跑 benchmark" : request.source_path },
+          { label: "报告 run_id", value: request.run_id || (loadingReport ? "最近一次报告" : "运行后返回") },
+        ]),
+        steps: [
+          createOperationChainStep(config.steps[0], {
+            status: loadingReport ? "error" : "done",
+            defaultOpen: loadingReport,
+            details: compactChainDetails([
+              { label: "接口", value: apiPath },
+              { label: "错误信息", value: loadingReport ? message : "请求已发出，执行阶段失败" },
+            ]),
+          }),
+          createOperationChainStep(config.steps[1], loadingReport
+            ? {
+                status: "skipped",
+                summary: "本次只读取已落盘报告，没有重新写入内容。",
+              }
+            : {
+                status: "error",
+                defaultOpen: true,
+                details: compactChainDetails([
+                  { label: "接口", value: apiPath },
+                  { label: "错误信息", value: message },
+                ]),
+              }),
+          createOperationChainStep(config.steps[2], {
+            status: loadingReport ? "skipped" : "upcoming",
+          }),
+          createOperationChainStep(config.steps[3], {
+            status: loadingReport ? "skipped" : "upcoming",
+            highlighted: true,
+          }),
+          createOperationChainStep(config.steps[4], {
+            status: loadingReport ? "upcoming" : "upcoming",
+          }),
+        ],
+        resultSummary: loadingReport ? "系统未能读取这次生命周期基准报告。" : "系统未能完成这次生命周期基准。",
         errorMessage: message,
       });
     }

@@ -38,6 +38,8 @@ class FrontendDebugTimelineQuery(FrontendModel):
     job_id: str | None = None
     workspace_id: str | None = None
     object_id: str | None = None
+    occurred_after: datetime | None = None
+    occurred_before: datetime | None = None
     scopes: list[TelemetryScope] = Field(default_factory=list)
     event_kinds: list[TelemetryEventKind] = Field(default_factory=list)
     limit: int = Field(default=200, ge=1, le=500)
@@ -54,13 +56,46 @@ class FrontendDebugTimelineQuery(FrontendModel):
                 self.job_id,
                 self.workspace_id,
                 self.object_id,
+                self.occurred_after,
+                self.occurred_before,
                 self.scopes,
                 self.event_kinds,
             )
         )
         if not has_filter:
             raise ValueError("frontend debug timeline queries require at least one filter")
+        if (
+            self.occurred_after is not None
+            and self.occurred_before is not None
+            and self.occurred_after > self.occurred_before
+        ):
+            raise ValueError("occurred_after must be earlier than or equal to occurred_before")
         return self
+
+
+class FrontendDebugFilterOption(FrontendModel):
+    """One searchable filter option for the frontend debug workspace."""
+
+    value: str = Field(min_length=1)
+    label: str = Field(min_length=1)
+    event_count: int = Field(ge=0)
+    latest_occurred_at: datetime | None = None
+
+
+class FrontendDebugWorkspaceResult(FrontendModel):
+    """Stable metadata payload for building frontend debug filters."""
+
+    total_event_count: int = Field(ge=0)
+    default_run_id: str | None = None
+    earliest_occurred_at: datetime | None = None
+    latest_occurred_at: datetime | None = None
+    run_options: list[FrontendDebugFilterOption] = Field(default_factory=list)
+    operation_options: list[FrontendDebugFilterOption] = Field(default_factory=list)
+    object_options: list[FrontendDebugFilterOption] = Field(default_factory=list)
+    job_options: list[FrontendDebugFilterOption] = Field(default_factory=list)
+    workspace_options: list[FrontendDebugFilterOption] = Field(default_factory=list)
+    scope_options: list[FrontendDebugFilterOption] = Field(default_factory=list)
+    event_kind_options: list[FrontendDebugFilterOption] = Field(default_factory=list)
 
 
 class FrontendDebugTimelineEvent(FrontendModel):

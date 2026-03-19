@@ -48,6 +48,20 @@ class FrontendDebugAppService:
             dev_mode=self._resolve_dev_mode(dev_mode),
         )
 
+    def load_workspace(
+        self,
+        *,
+        dev_mode: bool | None = None,
+    ) -> Any:
+        """Return frontend-facing filter metadata for the debug workspace."""
+
+        from mind.app.frontend_debug_workspace import build_frontend_debug_workspace
+
+        return build_frontend_debug_workspace(
+            self._iter_events(),
+            dev_mode=self._resolve_dev_mode(dev_mode),
+        )
+
     def _iter_events(self) -> Sequence[TelemetryEvent]:
         if self._telemetry_source is not None:
             return tuple(self._telemetry_source.iter_events())

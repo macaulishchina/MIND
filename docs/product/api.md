@@ -64,12 +64,15 @@ X-API-Key: <your key>
 - `POST /v1/frontend/retrieve`
 - `POST /v1/frontend/access`
 - `POST /v1/frontend/offline`
+- `GET /v1/frontend/benchmark:workspace`
 - `POST /v1/frontend/benchmark:run`
 - `POST /v1/frontend/benchmark:report`
+- `POST /v1/frontend/benchmark:slice:generate`
 - `GET /v1/frontend/settings`
 - `POST /v1/frontend/settings:preview`
 - `POST /v1/frontend/settings:apply`
 - `POST /v1/frontend/settings:restore`
+- `GET /v1/frontend/debug:workspace`
 - `POST /v1/frontend/debug:timeline`
 
 ### User State
@@ -153,6 +156,32 @@ frontend-facing benchmark report 投影。请求体目前包含：
 
 - `run_id`：指定某次 benchmark 运行；省略时读取最近一次持久化报告。
 
+`GET /v1/frontend/benchmark:workspace` 会返回生命周期基准工作台需要的全部下拉元数据：
+
+- `datasets[]`：可选 public dataset、摘要、raw source 类型、默认输出路径
+- `raw_sources[]`：当前仓库中可直接用于编译 slice 的 raw 数据样例
+- `slice_options[]`：可直接运行 benchmark 的 local slice 列表
+- `report_options[]`：已持久化的历史 benchmark 报告，按最近时间排序
+- `default_*`：页面初始化时建议选中的数据集、slice、raw source、输出路径和最近报告
+
+`POST /v1/frontend/benchmark:slice:generate` 会把 raw public dataset 样例编译成可直接运行的
+local slice，并返回生成结果。请求体包含：
+
+- `dataset_name`
+- `raw_source_path`
+- `output_path`
+- `selector_values`：可选；SciFact 表示 claim ids，LoCoMo / HotpotQA 表示 example ids
+- `max_items`：可选；未给 selector 时用于截取 raw 数据
+
+返回结果会包含：
+
+- `source_path`：生成后的 local slice 路径
+- `bundle_count`
+- `sequence_count`
+- `selector_kind`
+- `selector_values`
+- `max_items`
+
 benchmark report 结果会返回：
 
 - `run_id`
@@ -161,6 +190,26 @@ benchmark report 结果会返回：
 - `store_path`
 - `stage_reports[]`：每个阶段的 ask / memory / cost 指标
 - `frontend_debug_query.run_id`：可直接继续喂给 `POST /v1/frontend/debug:timeline`
+
+`GET /v1/frontend/debug:workspace` 会返回问题排查页面需要的筛选元数据：
+
+- `default_run_id`：页面默认建议查看的最近一次请求
+- `run_options[]` / `operation_options[]` / `object_options[]`
+- `job_options[]` / `workspace_options[]`
+- `scope_options[]` / `event_kind_options[]`
+- `earliest_occurred_at` / `latest_occurred_at`：当前 telemetry 可筛选的时间范围
+
+`POST /v1/frontend/debug:timeline` 继续负责真正查询处理记录。除了现有的
+`run_id` / `operation_id` / `job_id` / `workspace_id` / `object_id` 之外，
+现在还支持：
+
+- `occurred_after`
+- `occurred_before`
+- `scopes[]`
+- `event_kinds[]`
+- `limit`
+
+这些条件全部都是可选的；某一项不传就不会参与过滤。
 
 `provider_selection` 的结构如下：
 
