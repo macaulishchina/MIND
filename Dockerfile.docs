@@ -1,6 +1,0 @@
-FROM nginx:1.27-alpine
-
-COPY site /usr/share/nginx/html
-
-HEALTHCHECK --interval=20s --timeout=5s --start-period=10s --retries=5 \
-  CMD wget -q -O /dev/null http://127.0.0.1/ || exit 1
