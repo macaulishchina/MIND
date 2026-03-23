@@ -7,37 +7,30 @@ Use this checklist when refactoring existing code.
 ## Pre-work
 
 - [ ] Define the refactoring goal in one sentence
-- [ ] Confirm the refactoring is requested or clearly necessary (not "nice to have")
-- [ ] If you need a clean baseline before refactoring, run the full health check once before starting (`uv run python scripts/ai_health_check.py --full --report-for-ai`)
-- [ ] If the refactor spans more than 5 files, multiple subsystems, or more than one commit, create or update `PLANS.md` from `.ai/templates/PLANS.md`
-- [ ] If the target file is over 400 lines, define the extraction boundary before editing
+- [ ] Confirm the refactor is requested or clearly necessary
+- [ ] If the refactor spans many files or multiple steps, create or update
+      `PLANS.md` from `.ai/templates/PLANS.md`
 
 ## Scope
 
-- [ ] Change is limited to the stated goal — no feature additions
-- [ ] No API/CLI/MCP interface changes (refactoring is internal)
-- [ ] If interface changes are needed, that's a feature change, not a refactor
+- [ ] Keep the change limited to the stated goal
+- [ ] Preserve behavior unless a behavior change is called out separately
 
 ## Execution
 
-- [ ] Make changes in small, verifiable steps
-- [ ] Run tests after each step — never batch large changes
-- [ ] Preserve all existing behavior (tests should pass without modification)
-- [ ] If the target file is already over 500 lines, do not add a new
-      responsibility without reducing file size or recording the debt in
-      `.ai/health/drift-log.md`
+- [ ] Make changes in small, verifiable slices
+- [ ] Check behavior after each meaningful step
+- [ ] Record any recurring file coupling in `.ai/CHANGE_PROTOCOL.md`
 
 ## Testing
 
-- [ ] All existing tests pass without modification
-- [ ] If tests need updating, it's a signal the refactor changed behavior — verify intentional
-- [ ] Add tests for any new internal abstraction that has complex logic
+- [ ] Existing checks still pass, or the intended behavior change is documented
+- [ ] Add focused coverage if the refactor creates a new abstraction with
+      meaningful logic
 
 ## Verification
 
-- [ ] `uv run ruff check mind/ tests/` — zero errors
-- [ ] `uv run mypy mind/ tests/` — zero errors
-- [ ] Run the appropriate health check once for this milestone: `uv run python scripts/ai_health_check.py --report-for-ai` during local iteration, or `uv run python scripts/ai_health_check.py --full --report-for-ai` for final/pre-commit verification (`--full` subsumes quick)
-- [ ] No new files over 500 lines
-- [ ] No new circular imports
-- [ ] Architecture invariants still hold (see CONSTITUTION.md §2)
+- [ ] Run the repo's available verification commands, or record the manual
+      checks used instead
+- [ ] Confirm the repository instructions still describe reality after the
+      refactor

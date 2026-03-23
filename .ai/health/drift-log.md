@@ -1,50 +1,40 @@
 # AI Governance Drift Log
 
-> Record rule violations, blind spots, and rule conflicts found during AI-driven development.
+> Record rule violations, blind spots, and rule conflicts found during
+> AI-driven development.
 
 ---
 
 ## Format
 
-```
-### YYYY-MM-DD — <short description>
+```text
+### YYYY-MM-DD - <short description>
 
 - **Type**: violation | blind-spot | conflict | suggestion
 - **Rule**: <which rule was involved>
 - **Detail**: <what happened>
-- **Resolution**: <what was done / what rule should be updated>
+- **Resolution**: <what was done or what should change>
 ```
 
 ---
 
 ## Log Entries
 
-### 2026-03-13 — Initial baseline established
+### 2026-03-23 - Reset to initial scaffold
 
 - **Type**: suggestion
 - **Rule**: N/A
-- **Detail**: AI governance infrastructure created. `.ai/` directory with constitution, rules, checklists, and health tracking.
-- **Resolution**: Baseline captured. Future drift will be measured against this point.
+- **Detail**: Removed repo-specific `.ai/` rules and stale state so the folder
+  can act as a minimal spec-driven development scaffold.
+- **Resolution**: Rebuild project-specific guidance incrementally only when the
+  repo earns it.
 
-### 2026-03-14 — AI rule coverage blind spots in sync-heavy modules
-
-- **Type**: blind-spot
-- **Rule**: `CONSTITUTION.md` §3/§6, `CHANGE_PROTOCOL.md`
-- **Detail**: The rule system covered kernel/primitives/api/tests well, but it
-  lacked explicit guidance for domain services, transport modules outside REST,
-  telemetry, large-file growth, and common sync-heavy changes such as offline
-  jobs, provider adapters, and telemetry events.
-- **Resolution**: Added global AI workflow constraints, expanded the routing
-  table, added `domain-services.md`, `transport.md`, `telemetry.md`, and
-  extended `CHANGE_PROTOCOL.md` with the missing synchronization maps.
-
-### 2026-03-14 — Agent-native planning and instruction assets were implicit
+### 2026-03-23 - Referenced health check entrypoint is missing
 
 - **Type**: blind-spot
-- **Rule**: `CONSTITUTION.md` §3, `CHANGE_PROTOCOL.md`, agent entrypoint files
-- **Detail**: The repo had solid code rules, but plan-driven execution,
-  root-level agent entrypoint guidance, and health-check validation for plan
-  assets were still mostly implicit.
-- **Resolution**: Added `PLANS.md` template guidance, created `AGENTS.md`,
-  aligned `CLAUDE.md`, added `app-core.md`, and extended
-  `scripts/ai_health_check.py` with agent-asset and placeholder-code checks.
+- **Rule**: Verification workflow
+- **Detail**: The repository instructions referenced
+  `scripts/ai_health_check.py`, but that path does not exist in the current
+  repo snapshot.
+- **Resolution**: Add the health check script later or simplify any repo
+  instructions that still point to it.

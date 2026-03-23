@@ -1,37 +1,31 @@
-# MIND Change Protocol
+# Change Protocol
 
-> When you change A, you MUST also change B. This is the synchronization map.
->
-> Last updated: 2026-03-23 — Project reset to v0.0.0 (fresh start)
+> Use this file to capture synchronization rules: when changing A, also inspect B.
 
 ---
 
 ## Status
 
-Change protocols are **not yet defined** for the new architecture.
-This file will be populated as modules and interfaces are created.
+The initial scaffold does not define any repo-specific sync rules yet.
+Add entries only when a real dependency is discovered.
 
-The following general protocol always applies:
+## Always
 
----
+1. For any large or multi-step change, create or update the repo-root
+   `PLANS.md` from `.ai/templates/PLANS.md`.
+2. Make changes in small, verifiable slices.
+3. Update nearby docs, plans, and instructions when code or workflow changes
+   would otherwise make them stale.
 
-## 1. Planning a Large Change
+## Sync Map
 
-| Step | File(s) to change |
-|------|--------------------|
-| 1. Create or update a repo-root plan | `PLANS.md` from `.ai/templates/PLANS.md` |
-| 2. Record scope and constraints | Goal, constraints, non-goals, affected areas |
-| 3. Break work into verifiable slices | `## Steps` + `## Verification` |
-| 4. Keep plan current during execution | `## Progress Log`, `## Decisions`, `## Open Questions` |
-| 5. Close or archive the plan after the work lands | Update final status and follow-ups |
+| When you change... | Also inspect... | Why |
+|--------------------|-----------------|-----|
+| Working rules in `.ai/CONSTITUTION.md` | Related checklists and plans | Keep guidance consistent |
+| Durable architecture decisions | `.ai/ARCHITECTURE.md` and `.ai/CURRENT_STATE.md` | Preserve shared context |
 
----
+## Verification
 
-## 2. Verification Checklist (After Any Change)
-
-- [ ] `uv run ruff check` — zero errors
-- [ ] `uv run mypy` — zero errors
-- [ ] `uv run pytest` — all tests pass
-- [ ] Changed code has corresponding test(s)
-- [ ] No new `# type: ignore` without justification
-- [ ] If the change introduced a new sync dependency, update this file
+- Run whatever verification commands the repo currently supports.
+- If no automation exists yet, record the manual checks you performed.
+- If you discover a new recurring dependency between files, add it here.

@@ -6,31 +6,24 @@ Use this checklist when fixing a bug.
 
 ## Investigation
 
-- [ ] Reproduce the bug with a test (write a failing test FIRST)
-- [ ] If the fix will span more than 5 files, multiple subsystems, or more than one commit, create or update `PLANS.md` from `.ai/templates/PLANS.md`
-- [ ] Identify the root cause (not just the symptom)
-- [ ] Check if the bug exists in related code paths
+- [ ] Reproduce the bug with a failing check or test when practical
+- [ ] If the fix spans many files or multiple steps, create or update `PLANS.md`
+      from `.ai/templates/PLANS.md`
+- [ ] Identify the root cause, not just the symptom
+- [ ] Check nearby code paths for the same failure mode
 
 ## Fix
 
-- [ ] Make the minimal change to fix the root cause
-- [ ] Do NOT refactor surrounding code in the same change
-- [ ] Do NOT add unrelated improvements
+- [ ] Make the minimal change needed to fix the root cause
+- [ ] Avoid unrelated cleanup in the same change
 
 ## Testing
 
-- [ ] The failing test now passes
-- [ ] Add regression test if the bug could recur
-- [ ] Run the appropriate health check once for this milestone: `uv run python scripts/ai_health_check.py --report-for-ai` during local iteration, or `uv run python scripts/ai_health_check.py --full --report-for-ai` for final regression/pre-commit verification (`--full` subsumes quick)
-
-## Verification
-
-- [ ] `uv run ruff check mind/ tests/` — zero errors
-- [ ] `uv run mypy mind/ tests/` — zero errors
-- [ ] Fix is backward-compatible (no API/CLI/MCP changes unless the bug IS in the interface)
-- [ ] If the bug was in a kernel method, verify both SQLite and PostgreSQL paths
+- [ ] The failing check now passes
+- [ ] Add regression coverage if the bug could recur
+- [ ] Run the repo's available validation commands, or note the manual checks
+      you used instead
 
 ## Documentation
 
-- [ ] If the bug revealed a missing rule, update `.ai/` rules
-- [ ] If the bug revealed a documentation error, fix the docs
+- [ ] Update any stale `.ai/` guidance the bug exposed
