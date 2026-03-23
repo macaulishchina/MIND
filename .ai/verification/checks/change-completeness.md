@@ -1,0 +1,22 @@
+# Check: change-completeness
+
+## Purpose
+
+Verify that the change folder can stand on its own as a durable record of what
+was changed and how it was validated.
+
+## When To Use
+
+- every non-small change
+
+## Pass Criteria
+
+- The proposal clearly states scope and outcome.
+- Tasks reflect the implemented work.
+- Open questions are resolved or explicitly deferred.
+- The verification report records what evidence exists and what is still missing.
+
+## Acceptable Evidence
+
+- artifact review
+- archive-readiness review

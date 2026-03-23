@@ -2,70 +2,75 @@
 
 ## Goal
 
-- Reduce `.ai/` to a minimal, reusable spec-driven development scaffold.
+- Add a generic verification layer to `.ai/` so the spec workflow has a
+  reusable validation model without depending on any concrete script.
 
 ## Why Now
 
-- The current `.ai/` contents are heavily tailored to an older project shape.
-- We want a clean starting point before adding new rules or project-specific details.
+- The current workflow explains when to propose, approve, implement, and
+  archive, but verification is still described too loosely.
+- The repository has no substantive code yet, so the right move is to define
+  the verification model first and defer any concrete runner scripts.
 
 ## Constraints
 
-- Prefer deleting or neutralizing existing customization over adding new structure.
-- Keep the scaffold usable for future expansion.
-- Avoid changing files outside `.ai/` unless a consistency issue forces it.
+- Keep verification script-free for now.
+- Make verification fit naturally into the existing `.ai` workflow.
+- Prefer a reusable model that still works when the repository later gains real
+  code and toolchain commands.
 
 ## Non-Goals
 
-- Defining a full architecture, tooling stack, or workflow.
-- Replacing deleted detail with new project-specific guidance.
-- Adding new rule packs beyond the minimum scaffold.
+- Implementing `ai_health_check.py` or any other runner.
+- Defining product-specific technical checks that the repo has not earned yet.
+- Reverting the existing `project/specs/changes/archive` workflow layout.
 
 ## Affected Areas
 
-- `.ai/CONSTITUTION.md`
-- `.ai/ARCHITECTURE.md`
-- `.ai/CHANGE_PROTOCOL.md`
-- `.ai/CONVENTIONS.md`
-- `.ai/CURRENT_STATE.md`
-- `.ai/checklists/`
-- `.ai/rules/`
-- `.ai/health/drift-log.md`
+- `.ai/README.md`
+- `.ai/project.md`
+- `.ai/templates/proposal.md`
+- `.ai/templates/tasks.md`
+- `.ai/verification/`
 
 ## Risks
 
-- Removing too much could leave the scaffold confusing.
-- Leaving stale references behind would defeat the cleanup.
+- If verification stays too abstract, it will not help real change execution.
+- If profiles and checks overlap too much, future agents will not know which to use.
 
 ## Steps
 
-1. Rewrite retained top-level `.ai` files into generic, initial-scaffold placeholders.
-2. Rewrite the generic checklists we want to keep.
-3. Delete clearly project-specific rules and checklists.
-4. Search `.ai/` for stale project-specific references and fix anything left.
+1. Add a dedicated `.ai/verification/` subsystem with policy, profiles, checks,
+   and a reporting template.
+2. Update the workflow entrypoints so non-small changes select and execute a
+   verification profile.
+3. Update proposal and task templates so verification is planned and recorded
+   as part of each change.
+4. Verify the final structure and confirm there are no remaining references to
+   the old script-first model.
 
 ## Verification
 
-- Confirm the resulting `.ai/` tree only contains generic scaffold files.
-- Search `.ai/` for stale project-specific terms and paths.
-- Note any verification steps that cannot run because the repo does not contain the referenced tooling.
-- Attempt the quick health check once and record the result.
+- Inspect the final `.ai/verification/` tree.
+- Spot-check `README.md`, `project.md`, and change templates for verification
+  workflow integration.
+- Search for stale references to `scripts/ai_health_check.py` or other
+  script-first assumptions and keep only an explicit historical note if needed.
 
 ## Progress Log
 
-- `done` Created plan for `.ai/` scaffold cleanup.
-- `done` Rewrote retained `.ai/` files into generic scaffold placeholders.
-- `done` Deleted project-specific rules and checklist files.
-- `done` Verified that `.ai/` no longer contains stale project-specific paths or toolchain references.
-- `done` Attempted `uv run python scripts/ai_health_check.py --report-for-ai`; the repo does not contain `scripts/ai_health_check.py`.
+- `done` Re-read the current `.ai` workflow entrypoints and task template.
+- `done` Added the verification subsystem with policy, profiles, checks, and a report template.
+- `done` Wired verification into the main workflow entrypoints and change templates.
+- `done` Verified that the resulting model is self-consistent and script-agnostic.
 
 ## Decisions
 
-- Keep the existing `.ai/` folder structure where it still helps orientation.
-- Prefer empty placeholders over speculative new rules.
-- Keep only generic top-level governance files, two generic checklists, the drift log, and the plan template.
+- Verification will be modeled as policy + profiles + checks + report template.
+- Profiles will be reusable workflow levels, not bound to any language toolchain.
+- Manual verification remains valid when no automated runner exists.
 
 ## Open Questions
 
-- Whether to add a standardized `proposal/spec/design/tasks` layout later.
-- Whether root-level instructions outside `.ai/` should also be reduced to match the new scaffold.
+- Which additional verification checks should exist once the repository gains a
+  real implementation stack.
