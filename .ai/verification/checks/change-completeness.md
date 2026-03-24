@@ -15,6 +15,8 @@ was changed and how it was validated.
 - Tasks reflect the implemented work.
 - Open questions are resolved or explicitly deferred.
 - The verification report records what evidence exists and what is still missing.
+- If `.ai/` changed, the change also records whether the relevant `.human/`
+  handbook sections needed updates.
 
 ## Acceptable Evidence
 

@@ -3,6 +3,10 @@
 This `.ai/` directory is the repository's spec-driven workflow workspace.
 Start here before planning or implementing any non-small change.
 
+`.human/` is the Chinese developer handbook for this workflow. It is organized
+for human reading and must stay semantically aligned with `.ai/` whenever
+developer-facing guidance changes.
+
 ## Reading Order
 
 1. Read `.ai/README.md`.
@@ -21,6 +25,7 @@ Start here before planning or implementing any non-small change.
 - `.ai/archive/`: completed changes preserved for traceability
 - `.ai/verification/`: verification policy, profiles, checks, and report template
 - `.ai/templates/`: copyable templates for new workflow artifacts
+- `.human/`: Chinese developer handbook derived from the `.ai/` workflow
 
 ## Standard Workflow
 
@@ -34,7 +39,9 @@ Start here before planning or implementing any non-small change.
 7. Complete the selected verification profile and record the result.
 8. When implementation is complete, merge accepted spec changes into
    `.ai/specs/`.
-9. Move the completed change folder into `.ai/archive/`.
+9. If the change modified `.ai/` workflow guidance, update the relevant
+   `.human/` handbook documents as needed.
+10. Move the completed change folder into `.ai/archive/`.
 
 ## Artifact Rules
 
@@ -47,6 +54,8 @@ Start here before planning or implementing any non-small change.
   or acceptance criteria change.
 - A refactor or bugfix with no spec impact must state `Spec impact: none` in
   `proposal.md`.
+- A change that updates `.ai/` developer-facing guidance must review the
+  relevant `.human/` handbook coverage before archive.
 
 ## Approval Gate
 

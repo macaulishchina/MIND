@@ -41,6 +41,7 @@ Suggested location:
 - Manual review notes are valid evidence when no automation exists yet.
 - Any skipped check must state why it was skipped and what substitute evidence
   was used.
+- If `.ai/` changed, include the `human-doc-sync` check before archive.
 
 ## Archive Gate
 

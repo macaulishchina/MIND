@@ -31,4 +31,5 @@ Each folder under `.ai/changes/` represents one proposed or active change.
 7. Implement
 8. Complete and record verification
 9. Merge approved spec updates into `.ai/specs/`
-10. Move the whole folder to `.ai/archive/`
+10. If `.ai/` workflow docs changed, update the relevant `.human/` handbook
+    11. Move the whole folder to `.ai/archive/`

@@ -18,6 +18,9 @@ should inherit.
 - Prefer durable written context in repo files over chat-only decisions.
 - Do not mix feature work, refactors, and unrelated cleanup in one change.
 - Remove or update stale workflow instructions as soon as they are discovered.
+- Treat `.human/` as the Chinese developer handbook derived from `.ai/`; when
+  `.ai/` guidance changes, update the relevant `.human/` sections wherever the
+  same guidance is meant for developers.
 
 ## Small Change Rule
 
@@ -40,6 +43,8 @@ Anything else must use `.ai/changes/<change-id>/`.
 - Create `design.md` only when technical decisions need a durable explanation.
 - Use `.ai/verification/` to choose and satisfy a verification profile for each
   non-small change.
+- When `.ai/` changes affect developer-facing workflow guidance, review and
+  update the relevant `.human/` handbook sections before closing the change.
 
 ## Verification Model
 
@@ -58,6 +63,8 @@ Anything else must use `.ai/changes/<change-id>/`.
 - `spec delta`: the proposed requirement changes stored inside a change folder
 - `verification profile`: the required level of validation for a change
 - `verification report`: the record of which checks were satisfied and how
+- `human handbook`: the Chinese developer-facing documentation derived from
+  `.ai/` and stored in `.human/`
 - `archive`: completed changes kept for history after their specs are merged
 
 ## Add Later

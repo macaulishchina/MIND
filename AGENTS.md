@@ -16,5 +16,8 @@ Workflow:
 8. When the change is complete, merge approved spec updates into `.ai/specs/`
    and move the change folder into `.ai/archive/`.
 
+If a change updates `.ai/`, review and update the relevant `.human/` handbook
+documents whenever the change affects developer-facing guidance.
+
 Use `.ai/templates/` and `.ai/verification/templates/` when creating new
 workflow artifacts.

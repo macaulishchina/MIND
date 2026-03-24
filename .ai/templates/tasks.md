@@ -27,4 +27,5 @@ Finalize this file only after the proposal is approved.
 ## Closeout
 
 - [ ] Merge accepted spec updates into `.ai/specs/`
+- [ ] If `.ai/` changed, update the relevant `.human/` handbook documents as needed
 - [ ] Move the completed change folder into `.ai/archive/`
