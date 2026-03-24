@@ -2,27 +2,26 @@
 
 ## Goal
 
-- Replace the `.human/` mirror tree with a Chinese, developer-friendly handbook
-  that remains semantically aligned with `.ai/` without mirroring its layout.
+- Add a challenge-first, reality-check gate to the workflow so AI must surface
+  conflicts, infeasibility, and better alternatives before implementation.
 
 ## Why Now
 
-- The current `.human/` tree is a structural copy of `.ai/`, which is not the
-  intended experience for human readers.
-- Developers need a smaller set of Chinese documents organized by reading task,
-  while `.ai/` remains the operational workflow source.
+- The current workflow is strong on proposal, approval, tasks, and verification,
+  but it still risks turning immature directions into half-finished execution.
+- We want the system to value truth and better direction over obedient but low-value implementation.
 
 ## Constraints
 
-- `.human/` must still cover the full developer-relevant meaning of `.ai/`.
-- `.human/` should be organized for human reading, not file-by-file parity.
-- `.ai/` must explicitly state that `.human/` is semantically aligned, not mirrored.
+- Keep the existing `.ai/` and `.human/` structure intact.
+- Add the new behavior as a workflow rule, not as a vague style preference.
+- Preserve the current proposal-approval gate while making it more critical.
 
 ## Non-Goals
 
-- Changing the core `.ai/` workflow structure.
-- Adding scripts to generate `.human/` automatically.
-- Introducing human-only rules that diverge from `.ai/`.
+- Changing the archive/spec/verification model.
+- Adding automated feasibility tooling.
+- Making the workflow adversarial for the sake of it.
 
 ## Affected Areas
 
@@ -30,44 +29,46 @@
 - `.ai/README.md`
 - `.ai/project.md`
 - `.ai/changes/README.md`
-- `.ai/templates/tasks.md`
-- `.ai/verification/policy.md`
-- `.ai/verification/checks/human-doc-sync.md`
+- `.ai/templates/proposal.md`
+- `.ai/verification/checks/workflow-integrity.md`
 - `.ai/verification/checks/change-completeness.md`
-- `.human/`
+- `.human/context.md`
+- `.human/workflow.md`
+- `.human/quick-start.md`
+- `.human/templates.md`
 
 ## Risks
 
-- If `.human/` is too condensed, it may miss important `.ai/` semantics.
-- If `.ai/` still uses mirror language, future updates will recreate the wrong expectation.
+- If the new rule is too weak, AI will still execute bad directions too eagerly.
+- If the new rule is too vague, humans will not know when a challenge is expected.
 
 ## Steps
 
-1. Replace mirror-oriented wording in `.ai/` and root instructions with
-   semantic-alignment wording.
-2. Rebuild `.human/` as a compact Chinese handbook organized by reader tasks.
-3. Verify that `.human/` still covers the developer-facing meaning of `.ai/`.
+1. Add a formal reality-check requirement to the workflow entrypoints.
+2. Update the proposal template so each non-small change records feasibility,
+   conflicts, and better alternatives when relevant.
+3. Update verification checks so proposal quality includes reality-check coverage.
+4. Update the Chinese developer handbook so humans understand the same rule.
 
 ## Verification
 
-- Inspect the new `.human/` file set and confirm it is task-oriented, not mirrored.
-- Spot-check `.ai/` for updated wording about `.human/`.
-- Search for stale `mirror` wording and remove it where inaccurate.
+- Spot-check all workflow entrypoints for challenge-first wording.
+- Confirm the proposal template includes a dedicated reality-check section.
+- Confirm the handbook explains that AI should challenge bad directions instead
+  of blindly implementing them.
 
 ## Progress Log
 
-- `done` Confirmed the old `.human/` tree was a mirror structure.
-- `done` Removed the old `.human/` tree.
-- `done` Rewrote `.ai/` sync rules to require semantic alignment instead of mirroring.
-- `done` Created the new Chinese developer handbook under `.human/`.
-- `done` Verified semantic coverage and removed stale mirror wording outside the plan record.
+- `done` Re-read the current workflow entrypoints, proposal template, and handbook.
+- `done` Added the challenge-first rule to `.ai/` and `.human/`.
+- `done` Updated the proposal template and workflow checks with a reality-check requirement.
+- `done` Verified that the workflow no longer implies blind execution.
 
 ## Decisions
 
-- `.ai/` remains the workflow source of truth.
-- `.human/` becomes a Chinese developer handbook derived from `.ai/`.
-- Alignment is semantic coverage, not one-file-to-one-file mapping.
+- The proposal gate now includes a reality check before approval.
+- Challenge is treated as a responsibility, not as defiance for its own sake.
 
 ## Open Questions
 
-- Whether future tooling should help track semantic coverage between `.ai/` and `.human/`.
+- Whether future tooling should track unresolved feasibility objections explicitly.

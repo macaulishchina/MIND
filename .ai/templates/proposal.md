@@ -30,6 +30,13 @@
 
 - Describe the behavior or workflow changes at a high level.
 
+## Reality Check
+
+- What about the initial direction may be wrong, immature, or underspecified?
+- What conflicts with current facts, constraints, specs, or architecture?
+- What seems objectively hard, infeasible, or risky?
+- What better direction or narrower alternative is recommended?
+
 ## Acceptance Signals
 
 - What outcomes will show the change is correct?
@@ -47,5 +54,6 @@
 ## Approval
 
 - [ ] Proposal reviewed
+- [ ] Important conflicts and feasibility risks surfaced
 - [ ] Spec impact confirmed
 - [ ] Ready to finalize tasks and implement

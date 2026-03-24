@@ -18,6 +18,8 @@ should inherit.
 - Prefer durable written context in repo files over chat-only decisions.
 - Do not mix feature work, refactors, and unrelated cleanup in one change.
 - Remove or update stale workflow instructions as soon as they are discovered.
+- Do not blindly implement a requested direction when it is likely wrong,
+  conflicting, or infeasible. Challenge it and recommend a better path.
 - Treat `.human/` as the Chinese developer handbook derived from `.ai/`; when
   `.ai/` guidance changes, update the relevant `.human/` sections wherever the
   same guidance is meant for developers.
@@ -39,6 +41,8 @@ Anything else must use `.ai/changes/<change-id>/`.
 - Use `.ai/changes/` for proposed or active work only.
 - Do not edit `.ai/specs/` as part of drafting; spec updates belong in the
   change folder until the change is accepted and ready to archive.
+- Before approval, a proposal should contain a reality check when direction fit
+  or feasibility is not obvious.
 - Treat proposal approval as the only hard gate before implementation.
 - Create `design.md` only when technical decisions need a durable explanation.
 - Use `.ai/verification/` to choose and satisfy a verification profile for each
@@ -60,6 +64,8 @@ Anything else must use `.ai/changes/<change-id>/`.
 - `source of truth`: the approved current spec in `.ai/specs/`
 - `change`: one proposed or active unit of work in `.ai/changes/`
 - `proposal`: the document that explains why a change should happen
+- `reality check`: the part of a proposal that surfaces conflicts, infeasibility,
+  fragile assumptions, and better alternatives before implementation
 - `spec delta`: the proposed requirement changes stored inside a change folder
 - `verification profile`: the required level of validation for a change
 - `verification report`: the record of which checks were satisfied and how

@@ -15,6 +15,7 @@
 - 是否有 spec impact
 - 使用哪个 verification profile
 - In Scope / Out Of Scope
+- Reality Check：这条方向可能哪里错了、哪里冲突、哪里难做、有没有更好替代
 - 验收信号
 - 还有哪些开放问题
 

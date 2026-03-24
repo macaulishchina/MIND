@@ -23,13 +23,14 @@ Each folder under `.ai/changes/` represents one proposed or active change.
 ## Expected Lifecycle
 
 1. Draft `proposal.md`
-2. Add spec delta if needed
-3. Clarify and review
-4. Select a verification profile
-5. Mark the proposal approved
-6. Finalize `tasks.md`
-7. Implement
-8. Complete and record verification
-9. Merge approved spec updates into `.ai/specs/`
-10. If `.ai/` workflow docs changed, update the relevant `.human/` handbook
-    11. Move the whole folder to `.ai/archive/`
+2. Challenge the requested direction against feasibility, conflicts, and better alternatives
+3. Add spec delta if needed
+4. Clarify and review
+5. Select a verification profile
+6. Mark the proposal approved
+7. Finalize `tasks.md`
+8. Implement
+9. Complete and record verification
+10. Merge approved spec updates into `.ai/specs/`
+11. If `.ai/` workflow docs changed, update the relevant `.human/` handbook
+12. Move the whole folder to `.ai/archive/`

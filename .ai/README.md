@@ -33,15 +33,17 @@ developer-facing guidance changes.
 2. For any non-small change, create `.ai/changes/<change-id>/proposal.md`.
 3. Add a change-local spec delta when behavior, contracts, or acceptance
    criteria change.
-4. Clarify the proposal until it can be explicitly approved.
-5. Select a verification profile using `.ai/verification/policy.md`.
-6. Only after approval, finalize `tasks.md` and begin implementation.
-7. Complete the selected verification profile and record the result.
-8. When implementation is complete, merge accepted spec changes into
+4. Challenge the requested direction against existing facts, constraints,
+   feasibility, and better alternatives.
+5. Clarify the proposal until it can be explicitly approved.
+6. Select a verification profile using `.ai/verification/policy.md`.
+7. Only after approval, finalize `tasks.md` and begin implementation.
+8. Complete the selected verification profile and record the result.
+9. When implementation is complete, merge accepted spec changes into
    `.ai/specs/`.
-9. If the change modified `.ai/` workflow guidance, update the relevant
+10. If the change modified `.ai/` workflow guidance, update the relevant
    `.human/` handbook documents as needed.
-10. Move the completed change folder into `.ai/archive/`.
+11. Move the completed change folder into `.ai/archive/`.
 
 ## Artifact Rules
 
@@ -54,6 +56,8 @@ developer-facing guidance changes.
   or acceptance criteria change.
 - A refactor or bugfix with no spec impact must state `Spec impact: none` in
   `proposal.md`.
+- A non-small change proposal must record its reality check: likely conflicts,
+  infeasibility, wrong assumptions, or better alternatives when relevant.
 - A change that updates `.ai/` developer-facing guidance must review the
   relevant `.human/` handbook coverage before archive.
 
@@ -61,6 +65,8 @@ developer-facing guidance changes.
 
 Proposal approval is the only hard gate before implementation.
 Clarification is a phase, not a required standalone file.
+A proposal should not be approved until important feasibility concerns and
+directional conflicts have been surfaced.
 
 ## Archive Rule
 

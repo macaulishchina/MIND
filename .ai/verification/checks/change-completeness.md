@@ -12,6 +12,8 @@ was changed and how it was validated.
 ## Pass Criteria
 
 - The proposal clearly states scope and outcome.
+- The proposal captures major objections, feasibility concerns, or alternative
+  directions when they matter.
 - Tasks reflect the implemented work.
 - Open questions are resolved or explicitly deferred.
 - The verification report records what evidence exists and what is still missing.
