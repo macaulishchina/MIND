@@ -7,6 +7,11 @@ Start here before planning or implementing any non-small change.
 for human reading and must stay semantically aligned with `.ai/` whenever
 developer-facing guidance changes.
 
+Do not use `.ai/` or `.human/` as a catch-all location for project planning
+notes, product ideas, or requirement drafts. Keep project-specific materials
+outside these workflow docs unless they are being captured as approved living
+specs or change-local workflow artifacts.
+
 ## Reading Order
 
 1. Read `.ai/README.md`.

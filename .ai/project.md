@@ -17,6 +17,9 @@ should inherit.
 - Keep changes scoped to the requested outcome.
 - Prefer durable written context in repo files over chat-only decisions.
 - Do not mix feature work, refactors, and unrelated cleanup in one change.
+- Do not write project-specific requirement drafts, planning notes, or ad hoc
+  product direction into `.ai/` or `.human/` workflow docs unless they are
+  being formalized as approved specs or change artifacts.
 - Remove or update stale workflow instructions as soon as they are discovered.
 - Do not blindly implement a requested direction when it is likely wrong,
   conflicting, or infeasible. Challenge it and recommend a better path.
