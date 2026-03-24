@@ -11,11 +11,12 @@
 
 ## 推荐阅读顺序
 
-1. [项目与边界](./context.md)
-2. [开发流程](./workflow.md)
-3. [规格与变更工件](./artifacts.md)
-4. [验证体系](./verification.md)
-5. [模板使用说明](./templates.md)
+1. [快速开始](./quick-start.md)
+2. [项目与边界](./context.md)
+3. [开发流程](./workflow.md)
+4. [规格与变更工件](./artifacts.md)
+5. [验证体系](./verification.md)
+6. [模板使用说明](./templates.md)
 
 ## 与 `.ai/` 的关系
 
@@ -29,3 +30,9 @@
 - `.ai/specs/` + `.ai/changes/` + `.ai/archive/` -> `artifacts.md`
 - `.ai/templates/` -> `templates.md`
 - `.ai/verification/` -> `verification.md`
+
+## 第一次接手时怎么用
+
+如果你是第一次进入这个仓库，建议先读 [快速开始](./quick-start.md)。
+它会把真正需要操作的 `.ai/` 路径、change workflow 的硬门槛，以及
+最容易犯错的地方先讲清楚。
