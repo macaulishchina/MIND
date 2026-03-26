@@ -33,3 +33,5 @@ mindt.toml
 .pytest_cache/
 .ruff_cache/
 .ai/health/repair-prompt.md
+
+PLANS.md
