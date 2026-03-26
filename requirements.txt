@@ -1,0 +1,10 @@
+# Core dependencies
+openai>=1.0.0
+httpx>=0.24.0
+qdrant-client>=1.7.0
+pydantic>=2.0.0
+tomli>=2.0.0                    # TOML parser (Python < 3.11 fallback)
+
+# Testing
+pytest>=7.0.0
+pytest-asyncio>=0.21.0

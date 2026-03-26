@@ -18,6 +18,10 @@ site/
 .env.dev.local
 .env.prod.local
 
+# MIND runtime files
+mind_history.db
+*.db
+
 # cache
 .mypy_cache/
 .pytest_cache/
