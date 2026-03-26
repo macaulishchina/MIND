@@ -12,45 +12,51 @@ MIND 是一个 AI 记忆质量层（Memory Quality Layer），核心目标不是
 - **版本追踪**：UPDATE 操作记录 version_of 关系
 - **逻辑删除**：status=active/deleted，已删除记忆不参与检索
 - **操作历史**：SQLite 记录完整操作日志
-
-## 与 mem0 的差异
-
-| 维度 | mem0 | MIND |
-|------|------|------|
-| 写入质量 | LLM 一次性判断 | LLM 判断 + confidence 标注 |
-| 更新策略 | 直接覆盖 | 新建记忆 + version_of 引用 |
-| 来源追踪 | 无 | source_context 保留原始对话 |
-| 状态管理 | 无状态机 | active / deleted 两状态 |
+- **多协议 LLM**：支持 OpenAI / Anthropic / Google 三协议，可自定义 provider
+- **TOML 配置**：所有配置集中在 `mind.toml`，支持运行时 override
 
 ## 快速开始
 
-### 安装依赖
+### 1. 安装依赖
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 设置环境变量
+### 2. 配置 mind.toml
 
-```bash
-# 通用 API Key（推荐，适用于所有 provider）
-export MIND_API_KEY="your-api-key-here"
+在项目根目录的 `mind.toml` 中填入你的 API Key 和 Embedding 服务地址：
 
-# 也支持 provider 专用变量（按 MIND_API_KEY → 专用变量 的优先级解析）
-# export OPENAI_API_KEY="sk-xxx"
-# export ANTHROPIC_API_KEY="sk-ant-xxx"
-# export GOOGLE_API_KEY="AIza-xxx"
+```toml
+[llm]
+provider = "deepseek"            # 选择要用的 provider
 
-# 可选：自定义 API 域名（代理场景）
-# export MIND_BASE_URL="https://my-proxy.com"
+[llm.deepseek]
+template = "llm.openai"          # 使用 OpenAI 协议
+api_key  = "sk-your-key"
+base_url = "https://api.deepseek.com"
+model    = "deepseek-chat"
+
+[embedding]
+protocols = "openai-embedding"
+model     = "text-embedding-3-small"
+api_key   = "sk-your-key"
+base_url  = "https://api.openai.com"
+dimensions = 1536
 ```
 
-### 基本用法
+### 3. 测试连接
+
+```bash
+python -c "from mind.config import ConfigManager; from mind.llms.factory import LlmFactory; cfg = ConfigManager().get(); llm = LlmFactory.create(cfg.llm); print(llm.generate([{'role':'user','content':'say hi'}]))"
+```
+
+### 4. 基本用法
 
 ```python
-from mind import Memory, MemoryConfig
+from mind import Memory
 
-# 零配置：env 中设好 MIND_API_KEY 即可
+# 零配置初始化（读取 mind.toml）
 m = Memory()
 
 # 写入记忆
@@ -77,65 +83,71 @@ m.delete(memory_id=results[0].id)
 history = m.history(memory_id=results[0].id)
 ```
 
-### 自定义配置
+### 5. 运行时 Override
+
+每个 API 方法都支持 `overrides` 参数，上层服务可动态修改配置：
 
 ```python
-from mind import Memory, MemoryConfig
-from mind.config import LLMConfig
+# 单次调用用不同的模型
+m.add(messages=[...], user_id="alice",
+      overrides={"llm": {"provider": "openai"}})
 
-# 方式 1：顶层传 key，自动下沉到 llm 和 embedding
-m = Memory(MemoryConfig(api_key="sk-xxx"))
-
-# 方式 2：切换 LLM 协议
-m = Memory(MemoryConfig(
-    llm=LLMConfig(provider="anthropic"),     # 用 Claude
-))
-
-m = Memory(MemoryConfig(
-    llm=LLMConfig(provider="google"),        # 用 Gemini
-))
-
-# 方式 3：LLM 和 Embedding 用不同的 key
-from mind.config import EmbeddingConfig
-m = Memory(MemoryConfig(
-    llm=LLMConfig(provider="anthropic", api_key="sk-ant-xxx"),
-    embedding=EmbeddingConfig(api_key="sk-openai-xxx"),
-))
-
-# 方式 4：自定义代理域名
-m = Memory(MemoryConfig(
-    base_url="https://my-proxy.com",         # 自动下沉到 llm + embedding
-))
+# 单次调用调高 temperature
+m.add(messages=[...], user_id="alice",
+      overrides={"llm": {"temperature": 0.5}})
 ```
+
+## 配置说明
+
+所有配置集中在 `mind.toml`，无环境变量依赖。
+
+```
+mind.toml
+├── [llm]                    ← 通用设置：provider + temperature
+│   ├── [llm.openai]         ← 完整 provider 定义
+│   ├── [llm.anthropic]      ← 完整 provider 定义
+│   ├── [llm.google]         ← 完整 provider 定义
+│   └── [llm.deepseek]       ← template 继承 llm.openai + 覆盖差异
+├── [embedding]              ← Embedding 独立配置
+├── [vector_store]           ← 向量数据库（纯本地，不消耗 token）
+├── [history_store]          ← SQLite 历史记录
+└── [retrieval]              ← 检索参数
+```
+
+切换 LLM 只需改一行：`provider = "openai"` / `"anthropic"` / `"deepseek"` 等。
 
 ## 运行测试
 
 ```bash
-# 仅运行不需要 API 的单元测试
-pytest tests/test_storage.py -v
+# 离线单元测试（无需 API Key）
+python -m pytest tests/test_storage.py -v
 
-# 运行完整端到端测试（需要 API Key）
-export MIND_API_KEY="your-key"
-pytest tests/ -v
+# 端到端测试（需要在 mindt.toml 中配好 API Key）
+# 测试读取 mindt.toml，与正式配置 mind.toml 隔离
+python -m pytest tests/test_memory.py -v
 ```
 
 ## 项目结构
 
 ```
+mind.toml                         # 所有配置的唯一来源
 mind/
-├── __init__.py           # 包导出
-├── memory.py             # Memory 主类（系统入口）
-├── config.py             # 配置和数据模型
-├── prompts.py            # LLM Prompt 模板
-├── storage.py            # SQLite 历史记录
-├── utils.py              # 工具函数
-├── llms/                 # LLM 层（Factory + OpenAI / Anthropic / Google）
-├── embeddings/           # Embedding 层（Factory + OpenAI）
-└── vector_stores/        # 向量存储层（Factory + Qdrant）
+├── __init__.py                   # 包导出
+├── memory.py                     # Memory 主类（系统入口）
+├── prompts.py                    # LLM Prompt 模板
+├── storage.py                    # SQLite 历史记录
+├── utils.py                      # 工具函数
+├── config/                       # 配置子系统（独立模块）
+│   ├── manager.py                #   ConfigManager（加载、合并、解析）
+│   ├── schema.py                 #   配置结构定义
+│   └── models.py                 #   数据模型（MemoryItem 等）
+├── llms/                         # LLM 层（OpenAI / Anthropic / Google）
+├── embeddings/                   # Embedding 层（OpenAI）
+└── vector_stores/                # 向量存储层（Qdrant）
 tests/
-├── conftest.py           # 共享 fixtures
-├── test_storage.py       # SQLite 测试
-└── test_memory.py        # 端到端测试
+├── conftest.py                   # 共享 fixtures
+├── test_storage.py               # SQLite 测试
+└── test_memory.py                # 端到端测试
 ```
 
 ## 技术栈
@@ -143,10 +155,11 @@ tests/
 | 组件 | 选择 |
 |------|------|
 | 语言 | Python |
-| LLM | OpenAI / Anthropic / Google（三协议，默认 OpenAI） |
-| Embedding | OpenAI text-embedding-3-small |
+| LLM | OpenAI / Anthropic / Google 三协议 + 自定义 provider |
+| Embedding | OpenAI 兼容协议 |
 | 向量存储 | Qdrant（开发用 in-memory） |
 | 历史记录 | SQLite |
+| 配置 | TOML（mind.toml） |
 
 ## 路线图
 

@@ -1,0 +1,66 @@
+# =============================================================================
+# MIND 配置文件模板
+# 复制此文件为 mind.toml 并填入实际 API Key：  cp mind.toml.example mind.toml
+# 注意：mind.toml 包含密钥，请勿提交到版本控制
+# =============================================================================
+
+[llm]
+provider    = "openai"
+temperature = 0.0
+
+[llm.openai]
+protocols    = "openai"
+api_key      = ""                # 填入你的 OpenAI API Key
+base_url     = "https://api.openai.com"
+sdk_base     = "/v1"
+llm_suffix   = "/chat/completions"
+embed_suffix = "/embeddings"
+model        = "gpt-4o-mini"
+
+[llm.anthropic]
+protocols    = "anthropic"
+api_key      = ""                # 填入你的 Anthropic API Key
+base_url     = "https://api.anthropic.com"
+sdk_base     = ""
+llm_suffix   = "/v1/messages"
+embed_suffix = ""
+model        = "claude-sonnet-4-20250514"
+
+[llm.google]
+protocols    = "google"
+api_key      = ""                # 填入你的 Google API Key
+base_url     = "https://generativelanguage.googleapis.com"
+sdk_base     = ""
+llm_suffix   = "/v1beta/models/{model}:generateContent"
+embed_suffix = ""
+model        = "gemini-2.0-flash"
+
+# 示例：通过 template 继承添加第三方 provider
+# [llm.deepseek]
+# template = "llm.openai"
+# api_key  = ""
+# base_url = "https://api.deepseek.com"
+# model    = "deepseek-chat"
+
+[embedding]
+protocols    = "openai-embedding"
+model        = "text-embedding-3-small"
+api_key      = ""                # 填入 Embedding 服务的 API Key
+base_url     = "https://api.openai.com"
+sdk_base     = "/v1"
+embed_suffix = "/embeddings"
+dimensions   = 1536
+
+[vector_store]
+provider        = "qdrant"
+collection_name = "mind_memories"
+url             = ""
+api_key         = ""
+on_disk         = false
+
+[history_store]
+db_path = "mind_history.db"
+
+[retrieval]
+search_top_k     = 5
+similarity_top_k = 5

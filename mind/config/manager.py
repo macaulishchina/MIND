@@ -36,6 +36,7 @@ from mind.config.schema import (
 logger = logging.getLogger(__name__)
 
 _DEFAULT_TOML = Path(__file__).resolve().parent.parent.parent / "mind.toml"
+_DEFAULT_TEST_TOML = Path(__file__).resolve().parent.parent.parent / "mindt.toml"
 
 
 class ConfigManager:
@@ -220,30 +221,6 @@ class ConfigManager:
 
         return base
 
-    # ------------------------------------------------------------------
-    # URL builders (used by LLM/Embedding implementations)
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def build_sdk_base_url(config: MemoryConfig) -> str:
-        """Build base_url for the OpenAI SDK: base_url + sdk_base."""
-        base = config.llm.base_url.rstrip("/")
-        return base + config.llm.sdk_base
-
-    @staticmethod
-    def build_llm_url(config: MemoryConfig) -> str:
-        """Build full LLM API URL: base_url + llm_suffix."""
-        base = config.llm.base_url.rstrip("/")
-        suffix = config.llm.llm_suffix
-        if "{model}" in suffix:
-            suffix = suffix.replace("{model}", config.llm.model)
-        return base + suffix
-
-    @staticmethod
-    def build_embed_sdk_base_url(config: MemoryConfig) -> str:
-        """Build base_url for the OpenAI Embedding SDK: base_url + sdk_base."""
-        base = config.embedding.base_url.rstrip("/")
-        return base + config.embedding.sdk_base
 
 
 # ======================================================================

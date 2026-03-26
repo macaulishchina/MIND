@@ -1,21 +1,22 @@
 """End-to-end tests for the Memory system.
 
-These tests require a valid API key configured in mind.toml.
+These tests require a valid API key configured in mindt.toml (test config).
 Tests are skipped when llm.api_key is empty.
 """
 
 import pytest
 
 from mind.config import ConfigManager
+from mind.config.manager import _DEFAULT_TEST_TOML
 from mind.config.models import MemoryStatus
 from mind.memory import Memory
 
-_cfg = ConfigManager().get()
+_cfg = ConfigManager(toml_path=_DEFAULT_TEST_TOML).get()
 _HAS_API_KEY = bool(_cfg.llm.api_key)
 
 requires_api_key = pytest.mark.skipif(
     not _HAS_API_KEY,
-    reason="No API key configured in mind.toml (llm.api_key is empty)",
+    reason="No API key configured in mindt.toml (llm.api_key is empty)",
 )
 
 

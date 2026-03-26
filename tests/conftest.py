@@ -3,6 +3,7 @@
 import pytest
 
 from mind.config import ConfigManager
+from mind.config.manager import _DEFAULT_TEST_TOML
 from mind.config.schema import HistoryStoreConfig
 from mind.storage import SQLiteManager
 
@@ -20,10 +21,10 @@ def history_store(tmp_path):
 def memory_config(tmp_path):
     """Create a MemoryConfig for testing.
 
-    Loads mind.toml defaults, then overrides storage paths for isolation.
-    API credentials come from mind.toml — fill them there before running.
+    Loads mindt.toml (test config), then overrides storage paths for isolation.
+    API credentials come from mindt.toml — fill them there before running.
     """
-    mgr = ConfigManager()
+    mgr = ConfigManager(toml_path=_DEFAULT_TEST_TOML)
     return mgr.get(overrides={
         "vector_store": {"collection_name": "test_memories"},
         "history_store": {"db_path": str(tmp_path / "test_history.db")},

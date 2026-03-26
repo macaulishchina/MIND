@@ -144,7 +144,7 @@ class QdrantVectorStore(BaseVectorStore):
             self.client.set_payload(
                 collection_name=self.collection_name,
                 payload=payload,
-                points=[id],
+                points=PointIdsList(points=[id]),
             )
 
         if vector is not None:

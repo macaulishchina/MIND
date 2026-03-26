@@ -22,6 +22,11 @@ site/
 mind_history.db
 *.db
 
+# mind.toml / mindt.toml 包含 API Key，禁止提交
+# 使用 mind.toml.example / mindt.toml.example 作为模板
+mind.toml
+mindt.toml
+
 # cache
 .mypy_cache/
 .pytest_cache/
