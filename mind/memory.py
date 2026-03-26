@@ -14,12 +14,13 @@ Usage::
 
 import json
 import logging
+import sys
 from typing import Any, Dict, List, Optional, Union
 from pathlib import Path
 
 from mind.config.manager import ConfigManager
 from mind.config.models import MemoryItem, MemoryOperation, MemoryStatus
-from mind.config.schema import MemoryConfig
+from mind.config.schema import LoggingConfig, MemoryConfig
 from mind.embeddings.factory import EmbedderFactory
 from mind.llms.factory import LlmFactory
 from mind.prompts import (
@@ -64,12 +65,51 @@ class Memory:
             self._manager = ConfigManager(toml_path)
             self._base_config = self._manager.get()
 
+        # Set up logging based on config (only once per process)
+        self._setup_logging(self._base_config.logging)
+
         # Infrastructure components (shared across calls, not LLM-dependent)
         self._vector_store = VectorStoreFactory.create(self._base_config.vector_store)
         self._history_store = SQLiteManager(self._base_config.history_store)
         self._vector_store.create_collection(self._base_config.embedding.dimensions)
 
         logger.info("Memory system initialized")
+
+    # ------------------------------------------------------------------
+    # Logging setup
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _setup_logging(log_cfg: LoggingConfig) -> None:
+        """Configure the ``mind`` package logger based on TOML config.
+
+        Called once during Memory init. Subsequent calls are idempotent —
+        handlers are only added if the root ``mind`` logger has none.
+        """
+        root_logger = logging.getLogger("mind")
+
+        # Idempotent: skip if already configured
+        if root_logger.handlers:
+            return
+
+        level = getattr(logging, log_cfg.level.upper(), logging.INFO)
+        root_logger.setLevel(level)
+
+        formatter = logging.Formatter(log_cfg.format)
+
+        # Console handler (stderr)
+        if log_cfg.console:
+            console_handler = logging.StreamHandler(sys.stderr)
+            console_handler.setLevel(level)
+            console_handler.setFormatter(formatter)
+            root_logger.addHandler(console_handler)
+
+        # File handler (optional)
+        if log_cfg.file:
+            file_handler = logging.FileHandler(log_cfg.file, encoding="utf-8")
+            file_handler.setLevel(level)
+            file_handler.setFormatter(formatter)
+            root_logger.addHandler(file_handler)
 
     # ------------------------------------------------------------------
     # Config resolution
@@ -284,6 +324,7 @@ class Memory:
             {"role": "user", "content": FACT_EXTRACTION_USER_TEMPLATE.format(
                 conversation=conversation)},
         ]
+        logger.info("messages = %s", messages)
         response = llm.generate(messages=messages, response_format={"type": "json_object"})
         try:
             return json.loads(response).get("facts", [])

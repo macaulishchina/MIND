@@ -67,6 +67,17 @@ class RetrievalConfig(BaseModel):
     similarity_top_k: int = 5
 
 
+class LoggingConfig(BaseModel):
+    """Logging configuration.
+
+    Controls console and file log output for the ``mind`` package.
+    """
+    level: str = "INFO"                     # DEBUG / INFO / WARNING / ERROR
+    console: bool = True                    # 是否输出到控制台（stderr）
+    file: str = ""                          # 日志文件路径，留空 = 不写文件
+    format: str = "%(asctime)s [%(levelname)s] %(name)s — %(message)s"
+
+
 class MemoryConfig(BaseModel):
     """Top-level configuration — the single output of ConfigManager.
 
@@ -77,4 +88,5 @@ class MemoryConfig(BaseModel):
     vector_store: VectorStoreConfig = Field(default_factory=VectorStoreConfig)
     history_store: HistoryStoreConfig = Field(default_factory=HistoryStoreConfig)
     retrieval: RetrievalConfig = Field(default_factory=RetrievalConfig)
+    logging: LoggingConfig = Field(default_factory=LoggingConfig)
     providers: Dict[str, ProviderConfig] = Field(default_factory=dict)

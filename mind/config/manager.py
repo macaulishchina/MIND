@@ -27,6 +27,7 @@ from mind.config.schema import (
     EmbeddingConfig,
     HistoryStoreConfig,
     LLMConfig,
+    LoggingConfig,
     MemoryConfig,
     ProviderConfig,
     RetrievalConfig,
@@ -152,12 +153,19 @@ class ConfigManager:
             if k in RetrievalConfig.model_fields
         })
 
+        log_raw = raw.get("logging", {})
+        log_cfg = LoggingConfig(**{
+            k: v for k, v in log_raw.items()
+            if k in LoggingConfig.model_fields
+        })
+
         config = MemoryConfig(
             llm=llm_cfg,
             embedding=emb_cfg,
             vector_store=vs_cfg,
             history_store=hs_cfg,
             retrieval=ret_cfg,
+            logging=log_cfg,
             providers=providers,
         )
 

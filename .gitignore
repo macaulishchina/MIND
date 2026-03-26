@@ -21,6 +21,7 @@ site/
 # MIND runtime files
 mind_history.db
 *.db
+*.log
 
 # mind.toml / mindt.toml 包含 API Key，禁止提交
 # 使用 mind.toml.example / mindt.toml.example 作为模板
