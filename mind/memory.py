@@ -15,6 +15,7 @@ Usage::
 import json
 import logging
 import sys
+import time
 import threading
 from concurrent.futures import ThreadPoolExecutor, Future
 from typing import Any, Dict, List, Optional, Union
@@ -34,7 +35,6 @@ from mind.prompts import (
 )
 from mind.ops_logger import ops
 from mind.storage import SQLiteManager
-import time as _time
 from mind.utils import generate_hash, generate_id, get_utc_now, parse_messages
 from mind.vector_stores.factory import VectorStoreFactory
 
@@ -96,9 +96,9 @@ class Memory:
             cc.max_workers, effective,
         )
 
-    # ------------------------------------------------------------------
-    # Logging setup
-    # ------------------------------------------------------------------
+    # ══════════════════════════════════════════════════════════════════
+    # Bootstrap (logging, config, factory helpers)
+    # ══════════════════════════════════════════════════════════════════
 
     @staticmethod
     def _setup_logging(log_cfg: LoggingConfig) -> None:
@@ -140,10 +140,6 @@ class Memory:
             verbose=log_cfg.verbose,
         )
 
-    # ------------------------------------------------------------------
-    # Config resolution
-    # ------------------------------------------------------------------
-
     def _resolve_config(self, overrides: Optional[Dict[str, Any]] = None) -> MemoryConfig:
         """Get the effective config for this call.
 
@@ -162,9 +158,9 @@ class Memory:
         """Create an Embedder client from the resolved config."""
         return EmbedderFactory.create(config.embedding)
 
-    # ------------------------------------------------------------------
-    # add
-    # ------------------------------------------------------------------
+    # ══════════════════════════════════════════════════════════════════
+    # Public interface
+    # ══════════════════════════════════════════════════════════════════
 
     def add(
         self,
@@ -193,14 +189,13 @@ class Memory:
         conversation = parse_messages(messages)
         results: List[MemoryItem] = []
 
-        add_t0 = _time.perf_counter()
+        add_t0 = time.perf_counter()
         n_msgs = len(messages)
         logger.info("📝 [ADD] ── START | user=%s | %d messages ──", user_id, n_msgs)
 
-        # Step 1: Extract facts with confidence
         facts = self._extract_facts(llm, conversation)
         if not facts:
-            elapsed = _time.perf_counter() - add_t0
+            elapsed = time.perf_counter() - add_t0
             logger.info(
                 "📝 [ADD] ── DONE | user=%s | 0 facts extracted | %.2fs ──",
                 user_id, elapsed,
@@ -209,9 +204,6 @@ class Memory:
 
         logger.info("Extracted %d facts from conversation", len(facts))
 
-        # Step 2: Process facts concurrently via the global thread pool.
-        # Each fact is independent — no data dependency between facts.
-        # The Semaphore prevents a single add() from monopolising the pool.
         valid_facts = [
             f for f in facts
             if f.get("text", "")
@@ -253,7 +245,7 @@ class Memory:
                 # Should not happen — exceptions caught inside _guarded_process
                 logger.exception("Unexpected error in fact processing future")
 
-        elapsed = _time.perf_counter() - add_t0
+        elapsed = time.perf_counter() - add_t0
         n_new = len(results)
         n_unchanged = total - n_new
         logger.info(
@@ -261,10 +253,6 @@ class Memory:
             user_id, total, n_new, n_unchanged, elapsed,
         )
         return results
-
-    # ------------------------------------------------------------------
-    # search
-    # ------------------------------------------------------------------
 
     def search(
         self,
@@ -298,10 +286,6 @@ class Memory:
             items.append(item)
         return items
 
-    # ------------------------------------------------------------------
-    # get / get_all
-    # ------------------------------------------------------------------
-
     def get(self, memory_id: str) -> Optional[MemoryItem]:
         """Retrieve a single memory by ID."""
         record = self._vector_store.get(memory_id)
@@ -316,10 +300,6 @@ class Memory:
             limit=limit,
         )
         return [self._payload_to_item(r["id"], r.get("payload", {})) for r in records]
-
-    # ------------------------------------------------------------------
-    # update
-    # ------------------------------------------------------------------
 
     def update(
         self,
@@ -352,10 +332,6 @@ class Memory:
         )
         return self.get(memory_id)
 
-    # ------------------------------------------------------------------
-    # delete
-    # ------------------------------------------------------------------
-
     def delete(self, memory_id: str) -> bool:
         """Logically delete a memory (status → deleted)."""
         existing = self.get(memory_id)
@@ -375,18 +351,10 @@ class Memory:
         logger.info("Deleted memory %s", memory_id)
         return True
 
-    # ------------------------------------------------------------------
-    # history
-    # ------------------------------------------------------------------
-
     def history(self, memory_id: str) -> List[Dict[str, Any]]:
         """Get the operation history for a memory."""
         records = self._history_store.get_history(memory_id)
         return [r.model_dump() for r in records]
-
-    # ------------------------------------------------------------------
-    # lifecycle
-    # ------------------------------------------------------------------
 
     def close(self) -> None:
         """Shut down the thread pool and release resources.
@@ -398,11 +366,22 @@ class Memory:
         self._history_store.close()
         logger.info("Memory system shut down")
 
-    # ==================================================================
-    # Internal methods
-    # ==================================================================
+    # ══════════════════════════════════════════════════════════════════
+    # Core capabilities (each independently callable and testable)
+    # ══════════════════════════════════════════════════════════════════
 
-    def _extract_facts(self, llm, conversation: str) -> List[Dict[str, Any]]:
+    @staticmethod
+    def _extract_facts(llm, conversation: str) -> List[Dict[str, Any]]:
+        """Extract memorable facts from a conversation via LLM.
+
+        Args:
+            llm: The LLM client to use.
+            conversation: Formatted conversation text (User/Assistant turns).
+
+        Returns:
+            A list of ``{"text": ..., "confidence": ...}`` dicts.
+            Returns an empty list if no facts are found or parsing fails.
+        """
         messages = [
             {"role": "system", "content": FACT_EXTRACTION_SYSTEM_PROMPT},
             {"role": "user", "content": FACT_EXTRACTION_USER_TEMPLATE.format(
@@ -418,12 +397,21 @@ class Memory:
             logger.error("Failed to parse fact extraction response: %s", response)
             return []
 
-    def _process_fact(
-        self, llm, embedder, config: MemoryConfig,
-        fact_text: str, confidence: float, user_id: str,
-        session_id: Optional[str], source_context: str,
-        metadata: Optional[Dict[str, Any]],
-    ) -> Optional[MemoryItem]:
+    def _retrieve_similar(
+        self,
+        fact_text: str,
+        user_id: str,
+        embedder,
+        config: MemoryConfig,
+    ) -> tuple:
+        """Embed a fact and find similar existing memories.
+
+        Returns:
+            A tuple of ``(fact_vector, similar_results, temp_to_real)`` where
+            *similar_results* is the raw search result list, and
+            *temp_to_real* maps temporary string IDs ("0", "1", …) to real
+            memory IDs (used later by the decision stage).
+        """
         fact_vector = embedder.embed(fact_text)
 
         similar = self._vector_store.search(
@@ -432,13 +420,35 @@ class Memory:
             filters={"user_id": user_id, "status": MemoryStatus.ACTIVE.value},
         )
 
-        temp_to_real = {}
-        memory_list = []
+        temp_to_real: Dict[str, str] = {}
         for idx, s in enumerate(similar):
             temp_to_real[str(idx)] = s["id"]
-            memory_list.append({"content": s.get("payload", {}).get("content", "")})
 
+        return fact_vector, similar, temp_to_real
+
+    @staticmethod
+    def _decide_action(
+        fact_text: str,
+        similar_results: list,
+        llm,
+    ) -> Optional[Dict[str, Any]]:
+        """Decide ADD / UPDATE / DELETE / NONE for a single fact.
+
+        Args:
+            fact_text: The extracted fact string.
+            similar_results: Raw search results from retrieval.
+            llm: The LLM client to use.
+
+        Returns:
+            Parsed decision dict with keys ``action``, ``id``, ``text``,
+            ``reason``, or *None* if JSON parsing fails.
+        """
+        memory_list = [
+            {"content": s.get("payload", {}).get("content", "")}
+            for s in similar_results
+        ]
         existing_text = format_existing_memories(memory_list)
+
         decision_messages = [
             {"role": "system", "content": UPDATE_DECISION_SYSTEM_PROMPT},
             {"role": "user", "content": UPDATE_DECISION_USER_TEMPLATE.format(
@@ -458,41 +468,119 @@ class Memory:
         action = decision.get("action", "NONE").upper()
         reason = decision.get("reason", "")
         logger.info("Fact: '%s' → Decision: %s (reason: %s)", fact_text[:60], action, reason)
+        return decision
+
+    def _execute_action(
+        self,
+        decision: Dict[str, Any],
+        fact_text: str,
+        fact_vector: list,
+        temp_to_real: Dict[str, str],
+        embedder,
+        confidence: float,
+        user_id: str,
+        session_id: Optional[str],
+        source_context: str,
+        metadata: Optional[Dict[str, Any]],
+    ) -> Optional[MemoryItem]:
+        """Execute ADD / UPDATE / DELETE / NONE based on the LLM decision.
+
+        Args:
+            decision: Parsed decision dict from ``_decide_action``.
+            fact_text: Original fact text (fallback for ADD text).
+            fact_vector: The embedding vector from ``_retrieve_similar``.
+            temp_to_real: Temporary-ID → real-ID mapping from ``_retrieve_similar``.
+            embedder: Embedder client (needed for UPDATE re-embedding).
+            confidence: Extraction confidence score.
+            user_id: Owner of the memory.
+            session_id: Optional session identifier.
+            source_context: Original conversation text.
+            metadata: Optional extra metadata.
+
+        Returns:
+            A :class:`MemoryItem` for ADD/UPDATE, or *None* for DELETE/NONE.
+        """
+        action = decision.get("action", "NONE").upper()
 
         if action == "ADD":
             return self._execute_add(
                 embedder=embedder, text=decision.get("text", fact_text),
                 vector=fact_vector, confidence=confidence, user_id=user_id,
-                session_id=session_id, source_context=source_context, metadata=metadata)
+                session_id=session_id, source_context=source_context,
+                metadata=metadata)
+
         elif action == "UPDATE":
             temp_id = str(decision.get("id", ""))
             real_id = temp_to_real.get(temp_id)
             if real_id is None:
-                logger.warning("UPDATE referenced invalid ID: %s — falling back to ADD", temp_id)
+                logger.warning(
+                    "UPDATE referenced invalid ID: %s — falling back to ADD",
+                    temp_id,
+                )
                 return self._execute_add(
                     embedder=embedder, text=decision.get("text", fact_text),
                     vector=fact_vector, confidence=confidence, user_id=user_id,
-                    session_id=session_id, source_context=source_context, metadata=metadata)
+                    session_id=session_id, source_context=source_context,
+                    metadata=metadata)
             return self._execute_update(
                 embedder=embedder, old_memory_id=real_id,
-                new_text=decision.get("text", fact_text), confidence=confidence,
-                user_id=user_id, session_id=session_id,
-                source_context=source_context, metadata=metadata)
+                new_text=decision.get("text", fact_text),
+                confidence=confidence, user_id=user_id,
+                session_id=session_id, source_context=source_context,
+                metadata=metadata)
+
         elif action == "DELETE":
             temp_id = str(decision.get("id", ""))
             real_id = temp_to_real.get(temp_id)
             if real_id:
                 self.delete(real_id)
             return None
-        else:
+
+        else:  # NONE
             logger.debug("No action for fact: %s", fact_text[:60])
             return None
+
+    # ══════════════════════════════════════════════════════════════════
+    # Internal orchestration & storage helpers
+    # ══════════════════════════════════════════════════════════════════
+
+    def _process_fact(
+        self, llm, embedder, config: MemoryConfig,
+        fact_text: str, confidence: float, user_id: str,
+        session_id: Optional[str], source_context: str,
+        metadata: Optional[Dict[str, Any]],
+    ) -> Optional[MemoryItem]:
+        """Process a single fact through retrieval → decision → execution.
+
+        Thin orchestrator that composes the three independent methods.
+        Each method can also be called standalone for evaluation, testing,
+        or reuse by other flows.
+        """
+        fact_vector, similar, temp_to_real = self._retrieve_similar(
+            fact_text=fact_text, user_id=user_id,
+            embedder=embedder, config=config,
+        )
+
+        decision = self._decide_action(
+            fact_text=fact_text, similar_results=similar, llm=llm,
+        )
+        if decision is None:
+            return None
+
+        return self._execute_action(
+            decision=decision, fact_text=fact_text,
+            fact_vector=fact_vector, temp_to_real=temp_to_real,
+            embedder=embedder, confidence=confidence,
+            user_id=user_id, session_id=session_id,
+            source_context=source_context, metadata=metadata,
+        )
 
     def _execute_add(
         self, embedder, text: str, vector: List[float], confidence: float,
         user_id: str, session_id: Optional[str], source_context: str,
         metadata: Optional[Dict[str, Any]],
     ) -> MemoryItem:
+        """Persist a new memory to vector store and history."""
         now = get_utc_now()
         memory_id = generate_id()
         payload = {
@@ -514,6 +602,7 @@ class Memory:
         confidence: float, user_id: str, session_id: Optional[str],
         source_context: str, metadata: Optional[Dict[str, Any]],
     ) -> MemoryItem:
+        """Create a new version of an existing memory (re-embeds)."""
         old_memory = self.get(old_memory_id)
         old_content = old_memory.content if old_memory else None
 
@@ -541,6 +630,7 @@ class Memory:
 
     @staticmethod
     def _payload_to_item(memory_id: str, payload: Dict[str, Any]) -> MemoryItem:
+        """Convert a raw vector-store payload dict into a ``MemoryItem``."""
         return MemoryItem(
             id=memory_id, user_id=payload.get("user_id", ""),
             content=payload.get("content", ""), hash=payload.get("hash", ""),
