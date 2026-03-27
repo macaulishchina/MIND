@@ -34,10 +34,14 @@ Configuration::
 from __future__ import annotations
 
 import logging
+import threading
 from dataclasses import dataclass, field
 from typing import Optional, Sequence
 
 logger = logging.getLogger("mind.ops")
+
+# Thread-local context tag (e.g. "[fact:2/4]") for concurrent tracing
+_ctx = threading.local()
 
 # ── Default truncation for verbose content ──
 _VERBOSE_MAX_LEN = 500
@@ -62,6 +66,33 @@ class OpsLogger:
 
     def __init__(self) -> None:
         self._sw = _Switches()
+
+    # ------------------------------------------------------------------
+    # Context tag (for concurrent fact tracing)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def set_context(tag: str) -> None:
+        """Set a thread-local context tag that prefixes all log lines.
+
+        Example::
+
+            ops.set_context("[fact:2/4]")
+            # ... all subsequent ops.* calls in this thread get the prefix
+            ops.clear_context()
+        """
+        _ctx.tag = tag
+
+    @staticmethod
+    def clear_context() -> None:
+        """Remove the thread-local context tag."""
+        _ctx.tag = ""
+
+    @staticmethod
+    def _tag() -> str:
+        """Return current context tag with trailing space, or empty."""
+        t = getattr(_ctx, "tag", "")
+        return f"{t} " if t else ""
 
     # ------------------------------------------------------------------
     # Configuration
@@ -103,9 +134,10 @@ class OpsLogger:
         """Log a successful LLM call."""
         if not self._sw.llm:
             return
+        tag = self._tag()
         logger.info(
-            "🧠 [LLM] ── %s | %s | %d msgs | ~%d in_tok | ~%d out_tok | %.2fs ──",
-            provider, model, n_msgs, in_tok, out_tok, elapsed,
+            "%s🧠 [LLM] ── %s | %s | %d msgs | ~%d in_tok | ~%d out_tok | %.2fs ──",
+            tag, provider, model, n_msgs, in_tok, out_tok, elapsed,
         )
         if self._sw.verbose:
             if prompt_name and messages:
@@ -134,9 +166,10 @@ class OpsLogger:
         elapsed: float,
     ) -> None:
         """Log a failed LLM call (always logged regardless of switch)."""
+        tag = self._tag()
         logger.error(
-            "🧠 [LLM] ── %s | %s | %d msgs | ~%d in_tok | FAILED | %.2fs ──",
-            provider, model, n_msgs, in_tok, elapsed,
+            "%s🧠 [LLM] ── %s | %s | %d msgs | ~%d in_tok | FAILED | %.2fs ──",
+            tag, provider, model, n_msgs, in_tok, elapsed,
         )
 
     # ------------------------------------------------------------------
@@ -157,16 +190,13 @@ class OpsLogger:
         """Log a successful embedding call."""
         if not self._sw.llm:          # shares the LLM switch
             return
+        tag = self._tag()
         logger.info(
-            "🔗 [EMB] ── %s | %s | %d chars | dim=%d | %.2fs ──",
-            provider, model, text_len, dim, elapsed,
+            "%s🔗 [EMB] ── %s | %s | %d chars | dim=%d | %.2fs ──",
+            tag, provider, model, text_len, dim, elapsed,
         )
-        if self._sw.verbose:
-            if text:
-                logger.info("  ┊ input   → %s", text[:_VERBOSE_MAX_LEN])
-            if vector_preview:
-                preview = str(list(vector_preview[:5])) + " ..."
-                logger.info("  ┊ vector  → %s", preview)
+        if self._sw.verbose and text:
+            logger.info("  ┊ input   → %s", text[:_VERBOSE_MAX_LEN])
 
     def emb_error(
         self,
@@ -176,9 +206,10 @@ class OpsLogger:
         elapsed: float,
     ) -> None:
         """Log a failed embedding call (always logged)."""
+        tag = self._tag()
         logger.error(
-            "🔗 [EMB] ── %s | %s | %d chars | FAILED | %.2fs ──",
-            provider, model, text_len, elapsed,
+            "%s🔗 [EMB] ── %s | %s | %d chars | FAILED | %.2fs ──",
+            tag, provider, model, text_len, elapsed,
         )
 
     # ------------------------------------------------------------------
@@ -214,7 +245,7 @@ class OpsLogger:
         if count is not None:
             parts.append(f"count={count}")
         parts.append(f"{elapsed:.3f}s ──")
-        logger.info(" | ".join(parts))
+        logger.info("%s%s", self._tag(), " | ".join(parts))
         if self._sw.verbose and detail:
             logger.info("  ┊ detail  → %s", detail[:_VERBOSE_MAX_LEN])
 
@@ -235,7 +266,7 @@ class OpsLogger:
         if limit is not None:
             parts.append(f"limit={limit}")
         parts.append(f"FAILED | {elapsed:.3f}s ──")
-        logger.error(" | ".join(parts))
+        logger.error("%s%s", self._tag(), " | ".join(parts))
 
     # ------------------------------------------------------------------
     # Database
@@ -260,7 +291,7 @@ class OpsLogger:
         if rows is not None:
             parts.append(f"rows={rows}")
         parts.append(f"{elapsed:.3f}s ──")
-        logger.info(" | ".join(parts))
+        logger.info("%s%s", self._tag(), " | ".join(parts))
 
     def db_error(
         self,
@@ -276,7 +307,7 @@ class OpsLogger:
         if detail:
             parts.append(detail)
         parts.append(f"FAILED | {elapsed:.3f}s ──")
-        logger.error(" | ".join(parts))
+        logger.error("%s%s", self._tag(), " | ".join(parts))
 
     # ------------------------------------------------------------------
     # Generic verbose helper

@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 
 from mind.ops_logger import ops
+from mind.prompts import PROMPT_REGISTRY
 
 logger = logging.getLogger(__name__)
 
@@ -36,21 +37,18 @@ class BaseLLM(ABC):
         self,
         messages: List[Dict[str, str]],
         response_format: Optional[Dict[str, Any]] = None,
-        prompt_name: Optional[str] = None,
     ) -> str:
-        """Public entry-point — delegates to ``_generate`` with logging.
-
-        Args:
-            messages: List of {"role": ..., "content": ...} dicts.
-            response_format: Optional format specification (e.g., JSON mode).
-            prompt_name: Optional name of the prompt template used (e.g.
-                ``"FACT_EXTRACTION"``). When provided and verbose logging is
-                enabled, only the template name and user message preview are
-                shown instead of the full system prompt.
-        """
+        """Public entry-point — delegates to ``_generate`` with logging."""
         provider = self.provider or getattr(getattr(self, "config", None), "provider", "?")
         model = self.model or getattr(getattr(self, "config", None), "model", "?")
         n_msgs = len(messages)
+
+        # Auto-detect prompt template name from system message
+        prompt_name: Optional[str] = None
+        for m in messages:
+            if m.get("role") == "system":
+                prompt_name = PROMPT_REGISTRY.get(id(m["content"]))
+                break
 
         # Estimate input tokens from message contents
         in_text = "".join(m.get("content", "") for m in messages)
@@ -69,7 +67,9 @@ class BaseLLM(ABC):
 
         ops.llm_call(
             provider, model, n_msgs, in_tokens, out_tokens, elapsed,
-            prompt_name=prompt_name, messages=messages, response=result,
+            prompt_name=prompt_name,
+            messages=messages,
+            response=result,
         )
         return result
 

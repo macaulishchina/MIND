@@ -127,3 +127,19 @@ def format_existing_memories(memories: list) -> str:
         content = mem.get("content", mem.get("payload", {}).get("content", ""))
         lines.append(f"[{idx}] {content}")
     return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Prompt Registry — auto-populated on import
+# ---------------------------------------------------------------------------
+# Maps ``id(prompt_string)`` → variable name for all module-level variables
+# whose name ends with ``_SYSTEM_PROMPT``.  This allows ``BaseLLM.generate()``
+# to auto-detect which prompt template was used without explicit parameters.
+
+import sys as _sys
+
+PROMPT_REGISTRY: dict[int, str] = {
+    id(v): k
+    for k, v in vars(_sys.modules[__name__]).items()
+    if k.endswith("_SYSTEM_PROMPT") and isinstance(v, str)
+}

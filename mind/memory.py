@@ -34,6 +34,7 @@ from mind.prompts import (
 )
 from mind.ops_logger import ops
 from mind.storage import SQLiteManager
+import time as _time
 from mind.utils import generate_hash, generate_id, get_utc_now, parse_messages
 from mind.vector_stores.factory import VectorStoreFactory
 
@@ -192,10 +193,18 @@ class Memory:
         conversation = parse_messages(messages)
         results: List[MemoryItem] = []
 
+        add_t0 = _time.perf_counter()
+        n_msgs = len(messages)
+        logger.info("📝 [ADD] ── START | user=%s | %d messages ──", user_id, n_msgs)
+
         # Step 1: Extract facts with confidence
         facts = self._extract_facts(llm, conversation)
         if not facts:
-            logger.info("No facts extracted from conversation")
+            elapsed = _time.perf_counter() - add_t0
+            logger.info(
+                "📝 [ADD] ── DONE | user=%s | 0 facts extracted | %.2fs ──",
+                user_id, elapsed,
+            )
             return results
 
         logger.info("Extracted %d facts from conversation", len(facts))
@@ -207,9 +216,11 @@ class Memory:
             f for f in facts
             if f.get("text", "")
         ]
+        total = len(valid_facts)
 
-        def _guarded_process(fact: Dict[str, Any]) -> Optional[MemoryItem]:
+        def _guarded_process(idx: int, fact: Dict[str, Any]) -> Optional[MemoryItem]:
             """Acquire semaphore, process one fact, release."""
+            ops.set_context(f"[fact:{idx + 1}/{total}]")
             self._call_sem.acquire()
             try:
                 return self._process_fact(
@@ -223,12 +234,13 @@ class Memory:
                 logger.exception("Error processing fact: %s", fact["text"][:60])
                 return None
             finally:
+                ops.clear_context()
                 self._call_sem.release()
 
         # Submit all facts to the pool; collect futures in order
         futures: List[Future] = [
-            self._pool.submit(_guarded_process, f)
-            for f in valid_facts
+            self._pool.submit(_guarded_process, i, f)
+            for i, f in enumerate(valid_facts)
         ]
 
         # Gather results, preserving order, isolating per-fact errors
@@ -241,6 +253,13 @@ class Memory:
                 # Should not happen — exceptions caught inside _guarded_process
                 logger.exception("Unexpected error in fact processing future")
 
+        elapsed = _time.perf_counter() - add_t0
+        n_new = len(results)
+        n_unchanged = total - n_new
+        logger.info(
+            "📝 [ADD] ── DONE | user=%s | %d facts | %d new | %d unchanged | %.2fs ──",
+            user_id, total, n_new, n_unchanged, elapsed,
+        )
         return results
 
     # ------------------------------------------------------------------
@@ -392,7 +411,6 @@ class Memory:
         response = llm.generate(
             messages=messages,
             response_format={"type": "json_object"},
-            prompt_name="FACT_EXTRACTION",
         )
         try:
             return json.loads(response).get("facts", [])
@@ -429,7 +447,6 @@ class Memory:
         decision_response = llm.generate(
             messages=decision_messages,
             response_format={"type": "json_object"},
-            prompt_name="UPDATE_DECISION",
         )
 
         try:
