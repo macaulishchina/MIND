@@ -26,7 +26,7 @@ class OpenAILLM(BaseLLM):
             base_url=sdk_base,
         )
 
-    def generate(
+    def _generate(
         self,
         messages: List[Dict[str, str]],
         response_format: Optional[Dict[str, Any]] = None,
@@ -39,8 +39,5 @@ class OpenAILLM(BaseLLM):
         if response_format is not None:
             kwargs["response_format"] = response_format
 
-        logger.debug("OpenAI call: model=%s, messages=%d", self.config.model, len(messages))
         response = self.client.chat.completions.create(**kwargs)
-        content = response.choices[0].message.content or ""
-        logger.debug("OpenAI response length: %d chars", len(content))
-        return content
+        return response.choices[0].message.content or ""

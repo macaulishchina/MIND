@@ -60,7 +60,7 @@ class QdrantVectorStore(BaseVectorStore):
                 dimensions,
             )
 
-    def insert(
+    def _insert(
         self,
         id: str,
         vector: List[float],
@@ -73,7 +73,7 @@ class QdrantVectorStore(BaseVectorStore):
             ],
         )
 
-    def search(
+    def _search(
         self,
         query_vector: List[float],
         limit: int = 5,
@@ -97,7 +97,7 @@ class QdrantVectorStore(BaseVectorStore):
             for point in response.points
         ]
 
-    def get(self, id: str) -> Optional[Dict[str, Any]]:
+    def _get(self, id: str) -> Optional[Dict[str, Any]]:
         results = self.client.retrieve(
             collection_name=self.collection_name,
             ids=[id],
@@ -112,7 +112,7 @@ class QdrantVectorStore(BaseVectorStore):
             "payload": point.payload or {},
         }
 
-    def list(
+    def _list(
         self,
         filters: Optional[Dict[str, Any]] = None,
         limit: int = 100,
@@ -134,7 +134,7 @@ class QdrantVectorStore(BaseVectorStore):
             for record in records
         ]
 
-    def update(
+    def _update(
         self,
         id: str,
         vector: Optional[List[float]] = None,
@@ -149,7 +149,7 @@ class QdrantVectorStore(BaseVectorStore):
 
         if vector is not None:
             # Re-upsert with the new vector; preserve existing payload
-            existing = self.get(id)
+            existing = self._get(id)
             merged_payload = existing["payload"] if existing else {}
             if payload:
                 merged_payload.update(payload)
@@ -160,7 +160,7 @@ class QdrantVectorStore(BaseVectorStore):
                 ],
             )
 
-    def delete(self, id: str) -> None:
+    def _delete(self, id: str) -> None:
         self.client.delete(
             collection_name=self.collection_name,
             points_selector=PointIdsList(points=[id]),

@@ -20,6 +20,7 @@ site/
 
 # MIND runtime files
 mind_history.db
+qdrant_storage/
 *.db
 *.log
 

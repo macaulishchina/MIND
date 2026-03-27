@@ -22,7 +22,7 @@ class GoogleLLM(BaseLLM):
         self.url = config.base_url.rstrip("/") + suffix
         self.api_key = config.api_key
 
-    def generate(
+    def _generate(
         self,
         messages: List[Dict[str, str]],
         response_format: Optional[Dict[str, Any]] = None,
@@ -45,7 +45,6 @@ class GoogleLLM(BaseLLM):
         if response_format and response_format.get("type") == "json_object":
             body["generationConfig"]["responseMimeType"] = "application/json"
 
-        logger.debug("Google call: model=%s, url=%s", self.config.model, self.url)
         response = httpx.post(
             self.url, params={"key": self.api_key}, json=body,
             headers={"content-type": "application/json"}, timeout=120.0,

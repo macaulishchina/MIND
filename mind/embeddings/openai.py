@@ -22,9 +22,6 @@ class OpenAIEmbedding(BaseEmbedding):
             base_url=sdk_base,
         )
 
-    def embed(self, text: str) -> List[float]:
-        logger.debug("OpenAI embed: model=%s, text_len=%d", self.config.model, len(text))
+    def _embed(self, text: str) -> List[float]:
         response = self.client.embeddings.create(model=self.config.model, input=text)
-        vector = response.data[0].embedding
-        logger.debug("Embedding dimension: %d", len(vector))
-        return vector
+        return response.data[0].embedding

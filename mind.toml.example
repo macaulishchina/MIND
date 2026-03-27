@@ -67,6 +67,18 @@ console = true                 # 是否输出到控制台（stderr）
 file    = ""                   # 日志文件路径，留空 = 不写文件，如 "mind.log"
 format  = "%(asctime)s [%(levelname)s] %(name)s — %(message)s"
 
+# ── 操作日志开关 ──
+ops_llm          = true        # LLM + Embedding 调用日志（🧠 / 🔗）
+ops_vector_store = true        # 向量存储操作日志（📦）
+ops_database     = true        # 数据库操作日志（💾）
+verbose          = false       # 详细模式：显示每次操作的原始输入/输出（调试用）
+
 [retrieval]
 search_top_k     = 5
 similarity_top_k = 5
+
+[concurrency]
+max_workers           = 8    # 写操作全局线程池大小
+min_available_workers = 2    # 保底保留线程数，防止单次 add 饿死其他调用
+                             # 单次 add 最大并行度 = max_workers - min_available_workers
+                             # 设为 0 = 不保底；max_workers = 1 = 完全串行

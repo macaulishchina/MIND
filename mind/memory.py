@@ -15,6 +15,8 @@ Usage::
 import json
 import logging
 import sys
+import threading
+from concurrent.futures import ThreadPoolExecutor, Future
 from typing import Any, Dict, List, Optional, Union
 from pathlib import Path
 
@@ -30,6 +32,7 @@ from mind.prompts import (
     UPDATE_DECISION_USER_TEMPLATE,
     format_existing_memories,
 )
+from mind.ops_logger import ops
 from mind.storage import SQLiteManager
 from mind.utils import generate_hash, generate_id, get_utc_now, parse_messages
 from mind.vector_stores.factory import VectorStoreFactory
@@ -73,7 +76,24 @@ class Memory:
         self._history_store = SQLiteManager(self._base_config.history_store)
         self._vector_store.create_collection(self._base_config.embedding.dimensions)
 
-        logger.info("Memory system initialized")
+        # ── Concurrency infrastructure ──
+        cc = self._base_config.concurrency
+        if cc.min_available_workers >= cc.max_workers:
+            raise ValueError(
+                f"min_available_workers ({cc.min_available_workers}) must be "
+                f"strictly less than max_workers ({cc.max_workers})"
+            )
+        self._pool = ThreadPoolExecutor(
+            max_workers=cc.max_workers,
+            thread_name_prefix="mind-worker",
+        )
+        effective = cc.max_workers - cc.min_available_workers
+        self._call_sem = threading.Semaphore(effective)
+
+        logger.info(
+            "Memory system initialized (pool=%d, sem=%d)",
+            cc.max_workers, effective,
+        )
 
     # ------------------------------------------------------------------
     # Logging setup
@@ -110,6 +130,14 @@ class Memory:
             file_handler.setLevel(level)
             file_handler.setFormatter(formatter)
             root_logger.addHandler(file_handler)
+
+        # ── Configure centralised ops logger ──
+        ops.configure(
+            ops_llm=log_cfg.ops_llm,
+            ops_vector_store=log_cfg.ops_vector_store,
+            ops_database=log_cfg.ops_database,
+            verbose=log_cfg.verbose,
+        )
 
     # ------------------------------------------------------------------
     # Config resolution
@@ -172,23 +200,46 @@ class Memory:
 
         logger.info("Extracted %d facts from conversation", len(facts))
 
-        # Step 2: For each fact, decide and execute the operation
-        for fact in facts:
-            fact_text = fact.get("text", "")
-            confidence = fact.get("confidence", 0.5)
-            if not fact_text:
-                continue
+        # Step 2: Process facts concurrently via the global thread pool.
+        # Each fact is independent — no data dependency between facts.
+        # The Semaphore prevents a single add() from monopolising the pool.
+        valid_facts = [
+            f for f in facts
+            if f.get("text", "")
+        ]
+
+        def _guarded_process(fact: Dict[str, Any]) -> Optional[MemoryItem]:
+            """Acquire semaphore, process one fact, release."""
+            self._call_sem.acquire()
             try:
-                item = self._process_fact(
+                return self._process_fact(
                     llm=llm, embedder=embedder, config=config,
-                    fact_text=fact_text, confidence=confidence,
+                    fact_text=fact["text"],
+                    confidence=fact.get("confidence", 0.5),
                     user_id=user_id, session_id=session_id,
                     source_context=conversation, metadata=metadata,
                 )
+            except Exception:
+                logger.exception("Error processing fact: %s", fact["text"][:60])
+                return None
+            finally:
+                self._call_sem.release()
+
+        # Submit all facts to the pool; collect futures in order
+        futures: List[Future] = [
+            self._pool.submit(_guarded_process, f)
+            for f in valid_facts
+        ]
+
+        # Gather results, preserving order, isolating per-fact errors
+        for future in futures:
+            try:
+                item = future.result()
                 if item is not None:
                     results.append(item)
             except Exception:
-                logger.exception("Error processing fact: %s", fact_text)
+                # Should not happen — exceptions caught inside _guarded_process
+                logger.exception("Unexpected error in fact processing future")
 
         return results
 
@@ -314,6 +365,20 @@ class Memory:
         records = self._history_store.get_history(memory_id)
         return [r.model_dump() for r in records]
 
+    # ------------------------------------------------------------------
+    # lifecycle
+    # ------------------------------------------------------------------
+
+    def close(self) -> None:
+        """Shut down the thread pool and release resources.
+
+        Waits for all in-flight fact-processing tasks to finish before
+        returning.  Safe to call multiple times.
+        """
+        self._pool.shutdown(wait=True)
+        self._history_store.close()
+        logger.info("Memory system shut down")
+
     # ==================================================================
     # Internal methods
     # ==================================================================
@@ -324,8 +389,11 @@ class Memory:
             {"role": "user", "content": FACT_EXTRACTION_USER_TEMPLATE.format(
                 conversation=conversation)},
         ]
-        logger.info("messages = %s", messages)
-        response = llm.generate(messages=messages, response_format={"type": "json_object"})
+        response = llm.generate(
+            messages=messages,
+            response_format={"type": "json_object"},
+            prompt_name="FACT_EXTRACTION",
+        )
         try:
             return json.loads(response).get("facts", [])
         except json.JSONDecodeError:
@@ -359,7 +427,10 @@ class Memory:
                 existing_memories=existing_text, new_fact=fact_text)},
         ]
         decision_response = llm.generate(
-            messages=decision_messages, response_format={"type": "json_object"})
+            messages=decision_messages,
+            response_format={"type": "json_object"},
+            prompt_name="UPDATE_DECISION",
+        )
 
         try:
             decision = json.loads(decision_response)

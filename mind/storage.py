@@ -3,11 +3,14 @@
 import json
 import logging
 import sqlite3
+import threading
+import time
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from mind.config.models import HistoryRecord, MemoryOperation
 from mind.config.schema import HistoryStoreConfig
+from mind.ops_logger import ops
 from mind.utils import generate_id, get_utc_now
 
 logger = logging.getLogger(__name__)
@@ -22,18 +25,26 @@ class SQLiteManager:
 
     def __init__(self, config: HistoryStoreConfig) -> None:
         self.db_path = config.db_path
-        self._conn: Optional[sqlite3.Connection] = None
+        self._local = threading.local()
         self._ensure_table()
 
     # ------------------------------------------------------------------
-    # Connection management
+    # Connection management (per-thread, thread-safe)
     # ------------------------------------------------------------------
 
     def _get_conn(self) -> sqlite3.Connection:
-        if self._conn is None:
-            self._conn = sqlite3.connect(self.db_path)
-            self._conn.row_factory = sqlite3.Row
-        return self._conn
+        """Return a per-thread SQLite connection.
+
+        Uses ``threading.local()`` so each thread gets its own connection,
+        avoiding the ``sqlite3.ProgrammingError`` that occurs when a
+        connection is used across threads.
+        """
+        conn = getattr(self._local, "conn", None)
+        if conn is None:
+            conn = sqlite3.connect(self.db_path)
+            conn.row_factory = sqlite3.Row
+            self._local.conn = conn
+        return conn
 
     def _ensure_table(self) -> None:
         conn = self._get_conn()
@@ -85,6 +96,7 @@ class SQLiteManager:
             metadata=metadata or {},
         )
 
+        t0 = time.perf_counter()
         conn = self._get_conn()
         conn.execute(
             """
@@ -105,10 +117,17 @@ class SQLiteManager:
             ),
         )
         conn.commit()
+        elapsed = time.perf_counter() - t0
+
+        ops.db_op(
+            "INSERT", "memory_history", self.db_path, elapsed,
+            detail=f"{operation.value} | mem={memory_id}",
+        )
         return record
 
     def get_history(self, memory_id: str) -> List[HistoryRecord]:
         """Get all history records for a given memory, ordered by time."""
+        t0 = time.perf_counter()
         conn = self._get_conn()
         cursor = conn.execute(
             """
@@ -135,10 +154,17 @@ class SQLiteManager:
                     metadata=json.loads(row["metadata"]),
                 )
             )
+        elapsed = time.perf_counter() - t0
+
+        ops.db_op(
+            "SELECT", "memory_history", self.db_path, elapsed,
+            detail=f"mem={memory_id}", rows=len(records),
+        )
         return records
 
     def close(self) -> None:
-        """Close the database connection."""
-        if self._conn is not None:
-            self._conn.close()
-            self._conn = None
+        """Close the current thread's database connection."""
+        conn = getattr(self._local, "conn", None)
+        if conn is not None:
+            conn.close()
+            self._local.conn = None

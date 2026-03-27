@@ -24,7 +24,7 @@ class AnthropicLLM(BaseLLM):
             "content-type": "application/json",
         }
 
-    def generate(
+    def _generate(
         self,
         messages: List[Dict[str, str]],
         response_format: Optional[Dict[str, Any]] = None,
@@ -50,7 +50,6 @@ class AnthropicLLM(BaseLLM):
                               "\n\nIMPORTANT: Respond with valid JSON only, "
                               "no markdown fences, no extra text.").strip()
 
-        logger.debug("Anthropic call: model=%s, url=%s", self.config.model, self.url)
         response = httpx.post(self.url, headers=self.headers, json=body, timeout=120.0)
         response.raise_for_status()
         data = response.json()
