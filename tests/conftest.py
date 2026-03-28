@@ -21,11 +21,17 @@ def history_store(tmp_path):
 def memory_config(tmp_path):
     """Create a MemoryConfig for testing.
 
-    Loads mindt.toml (test config), then overrides storage paths for isolation.
-    API credentials come from mindt.toml — fill them there before running.
+    Loads mindt.toml (test config) and overrides storage paths for isolation.
+    The LLM and embedding backends are selected by the TOML itself.
+
+    The returned config can be passed directly to ``Memory(config=...)``.
     """
     mgr = ConfigManager(toml_path=_DEFAULT_TEST_TOML)
     return mgr.get(overrides={
-        "vector_store": {"collection_name": "test_memories"},
+        "vector_store": {
+            "collection_name": f"test_memories_{tmp_path.name}",
+            "url": "",
+            "api_key": "",
+        },
         "history_store": {"db_path": str(tmp_path / "test_history.db")},
     })

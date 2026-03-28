@@ -13,7 +13,7 @@ MIND 是一个 AI 记忆质量层（Memory Quality Layer），核心目标不是
 - **逻辑删除**：status=active/deleted，已删除记忆不参与检索
 - **操作历史**：SQLite 记录完整操作日志
 - **多协议 LLM**：支持 OpenAI / Anthropic / Google 三协议，可自定义 provider
-- **TOML 配置**：所有配置集中在 `mind.toml`，支持运行时 override
+- **TOML 配置**：所有配置集中在 `mind.toml`，支持构造时 override
 
 ## 快速开始
 
@@ -83,19 +83,20 @@ m.delete(memory_id=results[0].id)
 history = m.history(memory_id=results[0].id)
 ```
 
-### 5. 运行时 Override
+### 5. 构造时 Override
 
-每个 API 方法都支持 `overrides` 参数，上层服务可动态修改配置：
+`Memory` 构造函数支持 `overrides` 参数，一次性覆盖 TOML 配置：
 
 ```python
-# 单次调用用不同的模型
-m.add(messages=[...], user_id="alice",
-      overrides={"llm": {"provider": "openai"}})
+# 构造时指定不同的模型
+m = Memory(overrides={"llm": {"provider": "openai"}})
 
-# 单次调用调高 temperature
-m.add(messages=[...], user_id="alice",
-      overrides={"llm": {"temperature": 0.5}})
+# 构造时调高 temperature
+m = Memory(overrides={"llm": {"temperature": 0.5}})
 ```
+
+所有依赖对象（LLM、Embedder 等）在构造时创建并固定，后续方法调用不再接受配置变更。
+若需不同配置，请创建新的 `Memory` 实例。
 
 ## 配置说明
 
@@ -122,8 +123,7 @@ mind.toml
 # 离线单元测试（无需 API Key）
 python -m pytest tests/test_storage.py -v
 
-# 端到端测试（需要在 mindt.toml 中配好 API Key）
-# 测试读取 mindt.toml，与正式配置 mind.toml 隔离
+# Memory 流程测试（由 mindt.toml 切换到 fake LLM / fake embedding，无需 API Key）
 python -m pytest tests/test_memory.py -v
 ```
 

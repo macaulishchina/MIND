@@ -5,7 +5,7 @@
 # =============================================================================
 
 [llm]
-provider    = "openai"
+provider    = "openai"          # openai | anthropic | google | fake | other provider
 temperature = 0.0
 
 [llm.openai]
@@ -15,7 +15,7 @@ base_url     = "https://api.openai.com"
 sdk_base     = "/v1"
 llm_suffix   = "/chat/completions"
 embed_suffix = "/embeddings"
-model        = "gpt-4o-mini"
+model        = "gpt-5.4-nano"
 
 [llm.anthropic]
 protocols    = "anthropic"
@@ -24,7 +24,7 @@ base_url     = "https://api.anthropic.com"
 sdk_base     = ""
 llm_suffix   = "/v1/messages"
 embed_suffix = ""
-model        = "claude-sonnet-4-20250514"
+model        = "claude-haiku-4-5-20251001"
 
 [llm.google]
 protocols    = "google"
@@ -33,29 +33,55 @@ base_url     = "https://generativelanguage.googleapis.com"
 sdk_base     = ""
 llm_suffix   = "/v1beta/models/{model}:generateContent"
 embed_suffix = ""
-model        = "gemini-2.0-flash"
+model        = "gemini-3.1-flash-lite-preview"
+
+[llm.fake]
+protocols    = "fake"
+api_key      = ""
+base_url     = ""
+sdk_base     = ""
+llm_suffix   = ""
+embed_suffix = ""
+model        = "fake-memory-test"
 
 # 示例：通过 template 继承添加第三方 provider
-# [llm.deepseek]
-# template = "llm.openai"
-# api_key  = ""
-# base_url = "https://api.deepseek.com"
-# model    = "deepseek-chat"
+[llm.deepseek]
+template     = "llm.openai"
+api_key      = ""
+base_url     = "https://api.deepseek.com"
+model        = "deepseek-chat"
+
+[llm.aliyun]
+template     = "llm.openai"
+api_key      = ""
+base_url     = "https://dashscope.aliyuncs.com"
+sdk_base     = "/compatible-mode/v1"
+model        = "deepseek-v3.2"
 
 [embedding]
 protocols    = "openai-embedding"
-model        = "text-embedding-3-small"
+model        = "text-embedding-v4"
 api_key      = ""                # 填入 Embedding 服务的 API Key
-base_url     = "https://api.openai.com"
+base_url     = "https://dashscope.aliyuncs.com/compatible-mode"
 sdk_base     = "/v1"
 embed_suffix = "/embeddings"
-dimensions   = 1536
+dimensions   = 1024
+
+# 若需使用本地 fake embedding，可切换为：
+# protocols    = "fake-embedding"
+# model        = "fake-memory-embedding"
+# api_key      = ""
+# base_url     = ""
+# sdk_base     = "/v1"
+# embed_suffix = "/embeddings"
+# dimensions   = 128
 
 [vector_store]
 provider        = "qdrant"
 collection_name = "mind_memories"
-url             = ""
-api_key         = ""
+url             = ""                # 留空 = in-memory 模式（进程退出数据丢失）
+                                    # 填写后连接远程 Qdrant 服务，如 "http://localhost:6333"
+api_key         = ""                # 仅连接 Qdrant Cloud 时需要，本地开发留空
 on_disk         = false
 
 [history_store]
@@ -74,11 +100,11 @@ ops_database     = true        # 数据库操作日志（💾）
 verbose          = false       # 详细模式：显示每次操作的原始输入/输出（调试用）
 
 [retrieval]
-search_top_k     = 5
-similarity_top_k = 5
+search_top_k     = 5           # search() 返回的最大结果数
+similarity_top_k = 5           # add() 时去重搜索的 Top-K
 
 [concurrency]
-max_workers           = 8    # 写操作全局线程池大小
+max_workers           = 20   # 写操作全局线程池大小
 min_available_workers = 2    # 保底保留线程数，防止单次 add 饿死其他调用
                              # 单次 add 最大并行度 = max_workers - min_available_workers
                              # 设为 0 = 不保底；max_workers = 1 = 完全串行

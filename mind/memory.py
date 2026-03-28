@@ -7,9 +7,8 @@ Usage::
     m = Memory()                           # loads mind.toml defaults
     m.add(messages=[...], user_id="alice")
 
-    # Override config at call time
-    m.add(messages=[...], user_id="alice",
-          overrides={"llm": {"model": "gpt-4o", "temperature": 0.3}})
+    # Override config at construction time
+    m = Memory(overrides={"llm": {"model": "gpt-4o", "temperature": 0.3}})
 """
 
 import json
@@ -44,41 +43,45 @@ logger = logging.getLogger(__name__)
 class Memory:
     """MIND Memory — add, search, get, update, delete, and track history.
 
-    Every public method accepts an optional ``overrides`` dict that is
-    deep-merged on top of the base config for that single call. This
-    allows upstream services to change model, temperature, provider, etc.
-    on the fly without recreating the Memory instance.
+    All configuration and dependency objects (LLM client, embedder, vector
+    store, etc.) are resolved once at construction time and shared across
+    all subsequent method calls.  To use different settings, create a new
+    ``Memory`` instance.
     """
 
     def __init__(
         self,
         config: Optional[MemoryConfig] = None,
         toml_path: Optional[Union[str, Path]] = None,
+        overrides: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Initialize the Memory system.
 
         Args:
             config: A pre-built MemoryConfig (e.g. from ConfigManager.get()).
-                    If provided, toml_path is ignored.
+                    If provided, *toml_path* and *overrides* are ignored.
             toml_path: Path to a TOML config file. Defaults to ``mind.toml``.
+            overrides: Optional config overrides deep-merged on top of the
+                       TOML config at construction time.
         """
         if config is not None:
-            self._manager = ConfigManager.from_dict({})
-            self._base_config = config
+            self._config = config
         else:
-            self._manager = ConfigManager(toml_path)
-            self._base_config = self._manager.get()
+            manager = ConfigManager(toml_path)
+            self._config = manager.get(overrides)
 
         # Set up logging based on config (only once per process)
-        self._setup_logging(self._base_config.logging)
+        self._setup_logging(self._config.logging)
 
-        # Infrastructure components (shared across calls, not LLM-dependent)
-        self._vector_store = VectorStoreFactory.create(self._base_config.vector_store)
-        self._history_store = SQLiteManager(self._base_config.history_store)
-        self._vector_store.create_collection(self._base_config.embedding.dimensions)
+        # ── Dependency objects (fixed for the lifetime of this instance) ──
+        self.llm = LlmFactory.create(self._config.llm)
+        self.embedder = EmbedderFactory.create(self._config.embedding)
+        self._vector_store = VectorStoreFactory.create(self._config.vector_store)
+        self._history_store = SQLiteManager(self._config.history_store)
+        self._vector_store.create_collection(self._config.embedding.dimensions)
 
         # ── Concurrency infrastructure ──
-        cc = self._base_config.concurrency
+        cc = self._config.concurrency
         if cc.min_available_workers >= cc.max_workers:
             raise ValueError(
                 f"min_available_workers ({cc.min_available_workers}) must be "
@@ -97,7 +100,7 @@ class Memory:
         )
 
     # ══════════════════════════════════════════════════════════════════
-    # Bootstrap (logging, config, factory helpers)
+    # Bootstrap (logging)
     # ══════════════════════════════════════════════════════════════════
 
     @staticmethod
@@ -140,24 +143,6 @@ class Memory:
             verbose=log_cfg.verbose,
         )
 
-    def _resolve_config(self, overrides: Optional[Dict[str, Any]] = None) -> MemoryConfig:
-        """Get the effective config for this call.
-
-        If overrides is None, returns the base config (zero-cost).
-        If overrides is provided, deep-merges on top and re-resolves.
-        """
-        if not overrides:
-            return self._base_config
-        return self._manager.get(overrides)
-
-    def _make_llm(self, config: MemoryConfig):
-        """Create an LLM client from the resolved config."""
-        return LlmFactory.create(config.llm)
-
-    def _make_embedder(self, config: MemoryConfig):
-        """Create an Embedder client from the resolved config."""
-        return EmbedderFactory.create(config.embedding)
-
     # ══════════════════════════════════════════════════════════════════
     # Public interface
     # ══════════════════════════════════════════════════════════════════
@@ -168,7 +153,6 @@ class Memory:
         user_id: str,
         session_id: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
-        overrides: Optional[Dict[str, Any]] = None,
     ) -> List[MemoryItem]:
         """Extract facts from a conversation and store them as memories.
 
@@ -177,15 +161,10 @@ class Memory:
             user_id: The user this memory belongs to.
             session_id: Optional session identifier for source tracking.
             metadata: Optional extra metadata to attach.
-            overrides: Optional config overrides for this call.
 
         Returns:
             List of MemoryItem objects that were created or updated.
         """
-        config = self._resolve_config(overrides)
-        llm = self._make_llm(config)
-        embedder = self._make_embedder(config)
-
         conversation = parse_messages(messages)
         results: List[MemoryItem] = []
 
@@ -193,7 +172,7 @@ class Memory:
         n_msgs = len(messages)
         logger.info("📝 [ADD] ── START | user=%s | %d messages ──", user_id, n_msgs)
 
-        facts = self._extract_facts(llm, conversation)
+        facts = self._extract_facts(self.llm, conversation)
         if not facts:
             elapsed = time.perf_counter() - add_t0
             logger.info(
@@ -216,7 +195,6 @@ class Memory:
             self._call_sem.acquire()
             try:
                 return self._process_fact(
-                    llm=llm, embedder=embedder, config=config,
                     fact_text=fact["text"],
                     confidence=fact.get("confidence", 0.5),
                     user_id=user_id, session_id=session_id,
@@ -259,7 +237,6 @@ class Memory:
         query: str,
         user_id: str,
         limit: Optional[int] = None,
-        overrides: Optional[Dict[str, Any]] = None,
     ) -> List[MemoryItem]:
         """Search for memories relevant to the query.
 
@@ -267,13 +244,10 @@ class Memory:
             query: The search query.
             user_id: Only return memories for this user.
             limit: Max results (defaults to config.retrieval.search_top_k).
-            overrides: Optional config overrides for this call.
         """
-        config = self._resolve_config(overrides)
-        embedder = self._make_embedder(config)
-        limit = limit or config.retrieval.search_top_k
+        limit = limit or self._config.retrieval.search_top_k
 
-        query_vector = embedder.embed(query)
+        query_vector = self.embedder.embed(query)
         raw_results = self._vector_store.search(
             query_vector=query_vector, limit=limit,
             filters={"user_id": user_id, "status": MemoryStatus.ACTIVE.value},
@@ -305,19 +279,15 @@ class Memory:
         self,
         memory_id: str,
         content: str,
-        overrides: Optional[Dict[str, Any]] = None,
     ) -> Optional[MemoryItem]:
         """Manually update a memory's content (re-embeds)."""
-        config = self._resolve_config(overrides)
-        embedder = self._make_embedder(config)
-
         existing = self.get(memory_id)
         if existing is None:
             logger.warning("Memory %s not found for update", memory_id)
             return None
 
         old_content = existing.content
-        new_vector = embedder.embed(content)
+        new_vector = self.embedder.embed(content)
         now = get_utc_now()
 
         self._vector_store.update(
@@ -401,8 +371,6 @@ class Memory:
         self,
         fact_text: str,
         user_id: str,
-        embedder,
-        config: MemoryConfig,
     ) -> tuple:
         """Embed a fact and find similar existing memories.
 
@@ -412,11 +380,11 @@ class Memory:
             *temp_to_real* maps temporary string IDs ("0", "1", …) to real
             memory IDs (used later by the decision stage).
         """
-        fact_vector = embedder.embed(fact_text)
+        fact_vector = self.embedder.embed(fact_text)
 
         similar = self._vector_store.search(
             query_vector=fact_vector,
-            limit=config.retrieval.similarity_top_k,
+            limit=self._config.retrieval.similarity_top_k,
             filters={"user_id": user_id, "status": MemoryStatus.ACTIVE.value},
         )
 
@@ -476,7 +444,6 @@ class Memory:
         fact_text: str,
         fact_vector: list,
         temp_to_real: Dict[str, str],
-        embedder,
         confidence: float,
         user_id: str,
         session_id: Optional[str],
@@ -490,7 +457,6 @@ class Memory:
             fact_text: Original fact text (fallback for ADD text).
             fact_vector: The embedding vector from ``_retrieve_similar``.
             temp_to_real: Temporary-ID → real-ID mapping from ``_retrieve_similar``.
-            embedder: Embedder client (needed for UPDATE re-embedding).
             confidence: Extraction confidence score.
             user_id: Owner of the memory.
             session_id: Optional session identifier.
@@ -504,7 +470,7 @@ class Memory:
 
         if action == "ADD":
             return self._execute_add(
-                embedder=embedder, text=decision.get("text", fact_text),
+                text=decision.get("text", fact_text),
                 vector=fact_vector, confidence=confidence, user_id=user_id,
                 session_id=session_id, source_context=source_context,
                 metadata=metadata)
@@ -518,12 +484,12 @@ class Memory:
                     temp_id,
                 )
                 return self._execute_add(
-                    embedder=embedder, text=decision.get("text", fact_text),
+                    text=decision.get("text", fact_text),
                     vector=fact_vector, confidence=confidence, user_id=user_id,
                     session_id=session_id, source_context=source_context,
                     metadata=metadata)
             return self._execute_update(
-                embedder=embedder, old_memory_id=real_id,
+                old_memory_id=real_id,
                 new_text=decision.get("text", fact_text),
                 confidence=confidence, user_id=user_id,
                 session_id=session_id, source_context=source_context,
@@ -545,7 +511,7 @@ class Memory:
     # ══════════════════════════════════════════════════════════════════
 
     def _process_fact(
-        self, llm, embedder, config: MemoryConfig,
+        self,
         fact_text: str, confidence: float, user_id: str,
         session_id: Optional[str], source_context: str,
         metadata: Optional[Dict[str, Any]],
@@ -558,11 +524,10 @@ class Memory:
         """
         fact_vector, similar, temp_to_real = self._retrieve_similar(
             fact_text=fact_text, user_id=user_id,
-            embedder=embedder, config=config,
         )
 
         decision = self._decide_action(
-            fact_text=fact_text, similar_results=similar, llm=llm,
+            fact_text=fact_text, similar_results=similar, llm=self.llm,
         )
         if decision is None:
             return None
@@ -570,13 +535,13 @@ class Memory:
         return self._execute_action(
             decision=decision, fact_text=fact_text,
             fact_vector=fact_vector, temp_to_real=temp_to_real,
-            embedder=embedder, confidence=confidence,
+            confidence=confidence,
             user_id=user_id, session_id=session_id,
             source_context=source_context, metadata=metadata,
         )
 
     def _execute_add(
-        self, embedder, text: str, vector: List[float], confidence: float,
+        self, text: str, vector: List[float], confidence: float,
         user_id: str, session_id: Optional[str], source_context: str,
         metadata: Optional[Dict[str, Any]],
     ) -> MemoryItem:
@@ -598,7 +563,7 @@ class Memory:
         return self._payload_to_item(memory_id, payload)
 
     def _execute_update(
-        self, embedder, old_memory_id: str, new_text: str,
+        self, old_memory_id: str, new_text: str,
         confidence: float, user_id: str, session_id: Optional[str],
         source_context: str, metadata: Optional[Dict[str, Any]],
     ) -> MemoryItem:
@@ -606,7 +571,7 @@ class Memory:
         old_memory = self.get(old_memory_id)
         old_content = old_memory.content if old_memory else None
 
-        new_vector = embedder.embed(new_text)
+        new_vector = self.embedder.embed(new_text)
         now = get_utc_now()
         new_memory_id = generate_id()
         payload = {

@@ -15,6 +15,7 @@ class LlmFactory:
         "openai": "mind.llms.openai.OpenAILLM",
         "anthropic": "mind.llms.anthropic.AnthropicLLM",
         "google": "mind.llms.google.GoogleLLM",
+        "fake": "mind.llms.fake.FakeLLM",
     }
 
     @classmethod

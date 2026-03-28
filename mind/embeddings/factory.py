@@ -9,6 +9,7 @@ class EmbedderFactory:
 
     _protocols_map = {
         "openai-embedding": "mind.embeddings.openai.OpenAIEmbedding",
+        "fake-embedding": "mind.embeddings.fake.FakeEmbedding",
     }
 
     @classmethod
