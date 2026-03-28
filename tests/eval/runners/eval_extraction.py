@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -58,6 +59,10 @@ class DatasetSpec:
     focus: str
     description: str
     cases: list[dict[str, Any]]
+
+
+def _configure_runner_logging(cfg) -> None:
+    Memory._setup_logging(cfg.logging)
 
 
 def _expected_match_labels(expected: dict[str, Any]) -> list[str]:
@@ -390,6 +395,12 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Exit with code 1 when any configured metric target is not met",
     )
+    parser.add_argument(
+        "--concurrency",
+        type=int,
+        default=1,
+        help="Number of parallel workers for case evaluation (default: 1 = sequential)",
+    )
     return parser.parse_args()
 
 
@@ -401,17 +412,30 @@ def main() -> int:
         raise ValueError("No extraction datasets found")
 
     cfg = ConfigManager(toml_path=toml_path).get()
+    _configure_runner_logging(cfg)
     llm = LlmFactory.create(cfg.llm)
 
+    concurrency = max(1, args.concurrency)
     reports: list[dict[str, Any]] = []
     summaries: list[str] = []
     multi_dataset = len(dataset_paths) > 1
     for dataset_path in dataset_paths:
         dataset = _load_dataset(dataset_path)
-        case_results = [
-            _evaluate_case(llm, case, cfg.llm.extraction_temperature)
-            for case in dataset.cases
-        ]
+        if concurrency <= 1:
+            case_results = [
+                _evaluate_case(llm, case, cfg.llm.extraction_temperature)
+                for case in dataset.cases
+            ]
+        else:
+            case_results: list[CaseResult] = [None] * len(dataset.cases)  # type: ignore[list-item]
+            with ThreadPoolExecutor(max_workers=concurrency) as pool:
+                future_to_idx = {
+                    pool.submit(_evaluate_case, llm, case, cfg.llm.extraction_temperature): idx
+                    for idx, case in enumerate(dataset.cases)
+                }
+                for future in as_completed(future_to_idx):
+                    idx = future_to_idx[future]
+                    case_results[idx] = future.result()
         report = build_report(dataset, case_results, toml_path)
         output_path = _dataset_output_path(dataset.path, args.output, multi_dataset)
         output_path.parent.mkdir(parents=True, exist_ok=True)
