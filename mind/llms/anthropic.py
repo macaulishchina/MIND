@@ -28,6 +28,7 @@ class AnthropicLLM(BaseLLM):
         self,
         messages: List[Dict[str, str]],
         response_format: Optional[Dict[str, Any]] = None,
+        temperature: Optional[float] = None,
     ) -> str:
         system_text = ""
         conversation: List[Dict[str, str]] = []
@@ -40,7 +41,9 @@ class AnthropicLLM(BaseLLM):
         body: Dict[str, Any] = {
             "model": self.config.model,
             "max_tokens": 4096,
-            "temperature": self.config.temperature,
+            "temperature": (
+                self.config.temperature if temperature is None else temperature
+            ),
             "messages": conversation,
         }
         if system_text.strip():

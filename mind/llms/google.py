@@ -26,6 +26,7 @@ class GoogleLLM(BaseLLM):
         self,
         messages: List[Dict[str, str]],
         response_format: Optional[Dict[str, Any]] = None,
+        temperature: Optional[float] = None,
     ) -> str:
         system_text = ""
         contents: List[Dict[str, Any]] = []
@@ -38,7 +39,11 @@ class GoogleLLM(BaseLLM):
 
         body: Dict[str, Any] = {
             "contents": contents,
-            "generationConfig": {"temperature": self.config.temperature},
+            "generationConfig": {
+                "temperature": (
+                    self.config.temperature if temperature is None else temperature
+                )
+            },
         }
         if system_text.strip():
             body["systemInstruction"] = {"parts": [{"text": system_text.strip()}]}

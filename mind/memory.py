@@ -172,7 +172,11 @@ class Memory:
         n_msgs = len(messages)
         logger.info("📝 [ADD] ── START | user=%s | %d messages ──", user_id, n_msgs)
 
-        facts = self._extract_facts(self.llm, conversation)
+        facts = self._extract_facts(
+            self.llm,
+            conversation,
+            temperature=self._config.llm.extraction_temperature,
+        )
         if not facts:
             elapsed = time.perf_counter() - add_t0
             logger.info(
@@ -341,12 +345,17 @@ class Memory:
     # ══════════════════════════════════════════════════════════════════
 
     @staticmethod
-    def _extract_facts(llm, conversation: str) -> List[Dict[str, Any]]:
+    def _extract_facts(
+        llm,
+        conversation: str,
+        temperature: Optional[float] = None,
+    ) -> List[Dict[str, Any]]:
         """Extract memorable facts from a conversation via LLM.
 
         Args:
             llm: The LLM client to use.
             conversation: Formatted conversation text (User/Assistant turns).
+            temperature: Optional per-call override for extraction sampling.
 
         Returns:
             A list of ``{"text": ..., "confidence": ...}`` dicts.
@@ -360,12 +369,66 @@ class Memory:
         response = llm.generate(
             messages=messages,
             response_format={"type": "json_object"},
+            temperature=temperature,
         )
         try:
-            return json.loads(response).get("facts", [])
+            payload = json.loads(response)
         except json.JSONDecodeError:
             logger.error("Failed to parse fact extraction response: %s", response)
             return []
+
+        return Memory._normalize_extracted_facts(payload.get("facts", []))
+
+    @staticmethod
+    def _normalize_extracted_facts(raw_facts: Any) -> List[Dict[str, Any]]:
+        """Clean extraction output before retrieval and decision.
+
+        Keeps the runtime contract compatible with the existing pipeline while
+        removing empty rows, normalizing whitespace and punctuation, and
+        collapsing exact duplicates to the highest-confidence version.
+        """
+        if not isinstance(raw_facts, list):
+            logger.warning("Extraction returned non-list facts payload: %r", raw_facts)
+            return []
+
+        normalized_by_text: Dict[str, Dict[str, Any]] = {}
+        for index, raw_fact in enumerate(raw_facts):
+            if not isinstance(raw_fact, dict):
+                logger.warning("Ignoring malformed fact at index %d: %r", index, raw_fact)
+                continue
+
+            text = Memory._normalize_fact_text(raw_fact.get("text", ""))
+            if not text:
+                continue
+
+            confidence = raw_fact.get("confidence", 0.5)
+            try:
+                confidence_value = float(confidence)
+            except (TypeError, ValueError):
+                logger.warning(
+                    "Invalid confidence for extracted fact '%s': %r",
+                    text,
+                    confidence,
+                )
+                confidence_value = 0.5
+
+            confidence_value = max(0.0, min(1.0, confidence_value))
+            dedupe_key = text.casefold()
+            candidate = {"text": text, "confidence": confidence_value}
+            existing = normalized_by_text.get(dedupe_key)
+            if existing is None or confidence_value > existing["confidence"]:
+                normalized_by_text[dedupe_key] = candidate
+
+        return list(normalized_by_text.values())
+
+    @staticmethod
+    def _normalize_fact_text(text: Any) -> str:
+        """Normalize extracted fact text while preserving meaning."""
+        if not isinstance(text, str):
+            return ""
+
+        normalized = " ".join(text.strip().split())
+        return normalized.rstrip(" .,!?:;\t\r\n")
 
     def _retrieve_similar(
         self,

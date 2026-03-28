@@ -1,10 +1,36 @@
-# add() 分阶段优化 — 阶段划分与评估体系设计
+# Change Proposal: add() Phase Evaluation and Extraction Hardening
 
-> Status: **Draft** · Date: 2026-03-27 · Author: agent
+> Change ID: **add-phase-optimization**
+> Status: **Implementing** · Date: 2026-03-28 · Author: agent
+> Type: **feature** · Spec impact: **update required** · Verification: **feature**
 >
-> 回答两个核心问题：
-> 1. add 有几个阶段？
-> 2. 如何设计测试评估迭代每个阶段的能力？
+> 本变更在不扩大 MVP 产品边界的前提下，完成两件事：
+> 1. 把 `Memory.add()` 的阶段划分和评估方式写清楚
+> 2. 先落一批 extraction 阶段的稳健性增强：prompt 重构、结果规范化、单次调用温度控制
+
+## Reality Check
+
+- 提取阶段可以独立优化，但它的收益会受到后续 decision 逐条处理模式的限制
+- 当前 `confidence` 仍主要用于记录，不参与 decision，因此本轮只做校准增强，不扩大其运行时职责
+- 本轮不引入新的 first-class memory types，也不改变主返回 schema，避免把 prompt 优化和数据模型扩张绑死
+
+## Acceptance Signals
+
+- extraction 可通过单独测试验证温度覆盖和结果规范化行为
+- prompt 重构后不破坏现有 `add/search/update/delete` 基本回归
+- `Memory.add()` 仍保持 `{text, confidence}` 的兼容输出契约
+
+## Verification Plan
+
+- 运行聚焦测试：`tests/test_extraction.py` 与 `tests/test_memory.py`
+- 手工检查 `Doc/evolution/memory.add/` 下文档是否与实现一致
+
+## Approval
+
+- [x] Proposal reviewed
+- [x] Important conflicts and feasibility risks surfaced
+- [x] Spec impact confirmed
+- [x] Ready to finalize tasks and implement
 
 ---
 

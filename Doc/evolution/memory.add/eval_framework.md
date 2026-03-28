@@ -12,6 +12,15 @@
 - **可迭代**：评估结果存档，修改前后可对比
 - **数据驱动**：JSON 数据集描述测试用例，与代码解耦
 - **可复现**：固定 temperature=0，相同输入应产生一致结果
+- **数据集分焦点**：按 atomicity / exclusion / temporal / multiturn 等测试重点拆分数据集
+- **覆盖优先于数量**：每类重点只保留 2 到 3 个平行实例，避免靠堆数量制造表面稳定性
+- **报告可诊断**：输出不仅要有总分，还要能指出漏提、乱提、数量失控、空 case 污染等具体短板
+
+当前实践建议：
+
+- 每个 extraction 数据集维持在 10 个 case 左右
+- 每个数据集内部按 3 到 5 个子问题组织，每个子问题 2 到 3 个平行实例
+- case 扩充的目标是补边界，不是重复证明已经覆盖的能力
 
 ---
 
@@ -21,7 +30,11 @@
 tests/
 ├── eval/
 │   ├── datasets/
-│   │   ├── extraction_cases.json     # extraction 测试集
+│   │   ├── extraction_cases.json     # extraction smoke 测试集
+│   │   ├── extraction_atomicity_cases.json
+│   │   ├── extraction_exclusion_cases.json
+│   │   ├── extraction_temporal_cases.json
+│   │   └── extraction_multiturn_cases.json
 │   │   ├── retrieval_cases.json      # retrieval 测试集
 │   │   ├── decision_cases.json       # decision 测试集
 │   │   └── e2e_golden.json           # 端到端测试集
@@ -41,22 +54,25 @@ tests/
 ### 3.1 数据集格式
 
 ```json
-[
-  {
-    "id": "ext-001",
-    "description": "多事实简单陈述",
-    "input": "我叫张三，今年28岁，在网易工作，喜欢喝黑咖啡",
-    "expected_facts": [
-      {"text_contains": "张三", "confidence_range": [0.9, 1.0]},
-      {"text_contains": "28", "confidence_range": [0.9, 1.0]},
-      {"text_contains": "网易", "confidence_range": [0.9, 1.0]},
-      {"text_contains": "咖啡", "confidence_range": [0.9, 1.0]}
-    ],
-    "should_not_extract": ["AI", "assistant"],
-    "expected_count_range": [3, 5],
-    "difficulty": "easy"
-  }
-]
+{
+  "name": "extraction_atomicity_cases",
+  "focus": "atomic splitting",
+  "description": "Checks whether one user turn is decomposed into the right number of fact-shaped items.",
+  "cases": [
+    {
+      "id": "atomicity-001",
+      "description": "多事实简单陈述",
+      "input": "我叫张三，今年28岁，在网易工作，喜欢喝黑咖啡",
+      "expected_facts": [
+        {"text_contains": "张三", "confidence_range": [0.9, 1.0]},
+        {"text_contains": "28", "confidence_range": [0.9, 1.0]}
+      ],
+      "should_not_extract": ["assistant"],
+      "expected_count_range": [2, 4],
+      "difficulty": "easy"
+    }
+  ]
+}
 ```
 
 ### 3.2 字段说明
@@ -66,10 +82,23 @@ tests/
 | `id` | string | 唯一标识 |
 | `description` | string | 用例描述 |
 | `input` | string | 输入对话（User/Assistant 格式） |
-| `expected_facts` | array | 期望提取到的 facts，每个含 `text_contains` 和可选 `confidence_range` |
+| `expected_facts` | array | 期望提取到的 facts，每个含 `text_contains` 或 `match_any`，以及可选 `confidence_range` |
 | `should_not_extract` | array | 不应出现在提取结果中的关键词 |
 | `expected_count_range` | [min, max] | 期望的 fact 数量范围 |
 | `difficulty` | string | easy / medium / hard / tricky |
+
+数据集元信息：
+
+- `name`：数据集名字，用于报告展示
+- `focus`：该数据集的测试重点，例如 atomicity / exclusion / temporal
+- `description`：对该数据集目的的简短说明
+- `cases`：该数据集包含的 case 列表
+
+补充说明：
+
+- `text_contains`：适用于输出表述较稳定的场景
+- `match_any`：适用于跨语言、同义改写、允许多种合理表述的场景
+- 对真实 LLM 评估，优先推荐在存在改写空间的 case 中使用 `match_any`，否则容易把“语义正确但措辞不同”的结果误判为失败
 
 ### 3.3 评估指标
 
@@ -80,6 +109,17 @@ tests/
 | **No-Extract Accuracy** | 不应提取的 case 中返回空的比例 | ≥ 95% |
 | **Confidence Accuracy** | 置信度落在 confidence_range 的比例 | ≥ 70% |
 | **Count Accuracy** | fact 数量在 expected_count_range 内的比例 | ≥ 80% |
+| **Normalization Stability** | 重复、空文本、非法 confidence 被正确清洗的比例 | 100% |
+
+建议同时关注以下诊断参数：
+
+- `case_pass_rate`：完全无失败 case 的比例
+- `missing_expectation_rate`：漏提期望 fact 的比例
+- `forbidden_case_rate`：出现不应提取内容的 case 比例
+- `under_count_rate`：提取数量低于最小值的 case 比例
+- `over_count_rate`：提取数量高于最大值的 case 比例
+- `avg_extracted_facts`：每个 case 平均提取多少条
+- `avg_extracted_facts_on_empty_cases`：本该为空的 case 平均被提取多少条
 
 ### 3.4 评估方法
 
@@ -89,7 +129,53 @@ from mind.memory import Memory
 from mind.llms.factory import LlmFactory
 
 llm = LlmFactory.create(config.llm)
-facts = Memory._extract_facts(llm, conversation)
+facts = Memory._extract_facts(
+  llm,
+  conversation,
+  temperature=config.llm.extraction_temperature,
+)
+```
+
+> 注意：`_extract_facts()` 当前不仅负责 JSON 解析，也负责提取结果规范化。
+> 因此 extraction 评估应直接检查最终输出，而不是只检查 LLM 原始返回。
+
+### 3.4.1 实际运行脚本
+
+当前 extraction 评估脚本默认会扫描 `tests/eval/datasets/` 下所有 `extraction*_cases.json` 文件，并为每个数据集分别输出一份报告。
+
+```bash
+python tests/eval/runners/eval_extraction.py --toml mindt.toml
+```
+
+如果只想跑某一个数据集，可显式指定：
+
+```bash
+python tests/eval/runners/eval_extraction.py \
+  --toml mind.toml \
+  --dataset tests/eval/datasets/extraction_temporal_cases.json
+```
+
+如果要使用真实 LLM 评估 extraction，而不是 fake backend，使用：
+
+```bash
+python tests/eval/runners/eval_extraction.py --toml mind.toml
+```
+
+建议说明：
+
+- `mindt.toml`：用于本地回归、流程完整性验证、数据集和 runner 健康检查，不代表真实模型质量
+- `mind.toml`：用于真实 LLM 质量评估，会实际消耗模型调用和 token
+- 若不指定 `--output`，默认按数据集名字输出，例如：`tests/eval/reports/extraction_temporal_cases_report.json`
+- 脚本默认会输出面向人阅读的 summary；如果还需要查看完整 JSON，可加 `--pretty`
+- 如果要把 stdout 作为机器输入而不是人读摘要，可加 `--json-only`
+- 如果希望在指标未达标时直接返回非零退出码，可加 `--fail-on-targets`
+- 若要保留多次实验结果，应显式指定输出路径，例如：
+
+```bash
+python tests/eval/runners/eval_extraction.py \
+  --toml mind.toml \
+  --output tests/eval/reports/2026-03-28_real_llm_extraction_report.json \
+  --pretty
 ```
 
 ### 3.5 推荐测试用例类型
@@ -103,6 +189,7 @@ facts = Memory._extract_facts(llm, conversation)
 | 多轮对话 | 3-5轮对话 | 上下文理解 |
 | 隐含信息 | "我每天写 Python 10 年了" | 推断 "是程序员" |
 | 空对话 | "你好" | 应返回空 |
+| 规范化回归 | 重复行、脏标点、非法 confidence | 输出洁净度 |
 
 ---
 

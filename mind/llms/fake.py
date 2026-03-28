@@ -31,6 +31,7 @@ class FakeLLM(BaseLLM):
         self,
         messages: List[Dict[str, str]],
         response_format: Optional[Dict[str, Any]] = None,
+        temperature: Optional[float] = None,
     ) -> str:
         system_text = "\n".join(
             m.get("content", "") for m in messages if m.get("role") == "system"
@@ -52,9 +53,23 @@ class FakeLLM(BaseLLM):
             if not line.startswith("User:"):
                 continue
             content = line.split(":", 1)[1].strip()
-            if not content or _looks_hypothetical(content):
+            if (
+                not content
+                or _looks_hypothetical(content)
+                or _looks_like_question(content)
+                or _looks_like_temporary_troubleshooting(content)
+            ):
                 continue
-            facts.append({"text": _clean_fact_text(content), "confidence": 0.9})
+            for clause in _split_into_fact_candidates(content):
+                cleaned = _clean_fact_text(clause)
+                if not cleaned or _is_low_value_clause(cleaned):
+                    continue
+                facts.append(
+                    {
+                        "text": cleaned,
+                        "confidence": _estimate_confidence(cleaned),
+                    }
+                )
         return json.dumps({"facts": facts})
 
     def _decision_response(self, prompt_text: str) -> str:
@@ -145,11 +160,115 @@ def _parse_new_fact(prompt_text: str) -> str:
 
 def _looks_hypothetical(text: str) -> bool:
     lowered = text.lower()
-    return lowered.startswith("if ") or lowered.startswith("假如")
+    return (
+        lowered.startswith("if ")
+        or lowered.startswith("假如")
+        or lowered.startswith("如果")
+        or " might " in lowered
+        or " maybe " in lowered
+        or "可能" in text
+    )
+
+
+def _looks_like_question(text: str) -> bool:
+    stripped = text.strip()
+    lowered = stripped.lower()
+    question_starters = (
+        "do you",
+        "can you",
+        "could you",
+        "would you",
+        "what",
+        "why",
+        "how",
+        "should i",
+        "你觉得",
+        "请问",
+        "可以",
+        "能不能",
+        "要不要",
+    )
+    return stripped.endswith(("?", "？")) or lowered.startswith(question_starters)
+
+
+def _looks_like_temporary_troubleshooting(text: str) -> bool:
+    lowered = text.lower()
+    noise_markers = (
+        "timeout",
+        "timed out",
+        "retry",
+        "retried",
+        "restart",
+        "restarting",
+        "command",
+        "stack trace",
+        "error log",
+        "debug",
+        "超时",
+        "重试",
+        "重启",
+        "命令",
+        "报错",
+        "日志",
+        "调试",
+    )
+    return any(marker in lowered for marker in noise_markers)
+
+
+def _split_into_fact_candidates(text: str) -> List[str]:
+    normalized = text.replace("，", ", ").replace("；", "; ")
+    pieces = [normalized]
+    delimiters = [r"\s*,\s*", r"\s*;\s*", r"\s+and\s+", r"\s+but\s+"]
+    for delimiter in delimiters:
+        next_pieces: List[str] = []
+        for piece in pieces:
+            next_pieces.extend(part for part in re.split(delimiter, piece) if part)
+        pieces = next_pieces
+
+    expanded: List[str] = []
+    for piece in pieces:
+        expanded.extend(_split_chinese_transitions(piece))
+
+    return [piece.strip() for piece in expanded if piece.strip()]
+
+
+def _split_chinese_transitions(text: str) -> List[str]:
+    transition_markers = ["现在", "后来", "目前"]
+    for marker in transition_markers:
+        marker_index = text.find(marker)
+        if marker_index > 0:
+            before = text[:marker_index].rstrip(" ,")
+            after = text[marker_index:].lstrip(" ,")
+            return [part for part in [before, after] if part]
+    return [text]
+
+
+def _is_low_value_clause(text: str) -> bool:
+    lowered = text.lower()
+    low_value_markers = (
+        "noted",
+        "thanks",
+        "thank you",
+        "ok",
+        "okay",
+        "nice progress",
+        "收到",
+        "好的",
+        "谢谢",
+    )
+    if any(marker == lowered for marker in low_value_markers):
+        return True
+    return len(text) <= 1
+
+
+def _estimate_confidence(text: str) -> float:
+    if any(marker in text for marker in ["started", "last month", "上周", "上个月", "最近"]):
+        return 0.8
+    return 0.9
 
 
 def _clean_fact_text(text: str) -> str:
-    return text.strip().rstrip(".?!")
+    return text.strip().rstrip(".?!。！？")
 
 
 def _normalize_text(text: str) -> str:

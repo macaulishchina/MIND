@@ -30,11 +30,14 @@ class OpenAILLM(BaseLLM):
         self,
         messages: List[Dict[str, str]],
         response_format: Optional[Dict[str, Any]] = None,
+        temperature: Optional[float] = None,
     ) -> str:
         kwargs: Dict[str, Any] = {
             "model": self.config.model,
             "messages": messages,
-            "temperature": self.config.temperature,
+            "temperature": (
+                self.config.temperature if temperature is None else temperature
+            ),
         }
         if response_format is not None:
             kwargs["response_format"] = response_format

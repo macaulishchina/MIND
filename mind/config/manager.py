@@ -121,6 +121,7 @@ class ConfigManager:
             protocols=provider_cfg.get("protocols", "openai"),
             model=provider_cfg.get("model", ""),
             temperature=llm_globals.get("temperature", 0.0),
+            extraction_temperature=llm_globals.get("extraction_temperature"),
             api_key=provider_cfg.get("api_key", ""),
             base_url=provider_cfg.get("base_url", ""),
             sdk_base=provider_cfg.get("sdk_base", ""),

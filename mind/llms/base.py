@@ -37,6 +37,7 @@ class BaseLLM(ABC):
         self,
         messages: List[Dict[str, str]],
         response_format: Optional[Dict[str, Any]] = None,
+        temperature: Optional[float] = None,
     ) -> str:
         """Public entry-point — delegates to ``_generate`` with logging."""
         provider = self.provider or getattr(getattr(self, "config", None), "provider", "?")
@@ -56,7 +57,11 @@ class BaseLLM(ABC):
 
         t0 = time.perf_counter()
         try:
-            result = self._generate(messages, response_format)
+            result = self._generate(
+                messages,
+                response_format,
+                temperature=temperature,
+            )
         except Exception:
             elapsed = time.perf_counter() - t0
             ops.llm_error(provider, model, n_msgs, in_tokens, elapsed)
@@ -78,12 +83,14 @@ class BaseLLM(ABC):
         self,
         messages: List[Dict[str, str]],
         response_format: Optional[Dict[str, Any]] = None,
+        temperature: Optional[float] = None,
     ) -> str:
         """Subclass implementation — perform the actual LLM call.
 
         Args:
             messages: List of {"role": ..., "content": ...} dicts.
             response_format: Optional format specification (e.g., JSON mode).
+            temperature: Optional per-call override for the sampling temperature.
 
         Returns:
             The assistant's response text.

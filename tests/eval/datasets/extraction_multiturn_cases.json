@@ -1,0 +1,127 @@
+{
+  "name": "extraction_multiturn_cases",
+  "focus": "multi-turn consolidation",
+  "description": "Checks whether extraction can keep user-relevant facts across short multi-turn exchanges without leaking assistant turns.",
+  "cases": [
+    {
+      "id": "multiturn-001",
+      "description": "preference survives across short dialog",
+      "input": "User: I started learning guitar recently.\nAssistant: Nice.\nUser: I practice every evening for about an hour.\nAssistant: Keep it up.",
+      "expected_facts": [
+        {"match_any": ["learning guitar", "started learning guitar", "吉他"], "confidence_range": [0.6, 1.0]},
+        {"match_any": ["every evening", "an hour", "一个小时"], "confidence_range": [0.6, 1.0]}
+      ],
+      "should_not_extract": ["Keep it up", "Nice"],
+      "expected_count_range": [1, 3],
+      "difficulty": "medium"
+    },
+    {
+      "id": "multiturn-002",
+      "description": "interaction preference stated in conversation",
+      "input": "User: Please keep your answers short.\nAssistant: Sure.\nUser: Bullet points are best for me.\nAssistant: Noted.",
+      "expected_facts": [
+        {"match_any": ["answers short", "keep your answers short", "简短"], "confidence_range": [0.8, 1.0]},
+        {"match_any": ["bullet points", "要点", "列表"], "confidence_range": [0.8, 1.0]}
+      ],
+      "should_not_extract": ["Sure", "Noted"],
+      "expected_count_range": [1, 3],
+      "difficulty": "medium"
+    },
+    {
+      "id": "multiturn-003",
+      "description": "profile details spread across turns",
+      "input": "User: I live in Singapore.\nAssistant: Nice.\nUser: I work at Stripe.\nAssistant: Got it.",
+      "expected_facts": [
+        {"text_contains": "Singapore", "confidence_range": [0.8, 1.0]},
+        {"text_contains": "Stripe", "confidence_range": [0.8, 1.0]}
+      ],
+      "should_not_extract": ["Nice", "Got it"],
+      "expected_count_range": [2, 3],
+      "difficulty": "easy"
+    },
+    {
+      "id": "multiturn-004",
+      "description": "health and diet facts across turns",
+      "input": "User: I am lactose intolerant.\nAssistant: Understood.\nUser: So I only drink oat milk now.\nAssistant: Noted.",
+      "expected_facts": [
+        {"match_any": ["lactose intolerant", "乳糖不耐受"], "confidence_range": [0.8, 1.0]},
+        {"match_any": ["oat milk", "only drink oat milk"], "confidence_range": [0.8, 1.0]}
+      ],
+      "should_not_extract": ["Understood", "Noted"],
+      "expected_count_range": [2, 3],
+      "difficulty": "medium"
+    },
+    {
+      "id": "multiturn-005",
+      "description": "中文多轮工作信息整合",
+      "input": "User: 我现在在字节做AI。\nAssistant: 好的。\nUser: 主要写Python。\nAssistant: 明白。",
+      "expected_facts": [
+        {"match_any": ["字节", "ByteDance"], "confidence_range": [0.8, 1.0]},
+        {"match_any": ["Python", "写Python"], "confidence_range": [0.8, 1.0]}
+      ],
+      "should_not_extract": ["好的", "明白"],
+      "expected_count_range": [2, 3],
+      "difficulty": "easy"
+    },
+    {
+      "id": "multiturn-006",
+      "description": "travel preference disclosed over turns",
+      "input": "User: I usually take trains when I travel.\nAssistant: Nice.\nUser: Window seats are best for me.\nAssistant: Got it.",
+      "expected_facts": [
+        {"match_any": ["take trains", "trains", "高铁"], "confidence_range": [0.8, 1.0]},
+        {"match_any": ["window seats", "window seat"], "confidence_range": [0.8, 1.0]}
+      ],
+      "should_not_extract": ["Nice", "Got it"],
+      "expected_count_range": [2, 3],
+      "difficulty": "medium"
+    },
+    {
+      "id": "multiturn-007",
+      "description": "preference correction over turns",
+      "input": "User: I used to drink tea.\nAssistant: Okay.\nUser: Actually now I only drink coffee.\nAssistant: Noted.",
+      "expected_facts": [
+        {"match_any": ["used to drink tea", "tea"], "confidence_range": [0.8, 1.0]},
+        {"match_any": ["only drink coffee", "coffee"], "confidence_range": [0.8, 1.0]}
+      ],
+      "should_not_extract": ["Okay", "Noted"],
+      "expected_count_range": [2, 3],
+      "difficulty": "medium"
+    },
+    {
+      "id": "multiturn-008",
+      "description": "中文交互偏好多轮说明",
+      "input": "User: 回答尽量简短。\nAssistant: 好的。\nUser: 最好用列表。\nAssistant: 收到。",
+      "expected_facts": [
+        {"match_any": ["简短", "answers short"], "confidence_range": [0.8, 1.0]},
+        {"match_any": ["列表", "bullet points", "要点"], "confidence_range": [0.8, 1.0]}
+      ],
+      "should_not_extract": ["好的", "收到"],
+      "expected_count_range": [1, 3],
+      "difficulty": "medium"
+    },
+    {
+      "id": "multiturn-009",
+      "description": "habit and time preference across turns",
+      "input": "User: I write best in the morning.\nAssistant: Nice.\nUser: I usually block 8am to 10am for deep work.\nAssistant: Great.",
+      "expected_facts": [
+        {"match_any": ["best in the morning", "morning"], "confidence_range": [0.8, 1.0]},
+        {"match_any": ["8am to 10am", "deep work"], "confidence_range": [0.8, 1.0]}
+      ],
+      "should_not_extract": ["Nice", "Great"],
+      "expected_count_range": [2, 3],
+      "difficulty": "medium"
+    },
+    {
+      "id": "multiturn-010",
+      "description": "工具偏好多轮补充",
+      "input": "User: 我平时用Vim。\nAssistant: 明白。\nUser: 终端我更喜欢zsh。\nAssistant: 收到。",
+      "expected_facts": [
+        {"match_any": ["Vim", "用Vim"], "confidence_range": [0.8, 1.0]},
+        {"match_any": ["zsh", "终端更喜欢zsh"], "confidence_range": [0.8, 1.0]}
+      ],
+      "should_not_extract": ["明白", "收到"],
+      "expected_count_range": [2, 3],
+      "difficulty": "easy"
+    }
+  ]
+}

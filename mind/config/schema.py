@@ -30,6 +30,7 @@ class LLMConfig(BaseModel):
     protocols: str = "openai"       # which code implementation to use
     model: str = "gpt-4o-mini"
     temperature: float = 0.0
+    extraction_temperature: Optional[float] = None
     api_key: str = ""
     base_url: str = ""
     sdk_base: str = ""

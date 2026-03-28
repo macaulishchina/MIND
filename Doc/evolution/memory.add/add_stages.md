@@ -42,6 +42,12 @@ add(messages, user_id)
 ### 职责
 从对话中提取可记忆的事实，并评估置信度。
 
+### 当前实现约束
+
+- extraction 仍保持 MVP 兼容输出：`[{text, confidence}, ...]`
+- LLM 返回后会先做轻量规范化，再进入 retrieval：空文本过滤、空白压缩、句末标点清理、字符串级去重、confidence 截断到 `[0, 1]`
+- extraction 调用可单独覆盖 temperature，用于和 decision 阶段区分控制强度
+
 ### 方法签名
 ```python
 @staticmethod
@@ -56,7 +62,7 @@ def _extract_facts(llm, conversation: str) -> List[Dict[str, Any]]
 
 ### 调用链
 ```
-1× LLM 调用 → JSON 解析 → [{text, confidence}, ...]
+1× LLM 调用 → JSON 解析 → 结果规范化 → [{text, confidence}, ...]
 ```
 
 ### 关键质量维度
@@ -66,6 +72,7 @@ def _extract_facts(llm, conversation: str) -> List[Dict[str, Any]]
 | 粒度 | 每条 fact 是单一原子事实，不是复合句 |
 | 置信度准确性 | confidence 值与事实的确定程度匹配 |
 | 过滤能力 | 假设性/条件性语句不被提取 |
+| 输出洁净度 | 重复、空白、无效 confidence 不传播到下游 |
 
 ---
 
