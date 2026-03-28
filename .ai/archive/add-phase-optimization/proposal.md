@@ -1,29 +1,33 @@
-# Change Proposal: add() Phase Evaluation and Extraction Hardening
+# Change Proposal: add() Phase Evaluation, Extraction Hardening, and Black-Box Holdout
 
 > Change ID: **add-phase-optimization**
-> Status: **Implementing** · Date: 2026-03-28 · Author: agent
+> Status: **Completed** · Date: 2026-03-28 · Author: agent
 > Type: **feature** · Spec impact: **update required** · Verification: **feature**
 >
 > 本变更在不扩大 MVP 产品边界的前提下，完成两件事：
 > 1. 把 `Memory.add()` 的阶段划分和评估方式写清楚
 > 2. 先落一批 extraction 阶段的稳健性增强：prompt 重构、结果规范化、单次调用温度控制
+> 3. 增加一个独立的 50 条 extraction 黑盒 holdout 数据集，用于定期评估整体表现而不是日常 case-by-case 调参
 
 ## Reality Check
 
 - 提取阶段可以独立优化，但它的收益会受到后续 decision 逐条处理模式的限制
 - 当前 `confidence` 仍主要用于记录，不参与 decision，因此本轮只做校准增强，不扩大其运行时职责
 - 本轮不引入新的 first-class memory types，也不改变主返回 schema，避免把 prompt 优化和数据模型扩张绑死
+- 黑盒 holdout 集必须与默认难度分层回归集隔离，否则每次真实 LLM 全量回归的成本会显著上升，也会削弱它作为独立表现观测集的价值
 
 ## Acceptance Signals
 
 - extraction 可通过单独测试验证温度覆盖和结果规范化行为
 - prompt 重构后不破坏现有 `add/search/update/delete` 基本回归
 - `Memory.add()` 仍保持 `{text, confidence}` 的兼容输出契约
+- 50 条黑盒数据集覆盖 easy / medium / hard / tricky 各层难度与主要 case 类型，并可通过显式 `--dataset` 运行而不进入默认 top-level 扫描
 
 ## Verification Plan
 
-- 运行聚焦测试：`tests/test_extraction.py` 与 `tests/test_memory.py`
+- 运行聚焦测试：`tests/test_extraction.py`、`tests/test_eval_extraction.py` 与 `tests/test_memory.py`
 - 手工检查 `Doc/evolution/memory.add/` 下文档是否与实现一致
+- 对独立黑盒数据集做至少一次 runner smoke，确认 schema、路径和报告输出正常
 
 ## Approval
 
@@ -97,7 +101,10 @@ Stage 2+3+4 被绑在 `_process_fact()` 方法内，无法独立评估。
 tests/
 ├── eval/
 │   ├── datasets/
-│   │   ├── extraction_cases.json     # Stage 1 测试集
+│   │   ├── extraction_easy_cases.json
+│   │   ├── extraction_medium_cases.json
+│   │   ├── extraction_hard_cases.json
+│   │   ├── extraction_tricky_cases.json
 │   │   ├── retrieval_cases.json      # Stage 2 测试集
 │   │   ├── decision_cases.json       # Stage 3 测试集
 │   │   └── e2e_golden.json           # 端到端测试集

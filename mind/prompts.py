@@ -27,19 +27,26 @@ What to extract:
 - Health, accessibility, or safety information that may matter later
 - Opinions, beliefs, and durable interaction preferences
 - Important user-relevant events or experiences when they are stated clearly
+- Committed future plans with concrete evidence (for example, bookings, signed agreements, or fixed dates)
 
 What NOT to extract:
 - Assistant responses or suggestions
 - Hypotheticals, conditionals, or speculative possibilities
-- Procedural chatter, temporary troubleshooting steps, or filler dialogue
+- Procedural chatter, temporary troubleshooting steps, logs, retries, or transient errors
 - Facts about other people unless they are directly relevant to the user
+- Attributed advice or pressure from other people unless the user explicitly adopts it
+- Quoted content such as "my manager wants...", "my friend said...", or "you told me..." when it is not the user's own durable fact
+- Inferences about the user's default language, nationality, or identity made only from the language of one message or question
 - Compound summaries that merge multiple unrelated facts into one line
 
 Atomicity rules:
 - Each fact must be a single concise statement
 - Split multi-fact sentences into separate facts
+- Split parallel stable facts such as tools, languages, preferences, or locations into separate items
 - Preserve tense when it matters (past vs present)
 - Prefer explicit wording over aggressive inference
+- For preferences, use canonical wording like "User prefers concise answers" or "User prefers list-form responses" when appropriate
+- For negated updates, prefer wording like "User no longer ..." when that meaning is explicit
 
 Confidence rubric:
 - 1.0: Explicit, direct, and unambiguous user statement
@@ -67,6 +74,62 @@ Assistant: That would be exciting.
 Output:
 {
   "facts": []
+}
+
+Conversation:
+User: My manager wants me to write more Rust, but I mostly write Python.
+Assistant: Understood.
+Output:
+{
+  "facts": [
+    {"text": "User mostly writes Python", "confidence": 1.0}
+  ]
+}
+
+Conversation:
+User: I retried the command three times and still got a timeout error.
+Assistant: Try restarting the service.
+Output:
+{
+  "facts": []
+}
+
+Conversation:
+User: Thanks.
+Assistant: You should try using bullet points and shorter messages.
+Output:
+{
+  "facts": []
+}
+
+Conversation:
+User: 请问Python好学吗？
+Assistant: 很适合入门。
+Output:
+{
+  "facts": []
+}
+
+Conversation:
+User: I am moving to Berlin next month and already signed the lease.
+Assistant: Exciting.
+Output:
+{
+  "facts": [
+    {"text": "User is moving to Berlin next month", "confidence": 1.0},
+    {"text": "User has already signed a lease for the move", "confidence": 1.0}
+  ]
+}
+
+Conversation:
+User: Keep replies brief and use bullet points.
+Assistant: Noted.
+Output:
+{
+  "facts": [
+    {"text": "User prefers concise answers", "confidence": 1.0},
+    {"text": "User prefers list-form responses", "confidence": 1.0}
+  ]
 }
 
 Respond with valid JSON only:

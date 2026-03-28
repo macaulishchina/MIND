@@ -1,0 +1,155 @@
+{
+  "name": "extraction_easy_cases",
+  "focus": "difficulty-easy baseline",
+  "description": "Low-ambiguity extraction cases for explicit facts, simple exclusions, and straightforward multi-turn carryover.",
+  "cases": [
+    {
+      "id": "easy-001",
+      "description": "explicit profile bundle should split cleanly",
+      "input": "User: My name is Alice, I work at Stripe, and I drink black coffee every day.\nAssistant: Noted.",
+      "expected_facts": [
+        {"match_any": ["Alice", "name is Alice"], "confidence_range": [0.8, 1.0]},
+        {"match_any": ["Stripe", "works at Stripe"], "confidence_range": [0.8, 1.0]},
+        {"match_any": ["black coffee", "drinks black coffee"], "confidence_range": [0.8, 1.0]}
+      ],
+      "should_not_extract": ["Noted", "Assistant"],
+      "expected_count_range": [2, 4],
+      "difficulty": "easy"
+    },
+    {
+      "id": "easy-002",
+      "description": "中文显式画像应稳定提取",
+      "input": "User: 我叫张三，今年28岁，在网易工作，喜欢喝黑咖啡。\nAssistant: 记住了。",
+      "expected_facts": [
+        {"match_any": ["张三", "name is 张三"], "confidence_range": [0.8, 1.0]},
+        {"match_any": ["28", "28 years old"], "confidence_range": [0.8, 1.0]},
+        {"match_any": ["网易", "NetEase"], "confidence_range": [0.8, 1.0]},
+        {"match_any": ["黑咖啡", "black coffee"], "confidence_range": [0.8, 1.0]}
+      ],
+      "should_not_extract": ["记住了"],
+      "expected_count_range": [3, 5],
+      "difficulty": "easy"
+    },
+    {
+      "id": "easy-003",
+      "description": "simple English hypothetical should be excluded",
+      "input": "User: If I ever move to Tokyo, I might learn Japanese.\nAssistant: That would be exciting.",
+      "expected_facts": [],
+      "should_not_extract": ["Tokyo", "Japanese"],
+      "expected_count_range": [0, 0],
+      "difficulty": "easy"
+    },
+    {
+      "id": "easy-004",
+      "description": "中文假设句不应产生记忆",
+      "input": "User: 如果我以后去日本，可能会学日语。\nAssistant: 听起来不错。",
+      "expected_facts": [],
+      "should_not_extract": ["日本", "日语"],
+      "expected_count_range": [0, 0],
+      "difficulty": "easy"
+    },
+    {
+      "id": "easy-005",
+      "description": "assistant answer to a user question should be ignored",
+      "input": "User: Do you think Python is easy to learn?\nAssistant: Python is a great beginner language.",
+      "expected_facts": [],
+      "should_not_extract": ["Python is a great beginner language"],
+      "expected_count_range": [0, 0],
+      "difficulty": "easy"
+    },
+    {
+      "id": "easy-006",
+      "description": "explicit event and habit can be extracted as normal memory text",
+      "input": "User: I started learning guitar last month and practice every evening.\nAssistant: Nice progress.",
+      "expected_facts": [
+        {"match_any": ["learning guitar", "started learning guitar", "guitar"], "confidence_range": [0.6, 1.0]},
+        {"match_any": ["practice every evening", "every evening"], "confidence_range": [0.6, 1.0]}
+      ],
+      "should_not_extract": ["Nice progress"],
+      "expected_count_range": [1, 3],
+      "difficulty": "easy"
+    },
+    {
+      "id": "easy-007",
+      "description": "semicolon-separated preferences should split",
+      "input": "User: I like tea; I enjoy hiking; I use Vim at work.\nAssistant: Noted.",
+      "expected_facts": [
+        {"match_any": ["tea", "likes tea"], "confidence_range": [0.8, 1.0]},
+        {"match_any": ["hiking", "enjoys hiking"], "confidence_range": [0.8, 1.0]},
+        {"match_any": ["Vim", "uses Vim"], "confidence_range": [0.8, 1.0]}
+      ],
+      "should_not_extract": ["Noted"],
+      "expected_count_range": [3, 4],
+      "difficulty": "easy"
+    },
+    {
+      "id": "easy-008",
+      "description": "simple profile details across turns",
+      "input": "User: I live in Singapore.\nAssistant: Nice.\nUser: I work at Stripe.\nAssistant: Got it.",
+      "expected_facts": [
+        {"match_any": ["Singapore", "lives in Singapore"], "confidence_range": [0.8, 1.0]},
+        {"match_any": ["Stripe", "works at Stripe"], "confidence_range": [0.8, 1.0]}
+      ],
+      "should_not_extract": ["Nice", "Got it"],
+      "expected_count_range": [2, 3],
+      "difficulty": "easy"
+    },
+    {
+      "id": "easy-009",
+      "description": "clear temporal preference shift",
+      "input": "User: I used to drink lattes, but now I only drink americanos.\nAssistant: Understood.",
+      "expected_facts": [
+        {"match_any": ["used to drink lattes", "lattes"], "confidence_range": [0.8, 1.0]},
+        {"match_any": ["only drink americanos", "americanos", "now drinks americanos"], "confidence_range": [0.8, 1.0]}
+      ],
+      "should_not_extract": ["Understood"],
+      "expected_count_range": [2, 3],
+      "difficulty": "easy"
+    },
+    {
+      "id": "easy-010",
+      "description": "中文地点变化应拆开",
+      "input": "User: 我之前住在北京，目前住在上海。\nAssistant: 了解。",
+      "expected_facts": [
+        {"match_any": ["之前住在北京", "北京", "previously lived in Beijing"], "confidence_range": [0.8, 1.0]},
+        {"match_any": ["目前住在上海", "上海", "now lives in Shanghai", "currently lives in Shanghai"], "confidence_range": [0.8, 1.0]}
+      ],
+      "should_not_extract": ["了解"],
+      "expected_count_range": [2, 3],
+      "difficulty": "easy"
+    },
+    {
+      "id": "easy-011",
+      "description": "simple troubleshooting chatter should be ignored",
+      "input": "User: I retried the command three times and got a timeout again.\nAssistant: Try restarting the service.",
+      "expected_facts": [],
+      "should_not_extract": ["timeout", "restarting the service"],
+      "expected_count_range": [0, 0],
+      "difficulty": "easy"
+    },
+    {
+      "id": "easy-012",
+      "description": "health and diet facts across turns",
+      "input": "User: I am lactose intolerant.\nAssistant: Understood.\nUser: So I only drink oat milk now.\nAssistant: Noted.",
+      "expected_facts": [
+        {"match_any": ["lactose intolerant", "乳糖不耐受"], "confidence_range": [0.8, 1.0]},
+        {"match_any": ["oat milk", "only drink oat milk"], "confidence_range": [0.8, 1.0]}
+      ],
+      "should_not_extract": ["Understood", "Noted"],
+      "expected_count_range": [2, 3],
+      "difficulty": "easy"
+    },
+    {
+      "id": "easy-013",
+      "description": "tool preferences disclosed over turns",
+      "input": "User: 我平时用Vim。\nAssistant: 明白。\nUser: 终端我更喜欢zsh。\nAssistant: 收到。",
+      "expected_facts": [
+        {"match_any": ["Vim", "用Vim"], "confidence_range": [0.8, 1.0]},
+        {"match_any": ["zsh", "终端更喜欢zsh"], "confidence_range": [0.8, 1.0]}
+      ],
+      "should_not_extract": ["明白", "收到"],
+      "expected_count_range": [2, 3],
+      "difficulty": "easy"
+    }
+  ]
+}

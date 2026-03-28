@@ -12,14 +12,15 @@
 - **可迭代**：评估结果存档，修改前后可对比
 - **数据驱动**：JSON 数据集描述测试用例，与代码解耦
 - **可复现**：固定 temperature=0，相同输入应产生一致结果
-- **数据集分焦点**：按 atomicity / exclusion / temporal / multiturn 等测试重点拆分数据集
+- **数据集分难度**：优先按 easy / medium / hard / tricky 分层，便于分阶段观察能力边界
 - **覆盖优先于数量**：每类重点只保留 2 到 3 个平行实例，避免靠堆数量制造表面稳定性
 - **报告可诊断**：输出不仅要有总分，还要能指出漏提、乱提、数量失控、空 case 污染等具体短板
 
 当前实践建议：
 
-- 每个 extraction 数据集维持在 10 个 case 左右
-- 每个数据集内部按 3 到 5 个子问题组织，每个子问题 2 到 3 个平行实例
+- 每个 extraction 数据集维持在 10 到 15 个 case 左右
+- 每个难度层数据集内部混合 atomicity / exclusion / temporal / multiturn 等不同问题类型
+- 每个子问题保留 2 到 3 个平行实例，避免单一题型刷分
 - case 扩充的目标是补边界，不是重复证明已经覆盖的能力
 
 ---
@@ -30,11 +31,10 @@
 tests/
 ├── eval/
 │   ├── datasets/
-│   │   ├── extraction_cases.json     # extraction smoke 测试集
-│   │   ├── extraction_atomicity_cases.json
-│   │   ├── extraction_exclusion_cases.json
-│   │   ├── extraction_temporal_cases.json
-│   │   └── extraction_multiturn_cases.json
+│   │   ├── extraction_easy_cases.json
+│   │   ├── extraction_medium_cases.json
+│   │   ├── extraction_hard_cases.json
+│   │   └── extraction_tricky_cases.json
 │   │   ├── retrieval_cases.json      # retrieval 测试集
 │   │   ├── decision_cases.json       # decision 测试集
 │   │   └── e2e_golden.json           # 端到端测试集
@@ -55,13 +55,13 @@ tests/
 
 ```json
 {
-  "name": "extraction_atomicity_cases",
-  "focus": "atomic splitting",
-  "description": "Checks whether one user turn is decomposed into the right number of fact-shaped items.",
+  "name": "extraction_hard_cases",
+  "focus": "difficulty-hard mixed",
+  "description": "Hard cases targeting relevance filtering, mixed stable-and-ephemeral content, and future-or-quoted content boundaries.",
   "cases": [
     {
-      "id": "atomicity-001",
-      "description": "多事实简单陈述",
+      "id": "hard-001",
+      "description": "稳定信息与临时过程混合时只保留稳定信息",
       "input": "我叫张三，今年28岁，在网易工作，喜欢喝黑咖啡",
       "expected_facts": [
         {"text_contains": "张三", "confidence_range": [0.9, 1.0]},
@@ -90,7 +90,7 @@ tests/
 数据集元信息：
 
 - `name`：数据集名字，用于报告展示
-- `focus`：该数据集的测试重点，例如 atomicity / exclusion / temporal
+- `focus`：该数据集的分层与侧重点，例如 `difficulty-hard mixed`
 - `description`：对该数据集目的的简短说明
 - `cases`：该数据集包含的 case 列表
 
@@ -110,6 +110,12 @@ tests/
 | **Confidence Accuracy** | 置信度落在 confidence_range 的比例 | ≥ 70% |
 | **Count Accuracy** | fact 数量在 expected_count_range 内的比例 | ≥ 80% |
 | **Normalization Stability** | 重复、空文本、非法 confidence 被正确清洗的比例 | 100% |
+
+补充约定：
+
+- `No-Extract Accuracy` 只统计 `expected_facts=[]` 且 `expected_count_range=[0, 0]` 的 case
+- 对这类 case，只要返回了任意 fact，就必须记为 no-extract 失败，不能因为没有命中 `should_not_extract` 关键词而放过
+- `should_not_extract` 更适合表达明确禁止出现的噪音关键词；空 case 的核心判定仍然是“结果必须为空”
 
 建议同时关注以下诊断参数：
 
@@ -139,9 +145,15 @@ facts = Memory._extract_facts(
 > 注意：`_extract_facts()` 当前不仅负责 JSON 解析，也负责提取结果规范化。
 > 因此 extraction 评估应直接检查最终输出，而不是只检查 LLM 原始返回。
 
+当前规范化边界还包括：
+
+- 过滤明显的临时排障噪音、外部归因建议、以及带明显 speculative 标记的未来假设
+- 避免仅根据单条提问或单条消息所使用的语言，推断用户默认语言、身份或国籍
+- 对少量高频偏好表达做轻量 canonicalization，以提高评估与下游行为稳定性
+
 ### 3.4.1 实际运行脚本
 
-当前 extraction 评估脚本默认会扫描 `tests/eval/datasets/` 下所有 `extraction*_cases.json` 文件，并为每个数据集分别输出一份报告。
+当前 extraction 评估脚本默认会扫描 `tests/eval/datasets/` 下所有 `extraction*_cases.json` 文件，并为每个难度数据集分别输出一份报告。
 
 ```bash
 python tests/eval/runners/eval_extraction.py --toml mindt.toml
@@ -152,7 +164,7 @@ python tests/eval/runners/eval_extraction.py --toml mindt.toml
 ```bash
 python tests/eval/runners/eval_extraction.py \
   --toml mind.toml \
-  --dataset tests/eval/datasets/extraction_temporal_cases.json
+  --dataset tests/eval/datasets/extraction_hard_cases.json
 ```
 
 如果要使用真实 LLM 评估 extraction，而不是 fake backend，使用：
@@ -165,10 +177,12 @@ python tests/eval/runners/eval_extraction.py --toml mind.toml
 
 - `mindt.toml`：用于本地回归、流程完整性验证、数据集和 runner 健康检查，不代表真实模型质量
 - `mind.toml`：用于真实 LLM 质量评估，会实际消耗模型调用和 token
-- 若不指定 `--output`，默认按数据集名字输出，例如：`tests/eval/reports/extraction_temporal_cases_report.json`
+- 对按难度分层的数据集，`mindt.toml` 更适合检查脚本、数据格式和基础回归；`hard` / `tricky` 层不要求 fake backend 全部达标
+- 若不指定 `--output`，默认按数据集名字输出，例如：`tests/eval/reports/extraction_hard_cases_report.json`
 - 脚本默认会输出面向人阅读的 summary；如果还需要查看完整 JSON，可加 `--pretty`
 - 如果要把 stdout 作为机器输入而不是人读摘要，可加 `--json-only`
 - 如果希望在指标未达标时直接返回非零退出码，可加 `--fail-on-targets`
+- 当前真实 LLM 基线下，easy / medium / hard / tricky 四层数据集均已达到全指标通过
 - 若要保留多次实验结果，应显式指定输出路径，例如：
 
 ```bash
@@ -180,16 +194,12 @@ python tests/eval/runners/eval_extraction.py \
 
 ### 3.5 推荐测试用例类型
 
-| 类型 | 示例 | 测试重点 |
+| 难度层 | 代表问题 | 测试重点 |
 |------|------|---------|
-| 简单陈述 | "我叫张三，在网易工作" | 基础提取 |
-| 假设性语句 | "如果我去日本的话…" | 应不提取 |
-| 时态区分 | "之前在网易，刚跳到字节" | past vs current |
-| AI 回复过滤 | "User: xxx\nAssistant: yyy" | 不提取 AI 的话 |
-| 多轮对话 | 3-5轮对话 | 上下文理解 |
-| 隐含信息 | "我每天写 Python 10 年了" | 推断 "是程序员" |
-| 空对话 | "你好" | 应返回空 |
-| 规范化回归 | 重复行、脏标点、非法 confidence | 输出洁净度 |
+| easy | 简单陈述、简单排除、简单多轮 | 基础提取稳定性 |
+| medium | 时态切换、偏好多轮补充、atomic bundle | 常见真实场景 |
+| hard | 噪音过滤、稳定信息与临时过程混合、未来计划边界 | relevance 判断 |
+| tricky | 近义改写、领域条件偏好、quoted content、否定更新 | canonicalization 与边界稳健性 |
 
 ---
 
@@ -423,7 +433,9 @@ decision = Memory._decide_action(
 │  3. 针对性修改                           │
 │     ├─ 改 prompt（最常见）                │
 │     ├─ 改检索策略（K值、阈值）             │
-│     ├─ 改架构（如 batch decision）        │
+│     ├─ 改架构与执行模式                   │
+│     │  （如 batch decision、供应商        │
+│     │   Batch API、离线批量评估）         │
 │     └─ 补充数据集（发现新边界 case）       │
 │                                         │
 │  4. 运行该阶段 eval                      │
@@ -450,3 +462,4 @@ decision = Memory._decide_action(
 | **P2** | 实现 retrieval eval runner | 待开始 |
 | **P2** | 实现端到端 eval runner | 待开始 |
 | **P3** | 开始优化迭代 | 依赖 P1+P2 |
+| **P4** | 探索 Batch API 支持 | 优先用于 extraction / decision 的离线评估、批量实验与数据回灌，不作为实时 add 主链路默认模式 |

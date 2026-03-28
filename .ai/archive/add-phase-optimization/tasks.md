@@ -16,16 +16,20 @@
 - [x] 6. Add extraction evaluation dataset and runnable benchmark script
 - [x] 7. Split extraction evaluation into multiple focused datasets with dataset-derived report names
 - [x] 8. Add richer diagnostic metrics and human-readable summaries to the extraction evaluator
+- [x] 9. Reorganize extraction datasets by difficulty and add harder cases for noise filtering and canonicalization gaps
+- [x] 10. Add an independent 50-case black-box extraction holdout dataset with mixed difficulty and broad scenario coverage
 
 ## Validation
 
 - [x] Run focused pytest coverage for extraction changes and existing memory pipeline tests
+- [x] Re-run extraction benchmark after dataset reorganization
+- [x] Run the standalone black-box dataset through the extraction evaluator as a schema and report smoke check
 - [x] Create or update `verification-report.md`
 - [x] Record manual verification performed
 - [x] Record any skipped checks and why
 
 ## Closeout
 
-- [ ] Merge accepted spec updates into `.ai/specs/`
-- [ ] If `.ai/` changed, update the relevant `.human/` handbook documents as needed
-- [ ] Move the completed change folder into `.ai/archive/`
+- [x] Merge accepted spec updates into `.ai/specs/`
+- [x] If `.ai/` changed, update the relevant `.human/` handbook documents as needed
+- [x] Move the completed change folder into `.ai/archive/`

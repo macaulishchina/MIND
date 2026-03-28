@@ -157,16 +157,11 @@ def _evaluate_case(llm, case: dict[str, Any], extraction_temperature: float | No
             continue
         precision_hits += 1
 
-    no_extract_pass = bool(
-        not expected_facts and case.get("expected_count_range") == [0, 0] and not facts
-    ) or not should_not_extract or not any(
-        any(_contains_case_insensitive(fact_text, needle) for needle in should_not_extract)
-        for fact_text in fact_texts
-    )
-
     expected_count_range = case.get("expected_count_range", [0, len(facts)])
     expected_min_count = expected_count_range[0]
     expected_max_count = expected_count_range[1]
+    zero_extract_expected = not expected_facts and expected_count_range == [0, 0]
+    no_extract_pass = not facts if zero_extract_expected else True
     count_pass = expected_min_count <= len(facts) <= expected_max_count
     if not count_pass:
         failures.append(

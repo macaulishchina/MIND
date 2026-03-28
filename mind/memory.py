@@ -13,6 +13,7 @@ Usage::
 
 import json
 import logging
+import re
 import sys
 import time
 import threading
@@ -400,6 +401,12 @@ class Memory:
             text = Memory._normalize_fact_text(raw_fact.get("text", ""))
             if not text:
                 continue
+            if Memory._should_filter_extracted_fact(text):
+                logger.info("Filtering noisy extracted fact: %s", text)
+                continue
+            text = Memory._canonicalize_fact_text(text)
+            if not text:
+                continue
 
             confidence = raw_fact.get("confidence", 0.5)
             try:
@@ -429,6 +436,223 @@ class Memory:
 
         normalized = " ".join(text.strip().split())
         return normalized.rstrip(" .,!?:;\t\r\n")
+
+    @staticmethod
+    def _canonicalize_fact_text(text: str) -> str:
+        """Canonicalize high-frequency fact patterns to stabilize downstream behavior."""
+        canonical = text
+        lowered = text.casefold()
+
+        if Memory._is_concise_answer_preference(lowered):
+            return "User prefers concise answers"
+
+        if Memory._is_list_format_preference(lowered):
+            return "User prefers list-form responses"
+
+        if Memory._is_english_summary_preference(lowered):
+            return "User prefers summaries in English"
+
+        if Memory._is_chinese_default_language_preference(lowered):
+            return "User usually uses Chinese"
+
+        canonical = re.sub(
+            r"^User does not drink ([A-Za-z]+) anymore$",
+            r"User no longer drinks \1",
+            canonical,
+        )
+        canonical = re.sub(
+            r"^User no longer drinks ([A-Za-z]+)$",
+            r"User no longer drinks \1",
+            canonical,
+        )
+        return canonical
+
+    @staticmethod
+    def _is_concise_answer_preference(text: str) -> bool:
+        """Detect short/brief/terse response preferences."""
+        concise_markers = (
+            "prefers concise answers",
+            "prefers answers to be short",
+            "prefers short answers",
+            "prefers that responses be kept short",
+            "prefers brief responses",
+            "prefers brief replies",
+            "prefers concise responses",
+            "prefers replies to be terse",
+        )
+        return any(marker in text for marker in concise_markers)
+
+    @staticmethod
+    def _is_list_format_preference(text: str) -> bool:
+        """Detect bullet/list formatting preferences."""
+        list_markers = (
+            "prefers list-form responses",
+            "prefers answers in bullet points",
+            "prefers bullet points",
+            "prefers that responses use lists",
+            "prefers that responses use lists where appropriate",
+            "prefers responses to be concise and bullet-pointed",
+            "prefers responses to be bullet-pointed",
+            "prefers lists over paragraphs",
+        )
+        return any(marker in text for marker in list_markers)
+
+    @staticmethod
+    def _is_english_summary_preference(text: str) -> bool:
+        """Detect preferences for English summaries."""
+        return any(
+            marker in text
+            for marker in (
+                "requests summaries to be in english",
+                "prefers summaries in english",
+                "wants summaries in english",
+            )
+        )
+
+    @staticmethod
+    def _is_chinese_default_language_preference(text: str) -> bool:
+        """Detect a default preference for Chinese language usage."""
+        return any(
+            marker in text
+            for marker in (
+                "generally uses chinese",
+                "typically uses chinese",
+                "usually uses chinese",
+                "prefers chinese by default",
+            )
+        )
+
+    @staticmethod
+    def _should_filter_extracted_fact(text: str) -> bool:
+        """Drop obviously noisy extracted facts before retrieval and decision."""
+        lowered = text.casefold()
+        return (
+            Memory._looks_like_ephemeral_operational_fact(lowered)
+            or Memory._looks_like_external_attributed_fact(lowered)
+            or Memory._looks_like_speculative_fact(lowered)
+            or Memory._looks_like_weak_identity_inference(lowered)
+        )
+
+    @staticmethod
+    def _looks_like_ephemeral_operational_fact(text: str) -> bool:
+        """Detect transient troubleshooting or operational chatter."""
+        direct_noise_markers = (
+            "timeout",
+            "timed out",
+            "stack trace",
+            "error log",
+            "debug log",
+            "超时",
+            "报错",
+            "日志",
+            "排查",
+            "调试",
+        )
+        if any(marker in text for marker in direct_noise_markers):
+            return True
+
+        process_markers = (
+            "retry",
+            "retried",
+            "restarting",
+            "restart",
+            "重试",
+            "重启",
+        )
+        return any(marker in text for marker in process_markers)
+
+    @staticmethod
+    def _looks_like_external_attributed_fact(text: str) -> bool:
+        """Detect attributed preferences or advice from other people."""
+        attributed_phrases = (
+            "manager wants",
+            "manager asked",
+            "friend said",
+            "friend suggests",
+            "friend recommended",
+            "assistant said",
+            "you said",
+            "朋友总说",
+            "朋友建议",
+            "经理希望",
+            "经理要求",
+            "你说过",
+            "助手说",
+        )
+        if any(phrase in text for phrase in attributed_phrases):
+            return True
+
+        actor_markers = (
+            "manager",
+            "friend",
+            "assistant",
+            "朋友",
+            "经理",
+            "助手",
+        )
+        advice_markers = (
+            " wants ",
+            " told ",
+            " said ",
+            " suggests ",
+            " recommended ",
+            "advised",
+            "建议",
+            "希望",
+            "要求",
+            "让用户",
+        )
+        return any(actor in text for actor in actor_markers) and any(
+            marker in text for marker in advice_markers
+        )
+
+    @staticmethod
+    def _looks_like_speculative_fact(text: str) -> bool:
+        """Detect speculative facts that should not become memories."""
+        speculative_markers = (
+            " might ",
+            " may ",
+            " could ",
+            " possibly ",
+            " maybe ",
+            "可能",
+            "也许",
+            "或许",
+            "如果",
+        )
+        padded = f" {text} "
+        if any(marker in padded for marker in speculative_markers):
+            return True
+
+        return bool(re.search(r"\bif\b", text))
+
+    @staticmethod
+    def _looks_like_weak_identity_inference(text: str) -> bool:
+        """Detect soft inferred identity/profile statements that should not be stored."""
+        weak_inference_markers = (
+            "appears to be",
+            "seems to be",
+            "likely",
+            "probably",
+            "primary language appears to be",
+            "looks like the user",
+        )
+        if any(marker in text for marker in weak_inference_markers):
+            return True
+
+        inferred_language_markers = (
+            "primary language",
+            "native language",
+        )
+        uncertainty_markers = (
+            "appears",
+            "seems",
+            "likely",
+            "probably",
+        )
+        return any(marker in text for marker in inferred_language_markers) and any(
+            marker in text for marker in uncertainty_markers
+        )
 
     def _retrieve_similar(
         self,

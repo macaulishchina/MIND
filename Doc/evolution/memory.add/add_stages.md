@@ -46,6 +46,8 @@ add(messages, user_id)
 
 - extraction 仍保持 MVP 兼容输出：`[{text, confidence}, ...]`
 - LLM 返回后会先做轻量规范化，再进入 retrieval：空文本过滤、空白压缩、句末标点清理、字符串级去重、confidence 截断到 `[0, 1]`
+- 在规范化阶段会额外过滤明显不应进入长期记忆的脏事实，例如临时排障过程、报错/超时类操作噪音、外部人物的建议或要求、以及带明显 speculative 标记的未来假设
+- 在规范化阶段还会对少量高频表达做轻量 canonicalization，例如把短回答偏好、列表偏好、摘要语言偏好、以及 `no longer` 类否定更新统一到更稳定的 memory 文本
 - extraction 调用可单独覆盖 temperature，用于和 decision 阶段区分控制强度
 
 ### 方法签名
@@ -72,6 +74,7 @@ def _extract_facts(llm, conversation: str) -> List[Dict[str, Any]]
 | 粒度 | 每条 fact 是单一原子事实，不是复合句 |
 | 置信度准确性 | confidence 值与事实的确定程度匹配 |
 | 过滤能力 | 假设性/条件性语句不被提取 |
+| 边界判断 | 临时过程噪音、外部建议、quoted content 不进入长期记忆 |
 | 输出洁净度 | 重复、空白、无效 confidence 不传播到下游 |
 
 ---
