@@ -8,11 +8,38 @@
       "description": "中文工作经历时态切换",
       "input": "User: 我之前在网易做后端，现在在字节做AI。\nAssistant: 明白。",
       "expected_facts": [
-        {"match_any": ["之前在网易", "网易", "NetEase", "过去在网易"], "confidence_range": [0.8, 1.0]},
-        {"match_any": ["现在在字节", "字节", "字节跳动", "ByteDance"], "confidence_range": [0.8, 1.0]}
+        {
+          "match_any": [
+            "之前在网易",
+            "网易",
+            "NetEase",
+            "过去在网易"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "现在在字节",
+            "字节",
+            "字节跳动",
+            "ByteDance"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
       ],
-      "should_not_extract": ["明白"],
-      "expected_count_range": [2, 3],
+      "should_not_extract": [
+        "明白"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
       "difficulty": "medium"
     },
     {
@@ -20,11 +47,41 @@
       "description": "interaction preference across turns",
       "input": "User: Please keep your answers short.\nAssistant: Sure.\nUser: Bullet points are best for me.\nAssistant: Noted.",
       "expected_facts": [
-        {"match_any": ["answers short", "short answers", "concise answers", "keep your answers short", "prefers concise answers"], "confidence_range": [0.8, 1.0]},
-        {"match_any": ["bullet points", "lists", "formatted as lists", "list-form responses", "prefers list-form responses"], "confidence_range": [0.8, 1.0]}
+        {
+          "match_any": [
+            "answers short",
+            "short answers",
+            "concise answers",
+            "keep your answers short",
+            "prefers concise answers"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "bullet points",
+            "lists",
+            "formatted as lists",
+            "list-form responses",
+            "prefers list-form responses"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
       ],
-      "should_not_extract": ["Sure", "Noted"],
-      "expected_count_range": [1, 3],
+      "should_not_extract": [
+        "Sure",
+        "Noted"
+      ],
+      "expected_count_range": [
+        1,
+        3
+      ],
       "difficulty": "medium"
     },
     {
@@ -32,11 +89,43 @@
       "description": "中文交互偏好多轮说明",
       "input": "User: 回答尽量简短。\nAssistant: 好的。\nUser: 最好用列表。\nAssistant: 收到。",
       "expected_facts": [
-        {"match_any": ["简短", "简洁", "short answers", "brief and concise", "concise answers", "prefers concise answers"], "confidence_range": [0.8, 1.0]},
-        {"match_any": ["列表", "bullet points", "要点", "lists", "list-form responses", "prefers list-form responses"], "confidence_range": [0.8, 1.0]}
+        {
+          "match_any": [
+            "简短",
+            "简洁",
+            "short answers",
+            "brief and concise",
+            "concise answers",
+            "prefers concise answers"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "列表",
+            "bullet points",
+            "要点",
+            "lists",
+            "list-form responses",
+            "prefers list-form responses"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
       ],
-      "should_not_extract": ["好的", "收到"],
-      "expected_count_range": [1, 3],
+      "should_not_extract": [
+        "好的",
+        "收到"
+      ],
+      "expected_count_range": [
+        1,
+        3
+      ],
       "difficulty": "medium"
     },
     {
@@ -44,11 +133,36 @@
       "description": "travel preference disclosed over turns",
       "input": "User: I usually take trains when I travel.\nAssistant: Nice.\nUser: Window seats are best for me.\nAssistant: Got it.",
       "expected_facts": [
-        {"match_any": ["take trains", "trains", "usually takes trains"], "confidence_range": [0.8, 1.0]},
-        {"match_any": ["window seats", "window seat"], "confidence_range": [0.8, 1.0]}
+        {
+          "match_any": [
+            "take trains",
+            "trains",
+            "usually takes trains"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "window seats",
+            "window seat"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
       ],
-      "should_not_extract": ["Nice", "Got it"],
-      "expected_count_range": [2, 3],
+      "should_not_extract": [
+        "Nice",
+        "Got it"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
       "difficulty": "medium"
     },
     {
@@ -56,12 +170,44 @@
       "description": "family, location, and work bundle should split",
       "input": "User: I live in Singapore, I manage a small team, and I have two cats.\nAssistant: Got it.",
       "expected_facts": [
-        {"match_any": ["Singapore", "lives in Singapore"], "confidence_range": [0.8, 1.0]},
-        {"match_any": ["manage a small team", "small team"], "confidence_range": [0.8, 1.0]},
-        {"match_any": ["two cats", "cats"], "confidence_range": [0.8, 1.0]}
+        {
+          "match_any": [
+            "Singapore",
+            "lives in Singapore"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "manage a small team",
+            "small team"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "two cats",
+            "cats"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
       ],
-      "should_not_extract": ["Got it"],
-      "expected_count_range": [3, 4],
+      "should_not_extract": [
+        "Got it"
+      ],
+      "expected_count_range": [
+        3,
+        4
+      ],
       "difficulty": "medium"
     },
     {
@@ -69,12 +215,44 @@
       "description": "work stack bundle should keep atomic tool facts",
       "input": "User: I am a backend engineer, I write Python every day, and I deploy to Kubernetes.\nAssistant: Sounds good.",
       "expected_facts": [
-        {"match_any": ["backend engineer", "engineer"], "confidence_range": [0.8, 1.0]},
-        {"match_any": ["Python", "writes Python every day"], "confidence_range": [0.8, 1.0]},
-        {"match_any": ["Kubernetes", "deploys to Kubernetes"], "confidence_range": [0.8, 1.0]}
+        {
+          "match_any": [
+            "backend engineer",
+            "engineer"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "Python",
+            "writes Python every day"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "Kubernetes",
+            "deploys to Kubernetes"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
       ],
-      "should_not_extract": ["Sounds good"],
-      "expected_count_range": [3, 4],
+      "should_not_extract": [
+        "Sounds good"
+      ],
+      "expected_count_range": [
+        3,
+        4
+      ],
       "difficulty": "medium"
     },
     {
@@ -82,11 +260,34 @@
       "description": "mixed event and stable habit should split",
       "input": "User: I started running last month, and I always run before breakfast.\nAssistant: Nice.",
       "expected_facts": [
-        {"match_any": ["started running last month", "running last month"], "confidence_range": [0.6, 1.0]},
-        {"match_any": ["before breakfast", "always run before breakfast"], "confidence_range": [0.8, 1.0]}
+        {
+          "match_any": [
+            "started running last month",
+            "running last month"
+          ],
+          "confidence_range": [
+            0.6,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "before breakfast",
+            "always run before breakfast"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
       ],
-      "should_not_extract": ["Nice"],
-      "expected_count_range": [2, 3],
+      "should_not_extract": [
+        "Nice"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
       "difficulty": "medium"
     },
     {
@@ -94,11 +295,34 @@
       "description": "role change should preserve before and after",
       "input": "User: I used to manage a team, but now I am an individual contributor.\nAssistant: Got it.",
       "expected_facts": [
-        {"match_any": ["used to manage a team", "manage a team"], "confidence_range": [0.8, 1.0]},
-        {"match_any": ["individual contributor", "currently an individual contributor"], "confidence_range": [0.8, 1.0]}
+        {
+          "match_any": [
+            "used to manage a team",
+            "manage a team"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "individual contributor",
+            "currently an individual contributor"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
       ],
-      "should_not_extract": ["Got it"],
-      "expected_count_range": [2, 3],
+      "should_not_extract": [
+        "Got it"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
       "difficulty": "medium"
     },
     {
@@ -106,11 +330,34 @@
       "description": "past and current location should both survive",
       "input": "User: Last year I lived in London, and now I live in Singapore.\nAssistant: Noted.",
       "expected_facts": [
-        {"match_any": ["lived in London", "London"], "confidence_range": [0.8, 1.0]},
-        {"match_any": ["live in Singapore", "Singapore"], "confidence_range": [0.8, 1.0]}
+        {
+          "match_any": [
+            "lived in London",
+            "London"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "live in Singapore",
+            "Singapore"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
       ],
-      "should_not_extract": ["Noted"],
-      "expected_count_range": [2, 3],
+      "should_not_extract": [
+        "Noted"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
       "difficulty": "medium"
     },
     {
@@ -118,11 +365,36 @@
       "description": "中文习惯时段变化",
       "input": "User: 我以前早上跑步，现在晚上跑步。\nAssistant: 好的。",
       "expected_facts": [
-        {"match_any": ["以前早上跑步", "早上跑步", "morning"], "confidence_range": [0.8, 1.0]},
-        {"match_any": ["现在晚上跑步", "晚上跑步", "evening"], "confidence_range": [0.8, 1.0]}
+        {
+          "match_any": [
+            "以前早上跑步",
+            "早上跑步",
+            "morning"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "现在晚上跑步",
+            "晚上跑步",
+            "evening"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
       ],
-      "should_not_extract": ["好的"],
-      "expected_count_range": [2, 3],
+      "should_not_extract": [
+        "好的"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
       "difficulty": "medium"
     },
     {
@@ -130,8 +402,14 @@
       "description": "English question asking for advice should not become memory",
       "input": "User: Should I learn Rust this year?\nAssistant: It depends on your goals.",
       "expected_facts": [],
-      "should_not_extract": ["Rust", "depends on your goals"],
-      "expected_count_range": [0, 0],
+      "should_not_extract": [
+        "Rust",
+        "depends on your goals"
+      ],
+      "expected_count_range": [
+        0,
+        0
+      ],
       "difficulty": "medium"
     },
     {
@@ -139,8 +417,14 @@
       "description": "中文问题句不应提取",
       "input": "User: 请问Python好学吗？\nAssistant: 很适合入门。",
       "expected_facts": [],
-      "should_not_extract": ["Python", "很适合入门"],
-      "expected_count_range": [0, 0],
+      "should_not_extract": [
+        "Python",
+        "很适合入门"
+      ],
+      "expected_count_range": [
+        0,
+        0
+      ],
       "difficulty": "medium"
     },
     {
@@ -148,11 +432,35 @@
       "description": "preference correction over turns",
       "input": "User: I used to drink tea.\nAssistant: Okay.\nUser: Actually now I only drink coffee.\nAssistant: Noted.",
       "expected_facts": [
-        {"match_any": ["used to drink tea", "tea"], "confidence_range": [0.8, 1.0]},
-        {"match_any": ["only drink coffee", "coffee"], "confidence_range": [0.8, 1.0]}
+        {
+          "match_any": [
+            "used to drink tea",
+            "tea"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "only drink coffee",
+            "coffee"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
       ],
-      "should_not_extract": ["Okay", "Noted"],
-      "expected_count_range": [2, 3],
+      "should_not_extract": [
+        "Okay",
+        "Noted"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
       "difficulty": "medium"
     }
   ]
