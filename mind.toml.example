@@ -8,6 +8,8 @@
 provider    = "openai"          # openai | anthropic | google | fake | other provider
 temperature = 0.0
 extraction_temperature = 0.0     # 留空或删除 = 跟随 temperature
+batch       = false              # true = 路由到 batch 端点（需 provider 配置 batch_base_url）
+# batch_timeout = 3600.0        # batch 模式 SDK 超时（秒），默认 3600
 
 [llm.openai]
 protocols    = "openai"
@@ -58,6 +60,7 @@ api_key      = ""
 base_url     = "https://dashscope.aliyuncs.com"
 sdk_base     = "/compatible-mode/v1"
 model        = "deepseek-v3.2"
+batch_base_url = "https://batch.dashscope.aliyuncs.com"  # Aliyun Batch Chat 端点（50% 折扣）
 
 [embedding]
 protocols    = "openai-embedding"

@@ -19,6 +19,7 @@ class ProviderConfig(BaseModel):
     llm_suffix: str = ""            # e.g. "/chat/completions"
     embed_suffix: str = ""
     model: str = ""
+    batch_base_url: str = ""        # batch endpoint base, e.g. "https://batch.dashscope.aliyuncs.com"
 
 
 class LLMConfig(BaseModel):
@@ -35,6 +36,9 @@ class LLMConfig(BaseModel):
     base_url: str = ""
     sdk_base: str = ""
     llm_suffix: str = ""
+    batch: bool = False             # global switch: route to batch endpoint
+    batch_base_url: str = ""        # resolved from provider's batch_base_url
+    batch_timeout: float = 3600.0   # SDK timeout (seconds) when batch is active
 
 
 class EmbeddingConfig(BaseModel):

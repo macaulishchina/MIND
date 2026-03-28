@@ -16,15 +16,41 @@ class OpenAILLM(BaseLLM):
 
     The OpenAI SDK internally appends ``/chat/completions``,
     so we pass ``base_url = base + sdk_base`` (from protocol config).
+
+    When ``config.batch`` is *True* and ``config.batch_base_url`` is
+    non-empty, the client is pointed at the batch endpoint and the SDK
+    timeout is extended to ``config.batch_timeout`` (default 3600 s)
+    so that queued Batch Chat requests are not prematurely aborted.
     """
 
     def __init__(self, config: LLMConfig, **kwargs) -> None:
         self.config = config
-        sdk_base = config.base_url.rstrip("/") + config.sdk_base
-        self.client = OpenAI(
-            api_key=config.api_key,
-            base_url=sdk_base,
-        )
+
+        use_batch = config.batch and bool(config.batch_base_url)
+        if config.batch and not config.batch_base_url:
+            logger.warning(
+                "batch=True but batch_base_url is empty for provider '%s' "
+                "— falling back to normal endpoint",
+                config.provider,
+            )
+
+        if use_batch:
+            base = config.batch_base_url.rstrip("/") + config.sdk_base
+            self.client = OpenAI(
+                api_key=config.api_key,
+                base_url=base,
+                timeout=config.batch_timeout,
+            )
+            logger.info(
+                "OpenAILLM: batch mode ON — base_url=%s, timeout=%.0fs",
+                base, config.batch_timeout,
+            )
+        else:
+            sdk_base = config.base_url.rstrip("/") + config.sdk_base
+            self.client = OpenAI(
+                api_key=config.api_key,
+                base_url=sdk_base,
+            )
 
     def _generate(
         self,

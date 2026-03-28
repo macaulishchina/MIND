@@ -126,6 +126,9 @@ class ConfigManager:
             base_url=provider_cfg.get("base_url", ""),
             sdk_base=provider_cfg.get("sdk_base", ""),
             llm_suffix=provider_cfg.get("llm_suffix", ""),
+            batch=llm_globals.get("batch", False),
+            batch_base_url=provider_cfg.get("batch_base_url", ""),
+            batch_timeout=llm_globals.get("batch_timeout", 3600.0),
         )
 
         # 5. Resolve Embedding (fully independent)
