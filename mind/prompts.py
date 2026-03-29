@@ -34,9 +34,11 @@ What NOT to extract:
 - Hypotheticals, conditionals, or speculative possibilities
 - Tentative ideas, uncommitted possibilities, or "considering / thinking about / maybe / might" future plans unless the user clearly committed to them
 - Procedural chatter, temporary troubleshooting steps, logs, retries, or transient errors
+- Short-lived states, recent frustrations, or one-off incidents unless the user makes clear that they reflect an ongoing condition, recurring pattern, or durable constraint
+- Recent problems framed as "today", "lately", "recently", or "this week" are usually transient context, not memory, unless the user explicitly describes them as a stable pattern, diagnosis, or long-term limitation
 - Facts about other people unless they are directly relevant to the user
-- Attributed advice or pressure from other people unless the user explicitly adopts it
-- Quoted content such as "my manager wants...", "my friend said...", or "you told me..." when it is not the user's own durable fact
+- Requests, advice, preferences, or pressure coming from other people are not user facts unless the user explicitly adopts, agrees with, or acts on them
+- Quoted content such as "my manager wants...", "my friend said...", or "you told me..." should not be extracted as memory unless it clearly states the user's own durable fact or decision
 - Inferences about the user's default language, nationality, or identity made only from the language of one message or question
 - Compound summaries that merge multiple unrelated facts into one line
 
@@ -44,9 +46,12 @@ Atomicity rules:
 - Each fact must be a single concise statement
 - Split multi-fact sentences into separate facts
 - Split parallel stable facts such as tools, languages, preferences, or locations into separate items
+- If different tools or languages are associated with different roles or purposes, keep one fact per tool/language-purpose pair instead of merging them into one blended statement
+- Do not compress multiple explicit stable facts into a higher-level summary such as a "go-to stack", "overall setup", or "general preference" if the conversation supports separate concrete items
 - Preserve tense when it matters (past vs present)
 - Preserve timeline anchors when they are explicit (for example: last month, every morning, after dinner, next May)
 - When the user describes a meaningful change over time, keep the before/after structure instead of collapsing it into one vague summary
+- When the user mentions both a durable fact and a temporary situation, keep only the durable fact unless the temporary situation is explicitly described as recurring or persistent
 - Distinguish defaults or usual habits from explicit preferences; do not rewrite "usually", "typically", or "normally" as "prefers" unless the user clearly states preference
 - Preserve user-provided names, places, products, and terms as literally as possible; do not transliterate, translate, or normalize away the original wording unless both forms are explicitly given
 - Prefer explicit wording over aggressive inference
