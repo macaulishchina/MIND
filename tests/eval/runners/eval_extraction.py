@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
@@ -202,10 +203,22 @@ def _safe_ratio(numerator: int, denominator: int, empty_value: float = 1.0) -> f
     return numerator / denominator
 
 
+def _llm_descriptor(cfg) -> dict[str, str]:
+    provider = str(getattr(cfg.llm, "provider", "unknown"))
+    model = str(getattr(cfg.llm, "model", "unknown"))
+    label = re.sub(r"[^a-z0-9._-]+", "-", f"{provider}-{model}".lower()).strip("-")
+    return {
+        "provider": provider,
+        "model": model,
+        "label": label or "unknown-llm",
+    }
+
+
 def build_report(
     dataset: DatasetSpec,
     case_results: list[CaseResult],
     toml_path: Path,
+    llm_info: dict[str, str],
 ) -> dict[str, Any]:
     total_recall_hits = sum(result.recall_hits for result in case_results)
     total_recall = sum(result.recall_total for result in case_results)
@@ -245,6 +258,7 @@ def build_report(
         "dataset_focus": dataset.focus,
         "dataset_description": dataset.description,
         "toml_path": str(toml_path.relative_to(PROJECT_ROOT)),
+        "llm": llm_info,
         "total_cases": len(case_results),
         "targets": TARGET_METRICS,
         "metrics": {
@@ -281,13 +295,19 @@ def build_report(
     }
 
 
-def _dataset_output_path(dataset_path: Path, output_arg: Path | None, multi_dataset: bool) -> Path:
+def _dataset_output_path(
+    dataset_path: Path,
+    output_arg: Path | None,
+    multi_dataset: bool,
+    llm_label: str,
+) -> Path:
+    file_name = f"{dataset_path.stem}_{llm_label}_report.json"
     if output_arg is None:
-        return DEFAULT_OUTPUT_DIR / f"{dataset_path.stem}_report.json"
+        return DEFAULT_OUTPUT_DIR / file_name
 
     resolved = output_arg.resolve()
     if multi_dataset or resolved.is_dir() or resolved.suffix != ".json":
-        return resolved / f"{dataset_path.stem}_report.json"
+        return resolved / file_name
     return resolved
 
 
@@ -307,6 +327,7 @@ def build_summary(report: dict[str, Any], output_path: Path) -> str:
         f"dataset: {report['dataset_name']} ({report['dataset']})",
         f"focus: {report['dataset_focus']}",
         f"config: {report['toml_path']}",
+        f"llm: {report['llm']['provider']} / {report['llm']['model']}",
         f"total cases: {report['total_cases']}",
         "metrics:",
     ]
@@ -414,6 +435,7 @@ def main() -> int:
     cfg = ConfigManager(toml_path=toml_path).get()
     _configure_runner_logging(cfg)
     llm = LlmFactory.create(cfg.llm)
+    llm_info = _llm_descriptor(cfg)
 
     concurrency = max(1, args.concurrency)
     reports: list[dict[str, Any]] = []
@@ -436,8 +458,13 @@ def main() -> int:
                 for future in as_completed(future_to_idx):
                     idx = future_to_idx[future]
                     case_results[idx] = future.result()
-        report = build_report(dataset, case_results, toml_path)
-        output_path = _dataset_output_path(dataset.path, args.output, multi_dataset)
+        report = build_report(dataset, case_results, toml_path, llm_info)
+        output_path = _dataset_output_path(
+            dataset.path,
+            args.output,
+            multi_dataset,
+            llm_info["label"],
+        )
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(
             json.dumps(report, ensure_ascii=False, indent=2),

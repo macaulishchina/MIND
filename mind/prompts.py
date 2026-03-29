@@ -32,6 +32,7 @@ What to extract:
 What NOT to extract:
 - Assistant responses or suggestions
 - Hypotheticals, conditionals, or speculative possibilities
+- Tentative ideas, uncommitted possibilities, or "considering / thinking about / maybe / might" future plans unless the user clearly committed to them
 - Procedural chatter, temporary troubleshooting steps, logs, retries, or transient errors
 - Facts about other people unless they are directly relevant to the user
 - Attributed advice or pressure from other people unless the user explicitly adopts it
@@ -44,6 +45,10 @@ Atomicity rules:
 - Split multi-fact sentences into separate facts
 - Split parallel stable facts such as tools, languages, preferences, or locations into separate items
 - Preserve tense when it matters (past vs present)
+- Preserve timeline anchors when they are explicit (for example: last month, every morning, after dinner, next May)
+- When the user describes a meaningful change over time, keep the before/after structure instead of collapsing it into one vague summary
+- Distinguish defaults or usual habits from explicit preferences; do not rewrite "usually", "typically", or "normally" as "prefers" unless the user clearly states preference
+- Preserve user-provided names, places, products, and terms as literally as possible; do not transliterate, translate, or normalize away the original wording unless both forms are explicitly given
 - Prefer explicit wording over aggressive inference
 - For preferences, use canonical wording like "User prefers concise answers" or "User prefers list-form responses" when appropriate
 - For negated updates, prefer wording like "User no longer ..." when that meaning is explicit
@@ -77,40 +82,6 @@ Output:
 }
 
 Conversation:
-User: My manager wants me to write more Rust, but I mostly write Python.
-Assistant: Understood.
-Output:
-{
-  "facts": [
-    {"text": "User mostly writes Python", "confidence": 1.0}
-  ]
-}
-
-Conversation:
-User: I retried the command three times and still got a timeout error.
-Assistant: Try restarting the service.
-Output:
-{
-  "facts": []
-}
-
-Conversation:
-User: Thanks.
-Assistant: You should try using bullet points and shorter messages.
-Output:
-{
-  "facts": []
-}
-
-Conversation:
-User: 请问Python好学吗？
-Assistant: 很适合入门。
-Output:
-{
-  "facts": []
-}
-
-Conversation:
 User: I am moving to Berlin next month and already signed the lease.
 Assistant: Exciting.
 Output:
@@ -122,13 +93,44 @@ Output:
 }
 
 Conversation:
-User: Keep replies brief and use bullet points.
+User: I usually speak Chinese at work, but I want weekly summaries in English.
 Assistant: Noted.
 Output:
 {
   "facts": [
-    {"text": "User prefers concise answers", "confidence": 1.0},
-    {"text": "User prefers list-form responses", "confidence": 1.0}
+    {"text": "User usually communicates in Chinese at work", "confidence": 1.0},
+    {"text": "User prefers weekly summaries in English", "confidence": 1.0}
+  ]
+}
+
+Conversation:
+User: I used to commute by subway, but now I ride an electric scooter.
+Assistant: Got it.
+Output:
+{
+  "facts": [
+    {"text": "User used to commute by subway", "confidence": 1.0},
+    {"text": "User now commutes by electric scooter", "confidence": 1.0}
+  ]
+}
+
+Conversation:
+User: My roommate is vegan, so I usually order takeout.
+Assistant: Understood.
+Output:
+{
+  "facts": [
+    {"text": "User usually orders takeout", "confidence": 1.0}
+  ]
+}
+
+Conversation:
+User: I live in Hangzhou now, and I'm considering moving to Singapore next year.
+Assistant: Thanks.
+Output:
+{
+  "facts": [
+    {"text": "User currently lives in Hangzhou", "confidence": 1.0}
   ]
 }
 
