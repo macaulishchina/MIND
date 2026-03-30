@@ -6,6 +6,7 @@ from mind.config import ConfigManager
 from mind.config.manager import _DEFAULT_TEST_TOML
 from mind.config.schema import HistoryStoreConfig
 from mind.storage import SQLiteManager
+from mind.stl.store import SQLiteSTLStore
 
 
 @pytest.fixture
@@ -13,6 +14,14 @@ def history_store(tmp_path):
     """Create a SQLiteManager with a temporary database."""
     config = HistoryStoreConfig(db_path=str(tmp_path / "test_history.db"))
     store = SQLiteManager(config)
+    yield store
+    store.close()
+
+
+@pytest.fixture
+def stl_store(tmp_path):
+    """Create a SQLiteSTLStore with a temporary database."""
+    store = SQLiteSTLStore(db_path=str(tmp_path / "test_stl.db"))
     yield store
     store.close()
 

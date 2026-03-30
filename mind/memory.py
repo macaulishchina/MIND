@@ -45,6 +45,13 @@ from mind.prompts import (
     format_existing_memories,
 )
 from mind.ops_logger import ops
+from mind.stl.parser import parse_program
+from mind.stl.prompt import (
+    STL_EXTRACTION_SYSTEM_PROMPT,
+    STL_EXTRACTION_USER_TEMPLATE,
+    format_focus_stack,
+)
+from mind.stl.store import STLStoreFactory
 from mind.storage import HistoryStoreFactory
 from mind.utils import generate_hash, generate_id, get_utc_now, parse_messages
 from mind.vector_stores.factory import VectorStoreFactory
@@ -119,7 +126,11 @@ class Memory:
         self.embedder = EmbedderFactory.create(self._config.embedding)
         self._vector_store = VectorStoreFactory.create(self._config.vector_store)
         self._history_store = HistoryStoreFactory.create(self._config.history_store)
+        self._stl_store = STLStoreFactory.create(self._config.stl_store)
         self._vector_store.create_collection(self._config.embedding.dimensions)
+        self.stl_extraction_llm = LlmFactory.create(
+            self._config.llm_stages.get("stl_extraction", self._config.llm)
+        )
 
         # ── Concurrency infrastructure ──
         cc = self._config.concurrency
@@ -198,19 +209,23 @@ class Memory:
     ) -> List[MemoryItem]:
         """Extract facts from a conversation and store them as memories.
 
+        Uses the Semantic Translation Layer (STL) pipeline:
+        1. Single LLM call → structured STL output
+        2. Deterministic parser → ParsedProgram
+        3. Batch relational persist → STL store
+        4. Embed each statement for vector search
+
         Args:
             messages: Chat messages [{"role": ..., "content": ...}].
             user_id: Backward-compatible alias for ``owner.external_user_id``.
-            owner: Structured owner identity. Provide either known
-                   ``external_user_id`` or stable ``anonymous_session_id``.
+            owner: Structured owner identity.
             session_id: Optional session identifier for source tracking.
             metadata: Optional extra metadata to attach.
 
         Returns:
-            List of MemoryItem objects that were created or updated.
+            List of MemoryItem objects that were created.
         """
         conversation = parse_messages(messages)
-        results: List[MemoryItem] = []
         owner_context = self._coerce_owner_context(user_id=user_id, owner=owner)
         owner_record = self._history_store.resolve_owner(owner_context)
         owner_user_id = self._owner_user_id(owner_record)
@@ -219,75 +234,77 @@ class Memory:
         n_msgs = len(messages)
         logger.info("📝 [ADD] ── START | owner=%s | %d messages ──", owner_user_id, n_msgs)
 
-        facts = self._extract_facts(
-            self.extraction_llm,
-            conversation,
-            temperature=self._extraction_temperature(),
-        )
-        if not facts:
+        # ── Step 1: Single LLM extraction ──
+        stl_text = self._extract_stl(conversation)
+        if not stl_text.strip():
             elapsed = time.perf_counter() - add_t0
             logger.info(
-                "📝 [ADD] ── DONE | owner=%s | 0 facts extracted | %.2fs ──",
+                "📝 [ADD] ── DONE | owner=%s | empty STL output | %.2fs ──",
                 owner_user_id, elapsed,
             )
-            return results
+            return []
 
-        logger.info("Extracted %d facts from conversation", len(facts))
-
-        envelopes = self._normalize_facts_to_envelopes(
-            facts=facts,
-            owner=owner_record,
-            session_id=session_id,
-            source_context=conversation,
-            metadata=metadata,
-        )
-        total = len(envelopes)
-        if not envelopes:
+        # ── Step 2: Parse ──
+        program = parse_program(stl_text, batch_id=generate_id())
+        if not program.statements and not program.evidence:
             elapsed = time.perf_counter() - add_t0
             logger.info(
-                "📝 [ADD] ── DONE | owner=%s | 0 envelopes normalized | %.2fs ──",
+                "📝 [ADD] ── DONE | owner=%s | 0 statements parsed | %.2fs ──",
                 owner_user_id, elapsed,
             )
-            return results
+            return []
 
-        def _guarded_process(idx: int, envelope: FactEnvelope) -> Optional[MemoryItem]:
-            """Acquire semaphore, process one fact, release."""
-            ops.set_context(f"[fact:{idx + 1}/{total}]")
-            self._call_sem.acquire()
+        logger.info(
+            "Parsed %d refs, %d statements, %d evidence, %d notes (%d failed)",
+            len(program.refs),
+            len(program.statements),
+            len(program.evidence),
+            len(program.notes),
+            len(program.failed_lines),
+        )
+
+        # ── Step 3: Persist to STL relational store ──
+        conv_id = session_id or generate_id()
+        self._stl_store.create_conversation(conv_id)
+        storage_result = self._stl_store.store_program(
+            program=program,
+            owner_id=owner_record.owner_id,
+            conv_id=conv_id,
+            model=self.stl_extraction_llm.model if hasattr(self.stl_extraction_llm, "model") else None,
+        )
+
+        logger.info(
+            "STL stored: %d refs, %d stmts, %d ev, %d notes, %d errors",
+            storage_result.refs_upserted,
+            storage_result.statements_inserted,
+            storage_result.evidence_inserted,
+            storage_result.notes_inserted,
+            len(storage_result.errors),
+        )
+
+        # ── Step 4: Embed statements for vector search ──
+        results: List[MemoryItem] = []
+        for stmt in program.statements:
+            canonical = self._statement_to_canonical(stmt, program)
             try:
-                return self._process_envelope(envelope)
-            except Exception:
-                logger.exception(
-                    "Error processing envelope: %s",
-                    envelope.canonical_text[:60],
+                vector = self.embedder.embed(canonical)
+                item = self._store_stl_memory(
+                    stmt=stmt,
+                    canonical=canonical,
+                    vector=vector,
+                    owner_record=owner_record,
+                    batch_id=program.batch_id,
+                    session_id=session_id,
+                    metadata=metadata,
                 )
-                return None
-            finally:
-                ops.clear_context()
-                self._call_sem.release()
-
-        # Submit all facts to the pool; collect futures in order
-        futures: List[Future] = [
-            self._pool.submit(_guarded_process, i, envelope)
-            for i, envelope in enumerate(envelopes)
-        ]
-
-        # Gather results, preserving order, isolating per-fact errors
-        for future in futures:
-            try:
-                item = future.result()
-                if item is not None:
-                    results.append(item)
+                results.append(item)
             except Exception:
-                # Should not happen — exceptions caught inside _guarded_process
-                logger.exception("Unexpected error in fact processing future")
+                logger.exception("Failed to embed/store statement $%s", stmt.local_id)
 
         elapsed = time.perf_counter() - add_t0
-        n_new = len(results)
-        n_unchanged = total - n_new
         logger.info(
-            "📝 [ADD] ── DONE | owner=%s | %d envelopes | %d new | %d unchanged | %.2fs ──",
-            owner_user_id, total, n_new, n_unchanged, elapsed,
+            "📝 [ADD] ── DONE | owner=%s | %d stmts | %d embedded | %.2fs ──",
+            owner_user_id, len(program.statements), len(results), elapsed,
         )
         return results
 
@@ -299,6 +316,10 @@ class Memory:
     ) -> List[MemoryItem]:
         """Search for memories relevant to the query.
 
+        Executes a hybrid search:
+        1. Vector similarity search (existing, always runs)
+        2. STL structured query (predicate/ref-based, when applicable)
+
         Args:
             query: The search query.
             user_id: Only return memories for this user.
@@ -306,6 +327,7 @@ class Memory:
         """
         limit = limit or self._config.retrieval.search_top_k
 
+        # ── Vector search ──
         query_vector = self.embedder.embed(query)
         raw_results = self._vector_store.search(
             query_vector=query_vector, limit=limit,
@@ -313,11 +335,48 @@ class Memory:
         )
 
         items = []
+        seen_ids = set()
         for r in raw_results:
             item = self._payload_to_item(r["id"], r.get("payload", {}))
             item.score = r.get("score")
             items.append(item)
-        return items
+            seen_ids.add(r["id"])
+
+        # ── Structured STL search (supplement) ──
+        try:
+            owner_ctx = self._coerce_owner_context(user_id=user_id, owner=None)
+            owner_record = self._history_store.resolve_owner(owner_ctx)
+            stl_rows = self._stl_store.query_statements(
+                owner_id=owner_record.owner_id,
+                limit=limit,
+            )
+            for row in stl_rows:
+                stmt_id = row.get("id", "")
+                if stmt_id in seen_ids:
+                    continue
+                # Convert STL row to MemoryItem for a unified response
+                import json as _json
+                args = row.get("args", [])
+                if isinstance(args, str):
+                    args = _json.loads(args)
+                canonical = f"{row.get('predicate', '')}({', '.join(str(a) for a in args)})"
+                item = MemoryItem(
+                    id=stmt_id,
+                    user_id=user_id,
+                    owner_id=row.get("owner_id"),
+                    content=canonical,
+                    hash=generate_hash(canonical),
+                    created_at=row.get("created_at"),
+                    updated_at=row.get("created_at"),
+                    status=MemoryStatus.ACTIVE,
+                    canonical_text=canonical,
+                )
+                items.append(item)
+                seen_ids.add(stmt_id)
+        except Exception:
+            logger.debug("STL structured search supplement failed", exc_info=True)
+
+        return items[:limit]
 
     def get(self, memory_id: str) -> Optional[MemoryItem]:
         """Retrieve a single memory by ID."""
@@ -410,6 +469,7 @@ class Memory:
         """
         self._pool.shutdown(wait=True)
         self._history_store.close()
+        self._stl_store.close()
         logger.info("Memory system shut down")
 
     # ══════════════════════════════════════════════════════════════════
@@ -805,6 +865,75 @@ class Memory:
         if extraction_cfg:
             return extraction_cfg.temperature
         return self._config.llm.extraction_temperature
+
+    # ══════════════════════════════════════════════════════════════════
+    # STL pipeline helpers
+    # ══════════════════════════════════════════════════════════════════
+
+    def _extract_stl(self, conversation: str) -> str:
+        """Call LLM once to produce STL text from a conversation."""
+        focus_stack_text = format_focus_stack([])  # Phase 2: populate from history
+        messages = [
+            {"role": "system", "content": STL_EXTRACTION_SYSTEM_PROMPT},
+            {"role": "user", "content": STL_EXTRACTION_USER_TEMPLATE.format(
+                focus_stack=focus_stack_text,
+                conversation=conversation,
+            )},
+        ]
+        stl_cfg = self._config.llm_stages.get("stl_extraction")
+        temperature = None
+        if stl_cfg:
+            temperature = stl_cfg.extraction_temperature or stl_cfg.temperature
+        return self.stl_extraction_llm.generate(
+            messages=messages,
+            temperature=temperature,
+        )
+
+    @staticmethod
+    def _statement_to_canonical(stmt, program) -> str:
+        """Render a statement as a human-readable canonical string for embedding."""
+        args_str = ", ".join(str(a) for a in stmt.args)
+        return f"{stmt.predicate}({args_str})"
+
+    def _store_stl_memory(
+        self,
+        stmt,
+        canonical: str,
+        vector: list,
+        owner_record: OwnerRecord,
+        batch_id: str,
+        session_id: Optional[str],
+        metadata: Optional[Dict[str, Any]],
+    ) -> MemoryItem:
+        """Persist a single STL statement as a vector-store memory."""
+        now = get_utc_now()
+        memory_id = f"{batch_id}_{stmt.local_id}"
+        user_id = self._owner_user_id(owner_record)
+        payload = {
+            "user_id": user_id,
+            "owner_id": owner_record.owner_id,
+            "content": canonical,
+            "canonical_text": canonical,
+            "raw_text": f"${stmt.local_id} = {canonical}",
+            "hash": generate_hash(canonical),
+            "metadata": metadata or {},
+            "created_at": now.isoformat(),
+            "updated_at": now.isoformat(),
+            "confidence": 1.0,
+            "status": MemoryStatus.ACTIVE.value,
+            "source_session_id": session_id,
+            "stl_batch_id": batch_id,
+            "stl_predicate": stmt.predicate,
+            "stl_category": stmt.category,
+        }
+        self._vector_store.insert(id=memory_id, vector=vector, payload=payload)
+        self._history_store.add_record(
+            memory_id=memory_id,
+            user_id=user_id,
+            operation=MemoryOperation.ADD,
+            new_content=canonical,
+        )
+        return self._payload_to_item(memory_id, payload)
 
     def _retrieve_similar(
         self,

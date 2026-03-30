@@ -81,6 +81,13 @@ class HistoryStoreConfig(BaseModel):
     table_name: str = "memory_history"
 
 
+class STLStoreConfig(BaseModel):
+    """Semantic Translation Layer storage configuration."""
+    provider: str = "sqlite"
+    db_path: str = "mind_stl.db"
+    dsn: str = ""
+
+
 class RetrievalConfig(BaseModel):
     """Retrieval parameters."""
     search_top_k: int = 5
@@ -131,6 +138,7 @@ class MemoryConfig(BaseModel):
     embedding: EmbeddingConfig = Field(default_factory=EmbeddingConfig)
     vector_store: VectorStoreConfig = Field(default_factory=VectorStoreConfig)
     history_store: HistoryStoreConfig = Field(default_factory=HistoryStoreConfig)
+    stl_store: STLStoreConfig = Field(default_factory=STLStoreConfig)
     retrieval: RetrievalConfig = Field(default_factory=RetrievalConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
     concurrency: ConcurrencyConfig = Field(default_factory=ConcurrencyConfig)

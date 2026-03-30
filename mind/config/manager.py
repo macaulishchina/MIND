@@ -33,6 +33,7 @@ from mind.config.schema import (
     MemoryConfig,
     ProviderConfig,
     RetrievalConfig,
+    STLStoreConfig,
     VectorStoreConfig,
 )
 
@@ -157,6 +158,12 @@ class ConfigManager:
             if k in HistoryStoreConfig.model_fields
         })
 
+        stl_raw = raw.get("stl_store", {})
+        stl_cfg = STLStoreConfig(**{
+            k: v for k, v in stl_raw.items()
+            if k in STLStoreConfig.model_fields
+        })
+
         ret_raw = raw.get("retrieval", {})
         ret_cfg = RetrievalConfig(**{
             k: v for k, v in ret_raw.items()
@@ -180,6 +187,7 @@ class ConfigManager:
             embedding=emb_cfg,
             vector_store=vs_cfg,
             history_store=hs_cfg,
+            stl_store=stl_cfg,
             retrieval=ret_cfg,
             logging=log_cfg,
             concurrency=concurrency_cfg,
