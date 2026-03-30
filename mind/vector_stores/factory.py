@@ -9,6 +9,7 @@ class VectorStoreFactory:
 
     _provider_map = {
         "qdrant": "mind.vector_stores.qdrant.QdrantVectorStore",
+        "pgvector": "mind.vector_stores.pgvector.PgVectorStore",
     }
 
     @classmethod

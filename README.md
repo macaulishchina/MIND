@@ -11,7 +11,7 @@ MIND 是一个 AI 记忆质量层（Memory Quality Layer），核心目标不是
 - **来源追踪**：记录原始对话片段（source_context）
 - **版本追踪**：UPDATE 操作记录 version_of 关系
 - **逻辑删除**：status=active/deleted，已删除记忆不参与检索
-- **操作历史**：SQLite 记录完整操作日志
+- **操作历史**：支持同库 Postgres history，也保留 SQLite history backend
 - **多协议 LLM**：支持 OpenAI / Anthropic / Google 三协议，可自定义 provider
 - **TOML 配置**：所有配置集中在 `mind.toml`，支持构造时 override
 
@@ -110,8 +110,8 @@ mind.toml
 │   ├── [llm.google]         ← 完整 provider 定义
 │   └── [llm.deepseek]       ← template 继承 llm.openai + 覆盖差异
 ├── [embedding]              ← Embedding 独立配置
-├── [vector_store]           ← 向量数据库（纯本地，不消耗 token）
-├── [history_store]          ← SQLite 历史记录
+├── [vector_store]           ← 向量存储配置（支持 pgvector / Qdrant）
+├── [history_store]          ← 历史记录配置（支持 Postgres / SQLite）
 └── [retrieval]              ← 检索参数
 ```
 
@@ -141,7 +141,7 @@ mind/
 ├── __init__.py                   # 包导出
 ├── memory.py                     # Memory 主类（系统入口）
 ├── prompts.py                    # LLM Prompt 模板
-├── storage.py                    # SQLite 历史记录
+├── storage.py                    # History store 实现与工厂
 ├── utils.py                      # 工具函数
 ├── config/                       # 配置子系统（独立模块）
 │   ├── manager.py                #   ConfigManager（加载、合并、解析）
@@ -149,7 +149,7 @@ mind/
 │   └── models.py                 #   数据模型（MemoryItem 等）
 ├── llms/                         # LLM 层（OpenAI / Anthropic / Google）
 ├── embeddings/                   # Embedding 层（OpenAI）
-└── vector_stores/                # 向量存储层（Qdrant）
+└── vector_stores/                # 向量存储层（pgvector / Qdrant）
 tests/
 ├── conftest.py                   # 共享 fixtures
 ├── test_storage.py               # SQLite 测试
@@ -163,8 +163,8 @@ tests/
 | 语言 | Python |
 | LLM | OpenAI / Anthropic / Google 三协议 + 自定义 provider |
 | Embedding | OpenAI 兼容协议 |
-| 向量存储 | Qdrant（开发用 in-memory） |
-| 历史记录 | SQLite |
+| 向量存储 | PostgreSQL + pgvector（默认） / Qdrant |
+| 历史记录 | PostgreSQL / SQLite |
 | 配置 | TOML（mind.toml） |
 
 ## 路线图

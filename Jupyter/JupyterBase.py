@@ -25,3 +25,6 @@ def test_extract_facts_from_file(file_path: str):
         lines = f.readlines()
         for line in lines:
             test_extract_facts_from_message(line.strip())
+
+def test_add(role: str, message: str):
+    global_memory.add([{"role": role, "content": message}], user_id="test_user")

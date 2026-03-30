@@ -34,7 +34,7 @@ from mind.prompts import (
     format_existing_memories,
 )
 from mind.ops_logger import ops
-from mind.storage import SQLiteManager
+from mind.storage import HistoryStoreFactory
 from mind.utils import generate_hash, generate_id, get_utc_now, parse_messages
 from mind.vector_stores.factory import VectorStoreFactory
 
@@ -78,7 +78,7 @@ class Memory:
         self.llm = LlmFactory.create(self._config.llm)
         self.embedder = EmbedderFactory.create(self._config.embedding)
         self._vector_store = VectorStoreFactory.create(self._config.vector_store)
-        self._history_store = SQLiteManager(self._config.history_store)
+        self._history_store = HistoryStoreFactory.create(self._config.history_store)
         self._vector_store.create_collection(self._config.embedding.dimensions)
 
         # ── Concurrency infrastructure ──

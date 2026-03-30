@@ -57,13 +57,17 @@ class VectorStoreConfig(BaseModel):
     provider: str = "qdrant"
     collection_name: str = "mind_memories"
     url: str = ""
+    dsn: str = ""
     api_key: str = ""
     on_disk: bool = False
 
 
 class HistoryStoreConfig(BaseModel):
     """SQLite history store configuration."""
+    provider: str = "sqlite"
     db_path: str = "mind_history.db"
+    dsn: str = ""
+    table_name: str = "memory_history"
 
 
 class RetrievalConfig(BaseModel):

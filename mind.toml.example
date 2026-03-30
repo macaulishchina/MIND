@@ -81,15 +81,25 @@ dimensions   = 1024
 # dimensions   = 128
 
 [vector_store]
-provider        = "qdrant"
+provider        = "pgvector"
 collection_name = "mind_memories"
-url             = ""                # 留空 = in-memory 模式（进程退出数据丢失）
-                                    # 填写后连接远程 Qdrant 服务，如 "http://localhost:6333"
-api_key         = ""                # 仅连接 Qdrant Cloud 时需要，本地开发留空
-on_disk         = false
+dsn             = "postgresql://postgres:postgres@localhost:5432/mind"
+url             = ""                # qdrant provider 使用
+api_key         = ""                # qdrant provider 使用
+on_disk         = false             # qdrant provider 使用
+
+# 若需继续使用 Qdrant，可切换为：
+# provider        = "qdrant"
+# collection_name = "mind_memories"
+# url             = "http://localhost:6333"
+# api_key         = ""
+# on_disk         = false
 
 [history_store]
-db_path = "mind_history.db"
+provider   = "postgres"
+db_path    = "mind_history.db"      # sqlite provider 使用
+dsn        = "postgresql://postgres:postgres@localhost:5432/mind"
+table_name = "memory_history"
 
 [logging]
 level   = "INFO"               # DEBUG / INFO / WARNING / ERROR

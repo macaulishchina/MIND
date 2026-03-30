@@ -30,7 +30,11 @@ class BaseVectorStore(ABC):
     def _vec_url(self) -> str:
         """Connection URL for logging. Falls back to ':memory:' if unset."""
         cfg = getattr(self, "config", None)
-        return getattr(cfg, "url", None) or ":memory:"
+        return (
+            getattr(cfg, "url", None)
+            or getattr(cfg, "dsn", None)
+            or ":memory:"
+        )
 
     @abstractmethod
     def create_collection(self, dimensions: int) -> None:
