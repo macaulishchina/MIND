@@ -45,6 +45,7 @@ from mind.prompts import (
     format_existing_memories,
 )
 from mind.ops_logger import ops
+from mind.stl.focus import FocusStack
 from mind.stl.parser import parse_program
 from mind.stl.prompt import (
     STL_EXTRACTION_SYSTEM_PROMPT,
@@ -235,7 +236,11 @@ class Memory:
         logger.info("📝 [ADD] ── START | owner=%s | %d messages ──", owner_user_id, n_msgs)
 
         # ── Step 1: Single LLM extraction ──
-        stl_text = self._extract_stl(conversation)
+        stl_text = self._extract_stl(
+            conversation,
+            owner_id=owner_record.owner_id,
+            current_turn=len(messages),
+        )
         if not stl_text.strip():
             elapsed = time.perf_counter() - add_t0
             logger.info(
@@ -271,6 +276,7 @@ class Memory:
             owner_id=owner_record.owner_id,
             conv_id=conv_id,
             model=self.stl_extraction_llm.model if hasattr(self.stl_extraction_llm, "model") else None,
+            embedder=self.embedder,
         )
 
         logger.info(
@@ -870,9 +876,27 @@ class Memory:
     # STL pipeline helpers
     # ══════════════════════════════════════════════════════════════════
 
-    def _extract_stl(self, conversation: str) -> str:
-        """Call LLM once to produce STL text from a conversation."""
-        focus_stack_text = format_focus_stack([])  # Phase 2: populate from history
+    def _extract_stl(
+        self,
+        conversation: str,
+        owner_id: str = "",
+        current_turn: int = 0,
+    ) -> str:
+        """Call LLM once to produce STL text from a conversation.
+
+        When *owner_id* is provided, bootstraps the focus stack from
+        stored refs and injects it into the prompt (Phase 3 §17).
+        """
+        # Bootstrap focus stack from history
+        focus_stack = FocusStack()
+        if owner_id:
+            try:
+                ref_rows = self._stl_store.query_recent_refs(owner_id)
+                focus_stack.bootstrap_from_refs(ref_rows, current_turn)
+            except Exception:
+                logger.debug("Focus stack bootstrap failed", exc_info=True)
+        active = focus_stack.top_k_for_prompt()
+        focus_stack_text = format_focus_stack(active)
         messages = [
             {"role": "system", "content": STL_EXTRACTION_SYSTEM_PROMPT},
             {"role": "user", "content": STL_EXTRACTION_USER_TEMPLATE.format(

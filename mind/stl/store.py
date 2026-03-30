@@ -179,6 +179,41 @@ class BaseSTLStore(ABC):
     ) -> None:
         """Mark a statement as superseded (is_current=FALSE)."""
 
+    @abstractmethod
+    def query_recent_refs(
+        self,
+        owner_id: str,
+        limit: int = 20,
+    ) -> List[Dict[str, Any]]:
+        """Return recent refs for bootstrapping the focus stack.
+
+        Each dict has keys: ``id``, ``scope``, ``ref_type``, ``key``, ``aliases``.
+        """
+
+    @abstractmethod
+    def insert_coreference(
+        self,
+        source_expr: str,
+        resolved_to: str,
+        turn_id: int,
+        confidence: float,
+        method: Optional[str] = None,
+    ) -> None:
+        """Record a coreference resolution event."""
+
+    @abstractmethod
+    def insert_coref_pending(
+        self,
+        source_expr: str,
+        candidates: list,
+        turn_id: int,
+    ) -> None:
+        """Record an ambiguous coreference for later resolution."""
+
+    @abstractmethod
+    def get_all_vocab_words(self) -> List[str]:
+        """Return all words currently in vocab_registry."""
+
     def seed_vocab(self) -> None:
         """Pre-populate vocab_registry with seed predicates."""
         for entry in SEED_VOCAB:
@@ -203,6 +238,41 @@ class BaseSTLStore(ABC):
     def close(self) -> None:
         """Release backend resources."""
 
+    def check_vocab_collision(
+        self,
+        word: str,
+        embedder=None,
+        threshold: float = 0.85,
+    ):
+        """Check if *word* collides with existing vocab entries.
+
+        Uses embedding similarity when *embedder* is available.
+        Returns list of (existing_word, similarity) pairs above *threshold*.
+        Soft alert only -- does not block registration.
+        """
+        if embedder is None:
+            return []
+        existing_words = self.get_all_vocab_words()
+        if not existing_words:
+            return []
+        try:
+            new_vec = embedder.embed(word)
+        except Exception as e:
+            logger.debug("Vocab collision embed failed for %r: %s", word, e)
+            return []
+        collisions = []
+        for ew in existing_words:
+            if ew == word:
+                continue
+            try:
+                ev = embedder.embed(ew)
+                sim = _cosine_sim(new_vec, ev)
+                if sim >= threshold:
+                    collisions.append((ew, sim))
+            except Exception:
+                continue
+        return collisions
+
     # ── High-level helper ──
 
     def store_program(
@@ -211,6 +281,7 @@ class BaseSTLStore(ABC):
         owner_id: str,
         conv_id: str,
         model: Optional[str] = None,
+        embedder=None,
     ) -> StorageResult:
         """Persist an entire ParsedProgram.
 
@@ -329,7 +400,7 @@ class BaseSTLStore(ABC):
                 result.notes_inserted += 1
                 # Detect NEW_PRED declarations
                 if note.text.startswith("NEW_PRED "):
-                    self._handle_new_pred(note.text)
+                    self._handle_new_pred(note.text, embedder=embedder)
                     result.vocab_registered += 1
                 # Collect CORRECTION notes for correction workflow
                 if "CORRECTION:" in note.text:
@@ -370,10 +441,11 @@ class BaseSTLStore(ABC):
         )
         return ref_id
 
-    def _handle_new_pred(self, note_text: str) -> None:
+    def _handle_new_pred(self, note_text: str, embedder=None) -> None:
         """Parse a NEW_PRED note and register the vocabulary entry.
 
         Format: NEW_PRED word | category | arg_schema | definition
+        When *embedder* is provided, checks for vocab collision first.
         """
         parts = note_text[len("NEW_PRED "):].split("|")
         if len(parts) < 4:
@@ -383,12 +455,23 @@ class BaseSTLStore(ABC):
         category = parts[1].strip()
         arg_schema = parts[2].strip() or None
         definition = parts[3].strip()
+        # Collision detection (soft alert)
+        collisions = self.check_vocab_collision(word, embedder=embedder)
+        if collisions:
+            for cw, sim in collisions:
+                logger.warning(
+                    "Vocab collision: new pred %r similar to existing %r (sim=%.3f)",
+                    word, cw, sim,
+                )
         try:
             self.upsert_vocab(word, category, arg_schema, definition, "llm_created")
         except Exception as e:
             logger.warning("Failed to register vocab %r: %s", word, e)
 
-    def _handle_time_qualifier(self, stmt_id: str, args_json: list) -> None:
+    def _handle_time_qualifier(
+        self, stmt_id: str, args_json: list, anchor_turn: int = 0,
+        anchor_date: Optional[_date] = None,
+    ) -> None:
         """Extract temporal info from a time() qualifier and write to temporal_specs."""
         # time($target, "value") or time($target, "start", "end")
         if len(args_json) < 2:
@@ -400,13 +483,13 @@ class BaseSTLStore(ABC):
             return
 
         time_type, resolved_start, resolved_end, fuzzy_desc, window_days = (
-            _classify_time_value(raw_value, raw_end)
+            _classify_time_value(raw_value, raw_end, anchor_date=anchor_date)
         )
         try:
             self.insert_temporal_spec(
                 stmt_id=stmt_id,
                 time_type=time_type,
-                anchor_turn=0,  # caller may update later
+                anchor_turn=anchor_turn,
                 resolved_start=resolved_start,
                 resolved_end=resolved_end,
                 fuzzy_desc=fuzzy_desc,
@@ -478,9 +561,25 @@ class BaseSTLStore(ABC):
                 )
 
 
+# ── Cosine similarity helper ─────────────────────────────────────────
+
+import math as _math
+
+
+def _cosine_sim(a: list, b: list) -> float:
+    """Compute cosine similarity between two vectors."""
+    dot = sum(x * y for x, y in zip(a, b))
+    na = _math.sqrt(sum(x * x for x in a))
+    nb = _math.sqrt(sum(x * x for x in b))
+    if na == 0 or nb == 0:
+        return 0.0
+    return dot / (na * nb)
+
+
 # ── Time classification helper ───────────────────────────────────────
 
 import re as _re
+from datetime import date as _date, timedelta as _timedelta
 
 _RE_ABSOLUTE_DATE = _re.compile(
     r"^\d{4}(?:-\d{1,2})?(?:-\d{1,2})?$"
@@ -490,12 +589,82 @@ _FUZZY_WORDS = {
     "recent_start", "childhood", "youth",
 }
 
+# Relative time expressions that can be resolved to absolute dates
+_RELATIVE_RESOLVERS: Dict[str, Any] = {}  # populated below
+
+
+def _resolve_relative_time(
+    expr: str, anchor: _date,
+) -> Tuple[Optional[str], Optional[str]]:
+    """Resolve a relative time expression to (resolved_start, resolved_end).
+
+    Returns (None, None) if the expression cannot be resolved.
+    """
+    val = expr.lower().replace(" ", "_")
+
+    # Year-relative
+    if val in ("last_year", "去年"):
+        return (str(anchor.year - 1), None)
+    if val in ("this_year", "今年"):
+        return (str(anchor.year), None)
+    if val in ("next_year", "明年"):
+        return (str(anchor.year + 1), None)
+
+    # Month-relative
+    if val in ("last_month", "上个月", "上月"):
+        first = anchor.replace(day=1)
+        prev = first - _timedelta(days=1)
+        return (f"{prev.year}-{prev.month:02d}", None)
+    if val in ("this_month", "这个月", "本月"):
+        return (f"{anchor.year}-{anchor.month:02d}", None)
+    if val in ("next_month", "下个月", "下月"):
+        if anchor.month == 12:
+            return (f"{anchor.year + 1}-01", None)
+        return (f"{anchor.year}-{anchor.month + 1:02d}", None)
+
+    # Week-relative
+    if val in ("this_weekend", "这周末", "周末"):
+        # Saturday of the current week
+        days_to_sat = (5 - anchor.weekday()) % 7
+        if days_to_sat == 0 and anchor.weekday() != 5:
+            days_to_sat = 7
+        sat = anchor + _timedelta(days=days_to_sat)
+        sun = sat + _timedelta(days=1)
+        return (sat.isoformat(), sun.isoformat())
+    if val in ("next_week", "下周", "下星期"):
+        # Monday of next week
+        days_to_mon = (7 - anchor.weekday()) % 7 or 7
+        mon = anchor + _timedelta(days=days_to_mon)
+        return (mon.isoformat(), None)
+    if val in ("last_week", "上周", "上星期"):
+        mon = anchor - _timedelta(days=anchor.weekday() + 7)
+        return (mon.isoformat(), None)
+
+    # Day-relative
+    if val in ("today", "今天"):
+        return (anchor.isoformat(), None)
+    if val in ("yesterday", "昨天"):
+        return ((anchor - _timedelta(days=1)).isoformat(), None)
+    if val in ("tomorrow", "明天"):
+        return ((anchor + _timedelta(days=1)).isoformat(), None)
+    if val in ("day_before_yesterday", "前天"):
+        return ((anchor - _timedelta(days=2)).isoformat(), None)
+    if val in ("day_after_tomorrow", "后天"):
+        return ((anchor + _timedelta(days=2)).isoformat(), None)
+
+    return (None, None)
+
 
 def _classify_time_value(
     raw_value: str,
     raw_end: Optional[str] = None,
+    anchor_date: Optional[_date] = None,
 ) -> Tuple[str, Optional[str], Optional[str], Optional[str], Optional[int]]:
-    """Classify a time value into (time_type, resolved_start, resolved_end, fuzzy_desc, window_days)."""
+    """Classify a time value into (time_type, resolved_start, resolved_end, fuzzy_desc, window_days).
+
+    When *anchor_date* is provided, relative expressions like "next_month"
+    are resolved to absolute dates (§18).
+    """
     if raw_end is not None:
         # Interval: time($p, "2026-04", "2026-06")
         return ("interval", raw_value, raw_end, None, None)
@@ -504,10 +673,18 @@ def _classify_time_value(
         # Point: time($p, "2026-04")
         return ("point", raw_value, None, None, None)
 
-    # Check for relative patterns like "next_month", "last_year"
+    # Try to resolve relative expressions to absolute dates
     val_lower = raw_value.lower()
+    if anchor_date is not None:
+        resolved_start, resolved_end = _resolve_relative_time(raw_value, anchor_date)
+        if resolved_start is not None:
+            if resolved_end is not None:
+                return ("interval", resolved_start, resolved_end, raw_value, None)
+            return ("point", resolved_start, None, raw_value, None)
+
+    # Check for known fuzzy words
     if val_lower in _FUZZY_WORDS or not _RE_ABSOLUTE_DATE.match(raw_value):
-        window = 30 if val_lower == "recent" else None
+        window = 30 if val_lower in ("recent", "recently", "recent_start") else None
         return ("fuzzy", None, None, raw_value, window)
 
     return ("point", raw_value, None, None, None)
@@ -1064,6 +1241,60 @@ class SQLiteSTLStore(BaseSTLStore):
         )
         conn.commit()
 
+    def get_all_vocab_words(self) -> List[str]:
+        conn = self._get_conn()
+        rows = conn.execute("SELECT word FROM vocab_registry").fetchall()
+        return [row["word"] for row in rows]
+
+    def query_recent_refs(
+        self,
+        owner_id: str,
+        limit: int = 20,
+    ) -> List[Dict[str, Any]]:
+        conn = self._get_conn()
+        rows = conn.execute(
+            """SELECT id, scope, ref_type, key, aliases
+               FROM refs WHERE owner_id = ? AND scope != 'self'
+               ORDER BY created_at DESC LIMIT ?""",
+            (owner_id, limit),
+        ).fetchall()
+        results = []
+        for row in rows:
+            d = dict(row)
+            d["aliases"] = json.loads(d["aliases"]) if isinstance(d["aliases"], str) else d["aliases"]
+            results.append(d)
+        return results
+
+    def insert_coreference(
+        self,
+        source_expr: str,
+        resolved_to: str,
+        turn_id: int,
+        confidence: float,
+        method: Optional[str] = None,
+    ) -> None:
+        conn = self._get_conn()
+        conn.execute(
+            """INSERT INTO coreference (source_expr, resolved_to, turn_id, confidence, method)
+               VALUES (?, ?, ?, ?, ?)""",
+            (source_expr, resolved_to, turn_id, confidence, method),
+        )
+        conn.commit()
+
+    def insert_coref_pending(
+        self,
+        source_expr: str,
+        candidates: list,
+        turn_id: int,
+    ) -> None:
+        conn = self._get_conn()
+        conn.execute(
+            """INSERT INTO coref_pending (source_expr, candidates, turn_id)
+               VALUES (?, ?, ?)""",
+            (source_expr, json.dumps(candidates), turn_id),
+        )
+        conn.commit()
+
     def close(self) -> None:
         conn = getattr(self._local, "conn", None)
         if conn:
@@ -1321,6 +1552,58 @@ class PostgresSTLStore(BaseSTLStore):
                 cur.execute(
                     "UPDATE statements SET is_current = FALSE, superseded_by = %s WHERE id = %s",
                     (superseded_by, stmt_id),
+                )
+
+    def get_all_vocab_words(self) -> List[str]:
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT word FROM vocab_registry")
+                return [row["word"] for row in cur.fetchall()]
+
+    def query_recent_refs(
+        self,
+        owner_id: str,
+        limit: int = 20,
+    ) -> List[Dict[str, Any]]:
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """SELECT id, scope, ref_type, key, aliases
+                       FROM refs WHERE owner_id = %s AND scope != 'self'
+                       ORDER BY created_at DESC LIMIT %s""",
+                    (owner_id, limit),
+                )
+                return [dict(row) for row in cur.fetchall()]
+
+    def insert_coreference(
+        self,
+        source_expr: str,
+        resolved_to: str,
+        turn_id: int,
+        confidence: float,
+        method: Optional[str] = None,
+    ) -> None:
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """INSERT INTO coreference (source_expr, resolved_to, turn_id, confidence, method)
+                       VALUES (%s, %s, %s, %s, %s)""",
+                    (source_expr, resolved_to, turn_id, confidence, method),
+                )
+
+    def insert_coref_pending(
+        self,
+        source_expr: str,
+        candidates: list,
+        turn_id: int,
+    ) -> None:
+        _psycopg, _dict_row, sql, Jsonb = _load_postgres_modules()
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """INSERT INTO coref_pending (source_expr, candidates, turn_id)
+                       VALUES (%s, %s, %s)""",
+                    (source_expr, Jsonb(candidates), turn_id),
                 )
 
     def close(self) -> None:
