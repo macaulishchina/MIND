@@ -28,6 +28,12 @@ from mind.stl.models import (
     RefScope,
     StorageResult,
 )
+from mind.stl.vocab import (
+    CORRECTION_PREDICATES,
+    QUALIFIER_PREDICATES,
+    SEED_CATEGORY_MAP,
+    SEED_VOCAB,
+)
 from mind.ops_logger import ops
 from mind.utils import generate_id, get_utc_now
 
@@ -150,6 +156,50 @@ class BaseSTLStore(ABC):
     ) -> List[Dict[str, Any]]:
         """Query statements with optional filters."""
 
+    @abstractmethod
+    def get_vocab_category(self, predicate: str) -> Optional[str]:
+        """Look up a predicate's category from vocab_registry."""
+
+    @abstractmethod
+    def insert_temporal_spec(
+        self,
+        stmt_id: str,
+        time_type: str,
+        anchor_turn: int,
+        resolved_start: Optional[str] = None,
+        resolved_end: Optional[str] = None,
+        fuzzy_desc: Optional[str] = None,
+        window_days: Optional[int] = None,
+    ) -> None:
+        """Insert a temporal_specs row for a time() qualifier."""
+
+    @abstractmethod
+    def mark_superseded(
+        self, stmt_id: str, superseded_by: str,
+    ) -> None:
+        """Mark a statement as superseded (is_current=FALSE)."""
+
+    def seed_vocab(self) -> None:
+        """Pre-populate vocab_registry with seed predicates."""
+        for entry in SEED_VOCAB:
+            try:
+                self.upsert_vocab(
+                    word=entry.word,
+                    category=entry.category,
+                    arg_schema=entry.arg_schema,
+                    definition=entry.definition,
+                    source="seed",
+                )
+            except Exception as e:
+                logger.debug("Seed vocab %r already exists or failed: %s", entry.word, e)
+
+    def resolve_category(self, predicate: str) -> Optional[str]:
+        """Resolve a predicate's category: check seed map first, then DB."""
+        cat = SEED_CATEGORY_MAP.get(predicate)
+        if cat:
+            return cat
+        return self.get_vocab_category(predicate)
+
     def close(self) -> None:
         """Release backend resources."""
 
@@ -214,12 +264,15 @@ class BaseSTLStore(ABC):
                 logger.warning("Failed to upsert ref @%s: %s", ref.local_id, e)
                 result.errors.append(f"ref @{ref.local_id}: {e}")
 
-        # 3. Insert statements
+        # 3. Insert statements (with category resolution)
+        correction_stmts: List[Tuple[str, ParsedStatement, list]] = []
         for stmt in program.statements:
             global_id = f"{batch_id}_{stmt.local_id}"
             stmt_map[stmt.local_id] = global_id
             # Globalize args JSON
             args_json = _globalize_args(stmt.args, ref_map, stmt_map)
+            # Resolve category from vocab (seed map → DB → None)
+            category = stmt.category or self.resolve_category(stmt.predicate)
             try:
                 self.insert_statement(
                     stmt_id=global_id,
@@ -227,7 +280,7 @@ class BaseSTLStore(ABC):
                     owner_id=owner_id,
                     predicate=stmt.predicate,
                     args_json=args_json,
-                    category=stmt.category,
+                    category=category,
                 )
                 result.statements_inserted += 1
 
@@ -237,6 +290,15 @@ class BaseSTLStore(ABC):
                         arg_json.startswith("@") or arg_json.startswith("$")
                     ):
                         self.insert_stmt_ref(global_id, pos, arg_json)
+
+                # Detect time() qualifiers → populate temporal_specs
+                if stmt.predicate in QUALIFIER_PREDICATES and stmt.predicate == "time":
+                    self._handle_time_qualifier(global_id, args_json)
+
+                # Collect correct_intent / retract_intent for post-processing
+                if stmt.predicate in CORRECTION_PREDICATES:
+                    correction_stmts.append((global_id, stmt, args_json))
+
             except Exception as e:
                 logger.warning("Failed to insert statement $%s: %s", stmt.local_id, e)
                 result.errors.append(f"stmt ${stmt.local_id}: {e}")
@@ -258,6 +320,8 @@ class BaseSTLStore(ABC):
                 result.errors.append(f"ev ${ev.target_local_id}: {e}")
 
         # 5. Insert notes + detect NEW_PRED
+        # Collect CORRECTION: notes for matching old statements
+        correction_note_map: Dict[str, str] = {}  # correction_stmt_global_id → note text
         for note in program.notes:
             target_global = stmt_map.get(note.target_local_id, f"{batch_id}_{note.target_local_id}")
             try:
@@ -267,9 +331,26 @@ class BaseSTLStore(ABC):
                 if note.text.startswith("NEW_PRED "):
                     self._handle_new_pred(note.text)
                     result.vocab_registered += 1
+                # Collect CORRECTION notes for correction workflow
+                if "CORRECTION:" in note.text:
+                    correction_note_map[target_global] = note.text
             except Exception as e:
                 logger.warning("Failed to insert note: %s", e)
                 result.errors.append(f"note: {e}")
+
+        # 6. Process correct_intent / retract_intent
+        for global_id, stmt, args_json in correction_stmts:
+            try:
+                self._handle_correction(
+                    correction_stmt_id=global_id,
+                    predicate=stmt.predicate,
+                    args_json=args_json,
+                    owner_id=owner_id,
+                    note_text=correction_note_map.get(global_id),
+                )
+            except Exception as e:
+                logger.warning("Correction handling failed for $%s: %s", stmt.local_id, e)
+                result.errors.append(f"correction ${stmt.local_id}: {e}")
 
         return result
 
@@ -306,6 +387,130 @@ class BaseSTLStore(ABC):
             self.upsert_vocab(word, category, arg_schema, definition, "llm_created")
         except Exception as e:
             logger.warning("Failed to register vocab %r: %s", word, e)
+
+    def _handle_time_qualifier(self, stmt_id: str, args_json: list) -> None:
+        """Extract temporal info from a time() qualifier and write to temporal_specs."""
+        # time($target, "value") or time($target, "start", "end")
+        if len(args_json) < 2:
+            return
+        raw_value = args_json[1] if len(args_json) >= 2 else None
+        raw_end = args_json[2] if len(args_json) >= 3 else None
+
+        if not isinstance(raw_value, str):
+            return
+
+        time_type, resolved_start, resolved_end, fuzzy_desc, window_days = (
+            _classify_time_value(raw_value, raw_end)
+        )
+        try:
+            self.insert_temporal_spec(
+                stmt_id=stmt_id,
+                time_type=time_type,
+                anchor_turn=0,  # caller may update later
+                resolved_start=resolved_start,
+                resolved_end=resolved_end,
+                fuzzy_desc=fuzzy_desc,
+                window_days=window_days,
+            )
+        except Exception as e:
+            logger.warning("Failed to insert temporal_spec for %s: %s", stmt_id, e)
+
+    def _handle_correction(
+        self,
+        correction_stmt_id: str,
+        predicate: str,
+        args_json: list,
+        owner_id: str,
+        note_text: Optional[str] = None,
+    ) -> None:
+        """Process a correct_intent or retract_intent statement.
+
+        Finds matching existing statements by predicate/ref overlap and marks
+        them as superseded.  Uses heuristic matching (Phase 2); embedding
+        similarity matching deferred to Phase 3.
+        """
+        # The correction wraps a new statement: correct_intent(@speaker, $new_stmt)
+        # Extract the target proposition ID from args
+        target_prop_id = None
+        for arg in args_json:
+            if isinstance(arg, str) and arg.startswith("$"):
+                target_prop_id = arg.lstrip("$")
+                break
+
+        if not target_prop_id:
+            logger.debug("Correction %s has no target prop — skipping", correction_stmt_id)
+            return
+
+        # Look up the new statement to get its predicate and refs
+        candidates = self.query_statements(owner_id, is_current=True)
+        new_stmt = None
+        for c in candidates:
+            if c["id"] == target_prop_id:
+                new_stmt = c
+                break
+
+        if not new_stmt:
+            logger.debug("Correction target %s not found in DB", target_prop_id)
+            return
+
+        # Find existing statements with same predicate that are candidates for superseding
+        existing = self.query_statements(
+            owner_id, predicate=new_stmt["predicate"], is_current=True,
+        )
+
+        for old in existing:
+            if old["id"] == target_prop_id:
+                continue  # don't supersede itself
+            # Heuristic: same predicate + overlapping refs = likely match
+            old_args = old.get("args", [])
+            new_args = new_stmt.get("args", [])
+            old_refs = {a for a in old_args if isinstance(a, str) and a.startswith("@")}
+            new_refs = {a for a in new_args if isinstance(a, str) and a.startswith("@")}
+            overlap = old_refs & new_refs
+            if overlap:
+                if predicate == "retract_intent":
+                    self.mark_superseded(old["id"], correction_stmt_id)
+                else:
+                    self.mark_superseded(old["id"], target_prop_id)
+                logger.info(
+                    "Superseded statement %s by %s (correction: %s)",
+                    old["id"], target_prop_id, predicate,
+                )
+
+
+# ── Time classification helper ───────────────────────────────────────
+
+import re as _re
+
+_RE_ABSOLUTE_DATE = _re.compile(
+    r"^\d{4}(?:-\d{1,2})?(?:-\d{1,2})?$"
+)
+_FUZZY_WORDS = {
+    "recent", "recently", "past", "long_ago", "soon", "near_future",
+    "recent_start", "childhood", "youth",
+}
+
+
+def _classify_time_value(
+    raw_value: str,
+    raw_end: Optional[str] = None,
+) -> Tuple[str, Optional[str], Optional[str], Optional[str], Optional[int]]:
+    """Classify a time value into (time_type, resolved_start, resolved_end, fuzzy_desc, window_days)."""
+    if raw_end is not None:
+        # Interval: time($p, "2026-04", "2026-06")
+        return ("interval", raw_value, raw_end, None, None)
+
+    if _RE_ABSOLUTE_DATE.match(raw_value):
+        # Point: time($p, "2026-04")
+        return ("point", raw_value, None, None, None)
+
+    # Check for relative patterns like "next_month", "last_year"
+    val_lower = raw_value.lower()
+    if val_lower in _FUZZY_WORDS or not _RE_ABSOLUTE_DATE.match(raw_value):
+        window = 30 if val_lower == "recent" else None
+        return ("fuzzy", None, None, raw_value, window)
+
+    return ("point", raw_value, None, None, None)
 
 
 def _globalize_args(
@@ -614,6 +819,7 @@ class SQLiteSTLStore(BaseSTLStore):
         self.db_path = db_path
         self._local = threading.local()
         self.create_schema()
+        self.seed_vocab()
 
     def _get_conn(self) -> sqlite3.Connection:
         conn = getattr(self._local, "conn", None)
@@ -824,6 +1030,40 @@ class SQLiteSTLStore(BaseSTLStore):
 
         return results
 
+    def get_vocab_category(self, predicate: str) -> Optional[str]:
+        conn = self._get_conn()
+        row = conn.execute(
+            "SELECT category FROM vocab_registry WHERE word = ?", (predicate,)
+        ).fetchone()
+        return row["category"] if row else None
+
+    def insert_temporal_spec(
+        self,
+        stmt_id: str,
+        time_type: str,
+        anchor_turn: int,
+        resolved_start: Optional[str] = None,
+        resolved_end: Optional[str] = None,
+        fuzzy_desc: Optional[str] = None,
+        window_days: Optional[int] = None,
+    ) -> None:
+        conn = self._get_conn()
+        conn.execute(
+            """INSERT OR REPLACE INTO temporal_specs
+               (stmt_id, time_type, resolved_start, resolved_end, fuzzy_desc, window_days, anchor_turn)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (stmt_id, time_type, resolved_start, resolved_end, fuzzy_desc, window_days, anchor_turn),
+        )
+        conn.commit()
+
+    def mark_superseded(self, stmt_id: str, superseded_by: str) -> None:
+        conn = self._get_conn()
+        conn.execute(
+            "UPDATE statements SET is_current = 0, superseded_by = ? WHERE id = ?",
+            (superseded_by, stmt_id),
+        )
+        conn.commit()
+
     def close(self) -> None:
         conn = getattr(self._local, "conn", None)
         if conn:
@@ -843,6 +1083,7 @@ class PostgresSTLStore(BaseSTLStore):
             raise ValueError("stl_store.dsn is required for provider='postgres'")
         self.dsn = dsn
         self.create_schema()
+        self.seed_vocab()
 
     def _connect(self):
         psycopg, dict_row, _sql, _Jsonb = _load_postgres_modules()
@@ -1038,6 +1279,49 @@ class PostgresSTLStore(BaseSTLStore):
 
                 cur.execute(query, params)
                 return [dict(row) for row in cur.fetchall()]
+
+    def get_vocab_category(self, predicate: str) -> Optional[str]:
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT category FROM vocab_registry WHERE word = %s", (predicate,)
+                )
+                row = cur.fetchone()
+                return row["category"] if row else None
+
+    def insert_temporal_spec(
+        self,
+        stmt_id: str,
+        time_type: str,
+        anchor_turn: int,
+        resolved_start: Optional[str] = None,
+        resolved_end: Optional[str] = None,
+        fuzzy_desc: Optional[str] = None,
+        window_days: Optional[int] = None,
+    ) -> None:
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """INSERT INTO temporal_specs
+                       (stmt_id, time_type, resolved_start, resolved_end, fuzzy_desc, window_days, anchor_turn)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s)
+                       ON CONFLICT (stmt_id) DO UPDATE SET
+                           time_type = EXCLUDED.time_type,
+                           resolved_start = EXCLUDED.resolved_start,
+                           resolved_end = EXCLUDED.resolved_end,
+                           fuzzy_desc = EXCLUDED.fuzzy_desc,
+                           window_days = EXCLUDED.window_days,
+                           anchor_turn = EXCLUDED.anchor_turn""",
+                    (stmt_id, time_type, resolved_start, resolved_end, fuzzy_desc, window_days, anchor_turn),
+                )
+
+    def mark_superseded(self, stmt_id: str, superseded_by: str) -> None:
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE statements SET is_current = FALSE, superseded_by = %s WHERE id = %s",
+                    (superseded_by, stmt_id),
+                )
 
     def close(self) -> None:
         pass  # Connections are context-managed per operation
