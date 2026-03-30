@@ -17,18 +17,29 @@ import re
 import sys
 import time
 import threading
+import unicodedata
 from concurrent.futures import ThreadPoolExecutor, Future
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 from pathlib import Path
 
 from mind.config.manager import ConfigManager
-from mind.config.models import MemoryItem, MemoryOperation, MemoryStatus
+from mind.config.models import (
+    FactEnvelope,
+    FactFamily,
+    MemoryItem,
+    MemoryOperation,
+    MemoryStatus,
+    OwnerContext,
+    OwnerRecord,
+)
 from mind.config.schema import LoggingConfig, MemoryConfig
 from mind.embeddings.factory import EmbedderFactory
 from mind.llms.factory import LlmFactory
 from mind.prompts import (
     FACT_EXTRACTION_SYSTEM_PROMPT,
+    FACT_NORMALIZATION_SYSTEM_PROMPT,
     FACT_EXTRACTION_USER_TEMPLATE,
+    FACT_NORMALIZATION_USER_TEMPLATE,
     UPDATE_DECISION_SYSTEM_PROMPT,
     UPDATE_DECISION_USER_TEMPLATE,
     format_existing_memories,
@@ -39,6 +50,26 @@ from mind.utils import generate_hash, generate_id, get_utc_now, parse_messages
 from mind.vector_stores.factory import VectorStoreFactory
 
 logger = logging.getLogger(__name__)
+
+_SINGLE_VALUE_FIELDS = {
+    "name",
+    "age",
+    "occupation",
+    "location",
+    "workplace",
+    "language",
+    "relation_to_owner",
+}
+_SET_VALUE_FAMILIES = {
+    FactFamily.PREFERENCE,
+    FactFamily.BELIEF,
+    FactFamily.HABIT,
+}
+_APPEND_ONLY_FAMILIES = {
+    FactFamily.EVENT,
+    FactFamily.PLAN,
+    FactFamily.QUOTE,
+}
 
 
 class Memory:
@@ -76,6 +107,15 @@ class Memory:
 
         # ── Dependency objects (fixed for the lifetime of this instance) ──
         self.llm = LlmFactory.create(self._config.llm)
+        self.extraction_llm = LlmFactory.create(
+            self._config.llm_stages.get("extraction", self._config.llm)
+        )
+        self.normalization_llm = LlmFactory.create(
+            self._config.llm_stages.get("normalization", self._config.llm)
+        )
+        self.decision_llm = LlmFactory.create(
+            self._config.llm_stages.get("decision", self._config.llm)
+        )
         self.embedder = EmbedderFactory.create(self._config.embedding)
         self._vector_store = VectorStoreFactory.create(self._config.vector_store)
         self._history_store = HistoryStoreFactory.create(self._config.history_store)
@@ -151,7 +191,8 @@ class Memory:
     def add(
         self,
         messages: List[Dict[str, str]],
-        user_id: str,
+        user_id: Optional[str] = None,
+        owner: Optional[OwnerContext] = None,
         session_id: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> List[MemoryItem]:
@@ -159,7 +200,9 @@ class Memory:
 
         Args:
             messages: Chat messages [{"role": ..., "content": ...}].
-            user_id: The user this memory belongs to.
+            user_id: Backward-compatible alias for ``owner.external_user_id``.
+            owner: Structured owner identity. Provide either known
+                   ``external_user_id`` or stable ``anonymous_session_id``.
             session_id: Optional session identifier for source tracking.
             metadata: Optional extra metadata to attach.
 
@@ -168,45 +211,56 @@ class Memory:
         """
         conversation = parse_messages(messages)
         results: List[MemoryItem] = []
+        owner_context = self._coerce_owner_context(user_id=user_id, owner=owner)
+        owner_record = self._history_store.resolve_owner(owner_context)
+        owner_user_id = self._owner_user_id(owner_record)
 
         add_t0 = time.perf_counter()
         n_msgs = len(messages)
-        logger.info("📝 [ADD] ── START | user=%s | %d messages ──", user_id, n_msgs)
+        logger.info("📝 [ADD] ── START | owner=%s | %d messages ──", owner_user_id, n_msgs)
 
         facts = self._extract_facts(
-            self.llm,
+            self.extraction_llm,
             conversation,
-            temperature=self._config.llm.extraction_temperature,
+            temperature=self._extraction_temperature(),
         )
         if not facts:
             elapsed = time.perf_counter() - add_t0
             logger.info(
-                "📝 [ADD] ── DONE | user=%s | 0 facts extracted | %.2fs ──",
-                user_id, elapsed,
+                "📝 [ADD] ── DONE | owner=%s | 0 facts extracted | %.2fs ──",
+                owner_user_id, elapsed,
             )
             return results
 
         logger.info("Extracted %d facts from conversation", len(facts))
 
-        valid_facts = [
-            f for f in facts
-            if f.get("text", "")
-        ]
-        total = len(valid_facts)
+        envelopes = self._normalize_facts_to_envelopes(
+            facts=facts,
+            owner=owner_record,
+            session_id=session_id,
+            source_context=conversation,
+            metadata=metadata,
+        )
+        total = len(envelopes)
+        if not envelopes:
+            elapsed = time.perf_counter() - add_t0
+            logger.info(
+                "📝 [ADD] ── DONE | owner=%s | 0 envelopes normalized | %.2fs ──",
+                owner_user_id, elapsed,
+            )
+            return results
 
-        def _guarded_process(idx: int, fact: Dict[str, Any]) -> Optional[MemoryItem]:
+        def _guarded_process(idx: int, envelope: FactEnvelope) -> Optional[MemoryItem]:
             """Acquire semaphore, process one fact, release."""
             ops.set_context(f"[fact:{idx + 1}/{total}]")
             self._call_sem.acquire()
             try:
-                return self._process_fact(
-                    fact_text=fact["text"],
-                    confidence=fact.get("confidence", 0.5),
-                    user_id=user_id, session_id=session_id,
-                    source_context=conversation, metadata=metadata,
-                )
+                return self._process_envelope(envelope)
             except Exception:
-                logger.exception("Error processing fact: %s", fact["text"][:60])
+                logger.exception(
+                    "Error processing envelope: %s",
+                    envelope.canonical_text[:60],
+                )
                 return None
             finally:
                 ops.clear_context()
@@ -214,8 +268,8 @@ class Memory:
 
         # Submit all facts to the pool; collect futures in order
         futures: List[Future] = [
-            self._pool.submit(_guarded_process, i, f)
-            for i, f in enumerate(valid_facts)
+            self._pool.submit(_guarded_process, i, envelope)
+            for i, envelope in enumerate(envelopes)
         ]
 
         # Gather results, preserving order, isolating per-fact errors
@@ -232,8 +286,8 @@ class Memory:
         n_new = len(results)
         n_unchanged = total - n_new
         logger.info(
-            "📝 [ADD] ── DONE | user=%s | %d facts | %d new | %d unchanged | %.2fs ──",
-            user_id, total, n_new, n_unchanged, elapsed,
+            "📝 [ADD] ── DONE | owner=%s | %d envelopes | %d new | %d unchanged | %.2fs ──",
+            owner_user_id, total, n_new, n_unchanged, elapsed,
         )
         return results
 
@@ -297,8 +351,14 @@ class Memory:
 
         self._vector_store.update(
             id=memory_id, vector=new_vector,
-            payload={"content": content, "hash": generate_hash(content),
-                     "updated_at": now.isoformat()},
+            payload={
+                "content": content,
+                "canonical_text": content,
+                "raw_text": content,
+                "field_value_json": {"value": content},
+                "hash": generate_hash(content),
+                "updated_at": now.isoformat(),
+            },
         )
         self._history_store.add_record(
             memory_id=memory_id, user_id=existing.user_id,
@@ -322,6 +382,17 @@ class Memory:
         self._history_store.add_record(
             memory_id=memory_id, user_id=existing.user_id,
             operation=MemoryOperation.DELETE, old_content=existing.content,
+            metadata={
+                "owner_id": existing.owner_id,
+                "subject_ref": existing.subject_ref,
+                "fact_family": (
+                    existing.fact_family.value
+                    if existing.fact_family is not None
+                    else None
+                ),
+                "field_key": existing.field_key,
+                "canonical_text": existing.canonical_text or existing.content,
+            },
         )
         logger.info("Deleted memory %s", memory_id)
         return True
@@ -382,12 +453,7 @@ class Memory:
 
     @staticmethod
     def _normalize_extracted_facts(raw_facts: Any) -> List[Dict[str, Any]]:
-        """Clean extraction output before retrieval and decision.
-
-        Keeps the runtime contract compatible with the existing pipeline while
-        removing empty rows, normalizing whitespace and punctuation, and
-        collapsing exact duplicates to the highest-confidence version.
-        """
+        """Clean extraction output before normalization."""
         if not isinstance(raw_facts, list):
             logger.warning("Extraction returned non-list facts payload: %r", raw_facts)
             return []
@@ -399,12 +465,6 @@ class Memory:
                 continue
 
             text = Memory._normalize_fact_text(raw_fact.get("text", ""))
-            if not text:
-                continue
-            if Memory._should_filter_extracted_fact(text):
-                logger.info("Filtering noisy extracted fact: %s", text)
-                continue
-            text = Memory._canonicalize_fact_text(text)
             if not text:
                 continue
 
@@ -437,242 +497,344 @@ class Memory:
         normalized = " ".join(text.strip().split())
         return normalized.rstrip(" .,!?:;\t\r\n")
 
-    @staticmethod
-    def _canonicalize_fact_text(text: str) -> str:
-        """Canonicalize high-frequency fact patterns to stabilize downstream behavior."""
-        canonical = text
-        lowered = text.casefold()
-
-        if Memory._is_concise_answer_preference(lowered):
-            return "User prefers concise answers"
-
-        if Memory._is_list_format_preference(lowered):
-            return "User prefers list-form responses"
-
-        if Memory._is_english_summary_preference(lowered):
-            return "User prefers summaries in English"
-
-        if Memory._is_chinese_default_language_preference(lowered):
-            return "User usually uses Chinese"
-
-        canonical = re.sub(
-            r"^User does not drink ([A-Za-z]+) anymore$",
-            r"User no longer drinks \1",
-            canonical,
-        )
-        canonical = re.sub(
-            r"^User no longer drinks ([A-Za-z]+)$",
-            r"User no longer drinks \1",
-            canonical,
-        )
-        return canonical
-
-    @staticmethod
-    def _is_concise_answer_preference(text: str) -> bool:
-        """Detect short/brief/terse response preferences."""
-        concise_markers = (
-            "prefers concise answers",
-            "prefers answers to be short",
-            "prefers short answers",
-            "prefers that responses be kept short",
-            "prefers brief responses",
-            "prefers brief replies",
-            "prefers concise responses",
-            "prefers replies to be terse",
-        )
-        return any(marker in text for marker in concise_markers)
-
-    @staticmethod
-    def _is_list_format_preference(text: str) -> bool:
-        """Detect bullet/list formatting preferences."""
-        list_markers = (
-            "prefers list-form responses",
-            "prefers answers in bullet points",
-            "prefers bullet points",
-            "prefers that responses use lists",
-            "prefers that responses use lists where appropriate",
-            "prefers responses to be concise and bullet-pointed",
-            "prefers responses to be bullet-pointed",
-            "prefers lists over paragraphs",
-        )
-        return any(marker in text for marker in list_markers)
-
-    @staticmethod
-    def _is_english_summary_preference(text: str) -> bool:
-        """Detect preferences for English summaries."""
-        return any(
-            marker in text
-            for marker in (
-                "requests summaries to be in english",
-                "prefers summaries in english",
-                "wants summaries in english",
+    def _normalize_facts_to_envelopes(
+        self,
+        facts: List[Dict[str, Any]],
+        owner: OwnerRecord,
+        session_id: Optional[str],
+        source_context: str,
+        metadata: Optional[Dict[str, Any]],
+    ) -> List[FactEnvelope]:
+        """Normalize raw fact strings into structured envelopes."""
+        envelopes: List[FactEnvelope] = []
+        for fact in facts:
+            raw_text = fact.get("text", "")
+            if not raw_text:
+                continue
+            envelopes.extend(
+                self._normalize_single_fact(
+                    raw_fact=raw_text,
+                    confidence=fact.get("confidence", 0.5),
+                    owner=owner,
+                    session_id=session_id,
+                    source_context=source_context,
+                    metadata=metadata,
+                )
             )
-        )
 
-    @staticmethod
-    def _is_chinese_default_language_preference(text: str) -> bool:
-        """Detect a default preference for Chinese language usage."""
-        return any(
-            marker in text
-            for marker in (
-                "generally uses chinese",
-                "typically uses chinese",
-                "usually uses chinese",
-                "prefers chinese by default",
+        deduped: Dict[str, FactEnvelope] = {}
+        for envelope in envelopes:
+            key = envelope.canonical_text.casefold()
+            existing = deduped.get(key)
+            if existing is None or envelope.confidence > existing.confidence:
+                deduped[key] = envelope
+        return list(deduped.values())
+
+    def _normalize_single_fact(
+        self,
+        raw_fact: str,
+        confidence: float,
+        owner: OwnerRecord,
+        session_id: Optional[str],
+        source_context: str,
+        metadata: Optional[Dict[str, Any]],
+    ) -> List[FactEnvelope]:
+        """Normalize one raw fact through the normalization model."""
+        owner_context = {
+            "owner_id": owner.owner_id,
+            "owner_type": owner.owner_type.value,
+            "external_user_id": owner.external_user_id,
+            "anonymous_session_id": owner.anonymous_session_id,
+            "display_name": owner.display_name,
+            "channel": owner.channel,
+        }
+        messages = [
+            {"role": "system", "content": FACT_NORMALIZATION_SYSTEM_PROMPT},
+            {
+                "role": "user",
+                "content": FACT_NORMALIZATION_USER_TEMPLATE.format(
+                    owner_context=json.dumps(owner_context, ensure_ascii=False),
+                    raw_fact=raw_fact,
+                ),
+            },
+        ]
+        response = self.normalization_llm.generate(
+            messages=messages,
+            response_format={"type": "json_object"},
+        )
+        try:
+            payload = json.loads(response)
+        except json.JSONDecodeError:
+            logger.error("Failed to parse normalization response: %s", response)
+            payload = {"envelopes": []}
+
+        raw_envelopes = payload.get("envelopes", [])
+        if not isinstance(raw_envelopes, list) or not raw_envelopes:
+            raw_envelopes = [self._fallback_normalized_spec(raw_fact)]
+
+        envelopes: List[FactEnvelope] = []
+        subject_cache: Dict[Tuple[str, str, str], str] = {}
+        for spec in raw_envelopes:
+            if not isinstance(spec, dict):
+                continue
+            envelope = self._build_fact_envelope(
+                spec=spec,
+                raw_fact=raw_fact,
+                default_confidence=confidence,
+                owner=owner,
+                session_id=session_id,
+                source_context=source_context,
+                metadata=metadata,
+                subject_cache=subject_cache,
             )
+            if envelope is not None:
+                envelopes.append(envelope)
+        return envelopes
+
+    def _build_fact_envelope(
+        self,
+        spec: Dict[str, Any],
+        raw_fact: str,
+        default_confidence: float,
+        owner: OwnerRecord,
+        session_id: Optional[str],
+        source_context: str,
+        metadata: Optional[Dict[str, Any]],
+        subject_cache: Dict[Tuple[str, str, str], str],
+    ) -> Optional[FactEnvelope]:
+        """Convert a normalization spec into a validated envelope."""
+        subject_scope = str(spec.get("subject_scope", "self") or "self").strip().lower()
+        relation_type = self._normalize_relation_type(spec.get("relation_type"))
+        if subject_scope == "self":
+            subject_ref = "self"
+            relation_type = "self"
+        elif subject_scope == "third_party_named":
+            display_name = self._normalize_fact_text(spec.get("display_name", ""))
+            normalized_name = self._normalize_name(
+                spec.get("normalized_name") or display_name
+            )
+            if not display_name or not normalized_name:
+                return None
+            cache_key = (subject_scope, relation_type, normalized_name)
+            if cache_key in subject_cache:
+                subject_ref = subject_cache[cache_key]
+            else:
+                subject_ref = self._history_store.get_or_create_named_subject(
+                    owner_id=owner.owner_id,
+                    relation_type=relation_type,
+                    display_name=display_name,
+                    normalized_name=normalized_name,
+                    aliases={"last_raw_fact": raw_fact},
+                ).subject_ref
+                subject_cache[cache_key] = subject_ref
+        elif subject_scope == "third_party_unknown":
+            cache_key = (subject_scope, relation_type, "")
+            if cache_key in subject_cache:
+                subject_ref = subject_cache[cache_key]
+            else:
+                subject_ref = self._history_store.create_placeholder_subject(
+                    owner_id=owner.owner_id,
+                    relation_type=relation_type,
+                    aliases={"last_raw_fact": raw_fact},
+                ).subject_ref
+                subject_cache[cache_key] = subject_ref
+        else:
+            return None
+
+        fact_family = self._normalize_fact_family(spec.get("fact_family"))
+        field_key = self._normalize_field_key(
+            spec.get("field_key"),
+            fact_family=fact_family,
+        )
+        field_value_json = spec.get("field_value_json")
+        if not isinstance(field_value_json, dict) or not field_value_json:
+            field_value_json = {"value": raw_fact}
+
+        canonical_text = self._build_canonical_text(
+            subject_ref=subject_ref,
+            field_key=field_key,
+            field_value_json=field_value_json,
+        )
+        confidence = spec.get("confidence", default_confidence)
+        try:
+            confidence_value = max(0.0, min(1.0, float(confidence)))
+        except (TypeError, ValueError):
+            confidence_value = default_confidence
+
+        return FactEnvelope(
+            owner_id=owner.owner_id,
+            user_id=self._owner_user_id(owner),
+            owner_type=owner.owner_type,
+            subject_ref=subject_ref,
+            fact_family=fact_family,
+            relation_type=relation_type,
+            field_key=field_key,
+            field_value_json=field_value_json,
+            canonical_text=canonical_text,
+            raw_text=raw_fact,
+            confidence=confidence_value,
+            source_context=source_context,
+            source_session_id=session_id,
+            metadata=metadata or {},
         )
 
     @staticmethod
-    def _should_filter_extracted_fact(text: str) -> bool:
-        """Drop obviously noisy extracted facts before retrieval and decision."""
-        lowered = text.casefold()
-        return (
-            Memory._looks_like_ephemeral_operational_fact(lowered)
-            or Memory._looks_like_external_attributed_fact(lowered)
-            or Memory._looks_like_speculative_fact(lowered)
-            or Memory._looks_like_weak_identity_inference(lowered)
-        )
+    def _fallback_normalized_spec(raw_fact: str) -> Dict[str, Any]:
+        """Fallback when the normalization model returns unusable output."""
+        return {
+            "subject_scope": "self",
+            "relation_type": "self",
+            "fact_family": "attribute",
+            "field_key": "attribute:statement",
+            "field_value_json": {"value": raw_fact},
+        }
 
     @staticmethod
-    def _looks_like_ephemeral_operational_fact(text: str) -> bool:
-        """Detect transient troubleshooting or operational chatter."""
-        direct_noise_markers = (
-            "timeout",
-            "timed out",
-            "stack trace",
-            "error log",
-            "debug log",
-            "超时",
-            "报错",
-            "日志",
-            "排查",
-            "调试",
-        )
-        if any(marker in text for marker in direct_noise_markers):
-            return True
-
-        process_markers = (
-            "retry",
-            "retried",
-            "restarting",
-            "restart",
-            "重试",
-            "重启",
-        )
-        return any(marker in text for marker in process_markers)
+    def _normalize_name(name: Any) -> str:
+        """Normalize display names for owner-local subject refs."""
+        if not isinstance(name, str):
+            return ""
+        normalized = unicodedata.normalize("NFKC", name)
+        return " ".join(normalized.casefold().split())
 
     @staticmethod
-    def _looks_like_external_attributed_fact(text: str) -> bool:
-        """Detect attributed preferences or advice from other people."""
-        attributed_phrases = (
-            "manager wants",
-            "manager asked",
-            "friend said",
-            "friend suggests",
-            "friend recommended",
-            "assistant said",
-            "you said",
-            "朋友总说",
-            "朋友建议",
-            "经理希望",
-            "经理要求",
-            "你说过",
-            "助手说",
-        )
-        if any(phrase in text for phrase in attributed_phrases):
-            return True
-
-        actor_markers = (
-            "manager",
-            "friend",
-            "assistant",
-            "朋友",
-            "经理",
-            "助手",
-        )
-        advice_markers = (
-            " wants ",
-            " told ",
-            " said ",
-            " suggests ",
-            " recommended ",
-            "advised",
-            "建议",
-            "希望",
-            "要求",
-            "让用户",
-        )
-        return any(actor in text for actor in actor_markers) and any(
-            marker in text for marker in advice_markers
-        )
+    def _normalize_relation_type(value: Any) -> str:
+        relation = Memory._normalize_fact_text(value or "person").casefold()
+        relation = relation.replace(" ", "_")
+        relation_map = {
+            "mom": "mother",
+            "dad": "father",
+            "wife": "partner",
+            "husband": "partner",
+            "girlfriend": "partner",
+            "boyfriend": "partner",
+            "colleague": "coworker",
+            "brother": "sibling",
+            "sister": "sibling",
+            "dog": "pet",
+            "cat": "pet",
+        }
+        return relation_map.get(relation, relation or "person")
 
     @staticmethod
-    def _looks_like_speculative_fact(text: str) -> bool:
-        """Detect speculative facts that should not become memories."""
-        speculative_markers = (
-            " might ",
-            " may ",
-            " could ",
-            " possibly ",
-            " maybe ",
-            "可能",
-            "也许",
-            "或许",
-            "如果",
-        )
-        padded = f" {text} "
-        if any(marker in padded for marker in speculative_markers):
-            return True
-
-        return bool(re.search(r"\bif\b", text))
+    def _normalize_fact_family(value: Any) -> FactFamily:
+        normalized = Memory._normalize_fact_text(value or FactFamily.ATTRIBUTE.value).casefold()
+        try:
+            return FactFamily(normalized)
+        except ValueError:
+            return FactFamily.ATTRIBUTE
 
     @staticmethod
-    def _looks_like_weak_identity_inference(text: str) -> bool:
-        """Detect soft inferred identity/profile statements that should not be stored."""
-        weak_inference_markers = (
-            "appears to be",
-            "seems to be",
-            "likely",
-            "probably",
-            "primary language appears to be",
-            "looks like the user",
-        )
-        if any(marker in text for marker in weak_inference_markers):
-            return True
+    def _normalize_field_key(value: Any, fact_family: FactFamily) -> str:
+        raw_key = Memory._normalize_fact_text(value or "")
+        normalized = raw_key.casefold().replace(" ", "_").replace("-", "_")
+        normalized = re.sub(r"[^a-z0-9_:]+", "", normalized)
+        controlled_map = {
+            "job": "occupation",
+            "works_at": "workplace",
+            "work": "workplace",
+            "lives_in": "location",
+            "city": "location",
+            "profession": "occupation",
+            "relation": "relation_to_owner",
+        }
+        normalized = controlled_map.get(normalized, normalized)
+        if not normalized:
+            normalized = "attribute:statement"
 
-        inferred_language_markers = (
-            "primary language",
-            "native language",
-        )
-        uncertainty_markers = (
-            "appears",
-            "seems",
-            "likely",
-            "probably",
-        )
-        return any(marker in text for marker in inferred_language_markers) and any(
-            marker in text for marker in uncertainty_markers
-        )
+        if fact_family == FactFamily.RELATION:
+            return "relation_to_owner"
+        if fact_family == FactFamily.QUOTE:
+            return "quote"
+        if fact_family in _APPEND_ONLY_FAMILIES and ":" not in normalized:
+            return f"{fact_family.value}:{normalized}"
+        if fact_family in _SET_VALUE_FAMILIES and ":" not in normalized:
+            return f"{fact_family.value}:{normalized}"
+        if normalized in _SINGLE_VALUE_FIELDS or ":" in normalized:
+            return normalized
+        return f"attribute:{normalized}"
+
+    @staticmethod
+    def _build_canonical_text(
+        subject_ref: str,
+        field_key: str,
+        field_value_json: Dict[str, Any],
+    ) -> str:
+        """Render a structured canonical memory string."""
+        value = field_value_json.get("value", field_value_json)
+        if field_key == "quote":
+            rendered = json.dumps(str(value), ensure_ascii=False)
+        elif isinstance(value, (dict, list)):
+            rendered = json.dumps(value, ensure_ascii=False, sort_keys=True)
+        else:
+            rendered = str(value)
+        return f"[{subject_ref}] {field_key}={rendered}"
+
+    @staticmethod
+    def _owner_user_id(owner: OwnerRecord) -> str:
+        """Return the compatibility-facing user ID for a resolved owner."""
+        return owner.external_user_id or owner.anonymous_session_id or owner.owner_id
+
+    @staticmethod
+    def _coerce_owner_context(
+        user_id: Optional[str],
+        owner: Optional[OwnerContext],
+    ) -> OwnerContext:
+        """Resolve backward-compatible ``user_id`` into ``OwnerContext``."""
+        if owner is None:
+            if not user_id:
+                raise ValueError(
+                    "Provide either user_id or owner with external_user_id / "
+                    "anonymous_session_id"
+                )
+            return OwnerContext(external_user_id=user_id)
+
+        owner_data = owner.model_dump()
+        if user_id:
+            existing_external = owner_data.get("external_user_id")
+            if existing_external and existing_external != user_id:
+                raise ValueError("user_id conflicts with owner.external_user_id")
+            owner_data["external_user_id"] = user_id
+        return OwnerContext(**owner_data)
+
+    def _extraction_temperature(self) -> Optional[float]:
+        """Resolve extraction temperature from stage config with fallback."""
+        extraction_cfg = self._config.llm_stages.get("extraction")
+        if extraction_cfg and extraction_cfg.extraction_temperature is not None:
+            return extraction_cfg.extraction_temperature
+        if extraction_cfg:
+            return extraction_cfg.temperature
+        return self._config.llm.extraction_temperature
 
     def _retrieve_similar(
         self,
-        fact_text: str,
-        user_id: str,
+        fact_text: Optional[str] = None,
+        user_id: Optional[str] = None,
+        envelope: Optional[FactEnvelope] = None,
     ) -> tuple:
-        """Embed a fact and find similar existing memories.
-
-        Returns:
-            A tuple of ``(fact_vector, similar_results, temp_to_real)`` where
-            *similar_results* is the raw search result list, and
-            *temp_to_real* maps temporary string IDs ("0", "1", …) to real
-            memory IDs (used later by the decision stage).
-        """
+        """Embed a fact and find similar existing memories."""
+        if envelope is not None:
+            fact_text = envelope.canonical_text
+        if not fact_text:
+            raise ValueError("fact_text or envelope is required")
         fact_vector = self.embedder.embed(fact_text)
+        filters = {"status": MemoryStatus.ACTIVE.value}
+        if envelope is not None:
+            filters.update(
+                {
+                    "owner_id": envelope.owner_id,
+                    "subject_ref": envelope.subject_ref,
+                    "fact_family": envelope.fact_family.value,
+                    "field_key": envelope.field_key,
+                }
+            )
+        elif user_id:
+            filters["user_id"] = user_id
 
         similar = self._vector_store.search(
             query_vector=fact_vector,
             limit=self._config.retrieval.similarity_top_k,
-            filters={"user_id": user_id, "status": MemoryStatus.ACTIVE.value},
+            filters=filters,
         )
 
         temp_to_real: Dict[str, str] = {}
@@ -725,42 +887,47 @@ class Memory:
         logger.info("Fact: '%s' → Decision: %s (reason: %s)", fact_text[:60], action, reason)
         return decision
 
+    @staticmethod
+    def _update_mode(envelope: FactEnvelope) -> str:
+        """Return the update strategy for a structured envelope."""
+        if envelope.fact_family in _APPEND_ONLY_FAMILIES:
+            return "append_only"
+        if envelope.field_key in _SINGLE_VALUE_FIELDS:
+            return "single_value"
+        if envelope.fact_family in _SET_VALUE_FAMILIES:
+            return "set_value"
+        return "llm"
+
+    @staticmethod
+    def _has_exact_canonical_match(
+        envelope: FactEnvelope,
+        similar_results: List[Dict[str, Any]],
+    ) -> bool:
+        """Check whether retrieval found an exact canonical duplicate."""
+        target = envelope.canonical_text.casefold()
+        return any(
+            (
+                s.get("payload", {}).get("canonical_text")
+                or s.get("payload", {}).get("content", "")
+            ).casefold() == target
+            for s in similar_results
+        )
+
     def _execute_action(
         self,
         decision: Dict[str, Any],
-        fact_text: str,
+        envelope: FactEnvelope,
         fact_vector: list,
         temp_to_real: Dict[str, str],
-        confidence: float,
-        user_id: str,
-        session_id: Optional[str],
-        source_context: str,
-        metadata: Optional[Dict[str, Any]],
     ) -> Optional[MemoryItem]:
-        """Execute ADD / UPDATE / DELETE / NONE based on the LLM decision.
-
-        Args:
-            decision: Parsed decision dict from ``_decide_action``.
-            fact_text: Original fact text (fallback for ADD text).
-            fact_vector: The embedding vector from ``_retrieve_similar``.
-            temp_to_real: Temporary-ID → real-ID mapping from ``_retrieve_similar``.
-            confidence: Extraction confidence score.
-            user_id: Owner of the memory.
-            session_id: Optional session identifier.
-            source_context: Original conversation text.
-            metadata: Optional extra metadata.
-
-        Returns:
-            A :class:`MemoryItem` for ADD/UPDATE, or *None* for DELETE/NONE.
-        """
+        """Execute ADD / UPDATE / DELETE / NONE based on the decision output."""
         action = decision.get("action", "NONE").upper()
 
         if action == "ADD":
             return self._execute_add(
-                text=decision.get("text", fact_text),
-                vector=fact_vector, confidence=confidence, user_id=user_id,
-                session_id=session_id, source_context=source_context,
-                metadata=metadata)
+                envelope=self._apply_decision_text(envelope, decision),
+                vector=fact_vector,
+            )
 
         elif action == "UPDATE":
             temp_id = str(decision.get("id", ""))
@@ -771,16 +938,13 @@ class Memory:
                     temp_id,
                 )
                 return self._execute_add(
-                    text=decision.get("text", fact_text),
-                    vector=fact_vector, confidence=confidence, user_id=user_id,
-                    session_id=session_id, source_context=source_context,
-                    metadata=metadata)
+                    envelope=self._apply_decision_text(envelope, decision),
+                    vector=fact_vector,
+                )
             return self._execute_update(
                 old_memory_id=real_id,
-                new_text=decision.get("text", fact_text),
-                confidence=confidence, user_id=user_id,
-                session_id=session_id, source_context=source_context,
-                metadata=metadata)
+                envelope=self._apply_decision_text(envelope, decision),
+            )
 
         elif action == "DELETE":
             temp_id = str(decision.get("id", ""))
@@ -790,108 +954,238 @@ class Memory:
             return None
 
         else:  # NONE
-            logger.debug("No action for fact: %s", fact_text[:60])
+            logger.debug("No action for fact: %s", envelope.canonical_text[:60])
             return None
 
     # ══════════════════════════════════════════════════════════════════
     # Internal orchestration & storage helpers
     # ══════════════════════════════════════════════════════════════════
 
-    def _process_fact(
+    def _process_envelope(
         self,
-        fact_text: str, confidence: float, user_id: str,
-        session_id: Optional[str], source_context: str,
-        metadata: Optional[Dict[str, Any]],
+        envelope: FactEnvelope,
     ) -> Optional[MemoryItem]:
-        """Process a single fact through retrieval → decision → execution.
-
-        Thin orchestrator that composes the three independent methods.
-        Each method can also be called standalone for evaluation, testing,
-        or reuse by other flows.
-        """
+        """Process a normalized envelope through retrieval → decision → execution."""
         fact_vector, similar, temp_to_real = self._retrieve_similar(
-            fact_text=fact_text, user_id=user_id,
+            envelope=envelope,
         )
+        if self._has_exact_canonical_match(envelope, similar):
+            return None
+
+        mode = self._update_mode(envelope)
+        if mode == "append_only":
+            return self._execute_add(envelope=envelope, vector=fact_vector)
+        if mode == "single_value":
+            if not similar:
+                return self._execute_add(envelope=envelope, vector=fact_vector)
+            return self._execute_update(
+                old_memory_id=similar[0]["id"],
+                envelope=envelope,
+            )
 
         decision = self._decide_action(
-            fact_text=fact_text, similar_results=similar, llm=self.llm,
+            fact_text=envelope.canonical_text,
+            similar_results=similar,
+            llm=self.decision_llm,
         )
         if decision is None:
             return None
 
         return self._execute_action(
-            decision=decision, fact_text=fact_text,
-            fact_vector=fact_vector, temp_to_real=temp_to_real,
-            confidence=confidence,
-            user_id=user_id, session_id=session_id,
-            source_context=source_context, metadata=metadata,
+            decision=decision,
+            envelope=envelope,
+            fact_vector=fact_vector,
+            temp_to_real=temp_to_real,
         )
 
-    def _execute_add(
-        self, text: str, vector: List[float], confidence: float,
-        user_id: str, session_id: Optional[str], source_context: str,
+    def _process_fact(
+        self,
+        fact_text: str,
+        confidence: float,
+        user_id: str,
+        session_id: Optional[str],
+        source_context: str,
         metadata: Optional[Dict[str, Any]],
+    ) -> Optional[MemoryItem]:
+        """Backward-compatible single-fact entry point."""
+        owner = self._history_store.resolve_owner(OwnerContext(external_user_id=user_id))
+        envelopes = self._normalize_single_fact(
+            raw_fact=fact_text,
+            confidence=confidence,
+            owner=owner,
+            session_id=session_id,
+            source_context=source_context,
+            metadata=metadata,
+        )
+        if not envelopes:
+            return None
+        return self._process_envelope(envelopes[0])
+
+    def _execute_add(
+        self,
+        envelope: FactEnvelope,
+        vector: List[float],
     ) -> MemoryItem:
         """Persist a new memory to vector store and history."""
         now = get_utc_now()
         memory_id = generate_id()
         payload = {
-            "user_id": user_id, "content": text, "hash": generate_hash(text),
-            "metadata": metadata or {}, "created_at": now.isoformat(),
-            "updated_at": now.isoformat(), "confidence": confidence,
-            "status": MemoryStatus.ACTIVE.value, "source_context": source_context,
-            "source_session_id": session_id, "version_of": None,
+            "user_id": envelope.user_id,
+            "owner_id": envelope.owner_id,
+            "subject_ref": envelope.subject_ref,
+            "fact_family": envelope.fact_family.value,
+            "relation_type": envelope.relation_type,
+            "field_key": envelope.field_key,
+            "field_value_json": envelope.field_value_json,
+            "canonical_text": envelope.canonical_text,
+            "raw_text": envelope.raw_text,
+            "content": envelope.canonical_text,
+            "hash": generate_hash(envelope.canonical_text),
+            "metadata": envelope.metadata,
+            "created_at": now.isoformat(),
+            "updated_at": now.isoformat(),
+            "confidence": envelope.confidence,
+            "status": MemoryStatus.ACTIVE.value,
+            "source_context": envelope.source_context,
+            "source_session_id": envelope.source_session_id,
+            "version_of": None,
         }
         self._vector_store.insert(id=memory_id, vector=vector, payload=payload)
         self._history_store.add_record(
-            memory_id=memory_id, user_id=user_id,
-            operation=MemoryOperation.ADD, new_content=text)
-        logger.info("Added memory %s: %s", memory_id, text[:60])
+            memory_id=memory_id,
+            user_id=envelope.user_id,
+            operation=MemoryOperation.ADD,
+            new_content=envelope.canonical_text,
+            metadata=self._history_snapshot(envelope),
+        )
+        logger.info("Added memory %s: %s", memory_id, envelope.canonical_text[:60])
         return self._payload_to_item(memory_id, payload)
 
     def _execute_update(
-        self, old_memory_id: str, new_text: str,
-        confidence: float, user_id: str, session_id: Optional[str],
-        source_context: str, metadata: Optional[Dict[str, Any]],
+        self,
+        old_memory_id: str,
+        envelope: FactEnvelope,
     ) -> MemoryItem:
         """Create a new version of an existing memory (re-embeds)."""
         old_memory = self.get(old_memory_id)
         old_content = old_memory.content if old_memory else None
 
-        new_vector = self.embedder.embed(new_text)
+        new_vector = self.embedder.embed(envelope.canonical_text)
         now = get_utc_now()
         new_memory_id = generate_id()
         payload = {
-            "user_id": user_id, "content": new_text, "hash": generate_hash(new_text),
-            "metadata": metadata or {}, "created_at": now.isoformat(),
-            "updated_at": now.isoformat(), "confidence": confidence,
-            "status": MemoryStatus.ACTIVE.value, "source_context": source_context,
-            "source_session_id": session_id, "version_of": old_memory_id,
+            "user_id": envelope.user_id,
+            "owner_id": envelope.owner_id,
+            "subject_ref": envelope.subject_ref,
+            "fact_family": envelope.fact_family.value,
+            "relation_type": envelope.relation_type,
+            "field_key": envelope.field_key,
+            "field_value_json": envelope.field_value_json,
+            "canonical_text": envelope.canonical_text,
+            "raw_text": envelope.raw_text,
+            "content": envelope.canonical_text,
+            "hash": generate_hash(envelope.canonical_text),
+            "metadata": envelope.metadata,
+            "created_at": now.isoformat(),
+            "updated_at": now.isoformat(),
+            "confidence": envelope.confidence,
+            "status": MemoryStatus.ACTIVE.value,
+            "source_context": envelope.source_context,
+            "source_session_id": envelope.source_session_id,
+            "version_of": old_memory_id,
         }
         self._vector_store.insert(id=new_memory_id, vector=new_vector, payload=payload)
+        self._vector_store.update(
+            id=old_memory_id,
+            payload={
+                "status": MemoryStatus.DELETED.value,
+                "updated_at": now.isoformat(),
+            },
+        )
         self._history_store.add_record(
-            memory_id=new_memory_id, user_id=user_id,
-            operation=MemoryOperation.ADD, new_content=new_text,
-            metadata={"version_of": old_memory_id})
+            memory_id=new_memory_id,
+            user_id=envelope.user_id,
+            operation=MemoryOperation.ADD,
+            new_content=envelope.canonical_text,
+            metadata=self._history_snapshot(
+                envelope,
+                extra={"version_of": old_memory_id},
+            ),
+        )
         self._history_store.add_record(
-            memory_id=old_memory_id, user_id=user_id,
-            operation=MemoryOperation.UPDATE, old_content=old_content,
-            new_content=new_text, metadata={"superseded_by": new_memory_id})
+            memory_id=old_memory_id,
+            user_id=envelope.user_id,
+            operation=MemoryOperation.UPDATE,
+            old_content=old_content,
+            new_content=envelope.canonical_text,
+            metadata=self._history_snapshot(
+                envelope,
+                extra={"superseded_by": new_memory_id},
+            ),
+        )
         logger.info("Updated: %s → %s (version_of=%s)", old_memory_id, new_memory_id, old_memory_id)
         return self._payload_to_item(new_memory_id, payload)
+
+    @staticmethod
+    def _history_snapshot(
+        envelope: FactEnvelope,
+        extra: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Build rich history metadata for owner-centered writes."""
+        snapshot = {
+            "owner_id": envelope.owner_id,
+            "subject_ref": envelope.subject_ref,
+            "fact_family": envelope.fact_family.value,
+            "relation_type": envelope.relation_type,
+            "field_key": envelope.field_key,
+            "field_value_json": envelope.field_value_json,
+            "canonical_text": envelope.canonical_text,
+            "raw_text": envelope.raw_text,
+        }
+        if extra:
+            snapshot.update(extra)
+        return snapshot
+
+    @staticmethod
+    def _apply_decision_text(
+        envelope: FactEnvelope,
+        decision: Dict[str, Any],
+    ) -> FactEnvelope:
+        """Apply a decision-time replacement text to an envelope if needed."""
+        decision_text = Memory._normalize_fact_text(decision.get("text", ""))
+        if not decision_text or decision_text == envelope.canonical_text:
+            return envelope
+        return envelope.model_copy(
+            update={
+                "canonical_text": decision_text,
+                "field_value_json": {"value": decision_text},
+            }
+        )
 
     @staticmethod
     def _payload_to_item(memory_id: str, payload: Dict[str, Any]) -> MemoryItem:
         """Convert a raw vector-store payload dict into a ``MemoryItem``."""
         return MemoryItem(
-            id=memory_id, user_id=payload.get("user_id", ""),
-            content=payload.get("content", ""), hash=payload.get("hash", ""),
+            id=memory_id,
+            user_id=payload.get("user_id", ""),
+            owner_id=payload.get("owner_id"),
+            content=payload.get("content", ""),
+            hash=payload.get("hash", ""),
             metadata=payload.get("metadata", {}),
-            created_at=payload.get("created_at"), updated_at=payload.get("updated_at"),
+            created_at=payload.get("created_at"),
+            updated_at=payload.get("updated_at"),
             confidence=payload.get("confidence"),
             status=MemoryStatus(payload.get("status", "active")),
             source_context=payload.get("source_context"),
             source_session_id=payload.get("source_session_id"),
             version_of=payload.get("version_of"),
-            importance=payload.get("importance"), type=payload.get("type"),
+            importance=payload.get("importance"),
+            type=payload.get("type"),
+            subject_ref=payload.get("subject_ref"),
+            fact_family=payload.get("fact_family"),
+            relation_type=payload.get("relation_type"),
+            field_key=payload.get("field_key"),
+            field_value_json=payload.get("field_value_json") or {},
+            canonical_text=payload.get("canonical_text"),
+            raw_text=payload.get("raw_text"),
         )

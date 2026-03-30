@@ -1,0 +1,3760 @@
+{
+  "name": "extraction_curated_cases",
+  "focus": "general extraction regression",
+  "description": "Curated 100-case extraction regression set assembled from the previous easy / medium / hard / tricky and blackbox datasets. Low-value trivial cases were removed so the set stays compact while preserving coverage across stable facts, exclusions, multiturn preferences, temporal updates, and mixed Chinese / English inputs.",
+  "curation_notes": {
+    "legacy_total_cases": 152,
+    "selected_cases": 100,
+    "dropped_examples": [
+      "bb-005",
+      "bb-037",
+      "bb-055"
+    ]
+  },
+  "cases": [
+    {
+      "id": "easy-001",
+      "description": "explicit profile bundle should split cleanly",
+      "input": "User: My name is Alice, I work at Stripe, and I drink black coffee every day.\nAssistant: Noted.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "Alice",
+            "name is Alice"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "Stripe",
+            "works at Stripe"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "black coffee",
+            "drinks black coffee"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Noted",
+        "Assistant"
+      ],
+      "expected_count_range": [
+        2,
+        4
+      ],
+      "difficulty": "easy",
+      "legacy_source": "tests/eval/datasets/extraction_easy_cases.json"
+    },
+    {
+      "id": "easy-002",
+      "description": "中文显式画像应稳定提取",
+      "input": "User: 我叫张三，今年28岁，在网易工作，喜欢喝黑咖啡。\nAssistant: 记住了。",
+      "expected_facts": [
+        {
+          "match_any": [
+            "张三",
+            "name is 张三"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "28",
+            "28 years old"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "网易",
+            "NetEase"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "黑咖啡",
+            "black coffee"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "记住了"
+      ],
+      "expected_count_range": [
+        3,
+        5
+      ],
+      "difficulty": "easy",
+      "legacy_source": "tests/eval/datasets/extraction_easy_cases.json"
+    },
+    {
+      "id": "easy-003",
+      "description": "simple English hypothetical should be excluded",
+      "input": "User: If I ever move to Tokyo, I might learn Japanese.\nAssistant: That would be exciting.",
+      "expected_facts": [],
+      "should_not_extract": [
+        "Tokyo",
+        "Japanese"
+      ],
+      "expected_count_range": [
+        0,
+        0
+      ],
+      "difficulty": "easy",
+      "legacy_source": "tests/eval/datasets/extraction_easy_cases.json"
+    },
+    {
+      "id": "easy-004",
+      "description": "中文假设句不应产生记忆",
+      "input": "User: 如果我以后去日本，可能会学日语。\nAssistant: 听起来不错。",
+      "expected_facts": [],
+      "should_not_extract": [
+        "日本",
+        "日语"
+      ],
+      "expected_count_range": [
+        0,
+        0
+      ],
+      "difficulty": "easy",
+      "legacy_source": "tests/eval/datasets/extraction_easy_cases.json"
+    },
+    {
+      "id": "easy-005",
+      "description": "assistant answer to a user question should be ignored",
+      "input": "User: Do you think Python is easy to learn?\nAssistant: Python is a great beginner language.",
+      "expected_facts": [],
+      "should_not_extract": [
+        "Python is a great beginner language"
+      ],
+      "expected_count_range": [
+        0,
+        0
+      ],
+      "difficulty": "easy",
+      "legacy_source": "tests/eval/datasets/extraction_easy_cases.json"
+    },
+    {
+      "id": "easy-006",
+      "description": "explicit event and habit can be extracted as normal memory text",
+      "input": "User: I started learning guitar last month and practice every evening.\nAssistant: Nice progress.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "learning guitar",
+            "started learning guitar",
+            "guitar"
+          ],
+          "confidence_range": [
+            0.6,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "practice every evening",
+            "every evening"
+          ],
+          "confidence_range": [
+            0.6,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Nice progress"
+      ],
+      "expected_count_range": [
+        1,
+        3
+      ],
+      "difficulty": "easy",
+      "legacy_source": "tests/eval/datasets/extraction_easy_cases.json"
+    },
+    {
+      "id": "easy-007",
+      "description": "semicolon-separated preferences should split",
+      "input": "User: I like tea; I enjoy hiking; I use Vim at work.\nAssistant: Noted.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "tea",
+            "likes tea"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "hiking",
+            "enjoys hiking"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "Vim",
+            "uses Vim"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Noted"
+      ],
+      "expected_count_range": [
+        3,
+        4
+      ],
+      "difficulty": "easy",
+      "legacy_source": "tests/eval/datasets/extraction_easy_cases.json"
+    },
+    {
+      "id": "easy-008",
+      "description": "simple profile details across turns",
+      "input": "User: I live in Singapore.\nAssistant: Nice.\nUser: I work at Stripe.\nAssistant: Got it.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "Singapore",
+            "lives in Singapore"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "Stripe",
+            "works at Stripe"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Nice",
+        "Got it"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "easy",
+      "legacy_source": "tests/eval/datasets/extraction_easy_cases.json"
+    },
+    {
+      "id": "easy-009",
+      "description": "clear temporal preference shift",
+      "input": "User: I used to drink lattes, but now I only drink americanos.\nAssistant: Understood.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "used to drink lattes",
+            "lattes"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "only drink americanos",
+            "americanos",
+            "now drinks americanos"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Understood"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "easy",
+      "legacy_source": "tests/eval/datasets/extraction_easy_cases.json"
+    },
+    {
+      "id": "easy-010",
+      "description": "中文地点变化应拆开",
+      "input": "User: 我之前住在北京，目前住在上海。\nAssistant: 了解。",
+      "expected_facts": [
+        {
+          "match_any": [
+            "之前住在北京",
+            "北京",
+            "previously lived in Beijing"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "目前住在上海",
+            "上海",
+            "now lives in Shanghai",
+            "currently lives in Shanghai"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "了解"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "easy",
+      "legacy_source": "tests/eval/datasets/extraction_easy_cases.json"
+    },
+    {
+      "id": "easy-012",
+      "description": "health and diet facts across turns",
+      "input": "User: I am lactose intolerant.\nAssistant: Understood.\nUser: So I only drink oat milk now.\nAssistant: Noted.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "lactose intolerant",
+            "乳糖不耐受"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "oat milk",
+            "only drink oat milk"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Understood",
+        "Noted"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "easy",
+      "legacy_source": "tests/eval/datasets/extraction_easy_cases.json"
+    },
+    {
+      "id": "easy-013",
+      "description": "tool preferences disclosed over turns",
+      "input": "User: 我平时用Vim。\nAssistant: 明白。\nUser: 终端我更喜欢zsh。\nAssistant: 收到。",
+      "expected_facts": [
+        {
+          "match_any": [
+            "Vim",
+            "用Vim"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "zsh",
+            "终端更喜欢zsh"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "明白",
+        "收到"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "easy",
+      "legacy_source": "tests/eval/datasets/extraction_easy_cases.json"
+    },
+    {
+      "id": "medium-001",
+      "description": "中文工作经历时态切换",
+      "input": "User: 我之前在网易做后端，现在在字节做AI。\nAssistant: 明白。",
+      "expected_facts": [
+        {
+          "match_any": [
+            "之前在网易",
+            "网易",
+            "NetEase",
+            "过去在网易"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "现在在字节",
+            "字节",
+            "字节跳动",
+            "ByteDance"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "明白"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "medium",
+      "legacy_source": "tests/eval/datasets/extraction_medium_cases.json"
+    },
+    {
+      "id": "medium-002",
+      "description": "interaction preference across turns",
+      "input": "User: Please keep your answers short.\nAssistant: Sure.\nUser: Bullet points are best for me.\nAssistant: Noted.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "answers short",
+            "short answers",
+            "concise answers",
+            "keep your answers short",
+            "prefers concise answers"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "bullet points",
+            "lists",
+            "formatted as lists",
+            "list-form responses",
+            "prefers list-form responses"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Sure",
+        "Noted"
+      ],
+      "expected_count_range": [
+        1,
+        3
+      ],
+      "difficulty": "medium",
+      "legacy_source": "tests/eval/datasets/extraction_medium_cases.json"
+    },
+    {
+      "id": "medium-003",
+      "description": "中文交互偏好多轮说明",
+      "input": "User: 回答尽量简短。\nAssistant: 好的。\nUser: 最好用列表。\nAssistant: 收到。",
+      "expected_facts": [
+        {
+          "match_any": [
+            "简短",
+            "简洁",
+            "short answers",
+            "brief and concise",
+            "concise answers",
+            "prefers concise answers"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "列表",
+            "bullet points",
+            "要点",
+            "lists",
+            "list-form responses",
+            "prefers list-form responses"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "好的",
+        "收到"
+      ],
+      "expected_count_range": [
+        1,
+        3
+      ],
+      "difficulty": "medium",
+      "legacy_source": "tests/eval/datasets/extraction_medium_cases.json"
+    },
+    {
+      "id": "medium-004",
+      "description": "travel preference disclosed over turns",
+      "input": "User: I usually take trains when I travel.\nAssistant: Nice.\nUser: Window seats are best for me.\nAssistant: Got it.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "take trains",
+            "trains",
+            "usually takes trains"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "window seats",
+            "window seat"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Nice",
+        "Got it"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "medium",
+      "legacy_source": "tests/eval/datasets/extraction_medium_cases.json"
+    },
+    {
+      "id": "medium-005",
+      "description": "family, location, and work bundle should split",
+      "input": "User: I live in Singapore, I manage a small team, and I have two cats.\nAssistant: Got it.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "Singapore",
+            "lives in Singapore"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "manage a small team",
+            "small team"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "two cats",
+            "cats"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Got it"
+      ],
+      "expected_count_range": [
+        3,
+        4
+      ],
+      "difficulty": "medium",
+      "legacy_source": "tests/eval/datasets/extraction_medium_cases.json"
+    },
+    {
+      "id": "medium-006",
+      "description": "work stack bundle should keep atomic tool facts",
+      "input": "User: I am a backend engineer, I write Python every day, and I deploy to Kubernetes.\nAssistant: Sounds good.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "backend engineer",
+            "engineer"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "Python",
+            "writes Python every day"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "Kubernetes",
+            "deploys to Kubernetes"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Sounds good"
+      ],
+      "expected_count_range": [
+        3,
+        4
+      ],
+      "difficulty": "medium",
+      "legacy_source": "tests/eval/datasets/extraction_medium_cases.json"
+    },
+    {
+      "id": "medium-007",
+      "description": "mixed event and stable habit should split",
+      "input": "User: I started running last month, and I always run before breakfast.\nAssistant: Nice.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "started running last month",
+            "running last month"
+          ],
+          "confidence_range": [
+            0.6,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "before breakfast",
+            "always run before breakfast"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Nice"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "medium",
+      "legacy_source": "tests/eval/datasets/extraction_medium_cases.json"
+    },
+    {
+      "id": "medium-008",
+      "description": "role change should preserve before and after",
+      "input": "User: I used to manage a team, but now I am an individual contributor.\nAssistant: Got it.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "used to manage a team",
+            "manage a team"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "individual contributor",
+            "currently an individual contributor"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Got it"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "medium",
+      "legacy_source": "tests/eval/datasets/extraction_medium_cases.json"
+    },
+    {
+      "id": "medium-009",
+      "description": "past and current location should both survive",
+      "input": "User: Last year I lived in London, and now I live in Singapore.\nAssistant: Noted.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "lived in London",
+            "London"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "live in Singapore",
+            "Singapore"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Noted"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "medium",
+      "legacy_source": "tests/eval/datasets/extraction_medium_cases.json"
+    },
+    {
+      "id": "medium-010",
+      "description": "中文习惯时段变化",
+      "input": "User: 我以前早上跑步，现在晚上跑步。\nAssistant: 好的。",
+      "expected_facts": [
+        {
+          "match_any": [
+            "以前早上跑步",
+            "早上跑步",
+            "morning"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "现在晚上跑步",
+            "晚上跑步",
+            "evening"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "好的"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "medium",
+      "legacy_source": "tests/eval/datasets/extraction_medium_cases.json"
+    },
+    {
+      "id": "medium-011",
+      "description": "English question asking for advice should not become memory",
+      "input": "User: Should I learn Rust this year?\nAssistant: It depends on your goals.",
+      "expected_facts": [],
+      "should_not_extract": [
+        "Rust",
+        "depends on your goals"
+      ],
+      "expected_count_range": [
+        0,
+        0
+      ],
+      "difficulty": "medium",
+      "legacy_source": "tests/eval/datasets/extraction_medium_cases.json"
+    },
+    {
+      "id": "medium-012",
+      "description": "中文问题句不应提取",
+      "input": "User: 请问Python好学吗？\nAssistant: 很适合入门。",
+      "expected_facts": [],
+      "should_not_extract": [
+        "Python",
+        "很适合入门"
+      ],
+      "expected_count_range": [
+        0,
+        0
+      ],
+      "difficulty": "medium",
+      "legacy_source": "tests/eval/datasets/extraction_medium_cases.json"
+    },
+    {
+      "id": "medium-013",
+      "description": "preference correction over turns",
+      "input": "User: I used to drink tea.\nAssistant: Okay.\nUser: Actually now I only drink coffee.\nAssistant: Noted.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "used to drink tea",
+            "tea"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "only drink coffee",
+            "coffee"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Okay",
+        "Noted"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "medium",
+      "legacy_source": "tests/eval/datasets/extraction_medium_cases.json"
+    },
+    {
+      "id": "hard-003",
+      "description": "assistant-only helpful suggestion should never be stored",
+      "input": "User: Thanks.\nAssistant: You should try using bullet points and shorter messages.",
+      "expected_facts": [],
+      "should_not_extract": [
+        "bullet points",
+        "shorter messages"
+      ],
+      "expected_count_range": [
+        0,
+        0
+      ],
+      "difficulty": "hard",
+      "legacy_source": "tests/eval/datasets/extraction_hard_cases.json"
+    },
+    {
+      "id": "hard-004",
+      "description": "phatic continuation request should not create memories",
+      "input": "User: Hello, can you continue?\nAssistant: Sure.",
+      "expected_facts": [],
+      "should_not_extract": [
+        "Hello",
+        "continue",
+        "Sure"
+      ],
+      "expected_count_range": [
+        0,
+        0
+      ],
+      "difficulty": "hard",
+      "legacy_source": "tests/eval/datasets/extraction_hard_cases.json"
+    },
+    {
+      "id": "hard-005",
+      "description": "future relocation plan framed as hypothetical should be excluded",
+      "input": "User: If I switch jobs next year, I might move to Berlin.\nAssistant: That could be fun.",
+      "expected_facts": [],
+      "should_not_extract": [
+        "Berlin",
+        "switch jobs"
+      ],
+      "expected_count_range": [
+        0,
+        0
+      ],
+      "difficulty": "hard",
+      "legacy_source": "tests/eval/datasets/extraction_hard_cases.json"
+    },
+    {
+      "id": "hard-012",
+      "description": "committed future plan should still be extractable as user-relevant memory",
+      "input": "User: I'm moving to Berlin next month and already signed the lease.\nAssistant: Exciting.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "moving to Berlin next month",
+            "Berlin",
+            "signed the lease"
+          ],
+          "confidence_range": [
+            0.6,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Exciting"
+      ],
+      "expected_count_range": [
+        1,
+        2
+      ],
+      "difficulty": "hard",
+      "legacy_source": "tests/eval/datasets/extraction_hard_cases.json"
+    },
+    {
+      "id": "hard-013",
+      "description": "mixed-language response preference should keep both language and format preference",
+      "input": "User: 我一般用中文，但 summaries please in English.\nAssistant: 好的。",
+      "expected_facts": [
+        {
+          "match_any": [
+            "一般用中文",
+            "usually uses Chinese",
+            "中文",
+            "generally uses Chinese",
+            "User usually uses Chinese"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "summaries please in English",
+            "summaries in English",
+            "English summaries",
+            "prefers summaries in English",
+            "User prefers summaries in English",
+            "provided in English",
+            "summaries to be provided in English"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "好的"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "hard",
+      "legacy_source": "tests/eval/datasets/extraction_hard_cases.json"
+    },
+    {
+      "id": "tricky-001",
+      "description": "terse is still a short-answer preference",
+      "input": "User: Keep replies terse.\nAssistant: Sure.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "terse",
+            "short answers",
+            "brief replies",
+            "concise replies",
+            "concise answers",
+            "prefers concise answers"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Sure"
+      ],
+      "expected_count_range": [
+        1,
+        2
+      ],
+      "difficulty": "tricky",
+      "legacy_source": "tests/eval/datasets/extraction_tricky_cases.json"
+    },
+    {
+      "id": "tricky-002",
+      "description": "list preference may be paraphrased without the phrase bullet points",
+      "input": "User: Lists work better than paragraphs for me.\nAssistant: Noted.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "Lists work better",
+            "bullet points",
+            "lists",
+            "list format",
+            "list-form responses",
+            "prefers list-form responses"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Noted"
+      ],
+      "expected_count_range": [
+        1,
+        2
+      ],
+      "difficulty": "tricky",
+      "legacy_source": "tests/eval/datasets/extraction_tricky_cases.json"
+    },
+    {
+      "id": "tricky-003",
+      "description": "中文偏好可被意译为简洁和列点",
+      "input": "User: 回复别太展开，给我列点就行。\nAssistant: 明白。",
+      "expected_facts": [
+        {
+          "match_any": [
+            "别太展开",
+            "简洁",
+            "short answers",
+            "concise",
+            "concise answers",
+            "prefers concise answers"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "列点",
+            "列表",
+            "bullet points",
+            "要点",
+            "list-form responses",
+            "prefers list-form responses"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "明白"
+      ],
+      "expected_count_range": [
+        1,
+        3
+      ],
+      "difficulty": "tricky",
+      "legacy_source": "tests/eval/datasets/extraction_tricky_cases.json"
+    },
+    {
+      "id": "tricky-004",
+      "description": "negative preference update should preserve current non-coffee state",
+      "input": "User: I don't drink coffee anymore; now I drink tea.\nAssistant: Understood.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "don't drink coffee anymore",
+            "no longer drinks coffee",
+            "not drink coffee"
+          ],
+          "confidence_range": [
+            0.6,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "drink tea",
+            "tea",
+            "now drinks tea"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Understood"
+      ],
+      "expected_count_range": [
+        1,
+        3
+      ],
+      "difficulty": "tricky",
+      "legacy_source": "tests/eval/datasets/extraction_tricky_cases.json"
+    },
+    {
+      "id": "tricky-005",
+      "description": "中文否定更新应保留当前状态",
+      "input": "User: 我不喝咖啡了，现在只喝茶。\nAssistant: 好的。",
+      "expected_facts": [
+        {
+          "match_any": [
+            "不喝咖啡了",
+            "no longer drinks coffee",
+            "User no longer drinks coffee"
+          ],
+          "confidence_range": [
+            0.6,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "只喝茶",
+            "喝茶",
+            "tea"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "好的"
+      ],
+      "expected_count_range": [
+        1,
+        3
+      ],
+      "difficulty": "tricky",
+      "legacy_source": "tests/eval/datasets/extraction_tricky_cases.json"
+    },
+    {
+      "id": "tricky-009",
+      "description": "multi-turn event and cadence with paraphrased duration",
+      "input": "User: I started learning guitar recently.\nAssistant: Nice.\nUser: I practice every evening for about an hour.\nAssistant: Keep it up.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "learning guitar",
+            "started learning guitar",
+            "guitar"
+          ],
+          "confidence_range": [
+            0.6,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "every evening",
+            "about an hour",
+            "an hour",
+            "一个小时"
+          ],
+          "confidence_range": [
+            0.6,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Nice",
+        "Keep it up"
+      ],
+      "expected_count_range": [
+        1,
+        3
+      ],
+      "difficulty": "tricky",
+      "legacy_source": "tests/eval/datasets/extraction_tricky_cases.json"
+    },
+    {
+      "id": "tricky-010",
+      "description": "habit and time preference across turns with schedule wording",
+      "input": "User: I write best in the morning.\nAssistant: Nice.\nUser: I usually block 8am to 10am for deep work.\nAssistant: Great.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "best in the morning",
+            "morning"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "8am to 10am",
+            "deep work",
+            "blocks 8am to 10am"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Nice",
+        "Great"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "tricky",
+      "legacy_source": "tests/eval/datasets/extraction_tricky_cases.json"
+    },
+    {
+      "id": "tricky-011",
+      "description": "diet change should keep old and new state",
+      "input": "User: I used to be vegetarian, but now I eat fish again.\nAssistant: Understood.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "used to be vegetarian",
+            "vegetarian"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "eat fish again",
+            "fish",
+            "now eats fish"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Understood"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "tricky",
+      "legacy_source": "tests/eval/datasets/extraction_tricky_cases.json"
+    },
+    {
+      "id": "tricky-012",
+      "description": "domain-conditioned preferences should not collapse into one generic preference",
+      "input": "User: I keep work notes short, but for journaling I prefer long paragraphs.\nAssistant: Got it.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "work notes short",
+            "short work notes"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "journaling",
+            "long paragraphs",
+            "prefer long paragraphs for journaling"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Got it"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "tricky",
+      "legacy_source": "tests/eval/datasets/extraction_tricky_cases.json"
+    },
+    {
+      "id": "bb-001",
+      "description": "explicit profile bundle with beverage habit",
+      "input": "User: My name is Nora, I work at Figma, and I usually start my day with green tea.\nAssistant: Noted.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "Nora",
+            "name is Nora"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "Figma",
+            "works at Figma"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "green tea",
+            "starts the day with green tea"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Noted"
+      ],
+      "expected_count_range": [
+        2,
+        4
+      ],
+      "difficulty": "easy",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-003",
+      "description": "multi-turn preference with compact replies and numbered lists",
+      "input": "User: Please keep replies compact.\nAssistant: Sure.\nUser: Numbered lists help me more than paragraphs.\nAssistant: Noted.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "compact",
+            "concise answers",
+            "prefers concise answers"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "numbered lists",
+            "lists",
+            "list-form responses",
+            "prefers list-form responses"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Sure",
+        "Noted"
+      ],
+      "expected_count_range": [
+        1,
+        3
+      ],
+      "difficulty": "medium",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-004",
+      "description": "domain-conditioned writing preferences should stay separated",
+      "input": "User: For release notes I want bullet lists, but for design writeups I prefer full paragraphs.\nAssistant: Got it.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "release notes",
+            "bullet lists",
+            "list format for release notes"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "design writeups",
+            "full paragraphs",
+            "prefers full paragraphs for design writeups"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Got it"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "tricky",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-007",
+      "description": "temporal work shift from ops to AI tools",
+      "input": "User: I used to work in ops, and now I build internal AI tools.\nAssistant: Got it.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "used to work in ops",
+            "ops",
+            "used to work in operations"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "build internal AI tools",
+            "internal AI tools"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Got it"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "medium",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-008",
+      "description": "negative beverage update with sparkling water replacement",
+      "input": "User: I don't drink soda anymore; these days I mostly drink sparkling water.\nAssistant: Noted.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "don't drink soda anymore",
+            "no longer drinks soda"
+          ],
+          "confidence_range": [
+            0.6,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "sparkling water",
+            "mostly drink sparkling water"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Noted"
+      ],
+      "expected_count_range": [
+        1,
+        3
+      ],
+      "difficulty": "tricky",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-009",
+      "description": "health sensitivity and nighttime habit across turns",
+      "input": "User: Bright screens give me headaches.\nAssistant: Okay.\nUser: I always turn on dark mode at night.\nAssistant: Got it.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "Bright screens give me headaches",
+            "headaches",
+            "bright screens"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "dark mode at night",
+            "turn on dark mode at night"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Okay",
+        "Got it"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "easy",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-010",
+      "description": "single Chinese question should not trigger language inference",
+      "input": "User: 请问 Rust 适合写服务端吗？\nAssistant: 很适合高性能场景。",
+      "expected_facts": [],
+      "should_not_extract": [
+        "Rust",
+        "高性能场景"
+      ],
+      "expected_count_range": [
+        0,
+        0
+      ],
+      "difficulty": "hard",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-011",
+      "description": "new activity plus weekly cadence",
+      "input": "User: I started bouldering in February.\nAssistant: Nice.\nUser: I go twice a week after work.\nAssistant: Keep it up.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "bouldering",
+            "started bouldering in February"
+          ],
+          "confidence_range": [
+            0.6,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "twice a week",
+            "after work",
+            "go twice a week after work"
+          ],
+          "confidence_range": [
+            0.6,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Nice",
+        "Keep it up"
+      ],
+      "expected_count_range": [
+        1,
+        3
+      ],
+      "difficulty": "medium",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-013",
+      "description": "location and named pet in one sentence",
+      "input": "User: I live in Taipei and I have a golden retriever named Coco.\nAssistant: Nice.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "Taipei",
+            "live in Taipei"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "golden retriever named Coco",
+            "Coco",
+            "golden retriever"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Nice"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "easy",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-014",
+      "description": "committed travel plan with flight and hotel booking",
+      "input": "User: I already booked flights to Seoul for April and reserved a hotel near Hongdae.\nAssistant: Exciting.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "booked flights to Seoul for April",
+            "Seoul for April"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "reserved a hotel near Hongdae",
+            "hotel near Hongdae"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Exciting"
+      ],
+      "expected_count_range": [
+        1,
+        3
+      ],
+      "difficulty": "hard",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-015",
+      "description": "mixed-language summary and default-language preference",
+      "input": "User: 我平时中文交流，但 weekly summaries please in English.\nAssistant: 收到。",
+      "expected_facts": [
+        {
+          "match_any": [
+            "平时中文交流",
+            "usually uses Chinese",
+            "User usually uses Chinese",
+            "usually communicates in Chinese",
+            "User usually communicates in Chinese",
+            "normally communicates in Chinese",
+            "User normally communicates in Chinese",
+            "typically communicates in Chinese",
+            "User typically communicates in Chinese"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "weekly summaries please in English",
+            "summaries in English",
+            "prefers summaries in English",
+            "User prefers summaries in English",
+            "wants weekly summaries to be in English",
+            "User wants weekly summaries to be in English",
+            "prefers their weekly summaries to be provided in English"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "收到"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "medium",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-017",
+      "description": "semicolon hobbies should split cleanly",
+      "input": "User: I collect fountain pens; I enjoy road cycling; I cook on weekends.\nAssistant: Noted.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "fountain pens",
+            "collect fountain pens"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "road cycling",
+            "enjoy road cycling"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "cook on weekends",
+            "cooks on weekends"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Noted"
+      ],
+      "expected_count_range": [
+        3,
+        4
+      ],
+      "difficulty": "easy",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-019",
+      "description": "role change from support management to product ops",
+      "input": "User: Last year I managed a support team, now I do product operations.\nAssistant: Understood.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "managed a support team",
+            "support team"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "product operations",
+            "do product operations"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Understood"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "medium",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-021",
+      "description": "note-taking tools across turns",
+      "input": "User: I write notes in Obsidian.\nAssistant: Okay.\nUser: For quick captures I still use Apple Notes.\nAssistant: Got it.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "Obsidian",
+            "write notes in Obsidian"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "Apple Notes",
+            "quick captures",
+            "use Apple Notes"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Okay",
+        "Got it"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "easy",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-023",
+      "description": "deep work preference and time block",
+      "input": "User: I do deep work best before lunch.\nAssistant: Nice.\nUser: I usually block 9 to 11 for it.\nAssistant: Got it.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "before lunch",
+            "deep work best before lunch"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "9 to 11",
+            "block 9 to 11",
+            "usually block 9 to 11"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Nice",
+        "Got it"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "medium",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-024",
+      "description": "feedback tone preference should depend on context",
+      "input": "User: For code reviews I want blunt feedback, but for brainstorming I prefer softer language.\nAssistant: Understood.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "code reviews",
+            "blunt feedback",
+            "wants blunt feedback for code reviews"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "brainstorming",
+            "softer language",
+            "prefers softer language for brainstorming"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Understood"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "tricky",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-025",
+      "description": "past and current city should both survive",
+      "input": "User: I lived in Chengdu before, but now I'm in Shenzhen.\nAssistant: Noted.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "lived in Chengdu before",
+            "Chengdu"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "now I'm in Shenzhen",
+            "Shenzhen"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Noted"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "easy",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-027",
+      "description": "commute mode and train seating preference across turns",
+      "input": "User: I normally take the subway to work.\nAssistant: Okay.\nUser: Aisle seats are better for me on trains.\nAssistant: Noted.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "subway to work",
+            "normally take the subway to work"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "Aisle seats",
+            "aisle seats are better",
+            "prefers aisle seats on trains"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Okay",
+        "Noted"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "medium",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-028",
+      "description": "commute update from driving to biking",
+      "input": "User: I no longer drive to the office; now I bike there most days.\nAssistant: Got it.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "no longer drive to the office",
+            "no longer drives to the office"
+          ],
+          "confidence_range": [
+            0.6,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "bike there most days",
+            "bikes to the office most days"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Got it"
+      ],
+      "expected_count_range": [
+        1,
+        3
+      ],
+      "difficulty": "tricky",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-031",
+      "description": "English advice question should remain empty",
+      "input": "User: Should I switch from Notion to Obsidian?\nAssistant: It depends on how you search your notes.",
+      "expected_facts": [],
+      "should_not_extract": [
+        "Notion",
+        "Obsidian",
+        "search your notes"
+      ],
+      "expected_count_range": [
+        0,
+        0
+      ],
+      "difficulty": "medium",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-032",
+      "description": "default language plus English board updates and brevity",
+      "input": "User: 我通常用中文，不过 board updates should be in English and very brief.\nAssistant: 收到。",
+      "expected_facts": [
+        {
+          "match_any": [
+            "通常用中文",
+            "usually uses Chinese",
+            "User usually uses Chinese",
+            "default language is Chinese",
+            "User's default language is Chinese"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "board updates should be in English",
+            "updates in English",
+            "prefers summaries in English",
+            "User prefers summaries in English",
+            "prefers board updates to be in English",
+            "board updates to be in English"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "very brief",
+            "concise answers",
+            "prefers concise answers"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "收到"
+      ],
+      "expected_count_range": [
+        2,
+        4
+      ],
+      "difficulty": "tricky",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-033",
+      "description": "allergy and resulting checking habit",
+      "input": "User: I'm allergic to peanuts, so I always check dessert labels.\nAssistant: Understood.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "allergic to peanuts",
+            "peanut allergy"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "check dessert labels",
+            "always checks dessert labels"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Understood"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "easy",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-035",
+      "description": "family and mentoring bundle",
+      "input": "User: I live with my sister, I mentor two interns, and I foster one cat.\nAssistant: Got it.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "live with my sister",
+            "sister"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "mentor two interns",
+            "two interns"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "foster one cat",
+            "one cat"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Got it"
+      ],
+      "expected_count_range": [
+        3,
+        4
+      ],
+      "difficulty": "medium",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-038",
+      "description": "speculative startup move should stay empty",
+      "input": "User: If funding goes through, I may join a startup in Lisbon.\nAssistant: That would be a big move.",
+      "expected_facts": [],
+      "should_not_extract": [
+        "startup",
+        "Lisbon"
+      ],
+      "expected_count_range": [
+        0,
+        0
+      ],
+      "difficulty": "hard",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-039",
+      "description": "workout timing changed from mornings to nights",
+      "input": "User: I used to swim in the mornings, but now I go at night.\nAssistant: Okay.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "used to swim in the mornings",
+            "mornings"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "now I go at night",
+            "at night",
+            "swims at night now"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Okay"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "medium",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-041",
+      "description": "language learning with daily flashcard habit",
+      "input": "User: I started learning Korean this spring, and I review flashcards every evening.\nAssistant: Nice.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "learning Korean",
+            "started learning Korean this spring",
+            "Korean"
+          ],
+          "confidence_range": [
+            0.6,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "review flashcards every evening",
+            "flashcards every evening"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Nice"
+      ],
+      "expected_count_range": [
+        1,
+        3
+      ],
+      "difficulty": "easy",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-043",
+      "description": "reading device preference corrected across turns",
+      "input": "User: I used to read on a Kindle.\nAssistant: Okay.\nUser: Actually now I only read on my iPad.\nAssistant: Noted.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "used to read on a Kindle",
+            "Kindle"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "only read on my iPad",
+            "iPad"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Okay",
+        "Noted"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "medium",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-045",
+      "description": "profile facts spread across three turns",
+      "input": "User: I work at Canva.\nAssistant: Nice.\nUser: I'm based in Sydney.\nAssistant: Got it.\nUser: I usually drink jasmine tea.\nAssistant: Noted.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "Canva",
+            "work at Canva"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "Sydney",
+            "based in Sydney"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "jasmine tea",
+            "usually drink jasmine tea"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Nice",
+        "Got it",
+        "Noted"
+      ],
+      "expected_count_range": [
+        3,
+        4
+      ],
+      "difficulty": "easy",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-046",
+      "description": "Chinese advice question should remain empty",
+      "input": "User: 请问你觉得我该不该学西班牙语？\nAssistant: 如果你常去西语地区可以考虑。",
+      "expected_facts": [],
+      "should_not_extract": [
+        "西班牙语",
+        "西语地区"
+      ],
+      "expected_count_range": [
+        0,
+        0
+      ],
+      "difficulty": "hard",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-047",
+      "description": "pet care routine across turns",
+      "input": "User: I have two rabbits and I clean their room every Sunday.\nAssistant: Nice.\nUser: I also buy hay in bulk once a month.\nAssistant: Got it.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "two rabbits",
+            "have two rabbits"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "clean their room every Sunday",
+            "every Sunday"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "buy hay in bulk once a month",
+            "hay in bulk",
+            "once a month"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Nice",
+        "Got it"
+      ],
+      "expected_count_range": [
+        2,
+        4
+      ],
+      "difficulty": "medium",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-048",
+      "description": "Chinese negated drink update with replacement beverage",
+      "input": "User: 我现在不喝奶茶了，改喝无糖气泡水。\nAssistant: 好的。",
+      "expected_facts": [
+        {
+          "match_any": [
+            "不喝奶茶了",
+            "no longer drinks milk tea",
+            "no longer drinks bubble tea"
+          ],
+          "confidence_range": [
+            0.6,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "无糖气泡水",
+            "sparkling water",
+            "drinks sugar-free sparkling water"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "好的"
+      ],
+      "expected_count_range": [
+        1,
+        3
+      ],
+      "difficulty": "tricky",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-049",
+      "description": "lease and move date form a committed relocation plan",
+      "input": "User: I signed a lease in Rotterdam and move there in May.\nAssistant: Exciting.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "signed a lease in Rotterdam",
+            "lease in Rotterdam"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "move there in May",
+            "moving to Rotterdam in May",
+            "Rotterdam in May"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Exciting"
+      ],
+      "expected_count_range": [
+        1,
+        3
+      ],
+      "difficulty": "easy",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-052",
+      "description": "explicit profile with employer and weekend hobby",
+      "input": "User: I'm Maya, I work at Shopify, and I do pottery on weekends.\nAssistant: Got it.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "Maya",
+            "name is Maya"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "Shopify",
+            "works at Shopify"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "pottery on weekends",
+            "does pottery on weekends",
+            "pottery"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Got it"
+      ],
+      "expected_count_range": [
+        2,
+        4
+      ],
+      "difficulty": "easy",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-053",
+      "description": "tone preference differs between email and Slack",
+      "input": "User: In emails I keep things formal, but on Slack I'm super casual.\nAssistant: Makes sense.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "emails",
+            "formal",
+            "formal in emails",
+            "keeps things formal in emails"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "Slack",
+            "casual",
+            "super casual on Slack",
+            "casual on Slack"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Makes sense"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "tricky",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-054",
+      "description": "中文职业变化：从教师到产品经理",
+      "input": "User: 我以前是高中数学老师，去年转行做产品经理了。\nAssistant: 变化挺大的。",
+      "expected_facts": [
+        {
+          "match_any": [
+            "以前是高中数学老师",
+            "数学老师",
+            "高中老师",
+            "was a high school math teacher before"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "产品经理",
+            "转行做产品经理",
+            "currently a product manager",
+            "now works as a product manager",
+            "switched careers to become a product manager"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "变化挺大的"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "medium",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-056",
+      "description": "偏头痛触发因素和应对方式",
+      "input": "User: 我有偏头痛的毛病，强光容易诱发。\nAssistant: 有什么缓解方式吗？\nUser: 我发作时会吃布洛芬，然后去暗房休息。\nAssistant: 了解了。",
+      "expected_facts": [
+        {
+          "match_any": [
+            "偏头痛",
+            "有偏头痛",
+            "migraines",
+            "suffers from migraines",
+            "has migraine issues"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "强光",
+            "强光容易诱发",
+            "bright light triggers migraines",
+            "strong light can trigger the user's migraines",
+            "strong light triggers migraines",
+            "bright light can trigger user's migraines",
+            "Strong light is a trigger for the user's migraine"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "布洛芬",
+            "吃布洛芬",
+            "ibuprofen"
+          ],
+          "confidence_range": [
+            0.6,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "了解了"
+      ],
+      "expected_count_range": [
+        2,
+        4
+      ],
+      "difficulty": "medium",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-058",
+      "description": "piano learning and practice schedule across turns",
+      "input": "User: I've been taking piano lessons since last fall.\nAssistant: How's it going?\nUser: Good. I practice about 45 minutes every morning before work.\nAssistant: That's consistent.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "piano lessons",
+            "taking piano lessons since last fall",
+            "piano"
+          ],
+          "confidence_range": [
+            0.6,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "45 minutes every morning",
+            "practices 45 minutes every morning",
+            "practice every morning before work"
+          ],
+          "confidence_range": [
+            0.6,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "How's it going",
+        "That's consistent"
+      ],
+      "expected_count_range": [
+        1,
+        3
+      ],
+      "difficulty": "medium",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-059",
+      "description": "不再用微信办公，改用钉钉",
+      "input": "User: 我们团队不再用微信沟通工作了，全部切到钉钉了。\nAssistant: 切换顺利吗？",
+      "expected_facts": [
+        {
+          "match_any": [
+            "不再用微信沟通工作",
+            "no longer uses WeChat for work",
+            "team has stopped using WeChat for work communication",
+            "User's team has stopped using WeChat for work communication"
+          ],
+          "confidence_range": [
+            0.6,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "钉钉",
+            "切到钉钉",
+            "DingTalk",
+            "uses DingTalk for work"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "切换顺利吗"
+      ],
+      "expected_count_range": [
+        1,
+        3
+      ],
+      "difficulty": "tricky",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-060",
+      "description": "lives alone with a parrot named Rio",
+      "input": "User: I live alone but I have a parrot named Rio who keeps me company.\nAssistant: That's cute.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "lives alone",
+            "live alone"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "parrot named Rio",
+            "parrot",
+            "Rio"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "That's cute"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "easy",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-062",
+      "description": "冥想频率和时间段",
+      "input": "User: 我每天早上起来先冥想十分钟。\nAssistant: 养成习惯了？\nUser: 嗯，坚持一年多了，一般六点半开始。\nAssistant: 不错。",
+      "expected_facts": [
+        {
+          "match_any": [
+            "每天早上冥想",
+            "冥想十分钟",
+            "meditates every morning",
+            "morning meditation"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "六点半",
+            "6:30",
+            "一般六点半开始",
+            "starts at 6:30"
+          ],
+          "confidence_range": [
+            0.6,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "坚持一年多",
+            "一年多",
+            "over a year",
+            "已超过一年",
+            "habit has lasted over a year"
+          ],
+          "confidence_range": [
+            0.6,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "不错",
+        "养成习惯了"
+      ],
+      "expected_count_range": [
+        2,
+        4
+      ],
+      "difficulty": "medium",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-064",
+      "description": "设计工具偏好：Figma 和 Sketch",
+      "input": "User: 我做 UI 设计，平时主要用 Figma，偶尔用 Sketch 做 icon。\nAssistant: 明白。",
+      "expected_facts": [
+        {
+          "match_any": [
+            "UI 设计",
+            "做 UI 设计",
+            "UI designer",
+            "works in UI design",
+            "User works in UI design",
+            "does UI design",
+            "User does UI design"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "Figma",
+            "主要用 Figma",
+            "uses Figma"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "Sketch",
+            "用 Sketch 做 icon",
+            "uses Sketch for icons"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "明白"
+      ],
+      "expected_count_range": [
+        2,
+        4
+      ],
+      "difficulty": "easy",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-066",
+      "description": "enrolled in evening MBA starting next semester",
+      "input": "User: I just enrolled in an evening MBA at NYU, starting this September.\nAssistant: That's a big commitment.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "enrolled in an evening MBA",
+            "evening MBA at NYU",
+            "MBA at NYU"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "starting this September",
+            "September"
+          ],
+          "confidence_range": [
+            0.6,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "That's a big commitment"
+      ],
+      "expected_count_range": [
+        1,
+        3
+      ],
+      "difficulty": "medium",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-067",
+      "description": "prefers standing desks and natural light",
+      "input": "User: I always pick a standing desk with natural light when I can.\nAssistant: Same here.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "standing desk",
+            "prefers standing desk"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "natural light",
+            "prefers natural light"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Same here"
+      ],
+      "expected_count_range": [
+        1,
+        3
+      ],
+      "difficulty": "easy",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-069",
+      "description": "diet shift from keto to Mediterranean",
+      "input": "User: I did keto for two years but dropped it last month. Now I'm following a Mediterranean diet.\nAssistant: How's the transition?",
+      "expected_facts": [
+        {
+          "match_any": [
+            "did keto for two years",
+            "keto",
+            "used to do keto"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "dropped it last month",
+            "stopped keto last month",
+            "stopped following a ketogenic diet last month",
+            "stopped following keto last month",
+            "stopped following the keto diet last month"
+          ],
+          "confidence_range": [
+            0.6,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "Mediterranean diet",
+            "following a Mediterranean diet"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "How's the transition"
+      ],
+      "expected_count_range": [
+        2,
+        4
+      ],
+      "difficulty": "tricky",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-070",
+      "description": "中文工具选择问句不应提取",
+      "input": "User: Notion 和 Logseq 哪个更适合做个人知识库？\nAssistant: 看你更喜欢数据库视图还是双链笔记。",
+      "expected_facts": [],
+      "should_not_extract": [
+        "Notion",
+        "Logseq",
+        "知识库",
+        "双链笔记"
+      ],
+      "expected_count_range": [
+        0,
+        0
+      ],
+      "difficulty": "medium",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-071",
+      "description": "中文多轮画像：姓名、城市、爱好",
+      "input": "User: 我叫林婷。\nAssistant: 你好。\nUser: 我在厦门。\nAssistant: 好的。\nUser: 我特别喜欢吃芒果。\nAssistant: 记住了。",
+      "expected_facts": [
+        {
+          "match_any": [
+            "林婷",
+            "name is 林婷"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "厦门",
+            "在厦门",
+            "lives in Xiamen",
+            "is in Xiamen",
+            "User is in Xiamen"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "芒果",
+            "喜欢吃芒果",
+            "likes mango",
+            "likes to eat mangoes",
+            "particularly likes to eat mangoes",
+            "really likes eating mango"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "你好",
+        "好的",
+        "记住了"
+      ],
+      "expected_count_range": [
+        3,
+        4
+      ],
+      "difficulty": "easy",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-073",
+      "description": "季节性情绪波动和光疗习惯",
+      "input": "User: 我一到冬天情绪就很低落，医生说是季节性情绪障碍。我每天早上用光疗灯照半小时。\nAssistant: 坚持治疗很重要。",
+      "expected_facts": [
+        {
+          "match_any": [
+            "季节性情绪障碍",
+            "冬天情绪低落",
+            "seasonal affective disorder",
+            "SAD"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "光疗灯",
+            "每天早上用光疗灯",
+            "light therapy lamp",
+            "光疗"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "坚持治疗很重要"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "tricky",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-075",
+      "description": "和父母同住，弟弟在读大学",
+      "input": "User: 我现在和父母一起住，我弟弟在读大学。\nAssistant: 家里人挺多的。",
+      "expected_facts": [
+        {
+          "match_any": [
+            "和父母一起住",
+            "lives with parents",
+            "currently lives with their parents",
+            "lives with their parents",
+            "目前和父母一起居住"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "弟弟在读大学",
+            "弟弟",
+            "younger brother",
+            "brother in college"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "家里人挺多的"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "easy",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-076",
+      "description": "不再晨跑，改成晚上散步",
+      "input": "User: 我不再晨跑了，现在改成每天晚上饭后散步四十分钟。\nAssistant: 也不错。",
+      "expected_facts": [
+        {
+          "match_any": [
+            "不再晨跑",
+            "no longer runs in the morning",
+            "no longer goes for morning runs"
+          ],
+          "confidence_range": [
+            0.6,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "晚上饭后散步",
+            "散步四十分钟",
+            "walks 40 minutes after dinner",
+            "evening walk",
+            "walk every night after dinner",
+            "forty-minute walk every night after dinner",
+            "takes a 40-minute walk every evening after dinner"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "也不错"
+      ],
+      "expected_count_range": [
+        1,
+        3
+      ],
+      "difficulty": "medium",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-077",
+      "description": "中英混合的 IDE 选择习惯",
+      "input": "User: 我写代码主要用 IntelliJ，但 quick scripts 我会直接开 VS Code，比较轻量。\nAssistant: 看场景选工具。",
+      "expected_facts": [
+        {
+          "match_any": [
+            "IntelliJ",
+            "写代码主要用 IntelliJ",
+            "uses IntelliJ for coding"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "VS Code",
+            "quick scripts 用 VS Code",
+            "uses VS Code for quick scripts"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "看场景选工具"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "tricky",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-078",
+      "description": "API docs vs blog posts have different style needs",
+      "input": "User: For API docs I want everything terse and code-heavy, but my blog posts should be conversational with analogies.\nAssistant: Understood.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "API docs",
+            "terse and code-heavy",
+            "terse API docs",
+            "wants terse API docs"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "blog posts",
+            "conversational with analogies",
+            "conversational blog posts"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Understood"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "hard",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-079",
+      "description": "registered for a half-marathon with training started",
+      "input": "User: I registered for the Chicago half-marathon in October and started training last week.\nAssistant: Good luck.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "Chicago half-marathon",
+            "registered for the Chicago half-marathon",
+            "half-marathon in October"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "started training last week",
+            "training"
+          ],
+          "confidence_range": [
+            0.6,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Good luck"
+      ],
+      "expected_count_range": [
+        1,
+        3
+      ],
+      "difficulty": "easy",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-082",
+      "description": "每周三次瑜伽加周末长跑",
+      "input": "User: 我周一三五晚上去瑜伽馆，周六早上跑十公里。\nAssistant: 运动量挺大的。",
+      "expected_facts": [
+        {
+          "match_any": [
+            "周一三五晚上瑜伽",
+            "瑜伽",
+            "yoga three times a week",
+            "yoga on Monday, Wednesday, Friday",
+            "goes to a yoga studio on Monday, Wednesday, and Friday evenings",
+            "goes to yoga studio on Monday, Wednesday, and Friday evenings",
+            "goes to the yoga studio on Monday, Wednesday, and Friday evenings"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "周六早上跑十公里",
+            "十公里",
+            "runs 10km on Saturday mornings",
+            "runs 10 kilometers on Saturday mornings"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "运动量挺大的"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "tricky",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-084",
+      "description": "prefers paper books and visits library weekly",
+      "input": "User: I only read paper books.\nAssistant: Old school.\nUser: Yeah, I go to the library every Saturday morning.\nAssistant: Nice routine.",
+      "expected_facts": [
+        {
+          "match_any": [
+            "paper books",
+            "only reads paper books",
+            "prefers paper books"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "library every Saturday morning",
+            "goes to the library every Saturday",
+            "library on Saturdays"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Old school",
+        "Nice routine"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "easy",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-087",
+      "description": "通勤方式从地铁变为骑电动车",
+      "input": "User: 以前我坐地铁上班，现在骑电动车，十五分钟就到了。\nAssistant: 挺方便。",
+      "expected_facts": [
+        {
+          "match_any": [
+            "以前坐地铁",
+            "地铁",
+            "used to take the subway",
+            "used to commute by subway"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "骑电动车",
+            "电动车",
+            "rides an electric scooter",
+            "now commutes by electric scooter",
+            "now commutes by electric bike"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "挺方便"
+      ],
+      "expected_count_range": [
+        2,
+        3
+      ],
+      "difficulty": "easy",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-088",
+      "description": "CI tool recommendation question should not create memory",
+      "input": "User: What's the best CI/CD tool for a small team these days? GitHub Actions or GitLab CI or something else?\nAssistant: For small teams, GitHub Actions is often the easiest to start with.",
+      "expected_facts": [],
+      "should_not_extract": [
+        "GitHub Actions",
+        "GitLab CI",
+        "small team"
+      ],
+      "expected_count_range": [
+        0,
+        0
+      ],
+      "difficulty": "hard",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-091",
+      "description": "reads sci-fi for 30 minutes before bed nightly",
+      "input": "User: I read for about 30 minutes before bed every night. Mostly sci-fi.\nAssistant: Any favorites?",
+      "expected_facts": [
+        {
+          "match_any": [
+            "reads 30 minutes before bed",
+            "reads before bed",
+            "30 minutes before bed every night"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "sci-fi",
+            "mostly reads sci-fi",
+            "science fiction"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Any favorites"
+      ],
+      "expected_count_range": [
+        1,
+        3
+      ],
+      "difficulty": "easy",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-092",
+      "description": "不再用 Slack，全面迁移到飞书",
+      "input": "User: 我们公司不再用 Slack 了，全部迁到飞书。我自己也觉得飞书的文档协作好用一些。\nAssistant: 切换成本大吗？",
+      "expected_facts": [
+        {
+          "match_any": [
+            "不再用 Slack",
+            "no longer uses Slack"
+          ],
+          "confidence_range": [
+            0.6,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "飞书",
+            "迁到飞书",
+            "uses Lark",
+            "switched to Lark",
+            "company has migrated entirely to Feishu",
+            "company has migrated entirely to Feishu (Lark)",
+            "company has fully migrated to Feishu (Lark)",
+            "company has migrated all communication to Feishu (Lark)"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "飞书的文档协作好用",
+            "prefers Lark's document collaboration",
+            "finds Feishu's document collaboration useful",
+            "finds Lark's document collaboration more useful",
+            "finds Feishu's (Lark's) document collaboration feature better to use",
+            "prefers Feishu's document collaboration features",
+            "finds Feishu's (Lark's) document collaboration feature quite useful"
+          ],
+          "confidence_range": [
+            0.6,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "切换成本大吗"
+      ],
+      "expected_count_range": [
+        2,
+        4
+      ],
+      "difficulty": "hard",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-093",
+      "description": "领养流浪狗，每天遛两次",
+      "input": "User: 我上个月领养了一只流浪狗。\nAssistant: 什么品种？\nUser: 串串，叫豆豆。每天早晚各遛一次。\nAssistant: 挺有心的。",
+      "expected_facts": [
+        {
+          "match_any": [
+            "领养了一只流浪狗",
+            "adopted a stray dog",
+            "rescue dog"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "豆豆",
+            "叫豆豆",
+            "named Doudou"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "每天早晚各遛一次",
+            "walks dog twice daily",
+            "遛两次",
+            "walks their dog twice a day, once in the morning and once in the evening",
+            "每天早晚各遛狗一次"
+          ],
+          "confidence_range": [
+            0.6,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "什么品种",
+        "挺有心的"
+      ],
+      "expected_count_range": [
+        2,
+        5
+      ],
+      "difficulty": "medium",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-095",
+      "description": "中文多轮爱好：书法和每周练习",
+      "input": "User: 我最近在学书法。\nAssistant: 写的什么体？\nUser: 楷书，每周日下午练两个小时。\nAssistant: 很有毅力。",
+      "expected_facts": [
+        {
+          "match_any": [
+            "学书法",
+            "learning calligraphy",
+            "书法",
+            "calligraphy"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "楷书",
+            "regular script",
+            "writes regular script"
+          ],
+          "confidence_range": [
+            0.6,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "每周日下午练两个小时",
+            "every Sunday afternoon",
+            "practices two hours on Sundays",
+            "每周日下午练习书法两小时"
+          ],
+          "confidence_range": [
+            0.6,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "写的什么体",
+        "很有毅力"
+      ],
+      "expected_count_range": [
+        2,
+        4
+      ],
+      "difficulty": "easy",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    },
+    {
+      "id": "bb-096",
+      "description": "accepted job offer with confirmed start date",
+      "input": "User: I accepted an offer from Cloudflare and my start date is April 15th.\nAssistant: Congrats!",
+      "expected_facts": [
+        {
+          "match_any": [
+            "accepted an offer from Cloudflare",
+            "Cloudflare",
+            "joining Cloudflare"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "match_any": [
+            "start date is April 15th",
+            "April 15th",
+            "starts April 15th"
+          ],
+          "confidence_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ],
+      "should_not_extract": [
+        "Congrats"
+      ],
+      "expected_count_range": [
+        1,
+        3
+      ],
+      "difficulty": "hard",
+      "legacy_source": "tests/eval/datasets/blackbox/extraction_blackbox_cases.json"
+    }
+  ]
+}

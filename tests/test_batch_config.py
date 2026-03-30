@@ -119,6 +119,34 @@ def test_template_child_overrides_batch_base_url():
     assert cfg.llm.batch_base_url == "https://batch-child.example.com"
 
 
+def test_stage_specific_llm_override_inherits_provider_defaults():
+    """Stage configs resolve on top of [llm] globals and providers."""
+    mgr = ConfigManager.from_dict({
+        "llm": {
+            "provider": "test",
+            "temperature": 0.1,
+            "test": {
+                "protocols": "fake",
+                "model": "base-model",
+            },
+            "alt": {
+                "protocols": "fake",
+                "model": "alt-model",
+            },
+            "extraction": {
+                "provider": "alt",
+                "temperature": 0.3,
+            },
+        },
+    })
+    cfg = mgr.get()
+
+    assert cfg.llm.model == "base-model"
+    assert cfg.llm_stages["extraction"].provider == "alt"
+    assert cfg.llm_stages["extraction"].model == "alt-model"
+    assert cfg.llm_stages["extraction"].temperature == 0.3
+
+
 # ── OpenAILLM routing tests ─────────────────────────────────────────
 
 

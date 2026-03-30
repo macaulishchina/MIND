@@ -41,6 +41,17 @@ class LLMConfig(BaseModel):
     batch_timeout: float = 3600.0   # SDK timeout (seconds) when batch is active
 
 
+class LLMStageOverrideConfig(BaseModel):
+    """Stage-specific LLM override before full provider resolution."""
+
+    provider: str = ""
+    model: str = ""
+    temperature: Optional[float] = None
+    extraction_temperature: Optional[float] = None
+    batch: Optional[bool] = None
+    batch_timeout: Optional[float] = None
+
+
 class EmbeddingConfig(BaseModel):
     """Embedding configuration — fully independent from LLM."""
     protocols: str = "openai-embedding"
@@ -124,3 +135,4 @@ class MemoryConfig(BaseModel):
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
     concurrency: ConcurrencyConfig = Field(default_factory=ConcurrencyConfig)
     providers: Dict[str, ProviderConfig] = Field(default_factory=dict)
+    llm_stages: Dict[str, LLMConfig] = Field(default_factory=dict)

@@ -1,14 +1,4 @@
-"""LLM prompt templates for MIND.
-
-Two core prompts:
-1. FACT_EXTRACTION_PROMPT — extracts facts with confidence from conversations
-2. UPDATE_DECISION_PROMPT — decides ADD/UPDATE/DELETE/NONE for each fact
-
-Design notes:
-- Confidence scoring is MIND's key enhancement over mem0's extraction prompt
-- Temporary IDs in the update prompt prevent LLM UUID hallucination (mem0 trick)
-- source_context is captured from the original conversation, not generated here
-"""
+"""LLM prompt templates for MIND."""
 
 # ---------------------------------------------------------------------------
 # Fact Extraction
@@ -17,142 +7,96 @@ Design notes:
 FACT_EXTRACTION_SYSTEM_PROMPT = """\
 You are a memory extraction assistant.
 
-Your job is to extract the smallest set of fact-shaped memory items that are
-useful for future interactions with this user.
+Extract explicit, fact-shaped items from the conversation.
 
-What to extract:
-- Personal profile facts (name, location, age, role, workplace, family)
-- Stable preferences (food, music, hobbies, tools, habits)
-- Plans, goals, and commitments that the user explicitly mentions
-- Health, accessibility, or safety information that may matter later
-- Opinions, beliefs, and durable interaction preferences
-- Important user-relevant events or experiences when they are stated clearly
-- Committed future plans with concrete evidence (for example, bookings, signed agreements, or fixed dates)
-
-What NOT to extract:
-- Assistant responses or suggestions
-- Hypotheticals, conditionals, or speculative possibilities
-- Tentative ideas, uncommitted possibilities, or "considering / thinking about / maybe / might" future plans unless the user clearly committed to them
-- Procedural chatter, temporary troubleshooting steps, logs, retries, or transient errors
-- Short-lived states, recent frustrations, or one-off incidents unless the user makes clear that they reflect an ongoing condition, recurring pattern, or durable constraint
-- Recent problems framed as "today", "lately", "recently", or "this week" are usually transient context, not memory, unless the user explicitly describes them as a stable pattern, diagnosis, or long-term limitation
-- Facts about other people unless they are directly relevant to the user
-- Requests, advice, preferences, or pressure coming from other people are not user facts unless the user explicitly adopts, agrees with, or acts on them
-- Quoted content such as "my manager wants...", "my friend said...", or "you told me..." should not be extracted as memory unless it clearly states the user's own durable fact or decision
-- Inferences about the user's default language, nationality, or identity made only from the language of one message or question
-- Compound summaries that merge multiple unrelated facts into one line
-
-Atomicity rules:
-- Each fact must be a single concise statement
-- Split multi-fact sentences into separate facts
-- Split parallel stable facts such as tools, languages, preferences, or locations into separate items
-- If different tools or languages are associated with different roles or purposes, keep one fact per tool/language-purpose pair instead of merging them into one blended statement
-- Do not compress multiple explicit stable facts into a higher-level summary such as a "go-to stack", "overall setup", or "general preference" if the conversation supports separate concrete items
-- Preserve tense when it matters (past vs present)
-- Preserve timeline anchors when they are explicit (for example: last month, every morning, after dinner, next May)
-- When the user describes a meaningful change over time, keep the before/after structure instead of collapsing it into one vague summary
-- When the user mentions both a durable fact and a temporary situation, keep only the durable fact unless the temporary situation is explicitly described as recurring or persistent
-- Distinguish defaults or usual habits from explicit preferences; do not rewrite "usually", "typically", or "normally" as "prefers" unless the user clearly states preference
-- Preserve user-provided names, places, products, and terms as literally as possible; do not transliterate, translate, or normalize away the original wording unless both forms are explicitly given
-- Prefer explicit wording over aggressive inference
-- For preferences, use canonical wording like "User prefers concise answers" or "User prefers list-form responses" when appropriate
-- For negated updates, prefer wording like "User no longer ..." when that meaning is explicit
+Requirements:
+- Extract facts stated by the user.
+- Facts may be about the user, named third parties, unnamed third parties,
+  relationships, preferences, plans, events, habits, beliefs, or quotes.
+- Keep each fact atomic. Split multi-fact sentences into separate items.
+- Preserve names, relations, timeline anchors, and concrete values.
+- Do not invent hidden fields or infer facts that are not stated.
+- Ignore assistant replies unless the user explicitly adopts them as their own fact.
+- Ignore pure questions with no factual claim.
+- Ignore hypotheticals or speculation unless the user states them as a committed fact.
 
 Confidence rubric:
-- 1.0: Explicit, direct, and unambiguous user statement
-- 0.8: Strongly supported by the conversation with little ambiguity
-- 0.6: Reasonable compression of an explicit user-relevant event
-- 0.4: Weak inference or partially ambiguous context
-- 0.2: Too speculative to trust; usually do not extract it
-
-Examples:
-Conversation:
-User: My name is Alice, I work at Stripe, and I drink black coffee every day.
-Assistant: Noted.
-Output:
-{
-  "facts": [
-    {"text": "User's name is Alice", "confidence": 1.0},
-    {"text": "User works at Stripe", "confidence": 1.0},
-    {"text": "User drinks black coffee every day", "confidence": 1.0}
-  ]
-}
-
-Conversation:
-User: If I ever move to Tokyo, I might learn Japanese.
-Assistant: That would be exciting.
-Output:
-{
-  "facts": []
-}
-
-Conversation:
-User: I am moving to Berlin next month and already signed the lease.
-Assistant: Exciting.
-Output:
-{
-  "facts": [
-    {"text": "User is moving to Berlin next month", "confidence": 1.0},
-    {"text": "User has already signed a lease for the move", "confidence": 1.0}
-  ]
-}
-
-Conversation:
-User: I usually speak Chinese at work, but I want weekly summaries in English.
-Assistant: Noted.
-Output:
-{
-  "facts": [
-    {"text": "User usually communicates in Chinese at work", "confidence": 1.0},
-    {"text": "User prefers weekly summaries in English", "confidence": 1.0}
-  ]
-}
-
-Conversation:
-User: I used to commute by subway, but now I ride an electric scooter.
-Assistant: Got it.
-Output:
-{
-  "facts": [
-    {"text": "User used to commute by subway", "confidence": 1.0},
-    {"text": "User now commutes by electric scooter", "confidence": 1.0}
-  ]
-}
-
-Conversation:
-User: My roommate is vegan, so I usually order takeout.
-Assistant: Understood.
-Output:
-{
-  "facts": [
-    {"text": "User usually orders takeout", "confidence": 1.0}
-  ]
-}
-
-Conversation:
-User: I live in Hangzhou now, and I'm considering moving to Singapore next year.
-Assistant: Thanks.
-Output:
-{
-  "facts": [
-    {"text": "User currently lives in Hangzhou", "confidence": 1.0}
-  ]
-}
+- 1.0: explicit direct statement
+- 0.8: explicit but slightly compressed
+- 0.6: plausible restatement with minor ambiguity
 
 Respond with valid JSON only:
 {
   "facts": [
-    {"text": "fact description", "confidence": 0.9}
+    {"text": "atomic fact text", "confidence": 0.9}
   ]
 }
 """
 
 FACT_EXTRACTION_USER_TEMPLATE = """\
 Extract the key facts from the following conversation that should be \
-remembered about the user.
+remembered.
 
 Conversation:
 {conversation}
+"""
+
+
+# ---------------------------------------------------------------------------
+# Fact Normalization
+# ---------------------------------------------------------------------------
+
+FACT_NORMALIZATION_SYSTEM_PROMPT = """\
+You are a memory normalization assistant.
+
+You will receive one extracted raw fact plus owner context.
+Convert it into one or more structured memory envelopes.
+
+Rules:
+- The owner is the user-space that this memory belongs to.
+- Use subject_scope="self" when the fact is about the owner themself.
+- Use subject_scope="third_party_named" when the fact is about a third party
+  with a stable name and relation to the owner.
+- Use subject_scope="third_party_unknown" when the fact is about a third party
+  with a relation but no stable name.
+- relation_type must be "self" for self facts. For third parties use values
+  like friend, mother, father, boss, manager, roommate, partner, sibling,
+  coworker, child, pet, person.
+- fact_family must be one of:
+  attribute, preference, relation, event, plan, quote, belief, habit
+- field_key should use controlled keys when possible:
+  name, age, occupation, location, workplace, language, relation_to_owner
+- If there is no good controlled key, fall back to attribute:<raw_key>
+- field_value_json should be a JSON object. Prefer {"value": "..."}.
+- Do not generate the final canonical text. The application will do that.
+- A single raw fact may yield multiple envelopes. Example:
+  "My friend Green is a football player" should yield:
+  1. relation_to_owner=friend
+  2. occupation=football player
+
+Respond with valid JSON only:
+{
+  "envelopes": [
+    {
+      "subject_scope": "self" | "third_party_named" | "third_party_unknown",
+      "relation_type": "self | friend | mother | ...",
+      "display_name": "Green or null",
+      "normalized_name": "green or null",
+      "fact_family": "attribute",
+      "field_key": "occupation",
+      "field_value_json": {"value": "football player"},
+      "confidence": 1.0
+    }
+  ]
+}
+"""
+
+FACT_NORMALIZATION_USER_TEMPLATE = """\
+Owner context:
+{owner_context}
+
+Raw fact:
+{raw_fact}
 """
 
 

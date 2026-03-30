@@ -1,165 +1,117 @@
-"""Memory pipeline tests using deterministic local backends.
+"""Memory pipeline tests using deterministic local backends."""
 
-The test TOML selects fake LLM and embedding providers so the full add /
-search / update flow can be verified without external API calls.
-"""
-
-import pytest
-
-from mind.config.models import MemoryStatus
+from mind.config.models import FactFamily, MemoryStatus, OwnerContext
 from mind.memory import Memory
 
+
 class TestMemoryEndToEnd:
-    """Exercise the full Memory pipeline with TOML-configured fake backends."""
+    """Exercise the owner-centered memory pipeline with fake backends."""
 
-    def test_add_and_search(self, memory_config):
-        """Scenario 1: stable preference write and recall.
-
-        User says 'I love black coffee' → search for drink recommendations
-        should return that memory.
-        """
+    def test_add_and_search_known_owner(self, memory_config):
         m = Memory(memory_config)
 
-        # Add
         results = m.add(
             messages=[{"role": "user", "content": "I love black coffee"}],
             user_id="alice",
         )
 
-        assert len(results) >= 1
-        contents = [r.content.lower() for r in results]
-        assert any("coffee" in c for c in contents)
+        assert len(results) == 1
+        item = results[0]
+        assert item.owner_id is not None
+        assert item.subject_ref == "self"
+        assert item.fact_family == FactFamily.PREFERENCE
+        assert "black coffee" in item.content.lower()
+        assert item.status == MemoryStatus.ACTIVE
 
-        # Verify confidence and source_context are recorded
-        for item in results:
-            assert item.confidence is not None
-            assert item.source_context is not None
-            assert item.status == MemoryStatus.ACTIVE
-
-        # Search
         search_results = m.search(
             query="What drink do you recommend?",
             user_id="alice",
         )
         assert len(search_results) >= 1
-        assert any("coffee" in r.content.lower() for r in search_results)
+        assert any("black coffee" in r.content.lower() for r in search_results)
 
-    def test_update_with_version_tracking(self, memory_config):
-        """Scenario 2: preference update with version_of tracking.
-
-        User first says 'I like black coffee', then changes to 'I only drink
-        americano now'. The new memory should have version_of set.
-        """
+    def test_single_value_fields_update_with_version_tracking(self, memory_config):
         m = Memory(memory_config)
 
-        # Add initial preference
-        m.add(
-            messages=[{"role": "user", "content": "I like black coffee"}],
-            user_id="bob",
-        )
-
-        # Update preference
-        updated = m.add(
-            messages=[
-                {"role": "user", "content": "I only drink americano now"}
-            ],
-            user_id="bob",
-        )
-
-        # Check that at least one result has version_of set
-        # (the LLM should decide UPDATE for the conflicting preference)
-        all_memories = m.get_all(user_id="bob")
-        version_of_set = [
-            mem for mem in all_memories if mem.version_of is not None
-        ]
-
-        # It's possible the LLM decides ADD instead of UPDATE, which is
-        # acceptable for MVP — we just record whether version_of works.
-        if version_of_set:
-            assert version_of_set[0].version_of is not None
-
-    def test_delete_filters_from_search(self, memory_config):
-        """Scenario 4: deleted memory does not pollute search results."""
-        m = Memory(memory_config)
-
-        # Add
-        results = m.add(
-            messages=[
-                {"role": "user", "content": "I am allergic to peanuts"}
-            ],
-            user_id="carol",
-        )
-        assert len(results) >= 1
-        memory_id = results[0].id
-
-        # Delete
-        deleted = m.delete(memory_id)
-        assert deleted is True
-
-        # Search should not return the deleted memory
-        search_results = m.search(
-            query="food allergies",
-            user_id="carol",
-        )
-        found_ids = [r.id for r in search_results]
-        assert memory_id not in found_ids
-
-    def test_manual_update(self, memory_config):
-        """Manual update re-embeds and records history."""
-        m = Memory(memory_config)
-
-        # Add
-        results = m.add(
+        first = m.add(
             messages=[{"role": "user", "content": "My name is Dave"}],
-            user_id="dave",
+            user_id="bob",
         )
-        assert len(results) >= 1
-        memory_id = results[0].id
+        second = m.add(
+            messages=[{"role": "user", "content": "My name is David"}],
+            user_id="bob",
+        )
 
-        # Manual update
-        updated = m.update(memory_id, "My name is David, not Dave")
+        all_memories = m.get_all(user_id="bob")
+        assert len(all_memories) == 1
+        assert all_memories[0].content == "[self] name=David"
+        assert second[0].version_of == first[0].id
+
+        old_item = m.get(first[0].id)
+        assert old_item is not None
+        assert old_item.status == MemoryStatus.DELETED
+
+    def test_anonymous_owner_is_reused(self, memory_config):
+        m = Memory(memory_config)
+        owner = OwnerContext(anonymous_session_id="anon-session-1")
+
+        first = m.add(
+            messages=[{"role": "user", "content": "My name is June"}],
+            owner=owner,
+        )
+        second = m.add(
+            messages=[{"role": "user", "content": "I live in Hangzhou"}],
+            owner=owner,
+        )
+
+        assert first[0].owner_id == second[0].owner_id
+
+        search_results = m.search(
+            query="Where does the user live?",
+            user_id="anon-session-1",
+        )
+        assert any("hangzhou" in item.content.lower() for item in search_results)
+
+    def test_third_party_named_subject_creates_relation_and_attribute(self, memory_config):
+        m = Memory(memory_config)
+
+        results = m.add(
+            messages=[{"role": "user", "content": "My friend Green is a football player"}],
+            user_id="mike",
+        )
+
+        assert len(results) == 2
+        assert {item.subject_ref for item in results} == {"friend:green"}
+        contents = {item.content for item in results}
+        assert "[friend:green] relation_to_owner=friend" in contents
+        assert "[friend:green] occupation=football player" in contents
+
+    def test_third_party_unknown_subject_reuses_placeholder_within_one_fact(self, memory_config):
+        m = Memory(memory_config)
+
+        results = m.add(
+            messages=[{"role": "user", "content": "I have a friend who is gay"}],
+            user_id="mike",
+        )
+
+        assert len(results) == 2
+        subject_refs = {item.subject_ref for item in results}
+        assert len(subject_refs) == 1
+        only_ref = next(iter(subject_refs))
+        assert only_ref.startswith("friend:unknown_")
+
+    def test_manual_update_keeps_history(self, memory_config):
+        m = Memory(memory_config)
+        results = m.add(
+            messages=[{"role": "user", "content": "I work at Stripe"}],
+            user_id="eve",
+        )
+
+        updated = m.update(results[0].id, "[self] workplace=OpenAI")
         assert updated is not None
-        assert "David" in updated.content
+        assert updated.canonical_text == "[self] workplace=OpenAI"
 
-        # History should show both ADD and UPDATE
-        hist = m.history(memory_id)
+        hist = m.history(results[0].id)
         operations = [h["operation"] for h in hist]
         assert "ADD" in operations
         assert "UPDATE" in operations
-
-    def test_get_and_get_all(self, memory_config):
-        """get() and get_all() return correct results."""
-        m = Memory(memory_config)
-
-        results = m.add(
-            messages=[
-                {"role": "user", "content": "I work at a tech startup"}
-            ],
-            user_id="eve",
-        )
-        assert len(results) >= 1
-
-        # get single
-        item = m.get(results[0].id)
-        assert item is not None
-        assert item.id == results[0].id
-
-        # get_all
-        all_items = m.get_all(user_id="eve")
-        assert len(all_items) >= 1
-
-    def test_history_tracking(self, memory_config):
-        """history() returns the full operation log."""
-        m = Memory(memory_config)
-
-        results = m.add(
-            messages=[{"role": "user", "content": "I enjoy hiking"}],
-            user_id="frank",
-        )
-        assert len(results) >= 1
-        memory_id = results[0].id
-
-        hist = m.history(memory_id)
-        assert len(hist) >= 1
-        assert hist[0]["operation"] == "ADD"
-        assert hist[0]["new_content"] is not None

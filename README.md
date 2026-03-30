@@ -55,14 +55,25 @@ python -c "from mind.config import ConfigManager; from mind.llms.factory import 
 
 ```python
 from mind import Memory
+from mind.config import OwnerContext
 
 # 零配置初始化（读取 mind.toml）
 m = Memory()
 
-# 写入记忆
+# 写入记忆（兼容旧接口）
 m.add(
     messages=[{"role": "user", "content": "我喜欢黑咖啡"}],
     user_id="alice",
+)
+
+# 写入记忆（owner-centered 新接口）
+m.add(
+    messages=[{"role": "user", "content": "My friend Green is a football player"}],
+    owner=OwnerContext(
+        external_user_id="alice",
+        display_name="Alice",
+        channel="web",
+    ),
 )
 
 # 检索记忆
@@ -98,6 +109,14 @@ m = Memory(overrides={"llm": {"temperature": 0.5}})
 所有依赖对象（LLM、Embedder 等）在构造时创建并固定，后续方法调用不再接受配置变更。
 若需不同配置，请创建新的 `Memory` 实例。
 
+当前 `add()` 流程会先把对话提取成原子事实，再归一化为 owner-centered 的结构化 envelope，
+最终以结构标签式文本落库，例如：
+
+- `[self] name=John`
+- `[self] preference:general=black coffee`
+- `[friend:green] relation_to_owner=friend`
+- `[friend:green] occupation=football player`
+
 ## 配置说明
 
 所有配置集中在 `mind.toml`，无环境变量依赖。
@@ -105,6 +124,9 @@ m = Memory(overrides={"llm": {"temperature": 0.5}})
 ```
 mind.toml
 ├── [llm]                    ← 通用设置：provider + temperature
+│   ├── [llm.extraction]     ← 可选：抽取阶段覆盖
+│   ├── [llm.normalization]  ← 可选：归一化阶段覆盖
+│   ├── [llm.decision]       ← 可选：决策阶段覆盖
 │   ├── [llm.openai]         ← 完整 provider 定义
 │   ├── [llm.anthropic]      ← 完整 provider 定义
 │   ├── [llm.google]         ← 完整 provider 定义

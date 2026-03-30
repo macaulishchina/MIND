@@ -40,7 +40,7 @@ def test_fake_llm_splits_atomic_facts() -> None:
     assert any("black coffee" in text for text in texts)
 
 
-def test_fake_llm_filters_questions_and_troubleshooting_noise() -> None:
+def test_fake_llm_filters_questions_but_keeps_troubleshooting_facts() -> None:
     fake_llm = FakeLLM(LLMConfig(protocols="fake", model="fake-memory-test"))
 
     question_facts = _extract(
@@ -53,7 +53,10 @@ def test_fake_llm_filters_questions_and_troubleshooting_noise() -> None:
     )
 
     assert question_facts == []
-    assert troubleshooting_facts == []
+    assert troubleshooting_facts == [
+        {"text": "我刚才重试了三次命令", "confidence": 0.9},
+        {"text": "还是报错超时", "confidence": 0.9},
+    ]
 
 
 def test_fake_llm_supports_basic_chinese_fact_splitting() -> None:

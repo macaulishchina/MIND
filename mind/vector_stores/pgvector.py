@@ -10,6 +10,14 @@ class PgVectorStore(BaseVectorStore):
 
     _payload_columns = (
         "user_id",
+        "owner_id",
+        "subject_ref",
+        "fact_family",
+        "relation_type",
+        "field_key",
+        "field_value_json",
+        "canonical_text",
+        "raw_text",
         "content",
         "hash",
         "metadata",
@@ -66,6 +74,14 @@ class PgVectorStore(BaseVectorStore):
                             id                TEXT PRIMARY KEY,
                             embedding         VECTOR({}) NOT NULL,
                             user_id           TEXT NOT NULL,
+                            owner_id          TEXT,
+                            subject_ref       TEXT,
+                            fact_family       TEXT,
+                            relation_type     TEXT,
+                            field_key         TEXT,
+                            field_value_json  JSONB NOT NULL DEFAULT '{{}}'::jsonb,
+                            canonical_text    TEXT,
+                            raw_text          TEXT,
                             content           TEXT NOT NULL,
                             hash              TEXT NOT NULL,
                             metadata          JSONB NOT NULL DEFAULT '{{}}'::jsonb,
@@ -92,6 +108,41 @@ class PgVectorStore(BaseVectorStore):
                         """
                     ).format(
                         sql.Identifier(f"idx_{self.collection_name}_user_status"),
+                        sql.Identifier(self.collection_name),
+                    )
+                )
+                for statement in (
+                    "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS owner_id TEXT",
+                    "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS subject_ref TEXT",
+                    "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS fact_family TEXT",
+                    "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS relation_type TEXT",
+                    "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS field_key TEXT",
+                    "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS field_value_json JSONB NOT NULL DEFAULT '{}'::jsonb",
+                    "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS canonical_text TEXT",
+                    "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS raw_text TEXT",
+                ):
+                    cur.execute(
+                        sql.SQL(statement).format(
+                            table=sql.Identifier(self.collection_name),
+                        )
+                    )
+                cur.execute(
+                    sql.SQL(
+                        """
+                        CREATE INDEX IF NOT EXISTS {} ON {} (owner_id, status)
+                        """
+                    ).format(
+                        sql.Identifier(f"idx_{self.collection_name}_owner_status"),
+                        sql.Identifier(self.collection_name),
+                    )
+                )
+                cur.execute(
+                    sql.SQL(
+                        """
+                        CREATE INDEX IF NOT EXISTS {} ON {} (owner_id, subject_ref, fact_family, field_key, status)
+                        """
+                    ).format(
+                        sql.Identifier(f"idx_{self.collection_name}_owner_subject_field"),
                         sql.Identifier(self.collection_name),
                     )
                 )
@@ -244,7 +295,10 @@ class PgVectorStore(BaseVectorStore):
                     sql.Identifier(column),
                     sql.Placeholder(),
                 ))
-                params.append(Jsonb(value) if column == "metadata" else value)
+                if column in {"metadata", "field_value_json"}:
+                    params.append(Jsonb(value))
+                else:
+                    params.append(value)
 
         if not assignments:
             return
@@ -282,7 +336,7 @@ class PgVectorStore(BaseVectorStore):
         for column in cls._payload_columns:
             if partial and column not in payload:
                 continue
-            if column == "metadata":
+            if column in {"metadata", "field_value_json"}:
                 row[column] = payload.get(column, {})
             else:
                 row[column] = payload.get(column)
@@ -295,6 +349,7 @@ class PgVectorStore(BaseVectorStore):
         for column in cls._payload_columns:
             payload[column] = row.get(column)
         payload["metadata"] = payload.get("metadata") or {}
+        payload["field_value_json"] = payload.get("field_value_json") or {}
         return payload
 
     @staticmethod

@@ -1,4 +1,6 @@
-"""History-store implementations and factory."""
+"""Relational backing stores for history, owners, and owner-local subjects."""
+
+from __future__ import annotations
 
 import importlib
 import json
@@ -10,7 +12,14 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
-from mind.config.models import HistoryRecord, MemoryOperation
+from mind.config.models import (
+    HistoryRecord,
+    MemoryOperation,
+    OwnerContext,
+    OwnerRecord,
+    OwnerType,
+    SubjectRecord,
+)
 from mind.config.schema import HistoryStoreConfig
 from mind.ops_logger import ops
 from mind.utils import generate_id, get_utc_now
@@ -25,6 +34,15 @@ def _load_postgres_modules() -> Tuple[Any, Any, Any, Any]:
     sql = importlib.import_module("psycopg.sql")
     Jsonb = importlib.import_module("psycopg.types.json").Jsonb
     return psycopg, dict_row, sql, Jsonb
+
+
+def _json_to_dict(value: Any) -> Dict[str, Any]:
+    """Normalize JSON-like values from relational backends."""
+    if value is None:
+        return {}
+    if isinstance(value, str):
+        return json.loads(value)
+    return dict(value)
 
 
 def _build_history_record(
@@ -53,13 +71,6 @@ def _row_to_history_record(
     metadata_value: Any,
 ) -> HistoryRecord:
     """Convert a row dict into a ``HistoryRecord``."""
-    if isinstance(metadata_value, str):
-        metadata = json.loads(metadata_value)
-    elif metadata_value is None:
-        metadata = {}
-    else:
-        metadata = dict(metadata_value)
-
     timestamp = row["timestamp"]
     if isinstance(timestamp, str):
         timestamp = datetime.fromisoformat(timestamp)
@@ -72,12 +83,56 @@ def _row_to_history_record(
         old_content=row["old_content"],
         new_content=row["new_content"],
         timestamp=timestamp,
-        metadata=metadata,
+        metadata=_json_to_dict(metadata_value),
+    )
+
+
+def _row_to_owner_record(row: Dict[str, Any]) -> OwnerRecord:
+    """Convert a row dict into an ``OwnerRecord``."""
+    created_at = row["created_at"]
+    last_seen_at = row["last_seen_at"]
+    if isinstance(created_at, str):
+        created_at = datetime.fromisoformat(created_at)
+    if isinstance(last_seen_at, str):
+        last_seen_at = datetime.fromisoformat(last_seen_at)
+
+    return OwnerRecord(
+        owner_id=row["owner_id"],
+        owner_type=OwnerType(row["owner_type"]),
+        external_user_id=row.get("external_user_id"),
+        anonymous_session_id=row.get("anonymous_session_id"),
+        display_name=row.get("display_name"),
+        channel=row.get("channel"),
+        created_at=created_at,
+        last_seen_at=last_seen_at,
+        metadata=_json_to_dict(row.get("metadata")),
+    )
+
+
+def _row_to_subject_record(row: Dict[str, Any]) -> SubjectRecord:
+    """Convert a row dict into a ``SubjectRecord``."""
+    created_at = row["created_at"]
+    updated_at = row["updated_at"]
+    if isinstance(created_at, str):
+        created_at = datetime.fromisoformat(created_at)
+    if isinstance(updated_at, str):
+        updated_at = datetime.fromisoformat(updated_at)
+
+    return SubjectRecord(
+        owner_id=row["owner_id"],
+        subject_ref=row["subject_ref"],
+        relation_type=row["relation_type"],
+        display_name=row.get("display_name"),
+        normalized_name=row.get("normalized_name"),
+        is_named=bool(row.get("is_named")),
+        created_at=created_at,
+        updated_at=updated_at,
+        aliases=_json_to_dict(row.get("aliases")),
     )
 
 
 class BaseHistoryStore(ABC):
-    """Abstract base for history stores."""
+    """Abstract base for relational backing stores."""
 
     @abstractmethod
     def add_record(
@@ -95,12 +150,39 @@ class BaseHistoryStore(ABC):
     def get_history(self, memory_id: str) -> List[HistoryRecord]:
         """Return ordered history records for a memory."""
 
+    @abstractmethod
+    def resolve_owner(self, context: OwnerContext) -> OwnerRecord:
+        """Resolve or create an owner from business-facing identity context."""
+
+    @abstractmethod
+    def get_or_create_named_subject(
+        self,
+        owner_id: str,
+        relation_type: str,
+        display_name: str,
+        normalized_name: str,
+        aliases: Optional[Dict[str, Any]] = None,
+    ) -> SubjectRecord:
+        """Resolve or create a named owner-local subject."""
+
+    @abstractmethod
+    def create_placeholder_subject(
+        self,
+        owner_id: str,
+        relation_type: str,
+        aliases: Optional[Dict[str, Any]] = None,
+    ) -> SubjectRecord:
+        """Create a new unnamed owner-local placeholder subject."""
+
     def close(self) -> None:
         """Release any backend resources."""
 
 
 class SQLiteManager(BaseHistoryStore):
-    """Manages operation history for memories using SQLite."""
+    """SQLite-backed relational store for history, owners, and subjects."""
+
+    owners_table = "owners"
+    subjects_table = "owner_subjects"
 
     def __init__(self, config: HistoryStoreConfig) -> None:
         self.db_path = config.db_path
@@ -117,7 +199,7 @@ class SQLiteManager(BaseHistoryStore):
             self._local.conn = conn
         return conn
 
-    def _ensure_table(self) -> None:
+    def _ensure_tables(self) -> None:
         conn = self._get_conn()
         conn.execute(
             f"""
@@ -139,8 +221,48 @@ class SQLiteManager(BaseHistoryStore):
             ON {self.table_name} (memory_id)
             """
         )
+        conn.execute(
+            f"""
+            CREATE TABLE IF NOT EXISTS {self.owners_table} (
+                owner_id              TEXT PRIMARY KEY,
+                owner_type            TEXT NOT NULL,
+                external_user_id      TEXT UNIQUE,
+                anonymous_session_id  TEXT UNIQUE,
+                display_name          TEXT,
+                channel               TEXT,
+                created_at            TEXT NOT NULL,
+                last_seen_at          TEXT NOT NULL,
+                metadata              TEXT DEFAULT '{{}}'
+            )
+            """
+        )
+        conn.execute(
+            f"""
+            CREATE TABLE IF NOT EXISTS {self.subjects_table} (
+                owner_id          TEXT NOT NULL,
+                subject_ref       TEXT NOT NULL,
+                relation_type     TEXT NOT NULL,
+                display_name      TEXT,
+                normalized_name   TEXT,
+                is_named          INTEGER NOT NULL DEFAULT 0,
+                created_at        TEXT NOT NULL,
+                updated_at        TEXT NOT NULL,
+                aliases           TEXT DEFAULT '{{}}',
+                PRIMARY KEY (owner_id, subject_ref)
+            )
+            """
+        )
+        conn.execute(
+            f"""
+            CREATE INDEX IF NOT EXISTS idx_{self.subjects_table}_owner_relation
+            ON {self.subjects_table} (owner_id, relation_type)
+            """
+        )
         conn.commit()
-        logger.debug("History table ensured at %s", self.db_path)
+
+    def _ensure_table(self) -> None:
+        """Backward-compatible singular entry point."""
+        self._ensure_tables()
 
     def add_record(
         self,
@@ -204,7 +326,6 @@ class SQLiteManager(BaseHistoryStore):
             """,
             (memory_id,),
         )
-
         records = [
             _row_to_history_record(dict(row), row["metadata"])
             for row in cursor.fetchall()
@@ -217,6 +338,245 @@ class SQLiteManager(BaseHistoryStore):
         )
         return records
 
+    def resolve_owner(self, context: OwnerContext) -> OwnerRecord:
+        """Resolve or create a durable owner record."""
+        if bool(context.external_user_id) == bool(context.anonymous_session_id):
+            raise ValueError(
+                "OwnerContext must provide exactly one of external_user_id "
+                "or anonymous_session_id"
+            )
+
+        owner_type = (
+            OwnerType.KNOWN
+            if context.external_user_id
+            else OwnerType.ANONYMOUS
+        )
+        lookup_field = (
+            "external_user_id"
+            if context.external_user_id
+            else "anonymous_session_id"
+        )
+        lookup_value = (
+            context.external_user_id
+            if context.external_user_id
+            else context.anonymous_session_id
+        )
+        now = get_utc_now()
+        conn = self._get_conn()
+        row = conn.execute(
+            f"SELECT * FROM {self.owners_table} WHERE {lookup_field} = ?",
+            (lookup_value,),
+        ).fetchone()
+
+        if row is None:
+            owner = OwnerRecord(
+                owner_id=generate_id(),
+                owner_type=owner_type,
+                external_user_id=context.external_user_id,
+                anonymous_session_id=context.anonymous_session_id,
+                display_name=context.display_name,
+                channel=context.channel,
+                created_at=now,
+                last_seen_at=now,
+                metadata=context.metadata,
+            )
+            conn.execute(
+                f"""
+                INSERT INTO {self.owners_table}
+                    (owner_id, owner_type, external_user_id, anonymous_session_id,
+                     display_name, channel, created_at, last_seen_at, metadata)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    owner.owner_id,
+                    owner.owner_type.value,
+                    owner.external_user_id,
+                    owner.anonymous_session_id,
+                    owner.display_name,
+                    owner.channel,
+                    owner.created_at.isoformat(),
+                    owner.last_seen_at.isoformat(),
+                    json.dumps(owner.metadata),
+                ),
+            )
+            conn.commit()
+            return owner
+
+        updates = {
+            "display_name": context.display_name or row["display_name"],
+            "channel": context.channel or row["channel"],
+            "last_seen_at": now.isoformat(),
+            "metadata": json.dumps({
+                **_json_to_dict(row["metadata"]),
+                **(context.metadata or {}),
+            }),
+        }
+        conn.execute(
+            f"""
+            UPDATE {self.owners_table}
+            SET display_name = ?, channel = ?, last_seen_at = ?, metadata = ?
+            WHERE owner_id = ?
+            """,
+            (
+                updates["display_name"],
+                updates["channel"],
+                updates["last_seen_at"],
+                updates["metadata"],
+                row["owner_id"],
+            ),
+        )
+        conn.commit()
+
+        return _row_to_owner_record(
+            {
+                **dict(row),
+                **updates,
+            }
+        )
+
+    def get_or_create_named_subject(
+        self,
+        owner_id: str,
+        relation_type: str,
+        display_name: str,
+        normalized_name: str,
+        aliases: Optional[Dict[str, Any]] = None,
+    ) -> SubjectRecord:
+        """Resolve or create a named owner-local subject."""
+        subject_ref = f"{relation_type}:{normalized_name}"
+        now = get_utc_now()
+        conn = self._get_conn()
+        row = conn.execute(
+            f"""
+            SELECT * FROM {self.subjects_table}
+            WHERE owner_id = ? AND subject_ref = ?
+            """,
+            (owner_id, subject_ref),
+        ).fetchone()
+
+        if row is None:
+            subject = SubjectRecord(
+                owner_id=owner_id,
+                subject_ref=subject_ref,
+                relation_type=relation_type,
+                display_name=display_name,
+                normalized_name=normalized_name,
+                is_named=True,
+                created_at=now,
+                updated_at=now,
+                aliases=aliases or {},
+            )
+            conn.execute(
+                f"""
+                INSERT INTO {self.subjects_table}
+                    (owner_id, subject_ref, relation_type, display_name,
+                     normalized_name, is_named, created_at, updated_at, aliases)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    subject.owner_id,
+                    subject.subject_ref,
+                    subject.relation_type,
+                    subject.display_name,
+                    subject.normalized_name,
+                    1,
+                    subject.created_at.isoformat(),
+                    subject.updated_at.isoformat(),
+                    json.dumps(subject.aliases),
+                ),
+            )
+            conn.commit()
+            return subject
+
+        merged_aliases = {
+            **_json_to_dict(row["aliases"]),
+            **(aliases or {}),
+        }
+        display_name_value = display_name or row["display_name"]
+        conn.execute(
+            f"""
+            UPDATE {self.subjects_table}
+            SET display_name = ?, updated_at = ?, aliases = ?
+            WHERE owner_id = ? AND subject_ref = ?
+            """,
+            (
+                display_name_value,
+                now.isoformat(),
+                json.dumps(merged_aliases),
+                owner_id,
+                subject_ref,
+            ),
+        )
+        conn.commit()
+        return _row_to_subject_record(
+            {
+                **dict(row),
+                "display_name": display_name_value,
+                "updated_at": now.isoformat(),
+                "aliases": json.dumps(merged_aliases),
+            }
+        )
+
+    def create_placeholder_subject(
+        self,
+        owner_id: str,
+        relation_type: str,
+        aliases: Optional[Dict[str, Any]] = None,
+    ) -> SubjectRecord:
+        """Create a new owner-local unnamed placeholder subject."""
+        conn = self._get_conn()
+        cursor = conn.execute(
+            f"""
+            SELECT subject_ref
+            FROM {self.subjects_table}
+            WHERE owner_id = ? AND relation_type = ? AND is_named = 0
+            """,
+            (owner_id, relation_type),
+        )
+        max_index = 0
+        for row in cursor.fetchall():
+            ref = row["subject_ref"]
+            if ref.startswith(f"{relation_type}:unknown_"):
+                try:
+                    max_index = max(max_index, int(ref.rsplit("_", 1)[-1]))
+                except ValueError:
+                    continue
+
+        subject_ref = f"{relation_type}:unknown_{max_index + 1}"
+        now = get_utc_now()
+        subject = SubjectRecord(
+            owner_id=owner_id,
+            subject_ref=subject_ref,
+            relation_type=relation_type,
+            display_name=None,
+            normalized_name=None,
+            is_named=False,
+            created_at=now,
+            updated_at=now,
+            aliases=aliases or {},
+        )
+        conn.execute(
+            f"""
+            INSERT INTO {self.subjects_table}
+                (owner_id, subject_ref, relation_type, display_name,
+                 normalized_name, is_named, created_at, updated_at, aliases)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                subject.owner_id,
+                subject.subject_ref,
+                subject.relation_type,
+                subject.display_name,
+                subject.normalized_name,
+                0,
+                subject.created_at.isoformat(),
+                subject.updated_at.isoformat(),
+                json.dumps(subject.aliases),
+            ),
+        )
+        conn.commit()
+        return subject
+
     def close(self) -> None:
         """Close the current thread's database connection."""
         conn = getattr(self._local, "conn", None)
@@ -226,7 +586,10 @@ class SQLiteManager(BaseHistoryStore):
 
 
 class PostgresHistoryManager(BaseHistoryStore):
-    """Postgres-backed history tracking."""
+    """Postgres-backed relational store for history, owners, and subjects."""
+
+    owners_table = "owners"
+    subjects_table = "owner_subjects"
 
     def __init__(self, config: HistoryStoreConfig) -> None:
         if not config.dsn:
@@ -239,7 +602,7 @@ class PostgresHistoryManager(BaseHistoryStore):
         psycopg, dict_row, _sql, _Jsonb = _load_postgres_modules()
         return psycopg.connect(self.dsn, autocommit=True, row_factory=dict_row)
 
-    def _ensure_table(self) -> None:
+    def _ensure_tables(self) -> None:
         _psycopg, _dict_row, sql, _Jsonb = _load_postgres_modules()
         with self._connect() as conn:
             with conn.cursor() as cur:
@@ -269,6 +632,55 @@ class PostgresHistoryManager(BaseHistoryStore):
                         sql.Identifier(self.table_name),
                     )
                 )
+                cur.execute(
+                    sql.SQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS {} (
+                            owner_id             TEXT PRIMARY KEY,
+                            owner_type           TEXT NOT NULL,
+                            external_user_id     TEXT UNIQUE,
+                            anonymous_session_id TEXT UNIQUE,
+                            display_name         TEXT,
+                            channel              TEXT,
+                            created_at           TIMESTAMPTZ NOT NULL,
+                            last_seen_at         TIMESTAMPTZ NOT NULL,
+                            metadata             JSONB NOT NULL DEFAULT '{{}}'::jsonb
+                        )
+                        """
+                    ).format(sql.Identifier(self.owners_table))
+                )
+                cur.execute(
+                    sql.SQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS {} (
+                            owner_id        TEXT NOT NULL,
+                            subject_ref     TEXT NOT NULL,
+                            relation_type   TEXT NOT NULL,
+                            display_name    TEXT,
+                            normalized_name TEXT,
+                            is_named        BOOLEAN NOT NULL DEFAULT FALSE,
+                            created_at      TIMESTAMPTZ NOT NULL,
+                            updated_at      TIMESTAMPTZ NOT NULL,
+                            aliases         JSONB NOT NULL DEFAULT '{{}}'::jsonb,
+                            PRIMARY KEY (owner_id, subject_ref)
+                        )
+                        """
+                    ).format(sql.Identifier(self.subjects_table))
+                )
+                cur.execute(
+                    sql.SQL(
+                        """
+                        CREATE INDEX IF NOT EXISTS {} ON {} (owner_id, relation_type)
+                        """
+                    ).format(
+                        sql.Identifier(f"idx_{self.subjects_table}_owner_relation"),
+                        sql.Identifier(self.subjects_table),
+                    )
+                )
+
+    def _ensure_table(self) -> None:
+        """Backward-compatible singular entry point."""
+        self._ensure_tables()
 
     def add_record(
         self,
@@ -340,7 +752,6 @@ class PostgresHistoryManager(BaseHistoryStore):
                     (memory_id,),
                 )
                 rows = cur.fetchall()
-
         records = [
             _row_to_history_record(row, row["metadata"])
             for row in rows
@@ -353,9 +764,269 @@ class PostgresHistoryManager(BaseHistoryStore):
         )
         return records
 
+    def resolve_owner(self, context: OwnerContext) -> OwnerRecord:
+        """Resolve or create a durable owner record."""
+        if bool(context.external_user_id) == bool(context.anonymous_session_id):
+            raise ValueError(
+                "OwnerContext must provide exactly one of external_user_id "
+                "or anonymous_session_id"
+            )
+
+        _psycopg, _dict_row, sql, Jsonb = _load_postgres_modules()
+        owner_type = (
+            OwnerType.KNOWN
+            if context.external_user_id
+            else OwnerType.ANONYMOUS
+        )
+        lookup_field = (
+            "external_user_id"
+            if context.external_user_id
+            else "anonymous_session_id"
+        )
+        lookup_value = (
+            context.external_user_id
+            if context.external_user_id
+            else context.anonymous_session_id
+        )
+        now = get_utc_now()
+
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    sql.SQL("SELECT * FROM {} WHERE {} = %s").format(
+                        sql.Identifier(self.owners_table),
+                        sql.Identifier(lookup_field),
+                    ),
+                    (lookup_value,),
+                )
+                row = cur.fetchone()
+
+                if row is None:
+                    owner = OwnerRecord(
+                        owner_id=generate_id(),
+                        owner_type=owner_type,
+                        external_user_id=context.external_user_id,
+                        anonymous_session_id=context.anonymous_session_id,
+                        display_name=context.display_name,
+                        channel=context.channel,
+                        created_at=now,
+                        last_seen_at=now,
+                        metadata=context.metadata,
+                    )
+                    cur.execute(
+                        sql.SQL(
+                            """
+                            INSERT INTO {}
+                                (owner_id, owner_type, external_user_id,
+                                 anonymous_session_id, display_name, channel,
+                                 created_at, last_seen_at, metadata)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            """
+                        ).format(sql.Identifier(self.owners_table)),
+                        (
+                            owner.owner_id,
+                            owner.owner_type.value,
+                            owner.external_user_id,
+                            owner.anonymous_session_id,
+                            owner.display_name,
+                            owner.channel,
+                            owner.created_at,
+                            owner.last_seen_at,
+                            Jsonb(owner.metadata),
+                        ),
+                    )
+                    return owner
+
+                merged_metadata = {
+                    **_json_to_dict(row.get("metadata")),
+                    **(context.metadata or {}),
+                }
+                updated_row = {
+                    **row,
+                    "display_name": context.display_name or row.get("display_name"),
+                    "channel": context.channel or row.get("channel"),
+                    "last_seen_at": now,
+                    "metadata": merged_metadata,
+                }
+                cur.execute(
+                    sql.SQL(
+                        """
+                        UPDATE {}
+                        SET display_name = %s, channel = %s, last_seen_at = %s,
+                            metadata = %s
+                        WHERE owner_id = %s
+                        """
+                    ).format(sql.Identifier(self.owners_table)),
+                    (
+                        updated_row["display_name"],
+                        updated_row["channel"],
+                        updated_row["last_seen_at"],
+                        Jsonb(updated_row["metadata"]),
+                        row["owner_id"],
+                    ),
+                )
+                return _row_to_owner_record(updated_row)
+
+    def get_or_create_named_subject(
+        self,
+        owner_id: str,
+        relation_type: str,
+        display_name: str,
+        normalized_name: str,
+        aliases: Optional[Dict[str, Any]] = None,
+    ) -> SubjectRecord:
+        """Resolve or create a named owner-local subject."""
+        _psycopg, _dict_row, sql, Jsonb = _load_postgres_modules()
+        subject_ref = f"{relation_type}:{normalized_name}"
+        now = get_utc_now()
+
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    sql.SQL(
+                        """
+                        SELECT * FROM {}
+                        WHERE owner_id = %s AND subject_ref = %s
+                        """
+                    ).format(sql.Identifier(self.subjects_table)),
+                    (owner_id, subject_ref),
+                )
+                row = cur.fetchone()
+
+                if row is None:
+                    subject = SubjectRecord(
+                        owner_id=owner_id,
+                        subject_ref=subject_ref,
+                        relation_type=relation_type,
+                        display_name=display_name,
+                        normalized_name=normalized_name,
+                        is_named=True,
+                        created_at=now,
+                        updated_at=now,
+                        aliases=aliases or {},
+                    )
+                    cur.execute(
+                        sql.SQL(
+                            """
+                            INSERT INTO {}
+                                (owner_id, subject_ref, relation_type, display_name,
+                                 normalized_name, is_named, created_at, updated_at,
+                                 aliases)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            """
+                        ).format(sql.Identifier(self.subjects_table)),
+                        (
+                            subject.owner_id,
+                            subject.subject_ref,
+                            subject.relation_type,
+                            subject.display_name,
+                            subject.normalized_name,
+                            True,
+                            subject.created_at,
+                            subject.updated_at,
+                            Jsonb(subject.aliases),
+                        ),
+                    )
+                    return subject
+
+                merged_aliases = {
+                    **_json_to_dict(row.get("aliases")),
+                    **(aliases or {}),
+                }
+                display_name_value = display_name or row.get("display_name")
+                updated_row = {
+                    **row,
+                    "display_name": display_name_value,
+                    "updated_at": now,
+                    "aliases": merged_aliases,
+                }
+                cur.execute(
+                    sql.SQL(
+                        """
+                        UPDATE {}
+                        SET display_name = %s, updated_at = %s, aliases = %s
+                        WHERE owner_id = %s AND subject_ref = %s
+                        """
+                    ).format(sql.Identifier(self.subjects_table)),
+                    (
+                        display_name_value,
+                        now,
+                        Jsonb(merged_aliases),
+                        owner_id,
+                        subject_ref,
+                    ),
+                )
+                return _row_to_subject_record(updated_row)
+
+    def create_placeholder_subject(
+        self,
+        owner_id: str,
+        relation_type: str,
+        aliases: Optional[Dict[str, Any]] = None,
+    ) -> SubjectRecord:
+        """Create a new owner-local unnamed placeholder subject."""
+        _psycopg, _dict_row, sql, Jsonb = _load_postgres_modules()
+        now = get_utc_now()
+
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    sql.SQL(
+                        """
+                        SELECT subject_ref
+                        FROM {}
+                        WHERE owner_id = %s AND relation_type = %s AND is_named = FALSE
+                        """
+                    ).format(sql.Identifier(self.subjects_table)),
+                    (owner_id, relation_type),
+                )
+                max_index = 0
+                for row in cur.fetchall():
+                    ref = row["subject_ref"]
+                    if ref.startswith(f"{relation_type}:unknown_"):
+                        try:
+                            max_index = max(max_index, int(ref.rsplit("_", 1)[-1]))
+                        except ValueError:
+                            continue
+
+                subject_ref = f"{relation_type}:unknown_{max_index + 1}"
+                subject = SubjectRecord(
+                    owner_id=owner_id,
+                    subject_ref=subject_ref,
+                    relation_type=relation_type,
+                    display_name=None,
+                    normalized_name=None,
+                    is_named=False,
+                    created_at=now,
+                    updated_at=now,
+                    aliases=aliases or {},
+                )
+                cur.execute(
+                    sql.SQL(
+                        """
+                        INSERT INTO {}
+                            (owner_id, subject_ref, relation_type, display_name,
+                             normalized_name, is_named, created_at, updated_at, aliases)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """
+                    ).format(sql.Identifier(self.subjects_table)),
+                    (
+                        subject.owner_id,
+                        subject.subject_ref,
+                        subject.relation_type,
+                        subject.display_name,
+                        subject.normalized_name,
+                        False,
+                        subject.created_at,
+                        subject.updated_at,
+                        Jsonb(subject.aliases),
+                    ),
+                )
+                return subject
+
 
 class HistoryStoreFactory:
-    """Create a history-store backend from configuration."""
+    """Create a relational backing store from configuration."""
 
     _provider_map = {
         "sqlite": SQLiteManager,

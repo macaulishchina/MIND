@@ -8,6 +8,7 @@ from mind.config.schema import LLMConfig
 from mind.llms.base import BaseLLM
 from mind.prompts import (
     FACT_EXTRACTION_SYSTEM_PROMPT,
+    FACT_NORMALIZATION_SYSTEM_PROMPT,
     UPDATE_DECISION_SYSTEM_PROMPT,
 )
 
@@ -15,7 +16,7 @@ from mind.prompts import (
 class FakeLLM(BaseLLM):
     """Deterministic LLM backend for tests.
 
-    It implements the two prompts used by ``Memory.add()`` with simple,
+    It implements the prompts used by ``Memory.add()`` with simple,
     explicit heuristics so tests can exercise the full memory pipeline
     without external API calls.
     """
@@ -42,6 +43,8 @@ class FakeLLM(BaseLLM):
 
         if FACT_EXTRACTION_SYSTEM_PROMPT in system_text:
             return self._extract_facts_response(user_text)
+        if FACT_NORMALIZATION_SYSTEM_PROMPT in system_text:
+            return self._normalize_fact_response(user_text)
         if UPDATE_DECISION_SYSTEM_PROMPT in system_text:
             return self._decision_response(user_text)
         raise ValueError("FakeLLM received an unsupported prompt")
@@ -57,7 +60,6 @@ class FakeLLM(BaseLLM):
                 not content
                 or _looks_hypothetical(content)
                 or _looks_like_question(content)
-                or _looks_like_temporary_troubleshooting(content)
             ):
                 continue
             for clause in _split_into_fact_candidates(content):
@@ -71,6 +73,11 @@ class FakeLLM(BaseLLM):
                     }
                 )
         return json.dumps({"facts": facts})
+
+    def _normalize_fact_response(self, prompt_text: str) -> str:
+        raw_fact = prompt_text.split("Raw fact:\n", 1)[-1].strip()
+        envelopes = _normalize_raw_fact(raw_fact)
+        return json.dumps({"envelopes": envelopes})
 
     def _decision_response(self, prompt_text: str) -> str:
         existing_memories = _parse_existing_memories(prompt_text)
@@ -191,30 +198,6 @@ def _looks_like_question(text: str) -> bool:
     return stripped.endswith(("?", "？")) or lowered.startswith(question_starters)
 
 
-def _looks_like_temporary_troubleshooting(text: str) -> bool:
-    lowered = text.lower()
-    noise_markers = (
-        "timeout",
-        "timed out",
-        "retry",
-        "retried",
-        "restart",
-        "restarting",
-        "command",
-        "stack trace",
-        "error log",
-        "debug",
-        "超时",
-        "重试",
-        "重启",
-        "命令",
-        "报错",
-        "日志",
-        "调试",
-    )
-    return any(marker in lowered for marker in noise_markers)
-
-
 def _split_into_fact_candidates(text: str) -> List[str]:
     normalized = text.replace("，", ", ").replace("；", "; ")
     pieces = [normalized]
@@ -269,6 +252,237 @@ def _estimate_confidence(text: str) -> float:
 
 def _clean_fact_text(text: str) -> str:
     return text.strip().rstrip(".?!。！？")
+
+
+def _normalize_raw_fact(text: str) -> List[Dict[str, Any]]:
+    cleaned = _clean_fact_text(text)
+    if not cleaned:
+        return []
+
+    handlers = (
+        _normalize_self_name,
+        _normalize_self_age,
+        _normalize_self_location,
+        _normalize_self_workplace,
+        _normalize_third_party_fact,
+        _normalize_self_preference_or_habit,
+    )
+    for handler in handlers:
+        normalized = handler(cleaned)
+        if normalized:
+            return normalized
+
+    return [
+        {
+            "subject_scope": "self",
+            "relation_type": "self",
+            "display_name": None,
+            "normalized_name": None,
+            "fact_family": "attribute",
+            "field_key": "attribute:statement",
+            "field_value_json": {"value": cleaned},
+            "confidence": _estimate_confidence(cleaned),
+        }
+    ]
+
+
+def _normalize_self_name(text: str) -> List[Dict[str, Any]]:
+    patterns = (
+        r"^(?:my name is|i am|i'm)\s+([A-Za-z][A-Za-z0-9 _'-]*)$",
+        r"^user'?s name is\s+([A-Za-z][A-Za-z0-9 _'-]*)$",
+    )
+    for pattern in patterns:
+        match = re.match(pattern, text, re.I)
+        if match:
+            return [_envelope("self", "self", "attribute", "name", match.group(1).strip(), text)]
+    return []
+
+
+def _normalize_self_age(text: str) -> List[Dict[str, Any]]:
+    patterns = (
+        r"^(?:i am|i'm)\s+(\d{1,3})\s+years?\s+old$",
+        r"^user is\s+(\d{1,3})\s+years?\s+old$",
+    )
+    for pattern in patterns:
+        match = re.match(pattern, text, re.I)
+        if match:
+            return [_envelope("self", "self", "attribute", "age", int(match.group(1)), text)]
+    return []
+
+
+def _normalize_self_location(text: str) -> List[Dict[str, Any]]:
+    patterns = (
+        r"^(?:i live in|i currently live in)\s+(.+)$",
+        r"^user (?:currently )?lives in\s+(.+)$",
+    )
+    for pattern in patterns:
+        match = re.match(pattern, text, re.I)
+        if match:
+            return [_envelope("self", "self", "attribute", "location", match.group(1).strip(), text)]
+    return []
+
+
+def _normalize_self_workplace(text: str) -> List[Dict[str, Any]]:
+    patterns = (
+        r"^(?:i work at|i work for)\s+(.+)$",
+        r"^user works (?:at|for)\s+(.+)$",
+    )
+    for pattern in patterns:
+        match = re.match(pattern, text, re.I)
+        if match:
+            return [_envelope("self", "self", "attribute", "workplace", match.group(1).strip(), text)]
+    return []
+
+
+def _normalize_self_preference_or_habit(text: str) -> List[Dict[str, Any]]:
+    lowered = text.lower()
+    if lowered.startswith(("i like ", "i love ", "user likes ", "user loves ")):
+        value = re.sub(r"^(?:i|user)\s+(?:like|likes|love|loves)\s+", "", text, flags=re.I)
+        return [_envelope("self", "self", "preference", "preference:general", value.strip(), text)]
+    if lowered.startswith(("i enjoy ", "user enjoys ")):
+        value = re.sub(r"^(?:i|user)\s+(?:enjoy|enjoys)\s+", "", text, flags=re.I)
+        return [_envelope("self", "self", "habit", "habit:activity", value.strip(), text)]
+    if "usually uses" in lowered or "usually communicates in" in lowered:
+        value = re.sub(r"^user\s+(?:usually uses|usually communicates in)\s+", "", text, flags=re.I)
+        return [_envelope("self", "self", "habit", "habit:language", value.strip(), text)]
+    return []
+
+
+def _normalize_third_party_fact(text: str) -> List[Dict[str, Any]]:
+    relation_map = {
+        "friend": "friend",
+        "mother": "mother",
+        "mom": "mother",
+        "father": "father",
+        "dad": "father",
+        "boss": "boss",
+        "manager": "manager",
+        "roommate": "roommate",
+        "partner": "partner",
+        "wife": "partner",
+        "husband": "partner",
+        "girlfriend": "partner",
+        "boyfriend": "partner",
+        "coworker": "coworker",
+        "colleague": "coworker",
+        "brother": "sibling",
+        "sister": "sibling",
+        "son": "child",
+        "daughter": "child",
+        "dog": "pet",
+        "cat": "pet",
+        "pet": "pet",
+    }
+    relation_pattern = "|".join(sorted(relation_map, key=len, reverse=True))
+
+    named_patterns = (
+        rf"^(?:my|user'?s)\s+({relation_pattern})\s+([A-Za-z][A-Za-z0-9 _'-]*)\s+is\s+(.+)$",
+        rf"^([A-Za-z][A-Za-z0-9 _'-]*)\s+is\s+my\s+({relation_pattern})$",
+    )
+    for pattern in named_patterns:
+        match = re.match(pattern, text, re.I)
+        if not match:
+            continue
+
+        if len(match.groups()) == 3:
+            raw_relation, display_name, predicate = match.groups()
+        else:
+            display_name, raw_relation = match.groups()
+            predicate = None
+
+        relation_type = relation_map[raw_relation.lower()]
+        envelopes = [
+            _envelope(
+                "third_party_named",
+                relation_type,
+                "relation",
+                "relation_to_owner",
+                relation_type,
+                text,
+                display_name=display_name.strip(),
+            )
+        ]
+        if predicate:
+            attribute_key, attribute_value = _infer_attribute_from_predicate(predicate.strip())
+            envelopes.append(
+                _envelope(
+                    "third_party_named",
+                    relation_type,
+                    "attribute",
+                    attribute_key,
+                    attribute_value,
+                    text,
+                    display_name=display_name.strip(),
+                )
+            )
+        return envelopes
+
+    unknown_pattern = rf"^(?:i have|i've got|my)\s+(?:a\s+|an\s+)?({relation_pattern})(?:\s+who)?\s+is\s+(.+)$"
+    match = re.match(unknown_pattern, text, re.I)
+    if match:
+        raw_relation, predicate = match.groups()
+        relation_type = relation_map[raw_relation.lower()]
+        attribute_key, attribute_value = _infer_attribute_from_predicate(predicate.strip())
+        return [
+            _envelope(
+                "third_party_unknown",
+                relation_type,
+                "relation",
+                "relation_to_owner",
+                relation_type,
+                text,
+            ),
+            _envelope(
+                "third_party_unknown",
+                relation_type,
+                "attribute",
+                attribute_key,
+                attribute_value,
+                text,
+            ),
+        ]
+
+    return []
+
+
+def _infer_attribute_from_predicate(predicate: str) -> tuple[str, Any]:
+    lowered = predicate.lower()
+    if re.fullmatch(r"\d{1,3}\s+years?\s+old", lowered):
+        return "age", int(re.findall(r"\d+", lowered)[0])
+    if any(marker in lowered for marker in ("football player", "soccer player", "engineer", "teacher", "doctor", "developer", "designer")):
+        cleaned = re.sub(r"^(?:a|an)\s+", "", predicate, flags=re.I)
+        return "occupation", cleaned
+    if lowered.startswith(("named ", "called ")):
+        return "name", predicate.split(" ", 1)[1].strip()
+    return "attribute:statement", predicate
+
+
+def _envelope(
+    subject_scope: str,
+    relation_type: str,
+    fact_family: str,
+    field_key: str,
+    value: Any,
+    raw_text: str,
+    display_name: Optional[str] = None,
+) -> Dict[str, Any]:
+    normalized_name = _normalize_name(display_name) if display_name else None
+    return {
+        "subject_scope": subject_scope,
+        "relation_type": relation_type,
+        "display_name": display_name,
+        "normalized_name": normalized_name,
+        "fact_family": fact_family,
+        "field_key": field_key,
+        "field_value_json": {"value": value},
+        "confidence": _estimate_confidence(raw_text),
+    }
+
+
+def _normalize_name(value: Optional[str]) -> Optional[str]:
+    if not value:
+        return None
+    return " ".join(value.casefold().split())
 
 
 def _normalize_text(text: str) -> str:

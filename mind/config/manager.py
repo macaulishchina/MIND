@@ -24,9 +24,11 @@ except ModuleNotFoundError:
     import tomli as tomllib              # fallback for 3.10
 
 from mind.config.schema import (
+    ConcurrencyConfig,
     EmbeddingConfig,
     HistoryStoreConfig,
     LLMConfig,
+    LLMStageOverrideConfig,
     LoggingConfig,
     MemoryConfig,
     ProviderConfig,
@@ -86,14 +88,19 @@ class ConfigManager:
 
     def _resolve(self, raw: Dict[str, Any]) -> MemoryConfig:
         llm_section = raw.get("llm", {})
+        stage_keys = {"extraction", "normalization", "decision"}
 
         # 1. Extract [llm.*] provider sub-tables
         #    TOML nested tables [llm.openai] appear as sub-dicts of llm
         provider_defs: Dict[str, Dict[str, Any]] = {}
+        stage_defs: Dict[str, Dict[str, Any]] = {}
         llm_globals: Dict[str, Any] = {}
         for key, value in llm_section.items():
             if isinstance(value, dict):
-                provider_defs[key] = value
+                if key in stage_keys:
+                    stage_defs[key] = value
+                else:
+                    provider_defs[key] = value
             else:
                 llm_globals[key] = value
 
@@ -113,23 +120,22 @@ class ConfigManager:
             })
 
         # 4. Resolve LLM: merge globals + selected provider
-        selected = llm_globals.get("provider", "openai")
-        provider_cfg = resolved_providers.get(selected, {})
-
-        llm_cfg = LLMConfig(
-            provider=selected,
-            protocols=provider_cfg.get("protocols", "openai"),
-            model=provider_cfg.get("model", ""),
-            temperature=llm_globals.get("temperature", 0.0),
-            extraction_temperature=llm_globals.get("extraction_temperature"),
-            api_key=provider_cfg.get("api_key", ""),
-            base_url=provider_cfg.get("base_url", ""),
-            sdk_base=provider_cfg.get("sdk_base", ""),
-            llm_suffix=provider_cfg.get("llm_suffix", ""),
-            batch=llm_globals.get("batch", False),
-            batch_base_url=provider_cfg.get("batch_base_url", ""),
-            batch_timeout=llm_globals.get("batch_timeout", 3600.0),
+        llm_cfg = self._resolve_llm_config(
+            globals_cfg=llm_globals,
+            stage_override=None,
+            resolved_providers=resolved_providers,
         )
+        llm_stages = {
+            stage_name: self._resolve_llm_config(
+                globals_cfg=llm_globals,
+                stage_override=LLMStageOverrideConfig(**{
+                    k: v for k, v in stage_def.items()
+                    if k in LLMStageOverrideConfig.model_fields
+                }),
+                resolved_providers=resolved_providers,
+            )
+            for stage_name, stage_def in stage_defs.items()
+        }
 
         # 5. Resolve Embedding (fully independent)
         emb_raw = raw.get("embedding", {})
@@ -163,6 +169,12 @@ class ConfigManager:
             if k in LoggingConfig.model_fields
         })
 
+        concurrency_raw = raw.get("concurrency", {})
+        concurrency_cfg = ConcurrencyConfig(**{
+            k: v for k, v in concurrency_raw.items()
+            if k in ConcurrencyConfig.model_fields
+        })
+
         config = MemoryConfig(
             llm=llm_cfg,
             embedding=emb_cfg,
@@ -170,7 +182,9 @@ class ConfigManager:
             history_store=hs_cfg,
             retrieval=ret_cfg,
             logging=log_cfg,
+            concurrency=concurrency_cfg,
             providers=providers,
+            llm_stages=llm_stages,
         )
 
         logger.debug(
@@ -179,6 +193,60 @@ class ConfigManager:
             config.llm.model, config.embedding.model,
         )
         return config
+
+    @staticmethod
+    def _resolve_llm_config(
+        globals_cfg: Dict[str, Any],
+        stage_override: Optional[LLMStageOverrideConfig],
+        resolved_providers: Dict[str, Dict[str, Any]],
+    ) -> LLMConfig:
+        """Resolve a concrete LLM configuration from globals + optional stage override."""
+        selected = (
+            stage_override.provider
+            if stage_override and stage_override.provider
+            else globals_cfg.get("provider", "openai")
+        )
+        provider_cfg = resolved_providers.get(selected, {})
+        model = (
+            stage_override.model
+            if stage_override and stage_override.model
+            else provider_cfg.get("model", "")
+        )
+        temperature = (
+            stage_override.temperature
+            if stage_override and stage_override.temperature is not None
+            else globals_cfg.get("temperature", 0.0)
+        )
+        extraction_temperature = (
+            stage_override.extraction_temperature
+            if stage_override and stage_override.extraction_temperature is not None
+            else globals_cfg.get("extraction_temperature")
+        )
+        batch = (
+            stage_override.batch
+            if stage_override and stage_override.batch is not None
+            else globals_cfg.get("batch", False)
+        )
+        batch_timeout = (
+            stage_override.batch_timeout
+            if stage_override and stage_override.batch_timeout is not None
+            else globals_cfg.get("batch_timeout", 3600.0)
+        )
+
+        return LLMConfig(
+            provider=selected,
+            protocols=provider_cfg.get("protocols", "openai"),
+            model=model,
+            temperature=temperature,
+            extraction_temperature=extraction_temperature,
+            api_key=provider_cfg.get("api_key", ""),
+            base_url=provider_cfg.get("base_url", ""),
+            sdk_base=provider_cfg.get("sdk_base", ""),
+            llm_suffix=provider_cfg.get("llm_suffix", ""),
+            batch=batch,
+            batch_base_url=provider_cfg.get("batch_base_url", ""),
+            batch_timeout=batch_timeout,
+        )
 
     # ------------------------------------------------------------------
     # Template inheritance

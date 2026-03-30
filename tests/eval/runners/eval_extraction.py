@@ -28,6 +28,11 @@ TARGET_METRICS = {
     "confidence_accuracy": 0.70,
     "count_accuracy": 0.80,
 }
+RELATION_TARGET_METRICS = {
+    "relation_recall": 0.90,
+    "relation_forbidden_accuracy": 0.95,
+    "relation_case_accuracy": 0.90,
+}
 
 
 @dataclass
@@ -41,6 +46,12 @@ class CaseResult:
     precision_total: int
     confidence_hits: int
     confidence_total: int
+    relation_hits: int
+    relation_total: int
+    forbidden_relation_hits: int
+    forbidden_relation_total: int
+    relation_case_annotated: bool
+    relation_case_pass: bool
     no_extract_pass: bool
     count_pass: bool
     case_pass: bool
@@ -64,6 +75,19 @@ class DatasetSpec:
 
 def _configure_runner_logging(cfg) -> None:
     Memory._setup_logging(cfg.logging)
+
+
+def _resolve_extraction_llm_cfg(cfg):
+    return cfg.llm_stages.get("extraction", cfg.llm)
+
+
+def _resolve_extraction_temperature(cfg) -> float | None:
+    extraction_cfg = cfg.llm_stages.get("extraction")
+    if extraction_cfg and extraction_cfg.extraction_temperature is not None:
+        return extraction_cfg.extraction_temperature
+    if extraction_cfg:
+        return extraction_cfg.temperature
+    return cfg.llm.extraction_temperature
 
 
 def _expected_match_labels(expected: dict[str, Any]) -> list[str]:
@@ -110,6 +134,35 @@ def _contains_case_insensitive(text: str, needle: str) -> bool:
     return needle.casefold() in text.casefold()
 
 
+def _relation_labels(expectation: dict[str, Any]) -> list[str]:
+    labels = expectation.get("match_all")
+    if isinstance(labels, list) and labels:
+        return [str(label) for label in labels]
+    labels = expectation.get("match_any")
+    if isinstance(labels, list) and labels:
+        return [str(label) for label in labels]
+    label = expectation.get("label")
+    return [str(label)] if label else []
+
+
+def _relation_matches(text: str, expectation: dict[str, Any]) -> bool:
+    match_all = expectation.get("match_all", [])
+    if match_all and not all(
+        _contains_case_insensitive(text, str(label))
+        for label in match_all
+    ):
+        return False
+
+    match_any = expectation.get("match_any", [])
+    if match_any and not any(
+        _contains_case_insensitive(text, str(label))
+        for label in match_any
+    ):
+        return False
+
+    return bool(match_all or match_any)
+
+
 def _evaluate_case(llm, case: dict[str, Any], extraction_temperature: float | None) -> CaseResult:
     facts = Memory._extract_facts(
         llm,
@@ -120,9 +173,13 @@ def _evaluate_case(llm, case: dict[str, Any], extraction_temperature: float | No
     failures: list[str] = []
 
     expected_facts = case.get("expected_facts", [])
+    expected_relations = case.get("expected_relations", [])
+    forbidden_relations = case.get("forbidden_relations", [])
     recall_hits = 0
     confidence_hits = 0
     confidence_total = 0
+    relation_hits = 0
+    forbidden_relation_hits = 0
     missing_count = 0
     confidence_failures = 0
     for expected in expected_facts:
@@ -153,6 +210,39 @@ def _evaluate_case(llm, case: dict[str, Any], extraction_temperature: float | No
                     f"confidence:{' | '.join(match_labels)}={confidence} not in {confidence_range}"
                 )
 
+    relation_failures = 0
+    for expected in expected_relations:
+        matched = next(
+            (
+                fact for fact in facts
+                if _relation_matches(fact.get("text", ""), expected)
+            ),
+            None,
+        )
+        if matched is None:
+            relation_failures += 1
+            failures.append(
+                f"missing_relation:{' | '.join(_relation_labels(expected))}"
+            )
+            continue
+        relation_hits += 1
+
+    for expected in forbidden_relations:
+        matched = next(
+            (
+                fact for fact in facts
+                if _relation_matches(fact.get("text", ""), expected)
+            ),
+            None,
+        )
+        if matched is not None:
+            relation_failures += 1
+            failures.append(
+                f"forbidden_relation:{matched.get('text', '')}"
+            )
+            continue
+        forbidden_relation_hits += 1
+
     should_not_extract = case.get("should_not_extract", [])
     precision_hits = 0
     forbidden_count = 0
@@ -167,6 +257,8 @@ def _evaluate_case(llm, case: dict[str, Any], extraction_temperature: float | No
     expected_min_count = expected_count_range[0]
     expected_max_count = expected_count_range[1]
     zero_extract_expected = not expected_facts and expected_count_range == [0, 0]
+    relation_case_annotated = bool(expected_relations or forbidden_relations)
+    relation_case_pass = relation_case_annotated and relation_failures == 0
     no_extract_pass = not facts if zero_extract_expected else True
     count_pass = expected_min_count <= len(facts) <= expected_max_count
     if not count_pass:
@@ -184,6 +276,12 @@ def _evaluate_case(llm, case: dict[str, Any], extraction_temperature: float | No
         precision_total=len(facts),
         confidence_hits=confidence_hits,
         confidence_total=confidence_total,
+        relation_hits=relation_hits,
+        relation_total=len(expected_relations),
+        forbidden_relation_hits=forbidden_relation_hits,
+        forbidden_relation_total=len(forbidden_relations),
+        relation_case_annotated=relation_case_annotated,
+        relation_case_pass=relation_case_pass,
         no_extract_pass=no_extract_pass,
         count_pass=count_pass,
         case_pass=not failures,
@@ -203,9 +301,17 @@ def _safe_ratio(numerator: int, denominator: int, empty_value: float = 1.0) -> f
     return numerator / denominator
 
 
-def _llm_descriptor(cfg) -> dict[str, str]:
-    provider = str(getattr(cfg.llm, "provider", "unknown"))
-    model = str(getattr(cfg.llm, "model", "unknown"))
+def _display_path(path: Path) -> str:
+    resolved = path.resolve()
+    try:
+        return str(resolved.relative_to(PROJECT_ROOT))
+    except ValueError:
+        return str(resolved)
+
+
+def _llm_descriptor(llm_cfg) -> dict[str, str]:
+    provider = str(getattr(llm_cfg, "provider", "unknown"))
+    model = str(getattr(llm_cfg, "model", "unknown"))
     label = re.sub(r"[^a-z0-9._-]+", "-", f"{provider}-{model}".lower()).strip("-")
     return {
         "provider": provider,
@@ -226,6 +332,12 @@ def build_report(
     total_precision = sum(result.precision_total for result in case_results)
     total_confidence_hits = sum(result.confidence_hits for result in case_results)
     total_confidence = sum(result.confidence_total for result in case_results)
+    total_relation_hits = sum(result.relation_hits for result in case_results)
+    total_relations = sum(result.relation_total for result in case_results)
+    total_forbidden_relation_hits = sum(result.forbidden_relation_hits for result in case_results)
+    total_forbidden_relations = sum(result.forbidden_relation_total for result in case_results)
+    relation_cases = [result for result in case_results if result.relation_case_annotated]
+    relation_case_passes = sum(1 for result in relation_cases if result.relation_case_pass)
     no_extract_cases = [
         result for result in case_results
         if result.expected_min_count == 0 and result.expected_max_count == 0
@@ -251,43 +363,65 @@ def build_report(
         "confidence": confidence_fail_total,
         "count": sum(1 for result in case_results if not result.count_pass),
     }
+    targets = dict(TARGET_METRICS)
+    metrics = {
+        "recall": _safe_ratio(total_recall_hits, total_recall),
+        "precision": _safe_ratio(total_precision_hits, total_precision),
+        "no_extract_accuracy": _safe_ratio(no_extract_passes, len(no_extract_cases)),
+        "confidence_accuracy": _safe_ratio(total_confidence_hits, total_confidence),
+        "count_accuracy": _safe_ratio(count_passes, len(case_results)),
+        "case_pass_rate": _safe_ratio(case_passes, len(case_results)),
+        "missing_expectation_rate": _safe_ratio(missing_total, total_recall, empty_value=0.0),
+        "forbidden_case_rate": _safe_ratio(
+            sum(1 for result in case_results if result.forbidden_count > 0),
+            len(case_results),
+        ),
+        "under_count_rate": _safe_ratio(under_count_cases, len(case_results)),
+        "over_count_rate": _safe_ratio(over_count_cases, len(case_results)),
+        "avg_extracted_facts": _safe_ratio(total_extracted, len(case_results)),
+        "avg_extracted_facts_on_empty_cases": _safe_ratio(
+            empty_expected_extracted,
+            len(no_extract_cases),
+            empty_value=0.0,
+        ),
+    }
+    if relation_cases:
+        targets.update(RELATION_TARGET_METRICS)
+        failure_breakdown["relation_missing"] = total_relations - total_relation_hits
+        failure_breakdown["relation_forbidden"] = (
+            total_forbidden_relations - total_forbidden_relation_hits
+        )
+        metrics.update(
+            {
+                "relation_recall": _safe_ratio(total_relation_hits, total_relations),
+                "relation_forbidden_accuracy": _safe_ratio(
+                    total_forbidden_relation_hits,
+                    total_forbidden_relations,
+                ),
+                "relation_case_accuracy": _safe_ratio(
+                    relation_case_passes,
+                    len(relation_cases),
+                ),
+            }
+        )
 
     return {
-        "dataset": str(dataset.path.relative_to(PROJECT_ROOT)),
+        "dataset": _display_path(dataset.path),
         "dataset_name": dataset.name,
         "dataset_focus": dataset.focus,
         "dataset_description": dataset.description,
-        "toml_path": str(toml_path.relative_to(PROJECT_ROOT)),
+        "toml_path": _display_path(toml_path),
         "llm": llm_info,
         "total_cases": len(case_results),
-        "targets": TARGET_METRICS,
-        "metrics": {
-            "recall": _safe_ratio(total_recall_hits, total_recall),
-            "precision": _safe_ratio(total_precision_hits, total_precision),
-            "no_extract_accuracy": _safe_ratio(no_extract_passes, len(no_extract_cases)),
-            "confidence_accuracy": _safe_ratio(total_confidence_hits, total_confidence),
-            "count_accuracy": _safe_ratio(count_passes, len(case_results)),
-            "case_pass_rate": _safe_ratio(case_passes, len(case_results)),
-            "missing_expectation_rate": _safe_ratio(missing_total, total_recall, empty_value=0.0),
-            "forbidden_case_rate": _safe_ratio(
-                sum(1 for result in case_results if result.forbidden_count > 0),
-                len(case_results),
-            ),
-            "under_count_rate": _safe_ratio(under_count_cases, len(case_results)),
-            "over_count_rate": _safe_ratio(over_count_cases, len(case_results)),
-            "avg_extracted_facts": _safe_ratio(total_extracted, len(case_results)),
-            "avg_extracted_facts_on_empty_cases": _safe_ratio(
-                empty_expected_extracted,
-                len(no_extract_cases),
-                empty_value=0.0,
-            ),
-        },
+        "targets": targets,
+        "metrics": metrics,
         "failure_breakdown": failure_breakdown,
         "cases": [
             {
                 "id": result.case_id,
                 "description": result.description,
                 "facts": result.facts,
+                "relation_case_annotated": result.relation_case_annotated,
                 "failures": result.failures,
             }
             for result in case_results
@@ -362,6 +496,12 @@ def build_summary(report: dict[str, Any], output_path: Path) -> str:
         f"confidence={failure_breakdown['confidence']}, "
         f"count={failure_breakdown['count']}"
     )
+    if "relation_missing" in failure_breakdown or "relation_forbidden" in failure_breakdown:
+        lines.append(
+            "relation breakdown: "
+            f"missing={failure_breakdown.get('relation_missing', 0)}, "
+            f"forbidden={failure_breakdown.get('relation_forbidden', 0)}"
+        )
 
     if failed_cases:
         lines.append("failed cases:")
@@ -377,7 +517,7 @@ def build_summary(report: dict[str, Any], output_path: Path) -> str:
         lines.append("failed cases:")
         lines.append("  - none")
 
-    lines.append(f"json report saved to: {output_path.relative_to(PROJECT_ROOT)}")
+    lines.append(f"json report saved to: {_display_path(output_path)}")
     return "\n".join(lines)
 
 
@@ -434,8 +574,10 @@ def main() -> int:
 
     cfg = ConfigManager(toml_path=toml_path).get()
     _configure_runner_logging(cfg)
-    llm = LlmFactory.create(cfg.llm)
-    llm_info = _llm_descriptor(cfg)
+    extraction_llm_cfg = _resolve_extraction_llm_cfg(cfg)
+    extraction_temperature = _resolve_extraction_temperature(cfg)
+    llm = LlmFactory.create(extraction_llm_cfg)
+    llm_info = _llm_descriptor(extraction_llm_cfg)
 
     concurrency = max(1, args.concurrency)
     reports: list[dict[str, Any]] = []
@@ -445,14 +587,14 @@ def main() -> int:
         dataset = _load_dataset(dataset_path)
         if concurrency <= 1:
             case_results = [
-                _evaluate_case(llm, case, cfg.llm.extraction_temperature)
+                _evaluate_case(llm, case, extraction_temperature)
                 for case in dataset.cases
             ]
         else:
             case_results: list[CaseResult] = [None] * len(dataset.cases)  # type: ignore[list-item]
             with ThreadPoolExecutor(max_workers=concurrency) as pool:
                 future_to_idx = {
-                    pool.submit(_evaluate_case, llm, case, cfg.llm.extraction_temperature): idx
+                    pool.submit(_evaluate_case, llm, case, extraction_temperature): idx
                     for idx, case in enumerate(dataset.cases)
                 }
                 for future in as_completed(future_to_idx):
@@ -486,7 +628,7 @@ def main() -> int:
                 print(json.dumps(reports[index], ensure_ascii=False, indent=2))
 
     if args.fail_on_targets and any(
-        any(report["metrics"].get(name, 0.0) < target for name, target in TARGET_METRICS.items())
+        any(report["metrics"].get(name, 0.0) < target for name, target in report["targets"].items())
         for report in reports
     ):
         return 1

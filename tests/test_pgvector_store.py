@@ -11,6 +11,14 @@ class TestPgVectorStoreHelpers:
     def test_payload_to_row_keeps_known_columns(self):
         payload = {
             "user_id": "alice",
+            "owner_id": "owner-1",
+            "subject_ref": "self",
+            "fact_family": "preference",
+            "relation_type": "self",
+            "field_key": "preference:general",
+            "field_value_json": {"value": "black coffee"},
+            "canonical_text": "[self] preference:general=black coffee",
+            "raw_text": "I love black coffee",
             "content": "User likes black coffee",
             "hash": "abc",
             "metadata": {"source": "test"},
@@ -29,6 +37,9 @@ class TestPgVectorStoreHelpers:
         row = PgVectorStore._payload_to_row(payload)
 
         assert row["user_id"] == "alice"
+        assert row["owner_id"] == "owner-1"
+        assert row["subject_ref"] == "self"
+        assert row["field_value_json"] == {"value": "black coffee"}
         assert row["content"] == "User likes black coffee"
         assert row["metadata"] == {"source": "test"}
         assert "ignored" not in row
@@ -47,6 +58,14 @@ class TestPgVectorStoreHelpers:
     def test_row_to_payload_restores_metadata_default(self):
         payload = PgVectorStore._row_to_payload({
             "user_id": "alice",
+            "owner_id": "owner-1",
+            "subject_ref": "self",
+            "fact_family": "attribute",
+            "relation_type": "self",
+            "field_key": "name",
+            "field_value_json": None,
+            "canonical_text": None,
+            "raw_text": None,
             "content": "User likes coffee",
             "hash": "abc",
             "metadata": None,
@@ -62,6 +81,7 @@ class TestPgVectorStoreHelpers:
         })
 
         assert payload["metadata"] == {}
+        assert payload["field_value_json"] == {}
         assert payload["status"] == "active"
 
     def test_build_filter_returns_sql_and_params(self):

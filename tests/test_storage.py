@@ -1,6 +1,6 @@
-"""Tests for SQLite history storage."""
+"""Tests for SQLite relational storage."""
 
-from mind.config.models import MemoryOperation
+from mind.config.models import MemoryOperation, OwnerContext, OwnerType
 
 
 class TestSQLiteManager:
@@ -73,3 +73,50 @@ class TestSQLiteManager:
         assert len(history) == 1
         assert history[0].metadata["version_of"] == "mem_001"
         assert history[0].metadata["source"] == "test"
+
+    def test_resolve_known_owner_reuses_same_record(self, history_store):
+        first = history_store.resolve_owner(
+            OwnerContext(external_user_id="alice", display_name="Alice")
+        )
+        second = history_store.resolve_owner(
+            OwnerContext(external_user_id="alice", channel="web")
+        )
+
+        assert first.owner_id == second.owner_id
+        assert second.owner_type == OwnerType.KNOWN
+        assert second.display_name == "Alice"
+        assert second.channel == "web"
+
+    def test_named_subject_is_owner_local_and_stable(self, history_store):
+        owner = history_store.resolve_owner(OwnerContext(external_user_id="mike"))
+
+        first = history_store.get_or_create_named_subject(
+            owner_id=owner.owner_id,
+            relation_type="friend",
+            display_name="Green",
+            normalized_name="green",
+        )
+        second = history_store.get_or_create_named_subject(
+            owner_id=owner.owner_id,
+            relation_type="friend",
+            display_name="Green",
+            normalized_name="green",
+        )
+
+        assert first.subject_ref == "friend:green"
+        assert first.subject_ref == second.subject_ref
+
+    def test_placeholder_subjects_increment_per_relation(self, history_store):
+        owner = history_store.resolve_owner(OwnerContext(external_user_id="mike"))
+
+        first = history_store.create_placeholder_subject(
+            owner_id=owner.owner_id,
+            relation_type="friend",
+        )
+        second = history_store.create_placeholder_subject(
+            owner_id=owner.owner_id,
+            relation_type="friend",
+        )
+
+        assert first.subject_ref == "friend:unknown_1"
+        assert second.subject_ref == "friend:unknown_2"
