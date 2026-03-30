@@ -53,6 +53,7 @@ from mind.stl.prompt import (
     format_focus_stack,
 )
 from mind.stl.store import STLStoreFactory
+from datetime import date as _date
 from mind.storage import HistoryStoreFactory
 from mind.utils import generate_hash, generate_id, get_utc_now, parse_messages
 from mind.vector_stores.factory import VectorStoreFactory
@@ -277,6 +278,7 @@ class Memory:
             conv_id=conv_id,
             model=self.stl_extraction_llm.model if hasattr(self.stl_extraction_llm, "model") else None,
             embedder=self.embedder,
+            anchor_date=_date.today(),
         )
 
         logger.info(

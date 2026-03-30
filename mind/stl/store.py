@@ -13,10 +13,13 @@ from __future__ import annotations
 import importlib
 import json
 import logging
+import math
+import re
 import sqlite3
 import threading
 import time
 from abc import ABC, abstractmethod
+from datetime import date as _date, timedelta as _timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
 from mind.stl.models import (
@@ -282,6 +285,7 @@ class BaseSTLStore(ABC):
         conv_id: str,
         model: Optional[str] = None,
         embedder=None,
+        anchor_date: Optional[_date] = None,
     ) -> StorageResult:
         """Persist an entire ParsedProgram.
 
@@ -364,7 +368,7 @@ class BaseSTLStore(ABC):
 
                 # Detect time() qualifiers → populate temporal_specs
                 if stmt.predicate in QUALIFIER_PREDICATES and stmt.predicate == "time":
-                    self._handle_time_qualifier(global_id, args_json)
+                    self._handle_time_qualifier(global_id, args_json, anchor_date=anchor_date)
 
                 # Collect correct_intent / retract_intent for post-processing
                 if stmt.predicate in CORRECTION_PREDICATES:
@@ -563,14 +567,12 @@ class BaseSTLStore(ABC):
 
 # ── Cosine similarity helper ─────────────────────────────────────────
 
-import math as _math
-
 
 def _cosine_sim(a: list, b: list) -> float:
     """Compute cosine similarity between two vectors."""
     dot = sum(x * y for x, y in zip(a, b))
-    na = _math.sqrt(sum(x * x for x in a))
-    nb = _math.sqrt(sum(x * x for x in b))
+    na = math.sqrt(sum(x * x for x in a))
+    nb = math.sqrt(sum(x * x for x in b))
     if na == 0 or nb == 0:
         return 0.0
     return dot / (na * nb)
@@ -578,19 +580,13 @@ def _cosine_sim(a: list, b: list) -> float:
 
 # ── Time classification helper ───────────────────────────────────────
 
-import re as _re
-from datetime import date as _date, timedelta as _timedelta
-
-_RE_ABSOLUTE_DATE = _re.compile(
+_RE_ABSOLUTE_DATE = re.compile(
     r"^\d{4}(?:-\d{1,2})?(?:-\d{1,2})?$"
 )
 _FUZZY_WORDS = {
     "recent", "recently", "past", "long_ago", "soon", "near_future",
     "recent_start", "childhood", "youth",
 }
-
-# Relative time expressions that can be resolved to absolute dates
-_RELATIVE_RESOLVERS: Dict[str, Any] = {}  # populated below
 
 
 def _resolve_relative_time(

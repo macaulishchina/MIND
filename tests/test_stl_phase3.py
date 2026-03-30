@@ -27,6 +27,7 @@ from mind.stl.models import (
     ParsedProgram,
     ParsedRef,
     ParsedStatement,
+    PropArg,
     RefArg,
     RefExpr,
     RefScope,
@@ -500,11 +501,24 @@ class TestStoreCoreference:
     def test_get_all_vocab_words(self):
         store = SQLiteSTLStore()
         words = store.get_all_vocab_words()
-        # Should have seed vocab
-        assert len(words) > 30
+        # Should have seed vocab — spec §9 defines ~75 predicates
+        assert len(words) >= 70
         assert "friend" in words
         assert "believe" in words
         assert "time" in words
+
+    def test_seed_vocab_has_all_spec_categories(self):
+        """SEED_VOCAB should cover all 4 categories from §9."""
+        from mind.stl.vocab import SEED_VOCAB, SEED_CATEGORY_MAP
+        categories = {e.category for e in SEED_VOCAB}
+        assert categories == {"prop", "frame", "qualifier"}
+        # Verify key predicates from each spec section
+        assert SEED_CATEGORY_MAP["brother"] == "prop"
+        assert SEED_CATEGORY_MAP["spouse"] == "prop"
+        assert SEED_CATEGORY_MAP["nationality"] == "prop"
+        assert SEED_CATEGORY_MAP["work_at"] == "prop"
+        assert SEED_CATEGORY_MAP["birthday"] == "prop"
+        assert SEED_CATEGORY_MAP["gift"] == "prop"
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -549,3 +563,93 @@ class TestStoreTemporalWithAnchor:
         assert row["time_type"] == "fuzzy"
         assert row["fuzzy_desc"] == "recent"
         assert row["window_days"] == 30
+
+
+# ══════════════════════════════════════════════════════════════════════
+# store_program with anchor_date integration
+# ══════════════════════════════════════════════════════════════════════
+
+
+class TestStoreProgramAnchorDate:
+    """store_program should thread anchor_date to time() qualifier resolution."""
+
+    def test_store_program_resolves_relative_time(self):
+        """time() qualifiers should be resolved when anchor_date is passed."""
+        store = SQLiteSTLStore()
+        store.create_conversation("conv1")
+
+        program = ParsedProgram(
+            batch_id="b1",
+            refs=[
+                ParsedRef(local_id="s", expr=RefExpr(scope=RefScope.SELF)),
+            ],
+            statements=[
+                ParsedStatement(
+                    local_id="p1",
+                    predicate="resign",
+                    args=[RefArg(ref_id="s")],
+                ),
+                ParsedStatement(
+                    local_id="p2",
+                    predicate="time",
+                    args=[PropArg(prop_id="p1"), LiteralArg(value="next_month")],
+                ),
+            ],
+            evidence=[],
+        )
+
+        result = store.store_program(
+            program=program,
+            owner_id="owner1",
+            conv_id="conv1",
+            anchor_date=date(2026, 3, 30),
+        )
+
+        assert result.statements_inserted == 2
+        conn = store._get_conn()
+        row = conn.execute(
+            "SELECT * FROM temporal_specs WHERE stmt_id = ?", ("b1_p2",)
+        ).fetchone()
+        assert row is not None
+        assert row["time_type"] == "point"
+        assert row["resolved_start"] == "2026-04"
+
+    def test_store_program_without_anchor_date_falls_back_to_fuzzy(self):
+        """Without anchor_date, relative time should resolve as fuzzy."""
+        store = SQLiteSTLStore()
+        store.create_conversation("conv2")
+
+        program = ParsedProgram(
+            batch_id="b2",
+            refs=[
+                ParsedRef(local_id="s", expr=RefExpr(scope=RefScope.SELF)),
+            ],
+            statements=[
+                ParsedStatement(
+                    local_id="p1",
+                    predicate="hobby",
+                    args=[RefArg(ref_id="s"), LiteralArg(value="running")],
+                ),
+                ParsedStatement(
+                    local_id="p2",
+                    predicate="time",
+                    args=[PropArg(prop_id="p1"), LiteralArg(value="recent")],
+                ),
+            ],
+            evidence=[],
+        )
+
+        result = store.store_program(
+            program=program,
+            owner_id="owner2",
+            conv_id="conv2",
+        )
+
+        assert result.statements_inserted == 2
+        conn = store._get_conn()
+        row = conn.execute(
+            "SELECT * FROM temporal_specs WHERE stmt_id = ?", ("b2_p2",)
+        ).fetchone()
+        assert row is not None
+        assert row["time_type"] == "fuzzy"
+        assert row["fuzzy_desc"] == "recent"

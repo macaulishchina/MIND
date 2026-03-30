@@ -82,19 +82,71 @@ _QUALIFIERS = [
 ]
 
 # ── Common prop seed predicates ──────────────────────────────────────
-# Small set of very common propositions (not exhaustive — LLM creates more)
+# Full set per §9 of the spec
 
-_PROPS = [
+_PROPS_RELATION = [
     SeedEntry("friend", "prop", "person1,person2", "friendship relation"),
-    SeedEntry("occupation", "prop", "person,job", "occupation/job"),
-    SeedEntry("live_in", "prop", "person,place", "residence"),
-    SeedEntry("like", "prop", "experiencer,target", "preference"),
-    SeedEntry("hobby", "prop", "person,activity", "hobby/interest"),
     SeedEntry("mother", "prop", "child,parent", "mother relation"),
     SeedEntry("father", "prop", "child,parent", "father relation"),
-    SeedEntry("resign", "prop", "person", "resignation"),
-    SeedEntry("visit", "prop", "visitor,destination", "visit/travel"),
+    SeedEntry("brother", "prop", "person1,person2", "brother relation"),
+    SeedEntry("sister", "prop", "person1,person2", "sister relation"),
+    SeedEntry("spouse", "prop", "person1,person2", "spouse relation"),
+    SeedEntry("partner", "prop", "person1,person2", "partner relation"),
+    SeedEntry("child", "prop", "parent,child", "child relation"),
+    SeedEntry("cousin", "prop", "person1,person2", "cousin relation"),
+    SeedEntry("coworker", "prop", "person1,person2", "coworker relation"),
+    SeedEntry("boss", "prop", "employee,boss", "boss relation"),
+    SeedEntry("mentor", "prop", "mentee,mentor", "mentor relation"),
+    SeedEntry("student", "prop", "student,institution_or_teacher", "student relation"),
+    SeedEntry("roommate", "prop", "person1,person2", "roommate relation"),
+    SeedEntry("neighbor", "prop", "person1,person2", "neighbor relation"),
+    SeedEntry("classmate", "prop", "person1,person2", "classmate relation"),
+    SeedEntry("teammate", "prop", "person1,person2", "teammate relation"),
+    SeedEntry("client", "prop", "provider,client", "client relation"),
+    SeedEntry("landlord", "prop", "tenant,landlord", "landlord relation"),
+    SeedEntry("doctor", "prop", "patient,doctor", "doctor relation"),
+    SeedEntry("pet", "prop", "owner,animal", "pet ownership"),
+]
+
+_PROPS_ATTRIBUTE = [
+    SeedEntry("name", "prop", "entity,value", "name attribute"),
+    SeedEntry("age", "prop", "person,value", "age attribute"),
+    SeedEntry("occupation", "prop", "person,job", "occupation/job"),
+    SeedEntry("workplace", "prop", "person,org", "workplace"),
+    SeedEntry("language", "prop", "person,lang", "language spoken"),
+    SeedEntry("education", "prop", "person,value", "education background"),
+    SeedEntry("nationality", "prop", "person,value", "nationality"),
+]
+
+_PROPS_ACTION = [
+    SeedEntry("like", "prop", "experiencer,target", "preference"),
+    SeedEntry("dislike", "prop", "experiencer,target", "dislike"),
+    SeedEntry("habit", "prop", "person,activity", "habitual behavior"),
+    SeedEntry("hobby", "prop", "person,activity", "hobby/interest"),
+    SeedEntry("skill", "prop", "person,ability", "skill/ability"),
+    SeedEntry("own", "prop", "owner,object", "ownership"),
+    SeedEntry("use", "prop", "user,object", "usage"),
+    SeedEntry("eat", "prop", "person,food", "eating"),
+    SeedEntry("drink", "prop", "person,beverage", "drinking"),
+    SeedEntry("speak", "prop", "person,language", "language speaking"),
+    SeedEntry("live_in", "prop", "person,place", "residence"),
+    SeedEntry("work_at", "prop", "person,org", "workplace"),
+    SeedEntry("study_at", "prop", "person,institution", "study place"),
+]
+
+_PROPS_EVENT = [
     SeedEntry("plan", "prop", "agent,content", "plan/intention content"),
+    SeedEntry("event", "prop", "participant,description", "generic event"),
+    SeedEntry("buy", "prop", "buyer,item", "purchase"),
+    SeedEntry("visit", "prop", "visitor,destination", "visit/travel"),
+    SeedEntry("meet", "prop", "person1,person2", "meeting"),
+    SeedEntry("resign", "prop", "person", "resignation"),
+    SeedEntry("marry", "prop", "person1,person2", "marriage"),
+    SeedEntry("move", "prop", "person,destination", "relocation"),
+    SeedEntry("start", "prop", "agent,activity", "starting something"),
+    SeedEntry("stop", "prop", "agent,activity", "stopping something"),
+    SeedEntry("birthday", "prop", "person", "birthday event"),
+    SeedEntry("gift", "prop", "giver,recipient,item", "gift giving"),
 ]
 
 # ── Aggregate ────────────────────────────────────────────────────────
@@ -109,7 +161,10 @@ SEED_VOCAB: List[SeedEntry] = (
     + _FRAME_EMOTION
     + _FRAME_DECISION
     + _QUALIFIERS
-    + _PROPS
+    + _PROPS_RELATION
+    + _PROPS_ATTRIBUTE
+    + _PROPS_ACTION
+    + _PROPS_EVENT
 )
 
 # Fast lookup: word → category

@@ -3,13 +3,12 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from mind.config import ConfigManager
-from mind.config.manager import _DEFAULT_TEST_TOML
-from tests.eval.runners.eval_owner_centered_add import _case_owner_lookup
-from tests.eval.runners.eval_owner_centered_add import _evaluate_case
-from tests.eval.runners.eval_owner_centered_add import _load_dataset
-from tests.eval.runners.eval_owner_centered_add import build_report
-from tests.eval.runners.eval_owner_centered_add import build_summary
+import pytest
+
+pytestmark = pytest.mark.skip(
+    reason="Runner module tests.eval.runners.eval_owner_centered_add was removed; "
+    "owner-centered eval migrated to STL pipeline."
+)
 
 
 DATASET_PATH = Path("tests/eval/datasets/owner_centered_add_cases.json")
