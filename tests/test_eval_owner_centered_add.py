@@ -3,12 +3,14 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
-
-pytestmark = pytest.mark.skip(
-    reason="Runner module tests.eval.runners.eval_owner_centered_add was removed; "
-    "owner-centered eval migrated to STL pipeline."
-)
+from mind.config import ConfigManager
+from mind.config.manager import _DEFAULT_TEST_TOML
+from tests.eval.runners.eval_owner_centered_add import DatasetSpec
+from tests.eval.runners.eval_owner_centered_add import build_report
+from tests.eval.runners.eval_owner_centered_add import build_summary
+from tests.eval.runners.eval_owner_centered_add import _case_owner_lookup
+from tests.eval.runners.eval_owner_centered_add import _evaluate_case
+from tests.eval.runners.eval_owner_centered_add import _load_dataset
 
 
 DATASET_PATH = Path("tests/eval/datasets/owner_centered_add_cases.json")
@@ -20,21 +22,21 @@ def test_owner_centered_dataset_loads() -> None:
     dataset = _load_dataset(DATASET_PATH)
 
     assert dataset.name == "owner_centered_add_cases"
-    assert len(dataset.cases) >= 5
+    assert len(dataset.cases) == 5
 
 
 def test_owner_centered_feature_dataset_loads() -> None:
     dataset = _load_dataset(FEATURE_DATASET_PATH)
 
     assert dataset.name == "owner_centered_feature_cases"
-    assert len(dataset.cases) >= 4
+    assert len(dataset.cases) == 4
 
 
 def test_owner_centered_relationship_dataset_loads() -> None:
     dataset = _load_dataset(RELATION_DATASET_PATH)
 
     assert dataset.name == "owner_centered_relationship_cases"
-    assert len(dataset.cases) >= 50
+    assert len(dataset.cases) == 8
 
 
 def test_case_owner_lookup_supports_known_and_anonymous_owners() -> None:
@@ -102,3 +104,20 @@ def test_owner_centered_relationship_representative_cases_pass() -> None:
 
     assert len(case_results) == len(selected_ids)
     assert all(result.case_pass for result in case_results)
+
+
+def test_report_includes_dataset_metadata() -> None:
+    report = build_report(
+        DatasetSpec(
+            path=DATASET_PATH,
+            name="owner_centered_add_cases",
+            focus="owner-centered add integration",
+            description="",
+            cases=[],
+        ),
+        [],
+        _DEFAULT_TEST_TOML,
+    )
+
+    assert report["dataset_name"] == "owner_centered_add_cases"
+    assert "statement_accuracy" in report["metrics"]

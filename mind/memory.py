@@ -79,6 +79,26 @@ _APPEND_ONLY_FAMILIES = {
     FactFamily.PLAN,
     FactFamily.QUOTE,
 }
+_OWNER_RELATION_PREDICATES = {
+    "friend",
+    "mother",
+    "father",
+    "spouse",
+    "partner",
+    "child",
+    "coworker",
+    "boss",
+    "mentor",
+    "student",
+    "roommate",
+    "neighbor",
+    "classmate",
+    "teammate",
+    "client",
+    "landlord",
+    "doctor",
+    "pet",
+}
 
 
 class Memory:
@@ -290,31 +310,84 @@ class Memory:
             len(storage_result.errors),
         )
 
-        # ── Step 4: Embed statements for vector search ──
+        # ── Step 4: Project statements into owner-centered memories ──
         results: List[MemoryItem] = []
+        relation_subject_cache = self._build_relation_subject_cache(
+            program=program,
+            owner_record=owner_record,
+        )
         for stmt in program.statements:
-            canonical = self._statement_to_canonical(stmt, program)
+            envelope = self._statement_to_envelope(
+                stmt=stmt,
+                program=program,
+                owner_record=owner_record,
+                session_id=session_id,
+                source_context=conversation,
+                metadata=metadata,
+                relation_subject_cache=relation_subject_cache,
+            )
+            if envelope is None:
+                continue
             try:
-                vector = self.embedder.embed(canonical)
-                item = self._store_stl_memory(
-                    stmt=stmt,
-                    canonical=canonical,
-                    vector=vector,
-                    owner_record=owner_record,
-                    batch_id=program.batch_id,
-                    session_id=session_id,
-                    metadata=metadata,
-                )
-                results.append(item)
+                item = self._process_envelope(envelope)
+                if item is not None:
+                    results.append(item)
             except Exception:
-                logger.exception("Failed to embed/store statement $%s", stmt.local_id)
+                logger.exception("Failed to project/store statement $%s", stmt.local_id)
 
         elapsed = time.perf_counter() - add_t0
         logger.info(
-            "📝 [ADD] ── DONE | owner=%s | %d stmts | %d embedded | %.2fs ──",
+            "📝 [ADD] ── DONE | owner=%s | %d stmts | %d projected | %.2fs ──",
             owner_user_id, len(program.statements), len(results), elapsed,
         )
         return results
+
+    def _build_relation_subject_cache(
+        self,
+        program,
+        owner_record: OwnerRecord,
+    ) -> Dict[str, Dict[str, str]]:
+        """Resolve stable owner-local subject refs for relation targets in one batch."""
+        ref_map = {ref.local_id: ref.expr for ref in program.refs}
+        cache: Dict[str, Dict[str, str]] = {}
+
+        for stmt in program.statements:
+            if stmt.predicate not in _OWNER_RELATION_PREDICATES or len(stmt.args) < 2:
+                continue
+            first_arg, second_arg = stmt.args[0], stmt.args[1]
+            if getattr(first_arg, "kind", None) != "ref" or first_arg.ref_id not in {"s", "self"}:
+                continue
+            if getattr(second_arg, "kind", None) != "ref":
+                continue
+            target_ref_id = second_arg.ref_id
+            if target_ref_id in cache:
+                continue
+
+            relation_type = self._normalize_relation_type(stmt.predicate)
+            expr = ref_map.get(target_ref_id)
+            scope = getattr(getattr(expr, "scope", None), "value", getattr(expr, "scope", None))
+
+            if expr is not None and expr.key and scope != "blank":
+                subject = self._history_store.get_or_create_named_subject(
+                    owner_id=owner_record.owner_id,
+                    relation_type=relation_type,
+                    display_name=expr.key,
+                    normalized_name=self._normalize_name(expr.key),
+                    aliases={"stl_ref_id": target_ref_id},
+                )
+            else:
+                subject = self._history_store.create_placeholder_subject(
+                    owner_id=owner_record.owner_id,
+                    relation_type=relation_type,
+                    aliases={"stl_ref_id": target_ref_id},
+                )
+
+            cache[target_ref_id] = {
+                "subject_ref": subject.subject_ref,
+                "relation_type": relation_type,
+            }
+
+        return cache
 
     def search(
         self,
@@ -918,8 +991,185 @@ class Memory:
     @staticmethod
     def _statement_to_canonical(stmt, program) -> str:
         """Render a statement as a human-readable canonical string for embedding."""
-        args_str = ", ".join(str(a) for a in stmt.args)
+        ref_map = {ref.local_id: ref.expr for ref in program.refs}
+        args_str = ", ".join(
+            str(Memory._render_statement_arg(arg, ref_map))
+            for arg in stmt.args
+        )
         return f"{stmt.predicate}({args_str})"
+
+    @staticmethod
+    def _render_statement_arg(arg: Any, ref_map: Dict[str, Any]) -> Any:
+        """Render a parsed STL arg into a compact JSON-safe value."""
+        kind = getattr(arg, "kind", None)
+        if kind == "literal":
+            return arg.value
+        if kind == "number":
+            value = arg.value
+            return int(value) if isinstance(value, float) and value.is_integer() else value
+        if kind == "ref":
+            if arg.ref_id in {"s", "self"}:
+                return "self"
+            expr = ref_map.get(arg.ref_id)
+            if expr is not None and expr.key:
+                return expr.key
+            return arg.ref_id
+        if kind == "prop":
+            return f"${arg.prop_id}"
+        if kind == "list":
+            return [Memory._render_statement_arg(item, ref_map) for item in arg.items]
+        if kind == "inline_pred":
+            rendered = ", ".join(
+                str(Memory._render_statement_arg(item, ref_map)) for item in arg.args
+            )
+            return f"{arg.predicate}({rendered})"
+        return str(arg)
+
+    def _statement_confidence(self, stmt, program) -> float:
+        """Return the highest evidence confidence attached to a statement."""
+        matches = [
+            ev.conf
+            for ev in program.evidence
+            if ev.target_local_id == stmt.local_id
+        ]
+        return max(matches) if matches else 0.9
+
+    def _statement_subject(self, ref_id: str, ref_map: Dict[str, Any], relation_subject_cache: Dict[str, Dict[str, str]]) -> tuple[str, str]:
+        """Resolve projected subject_ref and relation_type for a local ref."""
+        if ref_id in {"s", "self"}:
+            return "self", "self"
+        cached = relation_subject_cache.get(ref_id)
+        if cached is not None:
+            return cached["subject_ref"], cached["relation_type"]
+
+        expr = ref_map.get(ref_id)
+        scope = getattr(getattr(expr, "scope", None), "value", getattr(expr, "scope", None))
+        if expr is not None and expr.key and scope != "blank":
+            ref_type = expr.ref_type or "entity"
+            normalized = self._normalize_name(expr.key) or ref_id
+            return f"{ref_type}:{normalized}", ref_type
+        return f"unknown:{ref_id}", "person"
+
+    def _statement_family_and_key(self, stmt) -> tuple[FactFamily, str]:
+        """Map an STL statement to a projected legacy family/key pair."""
+        predicate = stmt.predicate
+        mapping = {
+            "name": (FactFamily.ATTRIBUTE, "name"),
+            "age": (FactFamily.ATTRIBUTE, "age"),
+            "occupation": (FactFamily.ATTRIBUTE, "occupation"),
+            "work_at": (FactFamily.ATTRIBUTE, "workplace"),
+            "live_in": (FactFamily.ATTRIBUTE, "location"),
+            "like": (FactFamily.PREFERENCE, "preference:like"),
+            "drink": (FactFamily.HABIT, "habit:drink"),
+            "habit": (FactFamily.HABIT, "habit"),
+            "hobby": (FactFamily.HABIT, "habit:hobby"),
+            "buy": (FactFamily.EVENT, "event:buy"),
+            "visit": (FactFamily.EVENT, "event:visit"),
+            "meet": (FactFamily.EVENT, "event:meet"),
+            "resign": (FactFamily.EVENT, "event:resign"),
+            "plan": (FactFamily.PLAN, "plan"),
+            "say": (FactFamily.QUOTE, "quote"),
+            "believe": (FactFamily.BELIEF, "belief"),
+        }
+        if predicate in mapping:
+            return mapping[predicate]
+        return FactFamily.ATTRIBUTE, self._normalize_field_key(predicate, FactFamily.ATTRIBUTE)
+
+    def _statement_value_json(self, stmt, ref_map: Dict[str, Any]) -> Dict[str, Any]:
+        """Project the non-subject portion of a statement into field_value_json."""
+        if len(stmt.args) <= 1:
+            return {"value": stmt.predicate}
+
+        rendered = [
+            self._render_statement_arg(arg, ref_map)
+            for arg in stmt.args[1:]
+        ]
+        if len(rendered) == 1:
+            return {"value": rendered[0]}
+        return {"value": rendered}
+
+    def _statement_to_envelope(
+        self,
+        stmt,
+        program,
+        owner_record: OwnerRecord,
+        session_id: Optional[str],
+        source_context: str,
+        metadata: Optional[Dict[str, Any]],
+        relation_subject_cache: Dict[str, Dict[str, str]],
+    ) -> Optional[FactEnvelope]:
+        """Project one STL statement into a legacy owner-centered memory envelope."""
+        ref_map = {ref.local_id: ref.expr for ref in program.refs}
+        confidence = self._statement_confidence(stmt, program)
+
+        if (
+            stmt.predicate in _OWNER_RELATION_PREDICATES
+            and len(stmt.args) >= 2
+            and getattr(stmt.args[0], "kind", None) == "ref"
+            and stmt.args[0].ref_id in {"s", "self"}
+            and getattr(stmt.args[1], "kind", None) == "ref"
+        ):
+            subject_ref, relation_type = self._statement_subject(
+                stmt.args[1].ref_id,
+                ref_map,
+                relation_subject_cache,
+            )
+            field_value_json = {"value": relation_type}
+            canonical_text = self._build_canonical_text(
+                subject_ref=subject_ref,
+                field_key="relation_to_owner",
+                field_value_json=field_value_json,
+            )
+            return FactEnvelope(
+                owner_id=owner_record.owner_id,
+                user_id=self._owner_user_id(owner_record),
+                owner_type=owner_record.owner_type,
+                subject_ref=subject_ref,
+                fact_family=FactFamily.RELATION,
+                relation_type=relation_type,
+                field_key="relation_to_owner",
+                field_value_json=field_value_json,
+                canonical_text=canonical_text,
+                raw_text=f"${stmt.local_id} = {self._statement_to_canonical(stmt, program)}",
+                confidence=confidence,
+                source_context=source_context,
+                source_session_id=session_id,
+                metadata=metadata or {},
+            )
+
+        if stmt.args and getattr(stmt.args[0], "kind", None) == "ref":
+            subject_ref, relation_type = self._statement_subject(
+                stmt.args[0].ref_id,
+                ref_map,
+                relation_subject_cache,
+            )
+        else:
+            subject_ref, relation_type = "self", "self"
+
+        fact_family, field_key = self._statement_family_and_key(stmt)
+        field_value_json = self._statement_value_json(stmt, ref_map)
+        canonical_text = self._build_canonical_text(
+            subject_ref=subject_ref,
+            field_key=field_key,
+            field_value_json=field_value_json,
+        )
+
+        return FactEnvelope(
+            owner_id=owner_record.owner_id,
+            user_id=self._owner_user_id(owner_record),
+            owner_type=owner_record.owner_type,
+            subject_ref=subject_ref,
+            fact_family=fact_family,
+            relation_type=relation_type,
+            field_key=field_key,
+            field_value_json=field_value_json,
+            canonical_text=canonical_text,
+            raw_text=f"${stmt.local_id} = {self._statement_to_canonical(stmt, program)}",
+            confidence=confidence,
+            source_context=source_context,
+            source_session_id=session_id,
+            metadata=metadata or {},
+        )
 
     def _store_stl_memory(
         self,

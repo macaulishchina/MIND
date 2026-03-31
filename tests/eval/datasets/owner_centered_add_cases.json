@@ -1,0 +1,279 @@
+{
+  "name": "owner_centered_add_cases",
+  "focus": "owner-centered add integration",
+  "description": "Integration cases covering self projection, owner reuse, relation projection, placeholder subjects, and single-value update behavior on the STL-backed Memory.add() pipeline.",
+  "cases": [
+    {
+      "id": "owner-add-001",
+      "description": "self facts become canonical self memories",
+      "owner": {
+        "external_user_id": "eval_known_self_001"
+      },
+      "turns": [
+        {
+          "messages": [
+            {
+              "role": "user",
+              "content": "My name is John and I am 30 years old"
+            }
+          ]
+        }
+      ],
+      "expected_active_count": 2,
+      "expected_active_memories": [
+        {
+          "canonical_text": "[self] name=John",
+          "subject_ref": "self",
+          "field_key": "name",
+          "fact_family": "attribute"
+        },
+        {
+          "canonical_text": "[self] age=30",
+          "subject_ref": "self",
+          "field_key": "age",
+          "fact_family": "attribute"
+        }
+      ],
+      "expected_statements": [
+        {
+          "predicate": "name",
+          "args": [
+            "@self",
+            "John"
+          ]
+        },
+        {
+          "predicate": "age",
+          "args": [
+            "@self",
+            30
+          ]
+        }
+      ],
+      "expected_evidence": [
+        {
+          "predicate": "name",
+          "src": "turn_1",
+          "conf_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "predicate": "age",
+          "src": "turn_1",
+          "conf_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "owner-add-002",
+      "description": "anonymous owner is reused across multiple turns",
+      "owner": {
+        "anonymous_session_id": "eval_anon_001"
+      },
+      "turns": [
+        {
+          "messages": [
+            {
+              "role": "user",
+              "content": "My name is June"
+            }
+          ]
+        },
+        {
+          "messages": [
+            {
+              "role": "user",
+              "content": "I live in Hangzhou"
+            }
+          ]
+        }
+      ],
+      "expected_active_count": 2,
+      "expected_active_memories": [
+        {
+          "canonical_text": "[self] name=June",
+          "subject_ref": "self",
+          "field_key": "name",
+          "fact_family": "attribute"
+        },
+        {
+          "canonical_text": "[self] location=Hangzhou",
+          "subject_ref": "self",
+          "field_key": "location",
+          "fact_family": "attribute"
+        }
+      ]
+    },
+    {
+      "id": "owner-add-003",
+      "description": "named third party creates relation and attribute memories",
+      "owner": {
+        "external_user_id": "eval_rel_001"
+      },
+      "turns": [
+        {
+          "messages": [
+            {
+              "role": "user",
+              "content": "My friend Green is a football player"
+            }
+          ]
+        }
+      ],
+      "expected_active_count": 2,
+      "expected_active_memories": [
+        {
+          "canonical_text": "[friend:green] relation_to_owner=friend",
+          "subject_ref": "friend:green",
+          "field_key": "relation_to_owner",
+          "fact_family": "relation"
+        },
+        {
+          "canonical_text": "[friend:green] occupation=football player",
+          "subject_ref": "friend:green",
+          "field_key": "occupation",
+          "fact_family": "attribute"
+        }
+      ],
+      "expected_refs": [
+        {
+          "scope": "local",
+          "ref_type": "person",
+          "key": "green"
+        }
+      ],
+      "expected_statements": [
+        {
+          "predicate": "friend",
+          "args": [
+            "@self",
+            "@local/person(\"green\")"
+          ]
+        },
+        {
+          "predicate": "occupation",
+          "args": [
+            "@local/person(\"green\")",
+            "football player"
+          ]
+        }
+      ],
+      "expected_evidence": [
+        {
+          "predicate": "friend",
+          "src": "turn_1",
+          "conf_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "predicate": "occupation",
+          "src": "turn_1",
+          "conf_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "owner-add-004",
+      "description": "unnamed third party reuses a placeholder subject within one turn",
+      "owner": {
+        "external_user_id": "eval_rel_002"
+      },
+      "turns": [
+        {
+          "messages": [
+            {
+              "role": "user",
+              "content": "I have a friend who is gay"
+            }
+          ]
+        }
+      ],
+      "expected_active_count": 2,
+      "expected_active_memories": [
+        {
+          "canonical_text_contains": "relation_to_owner=friend",
+          "field_key": "relation_to_owner",
+          "fact_family": "relation"
+        },
+        {
+          "canonical_text_contains": "=gay",
+          "field_key": "attribute:attribute",
+          "fact_family": "attribute"
+        }
+      ],
+      "expected_statements": [
+        {
+          "predicate": "friend",
+          "args_contains": [
+            "@self"
+          ]
+        },
+        {
+          "predicate": "attribute",
+          "args_contains": [
+            "gay"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "owner-add-005",
+      "description": "single-value fields create a new active version and delete the old one",
+      "owner": {
+        "external_user_id": "eval_update_001"
+      },
+      "turns": [
+        {
+          "messages": [
+            {
+              "role": "user",
+              "content": "My name is Dave"
+            }
+          ]
+        },
+        {
+          "messages": [
+            {
+              "role": "user",
+              "content": "My name is David"
+            }
+          ]
+        }
+      ],
+      "expected_active_count": 1,
+      "expected_active_memories": [
+        {
+          "canonical_text": "[self] name=David",
+          "subject_ref": "self",
+          "field_key": "name",
+          "fact_family": "attribute"
+        }
+      ],
+      "expected_deleted_memories": [
+        {
+          "canonical_text": "[self] name=Dave",
+          "subject_ref": "self",
+          "field_key": "name"
+        }
+      ],
+      "expected_versioned_active_memories": [
+        {
+          "canonical_text": "[self] name=David",
+          "subject_ref": "self",
+          "field_key": "name",
+          "fact_family": "attribute"
+        }
+      ]
+    }
+  ]
+}

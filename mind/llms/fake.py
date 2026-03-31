@@ -11,6 +11,7 @@ from mind.prompts import (
     FACT_NORMALIZATION_SYSTEM_PROMPT,
     UPDATE_DECISION_SYSTEM_PROMPT,
 )
+from mind.stl.prompt import STL_EXTRACTION_SYSTEM_PROMPT
 
 
 class FakeLLM(BaseLLM):
@@ -47,6 +48,8 @@ class FakeLLM(BaseLLM):
             return self._normalize_fact_response(user_text)
         if UPDATE_DECISION_SYSTEM_PROMPT in system_text:
             return self._decision_response(user_text)
+        if STL_EXTRACTION_SYSTEM_PROMPT in system_text:
+            return self._extract_stl_response(user_text)
         raise ValueError("FakeLLM received an unsupported prompt")
 
     def _extract_facts_response(self, prompt_text: str) -> str:
@@ -138,6 +141,289 @@ class FakeLLM(BaseLLM):
                 "reason": "same topic with newer or better detail",
             }
         )
+
+    def _extract_stl_response(self, prompt_text: str) -> str:
+        conversation = prompt_text.split("Conversation:\n", 1)[-1]
+        builder = _FakeSTLBuilder()
+
+        for turn_index, line in enumerate(conversation.splitlines(), start=1):
+            if not line.startswith("User:"):
+                continue
+            content = line.split(":", 1)[1].strip()
+            if not content or _looks_like_question(content):
+                continue
+
+            if _handle_frame_patterns(builder, content, turn_index):
+                continue
+            if _handle_relation_patterns(builder, content, turn_index):
+                continue
+
+            for clause in _split_into_fact_candidates(content):
+                _handle_self_clause(builder, clause, turn_index)
+
+        return builder.render()
+
+
+class _FakeSTLBuilder:
+    """Small helper for deterministic STL emission in tests."""
+
+    def __init__(self) -> None:
+        self.lines: List[str] = []
+        self._declared_self = False
+        self._declared_refs: Dict[str, str] = {}
+        self._prop_count = 0
+        self._frame_count = 0
+        self._blank_count = 0
+
+    def _ensure_self(self) -> str:
+        if not self._declared_self:
+            self.lines.append("@s = @self")
+            self._declared_self = True
+        return "@s"
+
+    def local_person(self, name: str) -> str:
+        key = _normalize_entity_key(name)
+        alias = self._declared_refs.get(f"person:{key}")
+        if alias:
+            return alias
+
+        alias = f"@p{len(self._declared_refs) + 1}"
+        self.lines.append(f'{alias} = @local/person("{key}")')
+        self._declared_refs[f"person:{key}"] = alias
+        return alias
+
+    def world_entity(self, ref_type: str, key: str) -> str:
+        norm_key = _normalize_entity_key(key)
+        cache_key = f"{ref_type}:{norm_key}"
+        alias = self._declared_refs.get(cache_key)
+        if alias:
+            return alias
+
+        alias = f"@w{len(self._declared_refs) + 1}"
+        self.lines.append(f'{alias} = @world/{ref_type}("{norm_key}")')
+        self._declared_refs[cache_key] = alias
+        return alias
+
+    def blank_ref(self) -> str:
+        self._blank_count += 1
+        alias = f"@u{self._blank_count}"
+        self.lines.append(f"{alias} = _:u{self._blank_count}")
+        return alias
+
+    def prop(
+        self,
+        predicate: str,
+        args: List[str],
+        turn_index: int,
+        conf: float = 0.9,
+        span: Optional[str] = None,
+        frame: bool = False,
+    ) -> str:
+        counter_attr = "_frame_count" if frame else "_prop_count"
+        setattr(self, counter_attr, getattr(self, counter_attr) + 1)
+        prefix = "f" if frame else "p"
+        local_id = f"{prefix}{getattr(self, counter_attr)}"
+        self.lines.append(f"${local_id} = {predicate}({', '.join(args)})")
+        ev = f'ev(${local_id}, conf={conf:.1f}, src="turn_{turn_index}")'
+        if span:
+            ev = ev[:-1] + f', span="{span}")'
+        self.lines.append(ev)
+        return f"${local_id}"
+
+    def render(self) -> str:
+        return "\n".join(self.lines).strip()
+
+
+def _handle_self_clause(builder: _FakeSTLBuilder, clause: str, turn_index: int) -> bool:
+    cleaned = _clean_fact_text(clause)
+    if not cleaned:
+        return False
+
+    builder._ensure_self()
+
+    patterns = (
+        (r"^(?:my name is|i am|i'm)\s+([A-Za-z][A-Za-z0-9 _'-]*)$", "name", lambda m: f'"{m.group(1).strip()}"'),
+        (r"^(?:i am|i'm)\s+(\d{1,3})\s+years?\s+old$", "age", lambda m: m.group(1)),
+        (r"^(?:i work at|i work for)\s+(.+)$", "work_at", lambda m: f'"{m.group(1).strip()}"'),
+        (r"^(?:i live in|i currently live in)\s+(.+)$", "live_in", lambda m: f'"{m.group(1).strip()}"'),
+        (r"^(?:i love|i like|i enjoy)\s+(.+)$", "like", lambda m: f'"{m.group(1).strip()}"'),
+        (r"^(?:i drink)\s+(.+)$", "drink", lambda m: f'"{m.group(1).strip()}"'),
+    )
+    for pattern, predicate, value_fn in patterns:
+        match = re.match(pattern, cleaned, re.I)
+        if match:
+            builder.prop(predicate, ["@s", value_fn(match)], turn_index)
+            return True
+
+    zh_patterns = (
+        (r"^我叫(.+)$", "name", lambda m: f'"{m.group(1).strip()}"'),
+        (r"^我在(.+)工作$", "work_at", lambda m: f'"{m.group(1).strip()}"'),
+        (r"^我住在(.+)$", "live_in", lambda m: f'"{m.group(1).strip()}"'),
+        (r"^我喜欢(.+)$", "like", lambda m: f'"{m.group(1).strip()}"'),
+    )
+    for pattern, predicate, value_fn in zh_patterns:
+        match = re.match(pattern, cleaned)
+        if match:
+            builder.prop(predicate, ["@s", value_fn(match)], turn_index)
+            return True
+
+    return False
+
+
+def _handle_relation_patterns(builder: _FakeSTLBuilder, text: str, turn_index: int) -> bool:
+    cleaned = _clean_fact_text(text)
+    if not cleaned:
+        return False
+
+    builder._ensure_self()
+
+    named_is = re.match(
+        r"^My\s+(friend|coworker|boss|mother|father|brother|sister|mentor|roommate|neighbor)\s+([A-Z][A-Za-z0-9_-]*)\s+is\s+(?:a\s+|an\s+)?(.+)$",
+        cleaned,
+        re.I,
+    )
+    if named_is:
+        relation = _normalize_relation_name(named_is.group(1))
+        person_ref = builder.local_person(named_is.group(2))
+        builder.prop(relation, ["@s", person_ref], turn_index)
+        builder.prop("occupation", [person_ref, f'"{named_is.group(3).strip()}"'], turn_index)
+        return True
+
+    named_drink = re.match(
+        r"^My\s+(friend|coworker|boss|mother|father|brother|sister|mentor|roommate|neighbor)\s+([A-Z][A-Za-z0-9_-]*)\s+drinks\s+(.+)$",
+        cleaned,
+        re.I,
+    )
+    if named_drink:
+        relation = _normalize_relation_name(named_drink.group(1))
+        person_ref = builder.local_person(named_drink.group(2))
+        builder.prop(relation, ["@s", person_ref], turn_index)
+        builder.prop("drink", [person_ref, f'"{named_drink.group(3).strip()}"'], turn_index)
+        return True
+
+    named_like = re.match(
+        r"^My\s+(friend|coworker|boss|mother|father|brother|sister|mentor|roommate|neighbor)\s+([A-Z][A-Za-z0-9_-]*)\s+likes\s+(.+)$",
+        cleaned,
+        re.I,
+    )
+    if named_like:
+        relation = _normalize_relation_name(named_like.group(1))
+        person_ref = builder.local_person(named_like.group(2))
+        builder.prop(relation, ["@s", person_ref], turn_index)
+        builder.prop("like", [person_ref, f'"{named_like.group(3).strip()}"'], turn_index)
+        return True
+
+    named_live_in = re.match(
+        r"^My\s+(friend|coworker|boss|mother|father|brother|sister|mentor|roommate|neighbor)\s+([A-Z][A-Za-z0-9_-]*)\s+lives\s+in\s+(.+)$",
+        cleaned,
+        re.I,
+    )
+    if named_live_in:
+        relation = _normalize_relation_name(named_live_in.group(1))
+        person_ref = builder.local_person(named_live_in.group(2))
+        builder.prop(relation, ["@s", person_ref], turn_index)
+        builder.prop("live_in", [person_ref, f'"{named_live_in.group(3).strip()}"'], turn_index)
+        return True
+
+    unknown_attr = re.match(
+        r"^I have a\s+(friend|coworker|boss|neighbor)\s+who is\s+(.+)$",
+        cleaned,
+        re.I,
+    )
+    if unknown_attr:
+        relation = _normalize_relation_name(unknown_attr.group(1))
+        person_ref = builder.blank_ref()
+        builder.prop(relation, ["@s", person_ref], turn_index)
+        builder.prop("attribute", [person_ref, f'"{unknown_attr.group(2).strip()}"'], turn_index)
+        return True
+
+    inverse_like = re.match(
+        r"^([A-Z][A-Za-z0-9_-]*)\s+is\s+my\s+(friend|coworker|boss|mother|father|mentor|roommate|neighbor)\s+and\s+(?:he|she)\s+likes\s+(.+)$",
+        cleaned,
+        re.I,
+    )
+    if inverse_like:
+        relation = _normalize_relation_name(inverse_like.group(2))
+        person_ref = builder.local_person(inverse_like.group(1))
+        builder.prop(relation, ["@s", person_ref], turn_index)
+        builder.prop("like", [person_ref, f'"{inverse_like.group(3).strip()}"'], turn_index)
+        return True
+
+    return False
+
+
+def _handle_frame_patterns(builder: _FakeSTLBuilder, text: str, turn_index: int) -> bool:
+    cleaned = _clean_fact_text(text)
+    if not cleaned:
+        return False
+
+    builder._ensure_self()
+
+    hope_match = re.match(
+        r"^I hope\s+([A-Z][A-Za-z0-9_-]*)\s+comes?\s+to\s+([A-Z][A-Za-z0-9_-]*)$",
+        cleaned,
+        re.I,
+    )
+    if hope_match:
+        person_ref = builder.local_person(hope_match.group(1))
+        city_ref = builder.world_entity("city", hope_match.group(2))
+        target = builder.prop("come", [person_ref, city_ref], turn_index)
+        builder.prop("hope", ["@s", target], turn_index, frame=True)
+        return True
+
+    say_match = re.match(
+        r"^([A-Z][A-Za-z0-9_-]*)\s+says\s+([A-Z][A-Za-z0-9_-]*)\s+lives?\s+in\s+([A-Z][A-Za-z0-9_-]*)$",
+        cleaned,
+        re.I,
+    )
+    if say_match:
+        speaker_ref = builder.local_person(say_match.group(1))
+        person_ref = builder.local_person(say_match.group(2))
+        city_ref = builder.world_entity("city", say_match.group(3))
+        target = builder.prop("live_in", [person_ref, city_ref], turn_index)
+        builder.prop("say", [speaker_ref, target], turn_index, conf=0.8, frame=True)
+        return True
+
+    believe_match = re.match(
+        r"^I think my (mom|mother|dad|father)\s+likes\s+(.+)$",
+        cleaned,
+        re.I,
+    )
+    if believe_match:
+        relation = _normalize_relation_name(believe_match.group(1))
+        person_ref = builder.local_person("mom" if relation == "mother" else "dad")
+        builder.prop(relation, ["@s", person_ref], turn_index)
+        target = builder.prop("like", [person_ref, f'"{believe_match.group(2).strip()}"'], turn_index)
+        builder.prop("believe", ["@s", target], turn_index, conf=0.6, frame=True)
+        return True
+
+    if_match = re.match(
+        r"^If it rains tomorrow,\s+I will\s+(.+)$",
+        cleaned,
+        re.I,
+    )
+    if if_match:
+        target = builder.prop("plan", ["@s", f'"{if_match.group(1).strip()}"'], turn_index)
+        builder.prop("if", ['rain("tomorrow")', target], turn_index, frame=True)
+        return True
+
+    return False
+
+
+def _normalize_relation_name(raw_relation: str) -> str:
+    relation = raw_relation.strip().casefold().replace(" ", "_")
+    relation_map = {
+        "mom": "mother",
+        "dad": "father",
+        "sister": "sibling",
+        "brother": "sibling",
+        "colleague": "coworker",
+    }
+    return relation_map.get(relation, relation)
+
+
+def _normalize_entity_key(raw_key: str) -> str:
+    return _clean_fact_text(raw_key).strip().casefold().replace(" ", "_")
 
 
 def _parse_existing_memories(prompt_text: str) -> List[tuple[str, str]]:

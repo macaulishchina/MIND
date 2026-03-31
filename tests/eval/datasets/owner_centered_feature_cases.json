@@ -1,0 +1,210 @@
+{
+  "name": "owner_centered_feature_cases",
+  "focus": "STL feature semantics",
+  "description": "Feature-oriented cases covering frames and richer STL structures that should survive owner-centered Memory.add() evaluation even when projected active memories are only secondary.",
+  "cases": [
+    {
+      "id": "owner-feature-001",
+      "description": "hope frame preserves both proposition and frame",
+      "owner": {
+        "external_user_id": "feature_hope_001"
+      },
+      "turns": [
+        {
+          "messages": [
+            {
+              "role": "user",
+              "content": "I hope Tom comes to Tokyo"
+            }
+          ]
+        }
+      ],
+      "expected_refs": [
+        {
+          "scope": "local",
+          "ref_type": "person",
+          "key": "tom"
+        },
+        {
+          "scope": "world",
+          "ref_type": "city",
+          "key": "tokyo"
+        }
+      ],
+      "expected_statements": [
+        {
+          "predicate": "come",
+          "args": [
+            "@local/person(\"tom\")",
+            "@world/city(\"tokyo\")"
+          ]
+        },
+        {
+          "predicate": "hope",
+          "category": "frame"
+        }
+      ],
+      "expected_evidence": [
+        {
+          "predicate": "hope",
+          "src": "turn_1",
+          "conf_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "owner-feature-002",
+      "description": "say frame keeps speaker and quoted proposition",
+      "owner": {
+        "external_user_id": "feature_say_001"
+      },
+      "turns": [
+        {
+          "messages": [
+            {
+              "role": "user",
+              "content": "Mike says Tom lives in Tokyo"
+            }
+          ]
+        }
+      ],
+      "expected_refs": [
+        {
+          "scope": "local",
+          "ref_type": "person",
+          "key": "mike"
+        },
+        {
+          "scope": "local",
+          "ref_type": "person",
+          "key": "tom"
+        },
+        {
+          "scope": "world",
+          "ref_type": "city",
+          "key": "tokyo"
+        }
+      ],
+      "expected_statements": [
+        {
+          "predicate": "live_in",
+          "args": [
+            "@local/person(\"tom\")",
+            "@world/city(\"tokyo\")"
+          ]
+        },
+        {
+          "predicate": "say",
+          "category": "frame"
+        }
+      ],
+      "expected_evidence": [
+        {
+          "predicate": "say",
+          "src": "turn_1",
+          "conf_range": [
+            0.7,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "owner-feature-003",
+      "description": "belief frame preserves owner stance toward a third-party preference",
+      "owner": {
+        "external_user_id": "feature_belief_001"
+      },
+      "turns": [
+        {
+          "messages": [
+            {
+              "role": "user",
+              "content": "I think my mom likes gold necklace"
+            }
+          ]
+        }
+      ],
+      "expected_refs": [
+        {
+          "scope": "local",
+          "ref_type": "person",
+          "key": "mom"
+        }
+      ],
+      "expected_statements": [
+        {
+          "predicate": "mother",
+          "args": [
+            "@self",
+            "@local/person(\"mom\")"
+          ]
+        },
+        {
+          "predicate": "like",
+          "args": [
+            "@local/person(\"mom\")",
+            "gold necklace"
+          ]
+        },
+        {
+          "predicate": "believe",
+          "category": "frame"
+        }
+      ],
+      "expected_evidence": [
+        {
+          "predicate": "believe",
+          "src": "turn_1",
+          "conf_range": [
+            0.5,
+            0.7
+          ]
+        }
+      ]
+    },
+    {
+      "id": "owner-feature-004",
+      "description": "if frame keeps conditional structure instead of dropping it",
+      "owner": {
+        "external_user_id": "feature_if_001"
+      },
+      "turns": [
+        {
+          "messages": [
+            {
+              "role": "user",
+              "content": "If it rains tomorrow, I will work from home"
+            }
+          ]
+        }
+      ],
+      "expected_statements": [
+        {
+          "predicate": "plan",
+          "args": [
+            "@self",
+            "work from home"
+          ]
+        },
+        {
+          "predicate": "if",
+          "category": "frame"
+        }
+      ],
+      "expected_evidence": [
+        {
+          "predicate": "if",
+          "src": "turn_1",
+          "conf_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ]
+    }
+  ]
+}

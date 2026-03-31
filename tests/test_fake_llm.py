@@ -5,6 +5,7 @@ import json
 from mind.config.schema import LLMConfig
 from mind.llms.fake import FakeLLM
 from mind.prompts import FACT_EXTRACTION_SYSTEM_PROMPT, FACT_EXTRACTION_USER_TEMPLATE
+from mind.stl.prompt import STL_EXTRACTION_SYSTEM_PROMPT, STL_EXTRACTION_USER_TEMPLATE
 
 
 def _extract(fake_llm: FakeLLM, conversation: str) -> list[dict[str, object]]:
@@ -70,3 +71,28 @@ def test_fake_llm_supports_basic_chinese_fact_splitting() -> None:
     texts = [fact["text"] for fact in facts]
     assert any("之前在网易" in text for text in texts)
     assert any("现在在字节" in text for text in texts)
+
+
+def test_fake_llm_can_emit_basic_stl_program() -> None:
+    fake_llm = FakeLLM(LLMConfig(protocols="fake", model="fake-memory-test"))
+
+    program = fake_llm.generate(
+        messages=[
+            {
+                "role": "system",
+                "content": STL_EXTRACTION_SYSTEM_PROMPT,
+            },
+            {
+                "role": "user",
+                "content": STL_EXTRACTION_USER_TEMPLATE.format(
+                    focus_stack="",
+                    conversation="User: My friend Green is a football player",
+                ),
+            },
+        ],
+    )
+
+    assert '@p1 = @local/person("green")' in program
+    assert "$p1 = friend(@s, @p1)" in program
+    assert "$p2 = occupation(@p1, \"football player\")" in program
+    assert "ev($p1, conf=0.9, src=\"turn_1\")" in program

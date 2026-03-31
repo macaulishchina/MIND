@@ -37,10 +37,16 @@ def memory_config(tmp_path):
     """
     mgr = ConfigManager(toml_path=_DEFAULT_TEST_TOML)
     return mgr.get(overrides={
+        "llm": {
+            "provider": "fake",
+            "batch": False,
+        },
         "vector_store": {
             "collection_name": f"test_memories_{tmp_path.name}",
             "url": "",
             "api_key": "",
         },
         "history_store": {"db_path": str(tmp_path / "test_history.db")},
+        "stl_store": {"provider": "sqlite", "db_path": str(tmp_path / "test_stl.db")},
+        "logging": {"console": False, "file": ""},
     })
