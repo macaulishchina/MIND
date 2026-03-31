@@ -3,13 +3,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from mind.config import ConfigManager
 from mind.config.manager import _DEFAULT_TEST_TOML
 from tests.eval.runners.eval_owner_centered_add import DatasetSpec
 from tests.eval.runners.eval_owner_centered_add import build_report
 from tests.eval.runners.eval_owner_centered_add import build_summary
 from tests.eval.runners.eval_owner_centered_add import _case_owner_lookup
 from tests.eval.runners.eval_owner_centered_add import _evaluate_case
+from tests.eval.runners.eval_owner_centered_add import _evaluate_dataset_cases
 from tests.eval.runners.eval_owner_centered_add import _load_dataset
 
 
@@ -48,12 +48,11 @@ def test_case_owner_lookup_supports_known_and_anonymous_owners() -> None:
     ) == "anon-1"
 
 
-def test_owner_centered_eval_case_passes_for_update_scenario() -> None:
-    cfg = ConfigManager(toml_path=_DEFAULT_TEST_TOML).get()
+def test_owner_centered_eval_case_passes_for_update_scenario(memory_config) -> None:
     dataset = _load_dataset(DATASET_PATH)
     update_case = next(case for case in dataset.cases if case["id"] == "owner-add-005")
 
-    result = _evaluate_case(cfg, update_case)
+    result = _evaluate_case(memory_config, update_case)
 
     assert result.case_pass is True
     assert result.count_pass is True
@@ -62,10 +61,9 @@ def test_owner_centered_eval_case_passes_for_update_scenario() -> None:
     assert result.failures == []
 
 
-def test_owner_centered_report_and_summary_render(tmp_path) -> None:
-    cfg = ConfigManager(toml_path=_DEFAULT_TEST_TOML).get()
+def test_owner_centered_report_and_summary_render(tmp_path, memory_config) -> None:
     dataset = _load_dataset(DATASET_PATH)
-    case_results = [_evaluate_case(cfg, case) for case in dataset.cases]
+    case_results = _evaluate_dataset_cases(memory_config, dataset, concurrency=2)
 
     report = build_report(dataset, case_results, _DEFAULT_TEST_TOML)
     output_path = tmp_path / "owner_centered_report.json"
@@ -77,17 +75,15 @@ def test_owner_centered_report_and_summary_render(tmp_path) -> None:
     assert "Owner-Centered Add Evaluation Summary" in summary
 
 
-def test_owner_centered_feature_dataset_cases_pass() -> None:
-    cfg = ConfigManager(toml_path=_DEFAULT_TEST_TOML).get()
+def test_owner_centered_feature_dataset_cases_pass(memory_config) -> None:
     dataset = _load_dataset(FEATURE_DATASET_PATH)
 
-    case_results = [_evaluate_case(cfg, case) for case in dataset.cases]
+    case_results = _evaluate_dataset_cases(memory_config, dataset, concurrency=2)
 
     assert all(result.case_pass for result in case_results)
 
 
-def test_owner_centered_relationship_representative_cases_pass() -> None:
-    cfg = ConfigManager(toml_path=_DEFAULT_TEST_TOML).get()
+def test_owner_centered_relationship_representative_cases_pass(memory_config) -> None:
     dataset = _load_dataset(RELATION_DATASET_PATH)
     selected_ids = {
         "owner-rel-inverse-001",
@@ -95,14 +91,28 @@ def test_owner_centered_relationship_representative_cases_pass() -> None:
         "owner-rel-split-001",
         "owner-rel-owner-002",
     }
+    selected_dataset = DatasetSpec(
+        path=dataset.path,
+        name=dataset.name,
+        focus=dataset.focus,
+        description=dataset.description,
+        cases=[case for case in dataset.cases if case["id"] in selected_ids],
+    )
 
-    case_results = [
-        _evaluate_case(cfg, case)
-        for case in dataset.cases
-        if case["id"] in selected_ids
-    ]
+    case_results = _evaluate_dataset_cases(memory_config, selected_dataset, concurrency=2)
 
     assert len(case_results) == len(selected_ids)
+    assert all(result.case_pass for result in case_results)
+
+
+def test_owner_centered_dataset_concurrency_preserves_case_order(memory_config) -> None:
+    dataset = _load_dataset(DATASET_PATH)
+
+    case_results = _evaluate_dataset_cases(memory_config, dataset, concurrency=3)
+
+    assert [result.case_id for result in case_results] == [
+        case["id"] for case in dataset.cases
+    ]
     assert all(result.case_pass for result in case_results)
 
 

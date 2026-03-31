@@ -5,6 +5,7 @@ import json
 import re
 import sys
 import tempfile
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -423,6 +424,23 @@ def _evaluate_case(cfg, case: dict[str, Any]) -> CaseResult:
     )
 
 
+def _evaluate_dataset_cases(cfg, dataset: DatasetSpec, concurrency: int = 1) -> list[CaseResult]:
+    if concurrency <= 1 or len(dataset.cases) <= 1:
+        return [_evaluate_case(cfg, case) for case in dataset.cases]
+
+    ordered_results: list[CaseResult | None] = [None] * len(dataset.cases)
+    max_workers = min(concurrency, len(dataset.cases))
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        futures = {
+            pool.submit(_evaluate_case, cfg, case): index
+            for index, case in enumerate(dataset.cases)
+        }
+        for future in as_completed(futures):
+            ordered_results[futures[future]] = future.result()
+
+    return [result for result in ordered_results if result is not None]
+
+
 def build_report(
     dataset: DatasetSpec,
     case_results: list[CaseResult],
@@ -560,6 +578,12 @@ def main(argv: list[str] | None = None) -> int:
         help="Pretty-print JSON output.",
     )
     parser.add_argument(
+        "--concurrency",
+        type=int,
+        default=1,
+        help="Number of cases to evaluate in parallel. Default: 1.",
+    )
+    parser.add_argument(
         "--fail-on-targets",
         action="store_true",
         help="Return non-zero when any configured metric target fails.",
@@ -575,7 +599,11 @@ def main(argv: list[str] | None = None) -> int:
 
     for dataset_path in dataset_paths:
         dataset = _load_dataset(dataset_path)
-        case_results = [_evaluate_case(cfg, case) for case in dataset.cases]
+        case_results = _evaluate_dataset_cases(
+            cfg,
+            dataset,
+            concurrency=max(1, args.concurrency),
+        )
         report = build_report(dataset, case_results, args.toml)
         output_path = _dataset_output_path(dataset_path, args.output, multi_dataset)
         output_path.parent.mkdir(parents=True, exist_ok=True)

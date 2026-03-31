@@ -74,6 +74,21 @@ python tests/eval/runners/eval_owner_centered_add.py \
   --pretty
 ```
 
+### 开启并发
+
+```bash
+python tests/eval/runners/eval_owner_centered_add.py \
+  --toml mind.toml \
+  --dataset tests/eval/datasets/owner_centered_relationship_cases.json \
+  --concurrency 4
+```
+
+说明：
+
+- 适合手动跑真实模型时提速
+- 默认 `--concurrency 1`
+- 每个 case 都会使用独立临时存储，避免互相污染
+
 Owner-centered runner 关注的指标主要有：
 
 - `canonical_text_accuracy`
@@ -211,6 +226,11 @@ pytest -q tests/test_eval_owner_centered_add.py
 ```bash
 pytest -q tests/test_fake_llm.py tests/test_memory.py
 ```
+
+补充说明：
+
+- 常规 pytest 默认应走 `tests/conftest.py` 里的显式 fake 覆盖
+- 不应该依赖 `mindt.toml` 恰好配置成 fake，测试代码本身要明确声明自己不需要真实 LLM
 
 如果你改了 extraction runner 或 extraction 数据集，建议跑：
 

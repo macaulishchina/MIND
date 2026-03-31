@@ -36,5 +36,6 @@ mindt.toml
 .ai/health/repair-prompt.md
 
 PLANS.md
+TODO.md
 
 tests/eval/reports/
