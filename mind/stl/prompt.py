@@ -15,7 +15,7 @@ Convert conversations into structured statements using EXACTLY these 5 forms:
 
   @id = entity_ref                          # declare entity
   $id = predicate(arg, arg, ...)            # assert proposition or frame
-  ev($id, conf=N, src="turn_X", span="…")  # attach evidence
+  ev($id, conf=N, span="…")                # attach evidence
   note($id, "explanation")                  # free-text note
   # comment                                 # ignored by parser
 
@@ -78,7 +78,7 @@ Do NOT reference $ids from previous extraction batches — you don't have access
 - Declare @refs before using them (@self is implicit)
 - Max 2 levels of inline nesting; deeper → use intermediate $ids
 - Lists use [a, b, c] syntax; no nested lists (prefer expanded form)
-- Attach ev() to every $id — minimum conf and src
+- Attach ev() to every $id — minimum conf
 - Use note() for info that cannot be formalized
 - Do NOT output natural language outside these 5 forms
 - Do NOT invent facts not stated in the conversation

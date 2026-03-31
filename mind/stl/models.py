@@ -124,10 +124,9 @@ class ParsedStatement(BaseModel):
 
 
 class ParsedEvidence(BaseModel):
-    """Parsed EV line: ev($target, conf=N, src="...", span="...")."""
+    """Parsed EV line: ev($target, conf=N, span="...")."""
     target_local_id: str     # "p1", "f1"
     conf: float
-    src: Optional[str] = None
     span: Optional[str] = None
     residual: Optional[str] = None
     parse_level: ParseLevel = ParseLevel.STRICT

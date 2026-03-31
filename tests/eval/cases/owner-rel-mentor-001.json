@@ -1,0 +1,32 @@
+{
+  "id": "owner-rel-mentor-001",
+  "description": "mentor occupation case should keep relation and occupation memories",
+  "owner": {
+    "external_user_id": "owner_rel_mentor_001"
+  },
+  "turns": [
+    {
+      "messages": [
+        {
+          "role": "user",
+          "content": "My mentor Priya is a designer"
+        }
+      ]
+    }
+  ],
+  "expected_active_count": 2,
+  "expected_active_memories": [
+    {
+      "canonical_text": "[mentor:priya] relation_to_owner=mentor",
+      "subject_ref": "mentor:priya",
+      "field_key": "relation_to_owner",
+      "fact_family": "relation"
+    },
+    {
+      "canonical_text": "[mentor:priya] occupation=designer",
+      "subject_ref": "mentor:priya",
+      "field_key": "occupation",
+      "fact_family": "attribute"
+    }
+  ]
+}

@@ -125,9 +125,9 @@ class BaseSTLStore(ABC):
         self,
         target_id: str,
         conf: float,
-        src: Optional[str] = None,
         span: Optional[str] = None,
         residual: Optional[str] = None,
+        batch_id: Optional[str] = None,
     ) -> None:
         """Insert an evidence row."""
 
@@ -385,9 +385,9 @@ class BaseSTLStore(ABC):
                 self.insert_evidence(
                     target_id=target_global,
                     conf=ev.conf,
-                    src=ev.src,
                     span=ev.span,
                     residual=ev.residual,
+                    batch_id=batch_id,
                 )
                 result.evidence_inserted += 1
             except Exception as e:
@@ -798,12 +798,13 @@ CREATE TABLE IF NOT EXISTS evidence (
     id          SERIAL PRIMARY KEY,
     target_id   TEXT NOT NULL,
     conf        REAL NOT NULL,
-    src         TEXT,
     span        TEXT,
     residual    TEXT,
+    batch_id    TEXT REFERENCES extraction_batches(id),
     created_at  TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_evidence_target ON evidence (target_id);
+CREATE INDEX IF NOT EXISTS idx_evidence_batch ON evidence (batch_id);
 
 CREATE TABLE IF NOT EXISTS notes (
     id          SERIAL PRIMARY KEY,
@@ -922,12 +923,13 @@ CREATE TABLE IF NOT EXISTS evidence (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     target_id   TEXT NOT NULL,
     conf        REAL NOT NULL,
-    src         TEXT,
     span        TEXT,
     residual    TEXT,
+    batch_id    TEXT REFERENCES extraction_batches(id),
     created_at  TEXT DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_evidence_target ON evidence (target_id);
+CREATE INDEX IF NOT EXISTS idx_evidence_batch ON evidence (batch_id);
 
 CREATE TABLE IF NOT EXISTS notes (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1123,15 +1125,15 @@ class SQLiteSTLStore(BaseSTLStore):
         self,
         target_id: str,
         conf: float,
-        src: Optional[str] = None,
         span: Optional[str] = None,
         residual: Optional[str] = None,
+        batch_id: Optional[str] = None,
     ) -> None:
         conn = self._get_conn()
         conn.execute(
-            """INSERT INTO evidence (target_id, conf, src, span, residual)
+            """INSERT INTO evidence (target_id, conf, span, residual, batch_id)
                VALUES (?, ?, ?, ?, ?)""",
-            (target_id, conf, src, span, residual),
+            (target_id, conf, span, residual, batch_id),
         )
         conn.commit()
 
@@ -1440,16 +1442,16 @@ class PostgresSTLStore(BaseSTLStore):
         self,
         target_id: str,
         conf: float,
-        src: Optional[str] = None,
         span: Optional[str] = None,
         residual: Optional[str] = None,
+        batch_id: Optional[str] = None,
     ) -> None:
         with self._connect() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    """INSERT INTO evidence (target_id, conf, src, span, residual)
+                    """INSERT INTO evidence (target_id, conf, span, residual, batch_id)
                        VALUES (%s, %s, %s, %s, %s)""",
-                    (target_id, conf, src, span, residual),
+                    (target_id, conf, span, residual, batch_id),
                 )
 
     def insert_note(self, target_id: str, content: str) -> None:

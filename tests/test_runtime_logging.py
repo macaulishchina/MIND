@@ -64,8 +64,8 @@ def test_configure_runtime_logging_emits_verbose_llm_detail(capsys) -> None:
 
     assert response == "echo: hi"
     assert "🧠 [LLM]" in captured.err
-    assert "prompt" in captured.err
-    assert "output" in captured.err
+    assert "[user]" in captured.err
+    assert "[response]" in captured.err
 
 
 def test_configure_runtime_logging_refreshes_ops_switches(capsys) -> None:
@@ -97,7 +97,7 @@ def test_configure_runtime_logging_refreshes_ops_switches(capsys) -> None:
 
     assert "🧠 [LLM]" not in first.err
     assert "🧠 [LLM]" in second.err
-    assert "output" in second.err
+    assert "[response]" in second.err
 
 
 def test_eval_llm_speed_initializes_logging_from_toml(tmp_path: Path, capsys) -> None:
@@ -143,5 +143,5 @@ verbose = true
     assert exit_code == 0
     assert "run 1/1:" in captured.out
     assert "🧠 [LLM]" in captured.err
-    assert "prompt" in captured.err
-    assert "output" in captured.err
+    assert "[user]" in captured.err
+    assert "[response]" in captured.err

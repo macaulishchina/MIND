@@ -22,7 +22,7 @@ from mind.memory import Memory
 from mind.runtime_logging import configure_runtime_logging
 
 
-DEFAULT_DATASET_DIR = PROJECT_ROOT / "tests" / "eval" / "datasets"
+DEFAULT_CASES_DIR = PROJECT_ROOT / "tests" / "eval" / "cases"
 DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "tests" / "eval" / "reports"
 TARGET_METRICS = {
     "canonical_text_accuracy": 0.95,
@@ -40,8 +40,6 @@ TARGET_METRICS = {
 class DatasetSpec:
     path: Path
     name: str
-    focus: str
-    description: str
     cases: list[dict[str, Any]]
 
 
@@ -77,26 +75,32 @@ def _configure_runner_logging(cfg) -> None:
     configure_runtime_logging(cfg.logging)
 
 
-def _load_dataset(dataset_path: Path) -> DatasetSpec:
-    with dataset_path.open("r", encoding="utf-8") as handle:
-        payload = json.load(handle)
-    return DatasetSpec(
-        path=dataset_path,
-        name=str(payload.get("name", dataset_path.stem)),
-        focus=str(payload.get("focus", "owner-centered add")),
-        description=str(payload.get("description", "")),
-        cases=list(payload.get("cases", [])),
-    )
+def _load_case_file(path: Path) -> dict[str, Any]:
+    with path.open("r", encoding="utf-8") as f:
+        return json.load(f)
 
 
-def _resolve_dataset_paths(dataset_arg: Path | None) -> list[Path]:
-    if dataset_arg is None:
-        return sorted(DEFAULT_DATASET_DIR.glob("owner_centered*_cases.json"))
+def _load_dataset(source: Path) -> DatasetSpec:
+    """Load all cases from a directory or a single case file."""
+    resolved = source.resolve()
 
-    resolved = dataset_arg.resolve()
     if resolved.is_dir():
-        return sorted(resolved.glob("owner_centered*_cases.json"))
-    return [resolved]
+        case_files = sorted(resolved.glob("*.json"))
+        cases = [_load_case_file(p) for p in case_files]
+        return DatasetSpec(path=resolved, name=resolved.name, cases=cases)
+
+    if not resolved.exists():
+        sys.exit(f"Error: case file not found: {resolved}\n"
+                 f"Hint: cases are now flat under tests/eval/cases/ (e.g. tests/eval/cases/{resolved.name})")
+
+    payload = _load_case_file(resolved)
+    return DatasetSpec(path=resolved, name=resolved.stem, cases=[payload])
+
+
+def _resolve_dataset_path(case_arg: Path | None) -> Path:
+    if case_arg is not None:
+        return case_arg.resolve()
+    return DEFAULT_CASES_DIR
 
 
 def _display_path(path: Path) -> str:
@@ -168,7 +172,7 @@ def _stored_evidence_rows(memory: Memory, owner_id: str) -> list[dict[str, Any]]
     conn = memory._stl_store._get_conn()
     rows = conn.execute(
         """
-        SELECT e.target_id, e.conf, e.src, e.span, e.residual, s.predicate
+        SELECT e.target_id, e.conf, e.span, e.residual, e.batch_id, s.predicate
         FROM evidence e
         JOIN statements s ON s.id = e.target_id
         WHERE s.owner_id = ? AND s.is_current = 1
@@ -247,8 +251,6 @@ def _ref_matches(row: dict[str, Any], expectation: dict[str, Any]) -> bool:
 
 def _evidence_matches(row: dict[str, Any], expectation: dict[str, Any]) -> bool:
     if expectation.get("predicate") and row.get("predicate") != expectation["predicate"]:
-        return False
-    if expectation.get("src") and row.get("src") != expectation["src"]:
         return False
     if expectation.get("span_contains") and expectation["span_contains"] not in (row.get("span") or ""):
         return False
@@ -447,6 +449,7 @@ def build_report(
     dataset: DatasetSpec,
     case_results: list[CaseResult],
     toml_path: Path,
+    cfg = None,
 ) -> dict[str, Any]:
     count_passes = sum(1 for result in case_results if result.count_pass)
     owner_passes = sum(1 for result in case_results if result.owner_pass)
@@ -477,16 +480,22 @@ def build_report(
         "case_pass_rate": _safe_ratio(case_passes, len(case_results)),
     }
 
-    return {
+    report = {
         "dataset": _display_path(dataset.path),
         "dataset_name": dataset.name,
-        "dataset_focus": dataset.focus,
-        "dataset_description": dataset.description,
         "toml_path": _display_path(toml_path),
         "total_cases": len(case_results),
-        "targets": TARGET_METRICS,
-        "metrics": metrics,
-        "cases": [
+    }
+
+    if cfg is not None:
+        models = {"default": f"{cfg.llm.provider}/{cfg.llm.model}"}
+        for stage_name, stage_cfg in cfg.llm_stages.items():
+            models[stage_name] = f"{stage_cfg.provider}/{stage_cfg.model}"
+        report["models"] = models
+
+    report["targets"] = TARGET_METRICS
+    report["metrics"] = metrics
+    report["cases"] = [
             {
                 "id": result.case_id,
                 "description": result.description,
@@ -497,8 +506,9 @@ def build_report(
                 "evidence": _json_ready(result.evidence),
             }
             for result in case_results
-        ],
-    }
+        ]
+
+    return report
 
 
 def build_summary(report: dict[str, Any], output_path: Path) -> str:
@@ -512,11 +522,16 @@ def build_summary(report: dict[str, Any], output_path: Path) -> str:
     lines = [
         "Owner-Centered Add Evaluation Summary",
         f"dataset: {report['dataset_name']} ({report['dataset']})",
-        f"focus: {report['dataset_focus']}",
         f"config: {report['toml_path']}",
-        f"total cases: {report['total_cases']}",
-        "metrics:",
     ]
+    if "models" in report:
+        models = report["models"]
+        lines.append(f"model: {models.get('default', '?')}")
+        for stage, m in models.items():
+            if stage != "default":
+                lines.append(f"  {stage}: {m}")
+    lines.append(f"total cases: {report['total_cases']}")
+    lines.append("metrics:")
     for name, target in report["targets"].items():
         value = metrics.get(name, 0.0)
         status = "PASS" if value >= target else "FAIL"
@@ -543,13 +558,17 @@ def build_summary(report: dict[str, Any], output_path: Path) -> str:
     return "\n".join(lines)
 
 
-def _dataset_output_path(dataset_path: Path, output_arg: Path | None, multi_dataset: bool) -> Path:
-    file_name = f"{dataset_path.stem}_report.json"
+def _dataset_output_path(dataset_path: Path, output_arg: Path | None, model_name: str = "") -> Path:
+    model_suffix = f"_{_sanitize_name(model_name)}" if model_name else ""
+    if dataset_path.is_dir():
+        file_name = f"{dataset_path.name}{model_suffix}_report.json"
+    else:
+        file_name = f"{dataset_path.stem}{model_suffix}_report.json"
     if output_arg is None:
         return DEFAULT_OUTPUT_DIR / file_name
 
     resolved = output_arg.resolve()
-    if multi_dataset or resolved.is_dir() or resolved.suffix != ".json":
+    if resolved.is_dir() or resolved.suffix != ".json":
         return resolved / file_name
     return resolved
 
@@ -563,10 +582,10 @@ def main(argv: list[str] | None = None) -> int:
         help="Path to config TOML (default: mindt.toml)",
     )
     parser.add_argument(
-        "--dataset",
+        "--case",
         type=Path,
         default=None,
-        help="Dataset JSON path or directory. Defaults to all owner_centered*_cases.json files.",
+        help="Single case JSON file or directory (default: tests/eval/cases/).",
     )
     parser.add_argument(
         "--output",
@@ -590,38 +609,57 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Return non-zero when any configured metric target fails.",
     )
+    parser.add_argument(
+        "--model",
+        type=str,
+        default=None,
+        help="Override LLM model for all stages (e.g. qwen-plus).",
+    )
+    parser.add_argument(
+        "--provider",
+        type=str,
+        default=None,
+        help="Override LLM provider for all stages (e.g. deepseek). "
+             "Provider must be defined in the TOML [llm.*] section.",
+    )
     args = parser.parse_args(argv)
 
     cfg = ConfigManager(toml_path=args.toml).get()
+
+    if args.provider:
+        overrides: dict[str, Any] = {"llm": {"provider": args.provider}}
+        cfg = ConfigManager(toml_path=args.toml).get(overrides=overrides)
+
+    if args.model:
+        cfg.llm.model = args.model
+        for stage_cfg in cfg.llm_stages.values():
+            stage_cfg.model = args.model
     _configure_runner_logging(cfg)
 
-    dataset_paths = _resolve_dataset_paths(args.dataset)
-    multi_dataset = len(dataset_paths) > 1
+    dataset_path = _resolve_dataset_path(args.case)
+    dataset = _load_dataset(dataset_path)
+    case_results = _evaluate_dataset_cases(
+        cfg,
+        dataset,
+        concurrency=max(1, args.concurrency),
+    )
+    report = build_report(dataset, case_results, args.toml, cfg=cfg)
+    output_path = _dataset_output_path(dataset_path, args.output, model_name=cfg.llm.model)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(
+        json.dumps(report, ensure_ascii=False, indent=2 if args.pretty else None),
+        encoding="utf-8",
+    )
+    print(build_summary(report, output_path))
+
     exit_code = 0
-
-    for dataset_path in dataset_paths:
-        dataset = _load_dataset(dataset_path)
-        case_results = _evaluate_dataset_cases(
-            cfg,
-            dataset,
-            concurrency=max(1, args.concurrency),
-        )
-        report = build_report(dataset, case_results, args.toml)
-        output_path = _dataset_output_path(dataset_path, args.output, multi_dataset)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(
-            json.dumps(report, ensure_ascii=False, indent=2 if args.pretty else None),
-            encoding="utf-8",
-        )
-        print(build_summary(report, output_path))
-
-        if args.fail_on_targets:
-            failed_metrics = [
-                name for name, target in report["targets"].items()
-                if report["metrics"].get(name, 0.0) < target
-            ]
-            if failed_metrics:
-                exit_code = 1
+    if args.fail_on_targets:
+        failed_metrics = [
+            name for name, target in report["targets"].items()
+            if report["metrics"].get(name, 0.0) < target
+        ]
+        if failed_metrics:
+            exit_code = 1
 
     return exit_code
 

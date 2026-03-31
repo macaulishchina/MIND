@@ -14,30 +14,28 @@ from tests.eval.runners.eval_owner_centered_add import _eval_config
 from tests.eval.runners.eval_owner_centered_add import _load_dataset
 
 
-DATASET_PATH = Path("tests/eval/datasets/owner_centered_add_cases.json")
-FEATURE_DATASET_PATH = Path("tests/eval/datasets/owner_centered_feature_cases.json")
-RELATION_DATASET_PATH = Path("tests/eval/datasets/owner_centered_relationship_cases.json")
+CASES_DIR = Path("tests/eval/cases")
 
 
-def test_owner_centered_dataset_loads() -> None:
-    dataset = _load_dataset(DATASET_PATH)
+def test_add_suite_loads() -> None:
+    dataset = _load_dataset(CASES_DIR)
 
-    assert dataset.name == "owner_centered_add_cases"
-    assert len(dataset.cases) == 5
-
-
-def test_owner_centered_feature_dataset_loads() -> None:
-    dataset = _load_dataset(FEATURE_DATASET_PATH)
-
-    assert dataset.name == "owner_centered_feature_cases"
-    assert len(dataset.cases) == 4
+    assert dataset.name == "cases"
+    assert len(dataset.cases) == 18
 
 
-def test_owner_centered_relationship_dataset_loads() -> None:
-    dataset = _load_dataset(RELATION_DATASET_PATH)
+def test_feature_suite_loads() -> None:
+    dataset = _load_dataset(CASES_DIR)
+    feature_cases = [c for c in dataset.cases if c["id"].startswith("owner-feature-")]
 
-    assert dataset.name == "owner_centered_relationship_cases"
-    assert len(dataset.cases) == 8
+    assert len(feature_cases) == 4
+
+
+def test_relationship_suite_loads() -> None:
+    dataset = _load_dataset(CASES_DIR)
+    rel_cases = [c for c in dataset.cases if c["id"].startswith("owner-rel-")]
+
+    assert len(rel_cases) == 8
 
 
 def test_case_owner_lookup_supports_known_and_anonymous_owners() -> None:
@@ -50,7 +48,7 @@ def test_case_owner_lookup_supports_known_and_anonymous_owners() -> None:
 
 
 def test_owner_centered_eval_case_passes_for_update_scenario(memory_config) -> None:
-    dataset = _load_dataset(DATASET_PATH)
+    dataset = _load_dataset(CASES_DIR)
     update_case = next(case for case in dataset.cases if case["id"] == "owner-add-005")
 
     result = _evaluate_case(memory_config, update_case)
@@ -69,10 +67,16 @@ def test_memory_config_forces_all_llm_stages_to_fake(memory_config) -> None:
 
 
 def test_owner_centered_report_and_summary_render(tmp_path, memory_config) -> None:
-    dataset = _load_dataset(DATASET_PATH)
-    case_results = _evaluate_dataset_cases(memory_config, dataset, concurrency=2)
+    dataset = _load_dataset(CASES_DIR)
+    # Exclude comprehensive cases — they require real LLM for meaningful results
+    smoke_dataset = DatasetSpec(
+        path=dataset.path,
+        name=dataset.name,
+        cases=[c for c in dataset.cases if not c["id"].startswith("owner-comprehensive-")],
+    )
+    case_results = _evaluate_dataset_cases(memory_config, smoke_dataset, concurrency=2)
 
-    report = build_report(dataset, case_results, _DEFAULT_TEST_TOML)
+    report = build_report(smoke_dataset, case_results, _DEFAULT_TEST_TOML)
     output_path = tmp_path / "owner_centered_report.json"
     output_path.write_text(json.dumps(report), encoding="utf-8")
     summary = build_summary(report, output_path)
@@ -83,15 +87,20 @@ def test_owner_centered_report_and_summary_render(tmp_path, memory_config) -> No
 
 
 def test_owner_centered_feature_dataset_cases_pass(memory_config) -> None:
-    dataset = _load_dataset(FEATURE_DATASET_PATH)
+    dataset = _load_dataset(CASES_DIR)
+    feature_dataset = DatasetSpec(
+        path=dataset.path,
+        name=dataset.name,
+        cases=[c for c in dataset.cases if c["id"].startswith("owner-feature-")],
+    )
 
-    case_results = _evaluate_dataset_cases(memory_config, dataset, concurrency=2)
+    case_results = _evaluate_dataset_cases(memory_config, feature_dataset, concurrency=2)
 
     assert all(result.case_pass for result in case_results)
 
 
 def test_owner_centered_relationship_representative_cases_pass(memory_config) -> None:
-    dataset = _load_dataset(RELATION_DATASET_PATH)
+    dataset = _load_dataset(CASES_DIR)
     selected_ids = {
         "owner-rel-inverse-001",
         "owner-rel-stable-001",
@@ -101,8 +110,6 @@ def test_owner_centered_relationship_representative_cases_pass(memory_config) ->
     selected_dataset = DatasetSpec(
         path=dataset.path,
         name=dataset.name,
-        focus=dataset.focus,
-        description=dataset.description,
         cases=[case for case in dataset.cases if case["id"] in selected_ids],
     )
 
@@ -113,12 +120,17 @@ def test_owner_centered_relationship_representative_cases_pass(memory_config) ->
 
 
 def test_owner_centered_dataset_concurrency_preserves_case_order(memory_config) -> None:
-    dataset = _load_dataset(DATASET_PATH)
+    dataset = _load_dataset(CASES_DIR)
+    smoke_dataset = DatasetSpec(
+        path=dataset.path,
+        name=dataset.name,
+        cases=[c for c in dataset.cases if not c["id"].startswith("owner-comprehensive-")],
+    )
 
-    case_results = _evaluate_dataset_cases(memory_config, dataset, concurrency=3)
+    case_results = _evaluate_dataset_cases(memory_config, smoke_dataset, concurrency=3)
 
     assert [result.case_id for result in case_results] == [
-        case["id"] for case in dataset.cases
+        case["id"] for case in smoke_dataset.cases
     ]
     assert all(result.case_pass for result in case_results)
 
@@ -139,18 +151,16 @@ def test_eval_config_forces_isolated_local_vector_store(memory_config, tmp_path)
     assert eval_cfg.logging.file == "mind.log"
 
 
-def test_report_includes_dataset_metadata() -> None:
-    report = build_report(
-        DatasetSpec(
-            path=DATASET_PATH,
-            name="owner_centered_add_cases",
-            focus="owner-centered add integration",
-            description="",
-            cases=[],
-        ),
-        [],
-        _DEFAULT_TEST_TOML,
-    )
+def test_load_single_case_file() -> None:
+    case_path = CASES_DIR / "owner-add-001.json"
+    dataset = _load_dataset(case_path)
+    assert len(dataset.cases) == 1
+    assert dataset.cases[0]["id"] == "owner-add-001"
 
-    assert report["dataset_name"] == "owner_centered_add_cases"
-    assert "statement_accuracy" in report["metrics"]
+
+def test_single_case_file_passes(memory_config) -> None:
+    case_path = CASES_DIR / "owner-add-001.json"
+    dataset = _load_dataset(case_path)
+    case_results = _evaluate_dataset_cases(memory_config, dataset)
+    assert len(case_results) == 1
+    assert case_results[0].case_pass is True

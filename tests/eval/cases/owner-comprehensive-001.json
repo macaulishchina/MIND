@@ -1,0 +1,130 @@
+{
+  "id": "owner-comprehensive-001",
+  "description": "多轮中文对话：涵盖关系、框架、事件、限定词、纠正、多值属性、不同置信度",
+  "owner": {
+    "external_user_id": "eval_comprehensive_001"
+  },
+  "turns": [
+    {
+      "messages": [
+        {
+          "role": "user",
+          "content": "我哥凯文是约翰霍普金斯医院的外科医生，他会说英语、普通话，还会一点法语。"
+        }
+      ]
+    },
+    {
+      "messages": [
+        {
+          "role": "user",
+          "content": "我觉得凯文的老婆可能是日本人，他去年在东京认识她的。"
+        }
+      ]
+    },
+    {
+      "messages": [
+        {
+          "role": "user",
+          "content": "等等我说错了，凯文是在梅奥诊所工作，不是约翰霍普金斯。而且他们是在大阪结的婚，不是东京。"
+        }
+      ]
+    }
+  ],
+  "expected_active_count": 7,
+  "expected_active_memories": [
+    {
+      "subject_ref": "brother:凯文",
+      "field_key": "relation_to_owner",
+      "fact_family": "relation"
+    },
+    {
+      "subject_ref": "brother:凯文",
+      "field_key": "occupation",
+      "fact_family": "attribute"
+    },
+    {
+      "canonical_text_contains": "梅奥",
+      "subject_ref": "brother:凯文",
+      "fact_family": "attribute"
+    },
+    {
+      "canonical_text_contains": "英语",
+      "subject_ref": "brother:凯文"
+    },
+    {
+      "canonical_text_contains": "普通话",
+      "subject_ref": "brother:凯文"
+    },
+    {
+      "canonical_text_contains": "结婚",
+      "subject_ref": "brother:凯文"
+    },
+    {
+      "canonical_text_contains": "大阪",
+      "subject_ref": "brother:凯文"
+    }
+  ],
+  "expected_refs": [
+    {
+      "scope": "local",
+      "ref_type": "person",
+      "key": "凯文"
+    },
+    {
+      "scope": "world",
+      "ref_type": "org",
+      "key": "梅奥诊所"
+    }
+  ],
+  "expected_statements": [
+    {
+      "predicate": "brother",
+      "args": ["@self", "@local/person(\"凯文\")"]
+    },
+    {
+      "predicate": "occupation",
+      "args_contains": ["凯文", "外科医生"]
+    },
+    {
+      "predicate": "speak",
+      "args_contains": ["凯文"]
+    },
+    {
+      "predicate": "believe",
+      "category": "frame"
+    },
+    {
+      "predicate": "correct_intent",
+      "category": "frame"
+    }
+  ],
+  "expected_evidence": [
+    {
+      "predicate": "brother",
+      "conf_range": [0.9, 1.0]
+    },
+    {
+      "predicate": "occupation",
+      "conf_range": [0.8, 1.0]
+    },
+    {
+      "predicate": "believe",
+      "conf_range": [0.4, 0.7]
+    },
+    {
+      "predicate": "correct_intent",
+      "conf_range": [0.8, 1.0]
+    }
+  ],
+  "expected_deleted_memories": [
+    {
+      "canonical_text_contains": "约翰霍普金斯"
+    }
+  ],
+  "expected_versioned_active_memories": [
+    {
+      "canonical_text_contains": "梅奥",
+      "subject_ref": "brother:凯文"
+    }
+  ]
+}

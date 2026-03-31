@@ -118,20 +118,20 @@ class FakeLLM(BaseLLM):
         conversation = prompt_text.split("Conversation:\n", 1)[-1]
         builder = _FakeSTLBuilder()
 
-        for turn_index, line in enumerate(conversation.splitlines(), start=1):
+        for line in conversation.splitlines():
             if not line.startswith("User:"):
                 continue
             content = line.split(":", 1)[1].strip()
             if not content or _looks_like_question(content):
                 continue
 
-            if _handle_frame_patterns(builder, content, turn_index):
+            if _handle_frame_patterns(builder, content):
                 continue
-            if _handle_relation_patterns(builder, content, turn_index):
+            if _handle_relation_patterns(builder, content):
                 continue
 
             for clause in _split_into_fact_candidates(content):
-                _handle_self_clause(builder, clause, turn_index)
+                _handle_self_clause(builder, clause)
 
         return builder.render()
 
@@ -186,7 +186,6 @@ class _FakeSTLBuilder:
         self,
         predicate: str,
         args: List[str],
-        turn_index: int,
         conf: float = 0.9,
         span: Optional[str] = None,
         frame: bool = False,
@@ -196,7 +195,7 @@ class _FakeSTLBuilder:
         prefix = "f" if frame else "p"
         local_id = f"{prefix}{getattr(self, counter_attr)}"
         self.lines.append(f"${local_id} = {predicate}({', '.join(args)})")
-        ev = f'ev(${local_id}, conf={conf:.1f}, src="turn_{turn_index}")'
+        ev = f'ev(${local_id}, conf={conf:.1f})'
         if span:
             ev = ev[:-1] + f', span="{span}")'
         self.lines.append(ev)
@@ -206,7 +205,7 @@ class _FakeSTLBuilder:
         return "\n".join(self.lines).strip()
 
 
-def _handle_self_clause(builder: _FakeSTLBuilder, clause: str, turn_index: int) -> bool:
+def _handle_self_clause(builder: _FakeSTLBuilder, clause: str) -> bool:
     cleaned = _clean_fact_text(clause)
     if not cleaned:
         return False
@@ -224,7 +223,7 @@ def _handle_self_clause(builder: _FakeSTLBuilder, clause: str, turn_index: int) 
     for pattern, predicate, value_fn in patterns:
         match = re.match(pattern, cleaned, re.I)
         if match:
-            builder.prop(predicate, ["@s", value_fn(match)], turn_index)
+            builder.prop(predicate, ["@s", value_fn(match)])
             return True
 
     zh_patterns = (
@@ -236,13 +235,13 @@ def _handle_self_clause(builder: _FakeSTLBuilder, clause: str, turn_index: int) 
     for pattern, predicate, value_fn in zh_patterns:
         match = re.match(pattern, cleaned)
         if match:
-            builder.prop(predicate, ["@s", value_fn(match)], turn_index)
+            builder.prop(predicate, ["@s", value_fn(match)])
             return True
 
     return False
 
 
-def _handle_relation_patterns(builder: _FakeSTLBuilder, text: str, turn_index: int) -> bool:
+def _handle_relation_patterns(builder: _FakeSTLBuilder, text: str) -> bool:
     cleaned = _clean_fact_text(text)
     if not cleaned:
         return False
@@ -257,8 +256,8 @@ def _handle_relation_patterns(builder: _FakeSTLBuilder, text: str, turn_index: i
     if named_is:
         relation = _normalize_relation_name(named_is.group(1))
         person_ref = builder.local_person(named_is.group(2))
-        builder.prop(relation, ["@s", person_ref], turn_index)
-        builder.prop("occupation", [person_ref, f'"{named_is.group(3).strip()}"'], turn_index)
+        builder.prop(relation, ["@s", person_ref])
+        builder.prop("occupation", [person_ref, f'"{named_is.group(3).strip()}"'])
         return True
 
     named_drink = re.match(
@@ -269,8 +268,8 @@ def _handle_relation_patterns(builder: _FakeSTLBuilder, text: str, turn_index: i
     if named_drink:
         relation = _normalize_relation_name(named_drink.group(1))
         person_ref = builder.local_person(named_drink.group(2))
-        builder.prop(relation, ["@s", person_ref], turn_index)
-        builder.prop("drink", [person_ref, f'"{named_drink.group(3).strip()}"'], turn_index)
+        builder.prop(relation, ["@s", person_ref])
+        builder.prop("drink", [person_ref, f'"{named_drink.group(3).strip()}"'])
         return True
 
     named_like = re.match(
@@ -281,8 +280,8 @@ def _handle_relation_patterns(builder: _FakeSTLBuilder, text: str, turn_index: i
     if named_like:
         relation = _normalize_relation_name(named_like.group(1))
         person_ref = builder.local_person(named_like.group(2))
-        builder.prop(relation, ["@s", person_ref], turn_index)
-        builder.prop("like", [person_ref, f'"{named_like.group(3).strip()}"'], turn_index)
+        builder.prop(relation, ["@s", person_ref])
+        builder.prop("like", [person_ref, f'"{named_like.group(3).strip()}"'])
         return True
 
     named_live_in = re.match(
@@ -293,8 +292,8 @@ def _handle_relation_patterns(builder: _FakeSTLBuilder, text: str, turn_index: i
     if named_live_in:
         relation = _normalize_relation_name(named_live_in.group(1))
         person_ref = builder.local_person(named_live_in.group(2))
-        builder.prop(relation, ["@s", person_ref], turn_index)
-        builder.prop("live_in", [person_ref, f'"{named_live_in.group(3).strip()}"'], turn_index)
+        builder.prop(relation, ["@s", person_ref])
+        builder.prop("live_in", [person_ref, f'"{named_live_in.group(3).strip()}"'])
         return True
 
     unknown_attr = re.match(
@@ -305,8 +304,8 @@ def _handle_relation_patterns(builder: _FakeSTLBuilder, text: str, turn_index: i
     if unknown_attr:
         relation = _normalize_relation_name(unknown_attr.group(1))
         person_ref = builder.blank_ref()
-        builder.prop(relation, ["@s", person_ref], turn_index)
-        builder.prop("attribute", [person_ref, f'"{unknown_attr.group(2).strip()}"'], turn_index)
+        builder.prop(relation, ["@s", person_ref])
+        builder.prop("attribute", [person_ref, f'"{unknown_attr.group(2).strip()}"'])
         return True
 
     inverse_like = re.match(
@@ -317,14 +316,14 @@ def _handle_relation_patterns(builder: _FakeSTLBuilder, text: str, turn_index: i
     if inverse_like:
         relation = _normalize_relation_name(inverse_like.group(2))
         person_ref = builder.local_person(inverse_like.group(1))
-        builder.prop(relation, ["@s", person_ref], turn_index)
-        builder.prop("like", [person_ref, f'"{inverse_like.group(3).strip()}"'], turn_index)
+        builder.prop(relation, ["@s", person_ref])
+        builder.prop("like", [person_ref, f'"{inverse_like.group(3).strip()}"'])
         return True
 
     return False
 
 
-def _handle_frame_patterns(builder: _FakeSTLBuilder, text: str, turn_index: int) -> bool:
+def _handle_frame_patterns(builder: _FakeSTLBuilder, text: str) -> bool:
     cleaned = _clean_fact_text(text)
     if not cleaned:
         return False
@@ -339,8 +338,8 @@ def _handle_frame_patterns(builder: _FakeSTLBuilder, text: str, turn_index: int)
     if hope_match:
         person_ref = builder.local_person(hope_match.group(1))
         city_ref = builder.world_entity("city", hope_match.group(2))
-        target = builder.prop("come", [person_ref, city_ref], turn_index)
-        builder.prop("hope", ["@s", target], turn_index, frame=True)
+        target = builder.prop("come", [person_ref, city_ref])
+        builder.prop("hope", ["@s", target], frame=True)
         return True
 
     say_match = re.match(
@@ -352,8 +351,8 @@ def _handle_frame_patterns(builder: _FakeSTLBuilder, text: str, turn_index: int)
         speaker_ref = builder.local_person(say_match.group(1))
         person_ref = builder.local_person(say_match.group(2))
         city_ref = builder.world_entity("city", say_match.group(3))
-        target = builder.prop("live_in", [person_ref, city_ref], turn_index)
-        builder.prop("say", [speaker_ref, target], turn_index, conf=0.8, frame=True)
+        target = builder.prop("live_in", [person_ref, city_ref])
+        builder.prop("say", [speaker_ref, target], conf=0.8, frame=True)
         return True
 
     believe_match = re.match(
@@ -364,9 +363,9 @@ def _handle_frame_patterns(builder: _FakeSTLBuilder, text: str, turn_index: int)
     if believe_match:
         relation = _normalize_relation_name(believe_match.group(1))
         person_ref = builder.local_person("mom" if relation == "mother" else "dad")
-        builder.prop(relation, ["@s", person_ref], turn_index)
-        target = builder.prop("like", [person_ref, f'"{believe_match.group(2).strip()}"'], turn_index)
-        builder.prop("believe", ["@s", target], turn_index, conf=0.6, frame=True)
+        builder.prop(relation, ["@s", person_ref])
+        target = builder.prop("like", [person_ref, f'"{believe_match.group(2).strip()}"'])
+        builder.prop("believe", ["@s", target], conf=0.6, frame=True)
         return True
 
     if_match = re.match(
@@ -375,8 +374,8 @@ def _handle_frame_patterns(builder: _FakeSTLBuilder, text: str, turn_index: int)
         re.I,
     )
     if if_match:
-        target = builder.prop("plan", ["@s", f'"{if_match.group(1).strip()}"'], turn_index)
-        builder.prop("if", ['rain("tomorrow")', target], turn_index, frame=True)
+        target = builder.prop("plan", ["@s", f'"{if_match.group(1).strip()}"'])
+        builder.prop("if", ['rain("tomorrow")', target], frame=True)
         return True
 
     return False

@@ -1,0 +1,40 @@
+{
+  "id": "owner-add-002",
+  "description": "anonymous owner is reused across multiple turns",
+  "owner": {
+    "anonymous_session_id": "eval_anon_001"
+  },
+  "turns": [
+    {
+      "messages": [
+        {
+          "role": "user",
+          "content": "My name is June"
+        }
+      ]
+    },
+    {
+      "messages": [
+        {
+          "role": "user",
+          "content": "I live in Hangzhou"
+        }
+      ]
+    }
+  ],
+  "expected_active_count": 2,
+  "expected_active_memories": [
+    {
+      "canonical_text": "[self] name=June",
+      "subject_ref": "self",
+      "field_key": "name",
+      "fact_family": "attribute"
+    },
+    {
+      "canonical_text": "[self] location=Hangzhou",
+      "subject_ref": "self",
+      "field_key": "location",
+      "fact_family": "attribute"
+    }
+  ]
+}

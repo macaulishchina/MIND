@@ -82,7 +82,7 @@ def test_fake_llm_can_emit_basic_stl_program() -> None:
     assert '@p1 = @local/person("green")' in program
     assert "$p1 = friend(@s, @p1)" in program
     assert "$p2 = occupation(@p1, \"football player\")" in program
-    assert "ev($p1, conf=0.9, src=\"turn_1\")" in program
+    assert "ev($p1, conf=0.9)" in program
 
 
 def test_fake_llm_supports_generic_chat_prompt() -> None:

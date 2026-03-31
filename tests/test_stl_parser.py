@@ -128,8 +128,8 @@ class TestParseProgram:
 @t = @local/person("tom")
 $p1 = friend(@s, @t)
 $p2 = occupation(@t, "football_player")
-ev($p1, conf=1.0, src="turn_1")
-ev($p2, conf=1.0, src="turn_1")
+ev($p1, conf=1.0)
+ev($p2, conf=1.0)
 """
         prog = parse_program(text, batch_id="test_batch")
         assert len(prog.refs) == 2
@@ -145,8 +145,8 @@ ev($p2, conf=1.0, src="turn_1")
 @u = _:p1
 $p1 = friend(@s, @u)
 $p2 = occupation(@u, "football_player")
-ev($p1, conf=1.0, src="turn_1")
-ev($p2, conf=1.0, src="turn_1")
+ev($p1, conf=1.0)
+ev($p2, conf=1.0)
 """
         prog = parse_program(text, batch_id="test_batch")
         # @u should have blank scope
@@ -162,10 +162,10 @@ $p1 = speak(@s, "中文")
 $p2 = speak(@s, "英语")
 $p3 = speak(@s, "日语")
 $p4 = degree($p3, "slight")
-ev($p1, conf=1.0, src="turn_1")
-ev($p2, conf=1.0, src="turn_1")
-ev($p3, conf=1.0, src="turn_1")
-ev($p4, conf=0.8, src="turn_1", span="一点点")
+ev($p1, conf=1.0)
+ev($p2, conf=1.0)
+ev($p3, conf=1.0)
+ev($p4, conf=0.8, span="一点点")
 """
         prog = parse_program(text, batch_id="test_batch")
         assert len(prog.statements) == 4
@@ -181,7 +181,7 @@ ev($p4, conf=0.8, src="turn_1", span="一点点")
 @k = @world/city("tokyo")
 $p1 = come(@t, @k)
 $f1 = hope(@s, $p1)
-ev($f1, conf=0.9, src="turn_1")
+ev($f1, conf=0.9)
 """
         prog = parse_program(text, batch_id="test_batch")
         assert len(prog.refs) == 3
@@ -196,7 +196,7 @@ ev($f1, conf=0.9, src="turn_1")
 @s = @self
 $p1 = plan(@s, "running")
 $f1 = if(neg(rain("tomorrow")), $p1)
-ev($f1, conf=0.9, src="turn_1")
+ev($f1, conf=0.9)
 """
         prog = parse_program(text, batch_id="test_batch")
         # The inline pred should be expanded
@@ -206,13 +206,12 @@ ev($f1, conf=0.9, src="turn_1")
         text = """\
 @s = @self
 $p1 = resign(@s)
-ev($p1, conf=0.6, src="turn_1", span="好像")
+ev($p1, conf=0.6, span="好像")
 """
         prog = parse_program(text, batch_id="test_batch")
         assert len(prog.evidence) == 1
         ev = prog.evidence[0]
         assert ev.conf == 0.6
-        assert ev.src == "turn_1"
         assert ev.span == "好像"
 
     def test_note_with_new_pred(self):
@@ -221,7 +220,7 @@ ev($p1, conf=0.6, src="turn_1", span="好像")
 @s = @self
 $f1 = obsessed_with(@s, "long_distance_running")
 note($f1, "NEW_PRED obsessed_with | frame | experiencer,target | intense recent fascination")
-ev($f1, conf=0.8, src="turn_1", span="迷上了")
+ev($f1, conf=0.8, span="迷上了")
 """
         prog = parse_program(text, batch_id="test_batch")
         assert len(prog.notes) == 1
@@ -234,7 +233,7 @@ ev($f1, conf=0.8, src="turn_1", span="迷上了")
 @s = @self
 # Another comment
 $p1 = name(@s, "Alice")
-ev($p1, conf=1.0, src="turn_1")
+ev($p1, conf=1.0)
 """
         prog = parse_program(text, batch_id="test_batch")
         assert len(prog.statements) == 1
@@ -247,7 +246,7 @@ ev($p1, conf=1.0, src="turn_1")
 
 $p1 = name(@s, "Alice")
 
-ev($p1, conf=1.0, src="turn_1")
+ev($p1, conf=1.0)
 
 """
         prog = parse_program(text, batch_id="test_batch")
@@ -269,7 +268,7 @@ ev($p1, conf=1.0, src=\u201cturn_1\u201d)
         text = """\
 @s = @self
 $p1 = name(@s, "Alice")
-ev($p1, conf=1.0, src="turn_1")
+ev($p1, conf=1.0)
 """
         prog = parse_program(text, batch_id="test_batch")
         assert prog.refs[0].parse_level == ParseLevel.STRICT
@@ -281,14 +280,14 @@ ev($p1, conf=1.0, src="turn_1")
 @s = @self
 this is not valid STL syntax at all
 $p1 = name(@s, "Alice")
-ev($p1, conf=1.0, src="turn_1")
+ev($p1, conf=1.0)
 """
         prog = parse_program(text, batch_id="test_batch")
         assert len(prog.failed_lines) == 1
         assert "this is not valid" in prog.failed_lines[0].raw_text
 
     def test_batch_id_propagated(self):
-        text = "$p1 = name(@self, \"Alice\")\nev($p1, conf=1.0, src=\"turn_1\")"
+        text = "$p1 = name(@self, \"Alice\")\nev($p1, conf=1.0)"
         prog = parse_program(text, batch_id="my_batch_123")
         assert prog.batch_id == "my_batch_123"
 
@@ -297,7 +296,7 @@ ev($p1, conf=1.0, src="turn_1")
 @s = @self
 @t = @local/person("tom")
 $p1 = friend(@s, @t)
-ev($p1, conf=1.0, src="turn_1")
+ev($p1, conf=1.0)
 """
         prog = parse_program(text, batch_id="test_batch")
         ids = prog.ref_ids
@@ -312,7 +311,7 @@ ev($p1, conf=1.0, src="turn_1")
 class TestEdgeCases:
     def test_self_implicit_ref(self):
         """@self should be usable without explicit @s = @self."""
-        text = '$p1 = name(@self, "Alice")\nev($p1, conf=1.0, src="turn_1")'
+        text = '$p1 = name(@self, "Alice")\nev($p1, conf=1.0)'
         prog = parse_program(text, batch_id="test_batch")
         assert len(prog.statements) == 1
 
@@ -330,16 +329,16 @@ _:b1 = _:b1
 $p1 = eat_together(@s, @t)
 $p2 = location($p1, @mk)
 $p3 = time($p1, "today_noon")
-ev($p1, conf=1.0, src="turn_1")
-ev($p2, conf=1.0, src="turn_3")
+ev($p1, conf=1.0)
+ev($p2, conf=1.0)
 
 $p4 = plan(@t, resign(@t))
 $p5 = time($p4, "next_month")
 $f1 = say(@t, $p4)
-ev($f1, conf=0.85, src="turn_4")
+ev($f1, conf=0.85)
 
 $p10 = spouse(@t, @sa)
-ev($p10, conf=0.9, src="turn_8")
+ev($p10, conf=0.9)
 """
         prog = parse_program(text, batch_id="test_batch")
         assert len(prog.refs) >= 6

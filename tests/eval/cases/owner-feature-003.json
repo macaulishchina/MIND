@@ -1,0 +1,53 @@
+{
+  "id": "owner-feature-003",
+  "description": "belief frame preserves owner stance toward a third-party preference",
+  "owner": {
+    "external_user_id": "feature_belief_001"
+  },
+  "turns": [
+    {
+      "messages": [
+        {
+          "role": "user",
+          "content": "I think my mom likes gold necklace"
+        }
+      ]
+    }
+  ],
+  "expected_refs": [
+    {
+      "scope": "local",
+      "ref_type": "person",
+      "key": "mom"
+    }
+  ],
+  "expected_statements": [
+    {
+      "predicate": "mother",
+      "args": [
+        "@self",
+        "@local/person(\"mom\")"
+      ]
+    },
+    {
+      "predicate": "like",
+      "args": [
+        "@local/person(\"mom\")",
+        "gold necklace"
+      ]
+    },
+    {
+      "predicate": "believe",
+      "category": "frame"
+    }
+  ],
+  "expected_evidence": [
+    {
+      "predicate": "believe",
+      "conf_range": [
+        0.5,
+        0.7
+      ]
+    }
+  ]
+}

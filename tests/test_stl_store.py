@@ -125,7 +125,7 @@ class TestCRUD:
 
     def test_insert_evidence(self, memory_store):
         memory_store.insert_evidence(
-            target_id="s1", conf=0.9, src="turn_1", span="我朋友",
+            target_id="s1", conf=0.9, span="我朋友",
         )
         conn = memory_store._get_conn()
         row = conn.execute("SELECT * FROM evidence WHERE target_id = 's1'").fetchone()
@@ -200,10 +200,10 @@ class TestStoreProgram:
             ],
             evidence=[
                 ParsedEvidence(
-                    target_local_id="p1", conf=1.0, src="turn_1",
+                    target_local_id="p1", conf=1.0,
                 ),
                 ParsedEvidence(
-                    target_local_id="p2", conf=0.9, src="turn_1",
+                    target_local_id="p2", conf=0.9,
                 ),
             ],
             notes=[],

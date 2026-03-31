@@ -118,6 +118,32 @@ class OpsLogger:
     # LLM
     # ------------------------------------------------------------------
 
+    def llm_start(
+        self,
+        provider: str,
+        model: str,
+        n_msgs: int,
+        in_tok: int,
+        *,
+        prompt_name: Optional[str] = None,
+        messages: Optional[Sequence[dict]] = None,
+    ) -> None:
+        """Log the start of an LLM call (before waiting for response)."""
+        if not self._sw.llm:
+            return
+        tag = self._tag()
+        prompt_part = f" | {prompt_name}" if prompt_name else ""
+        logger.info(
+            "%s🧠 [LLM] ▶ %s | %s | %d msgs | ~%d in_tok%s",
+            tag, provider, model, n_msgs, in_tok, prompt_part,
+        )
+        if self._sw.verbose and messages:
+            for m in messages:
+                role = m.get("role", "?")
+                content = m.get("content", "")
+                logger.info("  ┊ [%s]\n%s", role, content)
+            logger.info("  ┊ ── end of request ──")
+
     def llm_call(
         self,
         provider: str,
@@ -139,23 +165,9 @@ class OpsLogger:
             "%s🧠 [LLM] ── %s | %s | %d msgs | ~%d in_tok | ~%d out_tok | %.2fs ──",
             tag, provider, model, n_msgs, in_tok, out_tok, elapsed,
         )
-        if self._sw.verbose:
-            if prompt_name and messages:
-                # Show prompt template name + user message preview
-                user_parts = [
-                    m.get("content", "") for m in messages
-                    if m.get("role") == "user"
-                ]
-                user_preview = " ".join(user_parts)[:_VERBOSE_MAX_LEN]
-                logger.info("  ┊ prompt  → %s | %s", prompt_name, user_preview)
-            elif messages:
-                # Fallback: no prompt_name, show concatenated content
-                preview = "".join(
-                    m.get("content", "") for m in messages
-                )[:_VERBOSE_MAX_LEN]
-                logger.info("  ┊ prompt  → %s", preview)
-            if response:
-                logger.info("  ┊ output  → %s", response[:_VERBOSE_MAX_LEN])
+        if self._sw.verbose and response:
+            logger.info("  ┊ [response]\n%s", response)
+            logger.info("  ┊ ── end of response ──")
 
     def llm_error(
         self,

@@ -59,7 +59,6 @@ _RE_REF_BLANK = re.compile(r"^_:(\w+)$")
 
 # Evidence kv-pair patterns
 _RE_KV_CONF = re.compile(r'conf\s*=\s*([\d.]+)')
-_RE_KV_SRC = re.compile(r'src\s*=\s*"([^"]*)"')
 _RE_KV_SPAN = re.compile(r'span\s*=\s*"([^"]*)"')
 _RE_KV_RESIDUAL = re.compile(r'residual\s*=\s*"([^"]*)"')
 
@@ -296,13 +295,11 @@ def _strict_parse_line(line: str) -> Optional[Any]:
         if not conf_m:
             raise ValueError(f"ev() missing conf: {stripped!r}")
         conf = float(conf_m.group(1))
-        src_m = _RE_KV_SRC.search(kv_text)
         span_m = _RE_KV_SPAN.search(kv_text)
         residual_m = _RE_KV_RESIDUAL.search(kv_text)
         return ParsedEvidence(
             target_local_id=target,
             conf=conf,
-            src=src_m.group(1) if src_m else None,
             span=span_m.group(1) if span_m else None,
             residual=residual_m.group(1) if residual_m else None,
         )
@@ -330,8 +327,6 @@ def _strict_parse_line(line: str) -> Optional[Any]:
 
 _FUZZY_TYPOS = {
     "confirm": "conf",
-    "souce": "src",
-    "source": "src",
     "confidence": "conf",
 }
 

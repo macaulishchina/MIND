@@ -55,6 +55,9 @@ class BaseLLM(ABC):
         in_text = "".join(m.get("content", "") for m in messages)
         in_tokens = _estimate_tokens(in_text)
 
+        ops.llm_start(provider, model, n_msgs, in_tokens,
+                      prompt_name=prompt_name, messages=messages)
+
         t0 = time.perf_counter()
         try:
             result = self._generate(

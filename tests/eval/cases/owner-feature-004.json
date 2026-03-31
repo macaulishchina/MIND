@@ -1,0 +1,39 @@
+{
+  "id": "owner-feature-004",
+  "description": "if frame keeps conditional structure instead of dropping it",
+  "owner": {
+    "external_user_id": "feature_if_001"
+  },
+  "turns": [
+    {
+      "messages": [
+        {
+          "role": "user",
+          "content": "If it rains tomorrow, I will work from home"
+        }
+      ]
+    }
+  ],
+  "expected_statements": [
+    {
+      "predicate": "plan",
+      "args": [
+        "@self",
+        "work from home"
+      ]
+    },
+    {
+      "predicate": "if",
+      "category": "frame"
+    }
+  ],
+  "expected_evidence": [
+    {
+      "predicate": "if",
+      "conf_range": [
+        0.8,
+        1.0
+      ]
+    }
+  ]
+}

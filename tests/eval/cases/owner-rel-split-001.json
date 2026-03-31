@@ -1,0 +1,32 @@
+{
+  "id": "owner-rel-split-001",
+  "description": "mother location case should project relation and location separately",
+  "owner": {
+    "external_user_id": "owner_rel_split_001"
+  },
+  "turns": [
+    {
+      "messages": [
+        {
+          "role": "user",
+          "content": "My mother Lisa lives in Toronto"
+        }
+      ]
+    }
+  ],
+  "expected_active_count": 2,
+  "expected_active_memories": [
+    {
+      "canonical_text": "[mother:lisa] relation_to_owner=mother",
+      "subject_ref": "mother:lisa",
+      "field_key": "relation_to_owner",
+      "fact_family": "relation"
+    },
+    {
+      "canonical_text": "[mother:lisa] location=Toronto",
+      "subject_ref": "mother:lisa",
+      "field_key": "location",
+      "fact_family": "attribute"
+    }
+  ]
+}
