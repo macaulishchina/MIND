@@ -24,13 +24,14 @@ cd /home/macaulish/workspace/MIND
 
 - `mindt.toml`
   - 仓库默认测试配置
-  - 当前使用 `fake` LLM 和 `fake-embedding`
-  - 适合本地快速验证，不消耗真实 API
+  - 仍保留更轻量的本地存储 / embedding 配置，适合手动评测时减少外围依赖
 - `mind.toml`
   - 你的本地开发配置
   - 可能连接真实 LLM / embedding / pgvector / qdrant
 
 如果只是手动验证 runner 行为，优先使用 `mindt.toml`。
+如果想完全避免真实模型调用，使用 pytest 里的显式 fake 覆盖，或手动传入 fake 配置。
+默认 TOML 已不再展开 legacy `llm.extraction / llm.normalization` stage；主链相关的可选 stage override 只有 `llm.stl_extraction` 和 `llm.decision`。
 
 ## 1. Owner-Centered Add Eval
 
@@ -160,9 +161,10 @@ pytest -q tests/test_fake_llm.py tests/test_memory.py
 补充说明：
 
 - 常规 pytest 默认应走 `tests/conftest.py` 里的显式 fake 覆盖
-- 不应该依赖 `mindt.toml` 恰好配置成 fake，测试代码本身要明确声明自己不需要真实 LLM
+- 不应该依赖 `mindt.toml` 的默认 provider 是什么，测试代码本身要明确声明自己不需要真实 LLM
 
 ## 5. 常见建议
 
 - 想验证业务主链路，优先看 owner-centered add eval
-- 想快速跑本地 deterministic 验证，优先用 `mindt.toml`
+- 想跑常规离线测试，优先用 pytest，因为测试夹具会显式切 fake
+- 想手动跑 add 评测且减少外围依赖，优先用 `mindt.toml`

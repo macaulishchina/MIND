@@ -89,7 +89,8 @@ class ConfigManager:
 
     def _resolve(self, raw: Dict[str, Any]) -> MemoryConfig:
         llm_section = raw.get("llm", {})
-        stage_keys = {"extraction", "normalization", "decision"}
+        active_stage_keys = {"decision", "stl_extraction"}
+        legacy_stage_keys = {"extraction", "normalization"}
 
         # 1. Extract [llm.*] provider sub-tables
         #    TOML nested tables [llm.openai] appear as sub-dicts of llm
@@ -98,8 +99,14 @@ class ConfigManager:
         llm_globals: Dict[str, Any] = {}
         for key, value in llm_section.items():
             if isinstance(value, dict):
-                if key in stage_keys:
+                if key in active_stage_keys:
                     stage_defs[key] = value
+                elif key in legacy_stage_keys:
+                    logger.warning(
+                        "Ignoring deprecated [llm.%s] override; "
+                        "legacy fact pipeline has been removed",
+                        key,
+                    )
                 else:
                     provider_defs[key] = value
             else:

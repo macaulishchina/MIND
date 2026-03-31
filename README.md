@@ -109,7 +109,12 @@ m = Memory(overrides={"llm": {"temperature": 0.5}})
 所有依赖对象（LLM、Embedder 等）在构造时创建并固定，后续方法调用不再接受配置变更。
 若需不同配置，请创建新的 `Memory` 实例。
 
-当前 `add()` 流程会先把对话提取成原子事实，再归一化为 owner-centered 的结构化 envelope，
+当前 `add()` 流程走 STL-native 主链：
+
+1. 单次 LLM 调用把对话翻译成 STL
+2. 解析并持久化 `refs / statements / evidence`
+3. 再把 statement 投影成 owner-centered memory
+
 最终以结构标签式文本落库，例如：
 
 - `[self] name=John`
@@ -124,9 +129,8 @@ m = Memory(overrides={"llm": {"temperature": 0.5}})
 ```
 mind.toml
 ├── [llm]                    ← 通用设置：provider + temperature
-│   ├── [llm.extraction]     ← 可选：抽取阶段覆盖
-│   ├── [llm.normalization]  ← 可选：归一化阶段覆盖
-│   ├── [llm.decision]       ← 可选：决策阶段覆盖
+│   ├── [llm.stl_extraction] ← 可选：STL 抽取阶段覆盖
+│   ├── [llm.decision]       ← 可选：投影更新决策阶段覆盖
 │   ├── [llm.openai]         ← 完整 provider 定义
 │   ├── [llm.anthropic]      ← 完整 provider 定义
 │   ├── [llm.google]         ← 完整 provider 定义
@@ -145,7 +149,7 @@ mind.toml
 # 离线单元测试（无需 API Key）
 python -m pytest tests/test_storage.py -v
 
-# Memory 流程测试（由 mindt.toml 切换到 fake LLM / fake embedding，无需 API Key）
+# Memory 流程测试（pytest 夹具会显式切到 fake LLM / fake embedding，无需 API Key）
 python -m pytest tests/test_memory.py -v
 
 # STL-native add 评估
@@ -153,6 +157,7 @@ python tests/eval/runners/eval_owner_centered_add.py --toml mindt.toml --pretty
 ```
 
 说明：
+- `mindt.toml` 的默认 LLM provider 现在与 `mind.toml` 对齐；手动跑 eval 可能会触发真实模型调用
 - 更详细的评估说明、真实 LLM 运行方式和并发参数见 `tests/eval/README.md`。
 
 ## 项目结构

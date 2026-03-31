@@ -69,14 +69,19 @@ The system SHALL narrow update candidates by owner, subject reference, fact fami
 
 ### Requirement: Stage-Specific LLM Overrides
 
-The system SHALL allow different LLM configurations for extraction, normalization, and decision stages with fallback to the global LLM configuration.
+The system SHALL allow stage-specific LLM overrides only for stages that remain on the STL-native `add()` path, with fallback to the global LLM configuration.
 
-#### Scenario: Unconfigured Stage Falls Back To Global LLM
+#### Scenario: Unconfigured Active Stage Falls Back To Global LLM
 
 - WHEN a stage-specific LLM override is absent
 - THEN the system uses the global resolved LLM configuration for that stage
 
-#### Scenario: Configured Stage Uses Its Own Provider Selection
+#### Scenario: Active Add Path Uses STL Extraction And Decision Stages
 
-- WHEN a stage-specific LLM override is present
-- THEN the system resolves and uses that stage-specific provider/model configuration for the corresponding stage
+- WHEN `Memory.add()` runs through the current STL-native pipeline
+- THEN the system resolves stage-specific LLM configuration from `llm.stl_extraction` for semantic extraction and from `llm.decision` for owner-centered projection/update decisions
+
+#### Scenario: Removed Legacy Stages Are Not Supported Runtime Knobs
+
+- WHEN deprecated legacy stages such as `llm.extraction` or `llm.normalization` appear in configuration
+- THEN the system does not treat them as part of the supported runtime stage override surface for the maintained add flow

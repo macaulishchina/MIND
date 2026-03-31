@@ -115,3 +115,19 @@ class TestMemoryEndToEnd:
         operations = [h["operation"] for h in hist]
         assert "ADD" in operations
         assert "UPDATE" in operations
+
+    def test_stl_extraction_uses_global_extraction_temperature(self, memory_config):
+        memory_config.llm.extraction_temperature = 0.42
+        memory_config.llm_stages = {}
+        m = Memory(memory_config)
+        captured = {}
+
+        def capture_generate(messages, temperature=None):
+            captured["temperature"] = temperature
+            return ""
+
+        m.stl_extraction_llm.generate = capture_generate
+
+        m._extract_stl("User: My name is Alice")
+
+        assert captured["temperature"] == 0.42

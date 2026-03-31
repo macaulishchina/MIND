@@ -119,8 +119,8 @@ def test_template_child_overrides_batch_base_url():
     assert cfg.llm.batch_base_url == "https://batch-child.example.com"
 
 
-def test_stage_specific_llm_override_inherits_provider_defaults():
-    """Stage configs resolve on top of [llm] globals and providers."""
+def test_decision_stage_override_inherits_provider_defaults():
+    """Active stage configs resolve on top of [llm] globals and providers."""
     mgr = ConfigManager.from_dict({
         "llm": {
             "provider": "test",
@@ -133,7 +133,7 @@ def test_stage_specific_llm_override_inherits_provider_defaults():
                 "protocols": "fake",
                 "model": "alt-model",
             },
-            "extraction": {
+            "decision": {
                 "provider": "alt",
                 "temperature": 0.3,
             },
@@ -142,9 +142,69 @@ def test_stage_specific_llm_override_inherits_provider_defaults():
     cfg = mgr.get()
 
     assert cfg.llm.model == "base-model"
-    assert cfg.llm_stages["extraction"].provider == "alt"
-    assert cfg.llm_stages["extraction"].model == "alt-model"
-    assert cfg.llm_stages["extraction"].temperature == 0.3
+    assert cfg.llm_stages["decision"].provider == "alt"
+    assert cfg.llm_stages["decision"].model == "alt-model"
+    assert cfg.llm_stages["decision"].temperature == 0.3
+
+
+def test_legacy_extraction_and_normalization_stages_are_ignored(caplog):
+    """Deprecated extraction/normalization stage overrides are ignored."""
+    mgr = ConfigManager.from_dict({
+        "llm": {
+            "provider": "test",
+            "test": {
+                "protocols": "fake",
+                "model": "base-model",
+            },
+            "alt": {
+                "protocols": "fake",
+                "model": "alt-model",
+            },
+            "extraction": {
+                "provider": "alt",
+                "temperature": 0.3,
+            },
+            "normalization": {
+                "provider": "alt",
+                "temperature": 0.4,
+            },
+        },
+    })
+
+    with caplog.at_level(logging.WARNING, logger="mind.config.manager"):
+        cfg = mgr.get()
+
+    assert "extraction" not in cfg.llm_stages
+    assert "normalization" not in cfg.llm_stages
+    assert "Ignoring deprecated [llm.extraction] override" in caplog.text
+    assert "Ignoring deprecated [llm.normalization] override" in caplog.text
+
+
+def test_stl_extraction_stage_override_is_resolved():
+    """stl_extraction participates in stage resolution like other stages."""
+    mgr = ConfigManager.from_dict({
+        "llm": {
+            "provider": "test",
+            "temperature": 0.1,
+            "test": {
+                "protocols": "fake",
+                "model": "base-model",
+            },
+            "alt": {
+                "protocols": "fake",
+                "model": "alt-model",
+            },
+            "stl_extraction": {
+                "provider": "alt",
+                "temperature": 0.2,
+            },
+        },
+    })
+    cfg = mgr.get()
+
+    assert cfg.llm_stages["stl_extraction"].provider == "alt"
+    assert cfg.llm_stages["stl_extraction"].model == "alt-model"
+    assert cfg.llm_stages["stl_extraction"].temperature == 0.2
 
 
 # ── OpenAILLM routing tests ─────────────────────────────────────────

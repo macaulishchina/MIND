@@ -27,10 +27,18 @@ def build_fake_memory_config(tmp_path, overrides: dict | None = None):
     default TOML provider changes later.
     """
     mgr = ConfigManager(toml_path=_DEFAULT_TEST_TOML)
+    fake_stage = {
+        "provider": "fake",
+        "model": "fake-memory-test",
+        "temperature": 0.0,
+        "batch": False,
+    }
     base_overrides = {
         "llm": {
             "provider": "fake",
             "batch": False,
+            "decision": dict(fake_stage),
+            "stl_extraction": dict(fake_stage),
         },
         "vector_store": {
             "collection_name": f"test_memories_{tmp_path.name}",

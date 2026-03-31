@@ -10,6 +10,7 @@ from tests.eval.runners.eval_owner_centered_add import build_summary
 from tests.eval.runners.eval_owner_centered_add import _case_owner_lookup
 from tests.eval.runners.eval_owner_centered_add import _evaluate_case
 from tests.eval.runners.eval_owner_centered_add import _evaluate_dataset_cases
+from tests.eval.runners.eval_owner_centered_add import _eval_config
 from tests.eval.runners.eval_owner_centered_add import _load_dataset
 
 
@@ -59,6 +60,12 @@ def test_owner_centered_eval_case_passes_for_update_scenario(memory_config) -> N
     assert result.owner_pass is True
     assert result.update_hits == result.update_total == 2
     assert result.failures == []
+
+
+def test_memory_config_forces_all_llm_stages_to_fake(memory_config) -> None:
+    assert memory_config.llm.provider == "fake"
+    assert set(memory_config.llm_stages) == {"decision", "stl_extraction"}
+    assert all(stage.provider == "fake" for stage in memory_config.llm_stages.values())
 
 
 def test_owner_centered_report_and_summary_render(tmp_path, memory_config) -> None:
@@ -114,6 +121,18 @@ def test_owner_centered_dataset_concurrency_preserves_case_order(memory_config) 
         case["id"] for case in dataset.cases
     ]
     assert all(result.case_pass for result in case_results)
+
+
+def test_eval_config_forces_isolated_local_vector_store(memory_config, tmp_path) -> None:
+    memory_config.vector_store.provider = "pgvector"
+    memory_config.vector_store.dsn = "postgresql://example"
+
+    eval_cfg = _eval_config(memory_config, "owner-add-001", str(tmp_path))
+
+    assert eval_cfg.vector_store.provider == "qdrant"
+    assert eval_cfg.vector_store.url == ""
+    assert eval_cfg.vector_store.dsn == ""
+    assert eval_cfg.vector_store.on_disk is False
 
 
 def test_report_includes_dataset_metadata() -> None:

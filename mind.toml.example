@@ -7,20 +7,16 @@
 [llm]
 provider    = "openai"          # openai | anthropic | google | fake | other provider
 temperature = 0.0
-extraction_temperature = 0.0     # 留空或删除 = 跟随 temperature
+extraction_temperature = 0.0     # STL extraction 默认采样温度；留空或删除 = 跟随 temperature
 batch       = false              # true = 路由到 batch 端点（需 provider 配置 batch_base_url）
 # batch_timeout = 3600.0        # batch 模式 SDK 超时（秒），默认 3600
 
-# 可选：为 extraction / normalization / decision 单独指定模型
+# 可选：为 STL 主链阶段单独指定模型
 # 未配置时默认回退到 [llm]
-#[llm.extraction]
+#[llm.stl_extraction]
 #provider = "openai"
 #model = "gpt-5.4-nano"
 #temperature = 0.0
-
-#[llm.normalization]
-#provider = "openai"
-#model = "gpt-5.4-nano"
 
 #[llm.decision]
 #provider = "openai"

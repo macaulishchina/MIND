@@ -132,9 +132,12 @@ def _sanitize_name(value: str) -> str:
 
 def _eval_config(cfg, case_id: str, temp_dir: str):
     eval_cfg = cfg.model_copy(deep=True)
+    eval_cfg.vector_store.provider = "qdrant"
     eval_cfg.vector_store.collection_name = f"eval_{_sanitize_name(case_id)}"
     eval_cfg.vector_store.url = ""
     eval_cfg.vector_store.api_key = ""
+    eval_cfg.vector_store.dsn = ""
+    eval_cfg.vector_store.on_disk = False
     eval_cfg.history_store.provider = "sqlite"
     eval_cfg.history_store.db_path = str(Path(temp_dir) / "history.db")
     eval_cfg.stl_store.provider = "sqlite"

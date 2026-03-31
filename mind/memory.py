@@ -18,8 +18,8 @@ import sys
 import time
 import threading
 import unicodedata
-from concurrent.futures import ThreadPoolExecutor, Future
-from typing import Any, Dict, List, Optional, Tuple, Union
+from concurrent.futures import ThreadPoolExecutor
+from typing import Any, Dict, List, Optional, Union
 from pathlib import Path
 
 from mind.config.manager import ConfigManager
@@ -36,10 +36,6 @@ from mind.config.schema import LoggingConfig, MemoryConfig
 from mind.embeddings.factory import EmbedderFactory
 from mind.llms.factory import LlmFactory
 from mind.prompts import (
-    FACT_EXTRACTION_SYSTEM_PROMPT,
-    FACT_NORMALIZATION_SYSTEM_PROMPT,
-    FACT_EXTRACTION_USER_TEMPLATE,
-    FACT_NORMALIZATION_USER_TEMPLATE,
     UPDATE_DECISION_SYSTEM_PROMPT,
     UPDATE_DECISION_USER_TEMPLATE,
     format_existing_memories,
@@ -136,12 +132,6 @@ class Memory:
 
         # ── Dependency objects (fixed for the lifetime of this instance) ──
         self.llm = LlmFactory.create(self._config.llm)
-        self.extraction_llm = LlmFactory.create(
-            self._config.llm_stages.get("extraction", self._config.llm)
-        )
-        self.normalization_llm = LlmFactory.create(
-            self._config.llm_stages.get("normalization", self._config.llm)
-        )
         self.decision_llm = LlmFactory.create(
             self._config.llm_stages.get("decision", self._config.llm)
         )
@@ -558,78 +548,6 @@ class Memory:
     # ══════════════════════════════════════════════════════════════════
 
     @staticmethod
-    def _extract_facts(
-        llm,
-        conversation: str,
-        temperature: Optional[float] = None,
-    ) -> List[Dict[str, Any]]:
-        """Extract memorable facts from a conversation via LLM.
-
-        Args:
-            llm: The LLM client to use.
-            conversation: Formatted conversation text (User/Assistant turns).
-            temperature: Optional per-call override for extraction sampling.
-
-        Returns:
-            A list of ``{"text": ..., "confidence": ...}`` dicts.
-            Returns an empty list if no facts are found or parsing fails.
-        """
-        messages = [
-            {"role": "system", "content": FACT_EXTRACTION_SYSTEM_PROMPT},
-            {"role": "user", "content": FACT_EXTRACTION_USER_TEMPLATE.format(
-                conversation=conversation)},
-        ]
-        response = llm.generate(
-            messages=messages,
-            response_format={"type": "json_object"},
-            temperature=temperature,
-        )
-        try:
-            payload = json.loads(response)
-        except json.JSONDecodeError:
-            logger.error("Failed to parse fact extraction response: %s", response)
-            return []
-
-        return Memory._normalize_extracted_facts(payload.get("facts", []))
-
-    @staticmethod
-    def _normalize_extracted_facts(raw_facts: Any) -> List[Dict[str, Any]]:
-        """Clean extraction output before normalization."""
-        if not isinstance(raw_facts, list):
-            logger.warning("Extraction returned non-list facts payload: %r", raw_facts)
-            return []
-
-        normalized_by_text: Dict[str, Dict[str, Any]] = {}
-        for index, raw_fact in enumerate(raw_facts):
-            if not isinstance(raw_fact, dict):
-                logger.warning("Ignoring malformed fact at index %d: %r", index, raw_fact)
-                continue
-
-            text = Memory._normalize_fact_text(raw_fact.get("text", ""))
-            if not text:
-                continue
-
-            confidence = raw_fact.get("confidence", 0.5)
-            try:
-                confidence_value = float(confidence)
-            except (TypeError, ValueError):
-                logger.warning(
-                    "Invalid confidence for extracted fact '%s': %r",
-                    text,
-                    confidence,
-                )
-                confidence_value = 0.5
-
-            confidence_value = max(0.0, min(1.0, confidence_value))
-            dedupe_key = text.casefold()
-            candidate = {"text": text, "confidence": confidence_value}
-            existing = normalized_by_text.get(dedupe_key)
-            if existing is None or confidence_value > existing["confidence"]:
-                normalized_by_text[dedupe_key] = candidate
-
-        return list(normalized_by_text.values())
-
-    @staticmethod
     def _normalize_fact_text(text: Any) -> str:
         """Normalize extracted fact text while preserving meaning."""
         if not isinstance(text, str):
@@ -637,198 +555,6 @@ class Memory:
 
         normalized = " ".join(text.strip().split())
         return normalized.rstrip(" .,!?:;\t\r\n")
-
-    def _normalize_facts_to_envelopes(
-        self,
-        facts: List[Dict[str, Any]],
-        owner: OwnerRecord,
-        session_id: Optional[str],
-        source_context: str,
-        metadata: Optional[Dict[str, Any]],
-    ) -> List[FactEnvelope]:
-        """Normalize raw fact strings into structured envelopes."""
-        envelopes: List[FactEnvelope] = []
-        for fact in facts:
-            raw_text = fact.get("text", "")
-            if not raw_text:
-                continue
-            envelopes.extend(
-                self._normalize_single_fact(
-                    raw_fact=raw_text,
-                    confidence=fact.get("confidence", 0.5),
-                    owner=owner,
-                    session_id=session_id,
-                    source_context=source_context,
-                    metadata=metadata,
-                )
-            )
-
-        deduped: Dict[str, FactEnvelope] = {}
-        for envelope in envelopes:
-            key = envelope.canonical_text.casefold()
-            existing = deduped.get(key)
-            if existing is None or envelope.confidence > existing.confidence:
-                deduped[key] = envelope
-        return list(deduped.values())
-
-    def _normalize_single_fact(
-        self,
-        raw_fact: str,
-        confidence: float,
-        owner: OwnerRecord,
-        session_id: Optional[str],
-        source_context: str,
-        metadata: Optional[Dict[str, Any]],
-    ) -> List[FactEnvelope]:
-        """Normalize one raw fact through the normalization model."""
-        owner_context = {
-            "owner_id": owner.owner_id,
-            "owner_type": owner.owner_type.value,
-            "external_user_id": owner.external_user_id,
-            "anonymous_session_id": owner.anonymous_session_id,
-            "display_name": owner.display_name,
-            "channel": owner.channel,
-        }
-        messages = [
-            {"role": "system", "content": FACT_NORMALIZATION_SYSTEM_PROMPT},
-            {
-                "role": "user",
-                "content": FACT_NORMALIZATION_USER_TEMPLATE.format(
-                    owner_context=json.dumps(owner_context, ensure_ascii=False),
-                    raw_fact=raw_fact,
-                ),
-            },
-        ]
-        response = self.normalization_llm.generate(
-            messages=messages,
-            response_format={"type": "json_object"},
-        )
-        try:
-            payload = json.loads(response)
-        except json.JSONDecodeError:
-            logger.error("Failed to parse normalization response: %s", response)
-            payload = {"envelopes": []}
-
-        raw_envelopes = payload.get("envelopes", [])
-        if not isinstance(raw_envelopes, list) or not raw_envelopes:
-            raw_envelopes = [self._fallback_normalized_spec(raw_fact)]
-
-        envelopes: List[FactEnvelope] = []
-        subject_cache: Dict[Tuple[str, str, str], str] = {}
-        for spec in raw_envelopes:
-            if not isinstance(spec, dict):
-                continue
-            envelope = self._build_fact_envelope(
-                spec=spec,
-                raw_fact=raw_fact,
-                default_confidence=confidence,
-                owner=owner,
-                session_id=session_id,
-                source_context=source_context,
-                metadata=metadata,
-                subject_cache=subject_cache,
-            )
-            if envelope is not None:
-                envelopes.append(envelope)
-        return envelopes
-
-    def _build_fact_envelope(
-        self,
-        spec: Dict[str, Any],
-        raw_fact: str,
-        default_confidence: float,
-        owner: OwnerRecord,
-        session_id: Optional[str],
-        source_context: str,
-        metadata: Optional[Dict[str, Any]],
-        subject_cache: Dict[Tuple[str, str, str], str],
-    ) -> Optional[FactEnvelope]:
-        """Convert a normalization spec into a validated envelope."""
-        subject_scope = str(spec.get("subject_scope", "self") or "self").strip().lower()
-        relation_type = self._normalize_relation_type(spec.get("relation_type"))
-        if subject_scope == "self":
-            subject_ref = "self"
-            relation_type = "self"
-        elif subject_scope == "third_party_named":
-            display_name = self._normalize_fact_text(spec.get("display_name", ""))
-            normalized_name = self._normalize_name(
-                spec.get("normalized_name") or display_name
-            )
-            if not display_name or not normalized_name:
-                return None
-            cache_key = (subject_scope, relation_type, normalized_name)
-            if cache_key in subject_cache:
-                subject_ref = subject_cache[cache_key]
-            else:
-                subject_ref = self._history_store.get_or_create_named_subject(
-                    owner_id=owner.owner_id,
-                    relation_type=relation_type,
-                    display_name=display_name,
-                    normalized_name=normalized_name,
-                    aliases={"last_raw_fact": raw_fact},
-                ).subject_ref
-                subject_cache[cache_key] = subject_ref
-        elif subject_scope == "third_party_unknown":
-            cache_key = (subject_scope, relation_type, "")
-            if cache_key in subject_cache:
-                subject_ref = subject_cache[cache_key]
-            else:
-                subject_ref = self._history_store.create_placeholder_subject(
-                    owner_id=owner.owner_id,
-                    relation_type=relation_type,
-                    aliases={"last_raw_fact": raw_fact},
-                ).subject_ref
-                subject_cache[cache_key] = subject_ref
-        else:
-            return None
-
-        fact_family = self._normalize_fact_family(spec.get("fact_family"))
-        field_key = self._normalize_field_key(
-            spec.get("field_key"),
-            fact_family=fact_family,
-        )
-        field_value_json = spec.get("field_value_json")
-        if not isinstance(field_value_json, dict) or not field_value_json:
-            field_value_json = {"value": raw_fact}
-
-        canonical_text = self._build_canonical_text(
-            subject_ref=subject_ref,
-            field_key=field_key,
-            field_value_json=field_value_json,
-        )
-        confidence = spec.get("confidence", default_confidence)
-        try:
-            confidence_value = max(0.0, min(1.0, float(confidence)))
-        except (TypeError, ValueError):
-            confidence_value = default_confidence
-
-        return FactEnvelope(
-            owner_id=owner.owner_id,
-            user_id=self._owner_user_id(owner),
-            owner_type=owner.owner_type,
-            subject_ref=subject_ref,
-            fact_family=fact_family,
-            relation_type=relation_type,
-            field_key=field_key,
-            field_value_json=field_value_json,
-            canonical_text=canonical_text,
-            raw_text=raw_fact,
-            confidence=confidence_value,
-            source_context=source_context,
-            source_session_id=session_id,
-            metadata=metadata or {},
-        )
-
-    @staticmethod
-    def _fallback_normalized_spec(raw_fact: str) -> Dict[str, Any]:
-        """Fallback when the normalization model returns unusable output."""
-        return {
-            "subject_scope": "self",
-            "relation_type": "self",
-            "fact_family": "attribute",
-            "field_key": "attribute:statement",
-            "field_value_json": {"value": raw_fact},
-        }
 
     @staticmethod
     def _normalize_name(name: Any) -> str:
@@ -938,14 +664,16 @@ class Memory:
             owner_data["external_user_id"] = user_id
         return OwnerContext(**owner_data)
 
-    def _extraction_temperature(self) -> Optional[float]:
-        """Resolve extraction temperature from stage config with fallback."""
-        extraction_cfg = self._config.llm_stages.get("extraction")
-        if extraction_cfg and extraction_cfg.extraction_temperature is not None:
-            return extraction_cfg.extraction_temperature
-        if extraction_cfg:
-            return extraction_cfg.temperature
-        return self._config.llm.extraction_temperature
+    def _stl_extraction_temperature(self) -> Optional[float]:
+        """Resolve STL extraction temperature from stage config with fallback."""
+        stl_cfg = self._config.llm_stages.get("stl_extraction")
+        if stl_cfg and stl_cfg.extraction_temperature is not None:
+            return stl_cfg.extraction_temperature
+        if stl_cfg:
+            return stl_cfg.temperature
+        if self._config.llm.extraction_temperature is not None:
+            return self._config.llm.extraction_temperature
+        return self._config.llm.temperature
 
     # ══════════════════════════════════════════════════════════════════
     # STL pipeline helpers
@@ -979,13 +707,9 @@ class Memory:
                 conversation=conversation,
             )},
         ]
-        stl_cfg = self._config.llm_stages.get("stl_extraction")
-        temperature = None
-        if stl_cfg:
-            temperature = stl_cfg.extraction_temperature or stl_cfg.temperature
         return self.stl_extraction_llm.generate(
             messages=messages,
-            temperature=temperature,
+            temperature=self._stl_extraction_temperature(),
         )
 
     @staticmethod
@@ -1402,29 +1126,6 @@ class Memory:
             fact_vector=fact_vector,
             temp_to_real=temp_to_real,
         )
-
-    def _process_fact(
-        self,
-        fact_text: str,
-        confidence: float,
-        user_id: str,
-        session_id: Optional[str],
-        source_context: str,
-        metadata: Optional[Dict[str, Any]],
-    ) -> Optional[MemoryItem]:
-        """Backward-compatible single-fact entry point."""
-        owner = self._history_store.resolve_owner(OwnerContext(external_user_id=user_id))
-        envelopes = self._normalize_single_fact(
-            raw_fact=fact_text,
-            confidence=confidence,
-            owner=owner,
-            session_id=session_id,
-            source_context=source_context,
-            metadata=metadata,
-        )
-        if not envelopes:
-            return None
-        return self._process_envelope(envelopes[0])
 
     def _execute_add(
         self,
