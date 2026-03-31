@@ -83,3 +83,22 @@ def test_fake_llm_can_emit_basic_stl_program() -> None:
     assert "$p1 = friend(@s, @p1)" in program
     assert "$p2 = occupation(@p1, \"football player\")" in program
     assert "ev($p1, conf=0.9, src=\"turn_1\")" in program
+
+
+def test_fake_llm_supports_generic_chat_prompt() -> None:
+    fake_llm = FakeLLM(LLMConfig(protocols="fake", model="fake-memory-test"))
+
+    response = fake_llm.generate(
+        messages=[
+            {
+                "role": "system",
+                "content": "You are a helpful assistant. Reply briefly.",
+            },
+            {
+                "role": "user",
+                "content": "hi",
+            },
+        ],
+    )
+
+    assert response == "echo: hi"

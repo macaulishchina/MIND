@@ -14,7 +14,6 @@ Usage::
 import json
 import logging
 import re
-import sys
 import time
 import threading
 import unicodedata
@@ -40,7 +39,7 @@ from mind.prompts import (
     UPDATE_DECISION_USER_TEMPLATE,
     format_existing_memories,
 )
-from mind.ops_logger import ops
+from mind.runtime_logging import configure_runtime_logging
 from mind.stl.focus import FocusStack
 from mind.stl.parser import parse_program
 from mind.stl.prompt import (
@@ -169,43 +168,8 @@ class Memory:
 
     @staticmethod
     def _setup_logging(log_cfg: LoggingConfig) -> None:
-        """Configure the ``mind`` package logger based on TOML config.
-
-        Called once during Memory init. Subsequent calls are idempotent —
-        handlers are only added if the root ``mind`` logger has none.
-        """
-        root_logger = logging.getLogger("mind")
-
-        # Idempotent: skip if already configured
-        if root_logger.handlers:
-            return
-
-        level = getattr(logging, log_cfg.level.upper(), logging.INFO)
-        root_logger.setLevel(level)
-
-        formatter = logging.Formatter(log_cfg.format)
-
-        # Console handler (stderr)
-        if log_cfg.console:
-            console_handler = logging.StreamHandler(sys.stderr)
-            console_handler.setLevel(level)
-            console_handler.setFormatter(formatter)
-            root_logger.addHandler(console_handler)
-
-        # File handler (optional)
-        if log_cfg.file:
-            file_handler = logging.FileHandler(log_cfg.file, encoding="utf-8")
-            file_handler.setLevel(level)
-            file_handler.setFormatter(formatter)
-            root_logger.addHandler(file_handler)
-
-        # ── Configure centralised ops logger ──
-        ops.configure(
-            ops_llm=log_cfg.ops_llm,
-            ops_vector_store=log_cfg.ops_vector_store,
-            ops_database=log_cfg.ops_database,
-            verbose=log_cfg.verbose,
-        )
+        """Configure runtime logging for the ``mind`` logger subtree."""
+        configure_runtime_logging(log_cfg)
 
     # ══════════════════════════════════════════════════════════════════
     # Public interface

@@ -17,6 +17,7 @@ from mind.config import ConfigManager
 from mind.config.manager import _DEFAULT_TEST_TOML
 from mind.llms.factory import LlmFactory
 from mind.prompts import UPDATE_DECISION_SYSTEM_PROMPT, UPDATE_DECISION_USER_TEMPLATE
+from mind.runtime_logging import configure_runtime_logging
 from mind.stl.prompt import STL_EXTRACTION_SYSTEM_PROMPT, STL_EXTRACTION_USER_TEMPLATE
 
 
@@ -100,11 +101,8 @@ def _build_overrides(args: argparse.Namespace) -> dict[str, Any]:
     return {"llm": {stage_key: override_block}}
 
 
-def _resolve_llm_config(args: argparse.Namespace):
-    cfg = ConfigManager(toml_path=args.toml).get(overrides=_build_overrides(args))
-    if args.stage == "llm":
-        return cfg.llm
-    return cfg.llm_stages.get(args.stage, cfg.llm)
+def _resolve_config(args: argparse.Namespace):
+    return ConfigManager(toml_path=args.toml).get(overrides=_build_overrides(args))
 
 
 def _summary(latencies: list[float]) -> dict[str, float]:
@@ -118,7 +116,7 @@ def _summary(latencies: list[float]) -> dict[str, float]:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Run a simple latency check against one LLM stage.",
+        description="Run a simple latency check against a plain chat prompt or one LLM stage.",
     )
     parser.add_argument(
         "--toml",
@@ -129,8 +127,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--stage",
         choices=("llm", "stl_extraction", "decision"),
-        default="stl_extraction",
-        help="Which LLM config/stage to measure.",
+        default="llm",
+        help="Which LLM config/stage to measure. Use llm for a plain chat latency check.",
     )
     parser.add_argument(
         "--runs",
@@ -195,14 +193,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--system-prompt",
         type=str,
-        default="You are a helpful assistant. Reply in one short sentence.",
+        default="You are a helpful assistant. Reply briefly.",
         help="System prompt for --stage llm.",
     )
     parser.add_argument(
         "--user-prompt",
+        "--text",
+        dest="user_prompt",
         type=str,
-        default="Say hello.",
-        help="User prompt for --stage llm.",
+        default="hi",
+        help="User prompt for --stage llm. Example: --stage llm --text hi",
     )
     parser.add_argument(
         "--show-response",
@@ -216,7 +216,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.warmup < 0:
         parser.error("--warmup must be >= 0")
 
-    llm_cfg = _resolve_llm_config(args)
+    cfg = _resolve_config(args)
+    configure_runtime_logging(cfg.logging)
+    if args.stage == "llm":
+        llm_cfg = cfg.llm
+    else:
+        llm_cfg = cfg.llm_stages.get(args.stage, cfg.llm)
     llm = LlmFactory.create(llm_cfg)
     messages, response_format = _build_messages(args)
 

@@ -19,6 +19,7 @@ from mind.config import ConfigManager
 from mind.config.manager import _DEFAULT_TEST_TOML
 from mind.config.models import MemoryItem, OwnerContext
 from mind.memory import Memory
+from mind.runtime_logging import configure_runtime_logging
 
 
 DEFAULT_DATASET_DIR = PROJECT_ROOT / "tests" / "eval" / "datasets"
@@ -73,7 +74,7 @@ class CaseResult:
 
 
 def _configure_runner_logging(cfg) -> None:
-    Memory._setup_logging(cfg.logging)
+    configure_runtime_logging(cfg.logging)
 
 
 def _load_dataset(dataset_path: Path) -> DatasetSpec:
@@ -142,8 +143,6 @@ def _eval_config(cfg, case_id: str, temp_dir: str):
     eval_cfg.history_store.db_path = str(Path(temp_dir) / "history.db")
     eval_cfg.stl_store.provider = "sqlite"
     eval_cfg.stl_store.db_path = str(Path(temp_dir) / "stl.db")
-    eval_cfg.logging.console = False
-    eval_cfg.logging.file = ""
     return eval_cfg
 
 

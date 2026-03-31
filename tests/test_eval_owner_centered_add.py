@@ -126,6 +126,8 @@ def test_owner_centered_dataset_concurrency_preserves_case_order(memory_config) 
 def test_eval_config_forces_isolated_local_vector_store(memory_config, tmp_path) -> None:
     memory_config.vector_store.provider = "pgvector"
     memory_config.vector_store.dsn = "postgresql://example"
+    memory_config.logging.console = True
+    memory_config.logging.file = "mind.log"
 
     eval_cfg = _eval_config(memory_config, "owner-add-001", str(tmp_path))
 
@@ -133,6 +135,8 @@ def test_eval_config_forces_isolated_local_vector_store(memory_config, tmp_path)
     assert eval_cfg.vector_store.url == ""
     assert eval_cfg.vector_store.dsn == ""
     assert eval_cfg.vector_store.on_disk is False
+    assert eval_cfg.logging.console is True
+    assert eval_cfg.logging.file == "mind.log"
 
 
 def test_report_includes_dataset_metadata() -> None:

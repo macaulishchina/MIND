@@ -267,10 +267,21 @@ python tests/eval/runners/eval_owner_centered_add.py \
 - owner-centered runner 评的是完整 add 链路
 - 使用真实模型会有耗时和费用
 - 如需提速，优先配合 `--concurrency`
+- 它会按 `--toml` 里的 `[logging]` 配置输出运行日志；如果 `verbose=true`，会继续打印更详细的 prompt / output 明细
 
 ## 3. 单独测 LLM 响应速度
 
-如果你只是想知道某个 LLM stage 响应有多慢，不想先跑完整数据集，可以直接用这个小 runner：
+如果你只是想知道 LLM 回一个很短输入要多久，比如你发一个 `hi`，可以直接这样跑：
+
+```bash
+python tests/eval/runners/eval_llm_speed.py \
+  --toml mind.toml \
+  --stage llm \
+  --text hi \
+  --runs 3
+```
+
+如果你还想继续细分到某个内部 LLM stage，不想先跑完整数据集，也可以用同一个 runner：
 
 ```bash
 python tests/eval/runners/eval_llm_speed.py \
@@ -287,6 +298,7 @@ python tests/eval/runners/eval_llm_speed.py \
 - `min / max / avg / median`
 
 这个测速 runner 不会写 `tests/eval/reports/` 文件；最后一行会直接在 stdout 打印一段 JSON summary，方便你临时重定向保存。
+调用过程中的 `🧠 [LLM]` 日志和 verbose 明细走的是同一个 `[logging]` 配置，不依赖是否经过 `Memory.add()`。
 
 常见用法：
 

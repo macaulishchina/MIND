@@ -42,7 +42,17 @@ class FakeLLM(BaseLLM):
             return self._decision_response(user_text)
         if STL_EXTRACTION_SYSTEM_PROMPT in system_text:
             return self._extract_stl_response(user_text)
-        raise ValueError("FakeLLM received an unsupported prompt")
+        return self._generic_response(user_text)
+
+    @staticmethod
+    def _generic_response(prompt_text: str) -> str:
+        text = prompt_text.strip()
+        if not text:
+            return "hello"
+        lines = [line.strip() for line in text.splitlines() if line.strip()]
+        if not lines:
+            return "hello"
+        return f"echo: {lines[-1][:80]}"
 
     def _decision_response(self, prompt_text: str) -> str:
         existing_memories = _parse_existing_memories(prompt_text)
