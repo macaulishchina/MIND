@@ -4,22 +4,22 @@
 
 ### Requirement: Extraction Stage Contract
 
-The system SHALL keep the extraction stage compatible with the MVP runtime contract by returning a list of fact objects with `text` and `confidence` fields.
+The system SHALL keep the extraction stage helper compatible with the legacy MVP contract by returning a list of fact objects with `text` and `confidence` fields.
 
 #### Scenario: Extraction Output Is Cleaned Before Downstream Use
 
 - WHEN the extraction model returns empty rows, malformed rows, duplicate rows, or invalid confidence values
-- THEN the system normalizes whitespace and trailing punctuation, clamps confidence into `[0.0, 1.0]`, drops invalid rows, and keeps only the highest-confidence exact duplicate before retrieval and decision begin
+- THEN the system normalizes whitespace and trailing punctuation, clamps confidence into `[0.0, 1.0]`, drops invalid rows, and keeps only the highest-confidence exact duplicate before downstream helper callers consume the result
 
 #### Scenario: Extraction Drops Obvious Noise Before Downstream Use
 
 - WHEN the extraction model returns fact candidates that are clearly temporary troubleshooting chatter, attributed advice from other people, or speculative future statements
-- THEN the system drops those candidates before retrieval and decision begin while preserving committed future plans and stable user-owned facts
+- THEN the system drops those candidates before downstream helper callers consume the result while preserving committed future plans and stable user-owned facts
 
 #### Scenario: Extraction Canonicalizes High-Frequency Preference Patterns
 
 - WHEN the extraction model returns semantically equivalent phrasing for short-answer preferences, list-format preferences, English-summary preferences, or obvious `no longer` drink-preference updates
-- THEN the system rewrites them into a stable canonical fact string before retrieval and decision begin
+- THEN the system rewrites them into a stable canonical fact string before downstream helper callers consume the result
 
 ### Requirement: Extraction Stage Control Surface
 
@@ -38,36 +38,3 @@ The system SHALL provide explicit extraction guidance for atomic facts, exclusio
 
 - WHEN the extraction prompt is sent to the model
 - THEN it includes clear extraction scope, exclusions for assistant content, speculative content, transient troubleshooting noise, externally attributed advice, and weak identity or language inference from single-message evidence, plus at least one positive and one negative example
-
-### Requirement: Extraction Evaluation Dataset Topology
-
-The repository SHALL maintain curated extraction evaluation datasets as a compact general regression set plus a dedicated relation-focused set.
-
-#### Scenario: Default Regression Discovery Uses Curated Top-Level Datasets
-
-- WHEN `tests/eval/runners/eval_extraction.py` runs without an explicit `--dataset` path
-- THEN it evaluates the maintained top-level curated extraction datasets and does not rely on the old easy/medium/hard/tricky plus standalone black-box topology
-
-#### Scenario: Curated General Extraction Dataset Exists
-
-- WHEN the repository defines its general extraction regression dataset
-- THEN that dataset is a single curated JSON file with 100 cases assembled from the previous extraction and black-box sources, with low-value trivial cases removed
-
-#### Scenario: Curated Relationship Extraction Dataset Exists
-
-- WHEN the repository defines its relationship-focused extraction regression dataset
-- THEN that dataset is a separate 100-case JSON file dedicated to relation-bearing inputs and coverage
-
-### Requirement: Extraction Evaluation Supports Relationship Signals
-
-The extraction evaluation runner SHALL support optional relationship-aware annotations while remaining compatible with legacy fact-only datasets.
-
-#### Scenario: Legacy Extraction Dataset Still Runs
-
-- WHEN an extraction dataset uses only the pre-existing fact-oriented fields
-- THEN `tests/eval/runners/eval_extraction.py` evaluates it without requiring any relationship annotations
-
-#### Scenario: Relation-Aware Extraction Dataset Reports Relationship Metrics
-
-- WHEN an extraction dataset includes relationship-aware expectations
-- THEN `tests/eval/runners/eval_extraction.py` scores those relationship expectations from extracted fact text and reports relationship-oriented metrics alongside the existing extraction metrics

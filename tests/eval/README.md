@@ -1,13 +1,10 @@
 # Evaluation README
 
-`tests/eval/` 现在维护两条评测链路：
+`tests/eval/` 当前只维护一条评测链路：
 
 - `eval_owner_centered_add.py`
   - 主评测
   - 走真实 `Memory.add()` -> STL parse/store -> owner-centered projection 链路
-- `eval_extraction.py`
-  - legacy 回归
-  - 只评估 `_extract_facts()` 抽取阶段
 
 ## 目录
 
@@ -35,7 +32,7 @@ cd /home/macaulish/workspace/MIND
 
 如果只是手动验证 runner 行为，优先使用 `mindt.toml`。
 
-## 1. 主评测: Owner-Centered Add Eval
+## 1. Owner-Centered Add Eval
 
 这条 runner 评估的是最终持久化结果，而不是中间抽取文本。每个 case 会：
 
@@ -112,60 +109,7 @@ Owner-centered runner 关注的指标主要有：
   - owner-centered 关系投影专项
   - 覆盖 named / inverse / split / stable relation 等典型模式
 
-## 2. Legacy: Extraction Eval
-
-这条 runner 还保留着，用来回归 `_extract_facts()` 的旧 contract，但它不再是 STL 主验收路径。
-
-### 跑全部 extraction 数据集
-
-```bash
-python tests/eval/runners/eval_extraction.py --toml mindt.toml
-```
-
-默认会跑：
-
-- `tests/eval/datasets/extraction_curated_cases.json`
-- `tests/eval/datasets/extraction_relationship_cases.json`
-
-### 只跑一个 extraction 数据集
-
-```bash
-python tests/eval/runners/eval_extraction.py \
-  --toml mindt.toml \
-  --dataset tests/eval/datasets/extraction_curated_cases.json
-```
-
-### 开启并发
-
-```bash
-python tests/eval/runners/eval_extraction.py \
-  --toml mindt.toml \
-  --concurrency 4
-```
-
-### 当指标不达标时返回非 0
-
-```bash
-python tests/eval/runners/eval_extraction.py \
-  --toml mindt.toml \
-  --fail-on-targets
-```
-
-Extraction eval 关注的指标主要有：
-
-- `recall`
-- `precision`
-- `no_extract_accuracy`
-- `confidence_accuracy`
-- `count_accuracy`
-
-如果数据集包含关系注解，还会额外评估：
-
-- `relation_recall`
-- `relation_forbidden_accuracy`
-- `relation_case_accuracy`
-
-## 3. 用真实模型手动评测
+## 2. 用真实模型手动评测
 
 如果你想用真实模型，只要把 `--toml` 换成你的真实配置：
 
@@ -175,21 +119,13 @@ python tests/eval/runners/eval_owner_centered_add.py \
   --dataset tests/eval/datasets/owner_centered_relationship_cases.json
 ```
 
-或者：
-
-```bash
-python tests/eval/runners/eval_extraction.py \
-  --toml mind.toml \
-  --dataset tests/eval/datasets/extraction_relationship_cases.json
-```
-
 注意：
 
-- owner-centered runner 评的是完整 add 链路，耗时会高于 extraction-only
-- extraction runner 会使用 `[llm.extraction]`，如果没配则回退到 `[llm]`
+- owner-centered runner 评的是完整 add 链路
 - 使用真实模型会有耗时和费用
+- 如需提速，优先配合 `--concurrency`
 
-## 4. 如何看结果
+## 3. 如何看结果
 
 运行后会先打印一段 summary，然后把详细 JSON 写到 `tests/eval/reports/`。
 
@@ -207,13 +143,7 @@ owner-centered 报告里重点看：
 - `expected_evidence`
 - `expected_versioned_active_memories`
 
-extraction 报告里重点看：
-
-- `missing`
-- `forbidden`
-- `count`
-
-## 5. 跑对应的 Pytest
+## 4. 跑对应的 Pytest
 
 如果你改了 owner-centered runner 或 STL-native 数据集，建议跑：
 
@@ -232,14 +162,7 @@ pytest -q tests/test_fake_llm.py tests/test_memory.py
 - 常规 pytest 默认应走 `tests/conftest.py` 里的显式 fake 覆盖
 - 不应该依赖 `mindt.toml` 恰好配置成 fake，测试代码本身要明确声明自己不需要真实 LLM
 
-如果你改了 extraction runner 或 extraction 数据集，建议跑：
+## 5. 常见建议
 
-```bash
-pytest -q tests/test_eval_extraction.py
-```
-
-## 6. 常见建议
-
-- 想验证 STL 主链路，优先看 owner-centered add eval
-- 想回归 `_extract_facts()` 旧行为，再看 extraction eval
+- 想验证业务主链路，优先看 owner-centered add eval
 - 想快速跑本地 deterministic 验证，优先用 `mindt.toml`

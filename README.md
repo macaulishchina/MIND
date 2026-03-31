@@ -148,12 +148,12 @@ python -m pytest tests/test_storage.py -v
 # Memory 流程测试（由 mindt.toml 切换到 fake LLM / fake embedding，无需 API Key）
 python -m pytest tests/test_memory.py -v
 
-# Extraction 评估
-python tests/eval/runners/eval_extraction.py --toml mindt.toml --pretty
+# STL-native add 评估
+python tests/eval/runners/eval_owner_centered_add.py --toml mindt.toml --pretty
 ```
 
 说明：
-- 更详细的 extraction 评估说明、真实 LLM 运行方式和报告归档建议见 `Doc/evolution/memory.add/eval_framework.md`。
+- 更详细的评估说明、真实 LLM 运行方式和并发参数见 `tests/eval/README.md`。
 
 ## 项目结构
 
