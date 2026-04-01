@@ -1,0 +1,23 @@
+{
+  "id": "po-comprehensive-001",
+  "category": "comprehensive",
+  "description": "综合场景：关系、多值属性、度修饰、不确定性、纠正、多事件",
+  "turns": [
+    {
+      "messages": [
+        {"role": "user", "content": "我哥凯文是约翰霍普金斯医院的外科医生，他会说英语、普通话，还会一点法语。"}
+      ]
+    },
+    {
+      "messages": [
+        {"role": "user", "content": "我觉得凯文的老婆可能是日本人，他去年在东京认识她的。"}
+      ]
+    },
+    {
+      "messages": [
+        {"role": "user", "content": "等等我说错了，凯文是在梅奥诊所工作，不是约翰霍普金斯。而且他们是在大阪结的婚，不是东京。"}
+      ]
+    }
+  ],
+  "golden_stl": "@kevin: person \"凯文\"\n@mayo: org \"梅奥诊所\"\n@tokyo: place \"东京\"\n@osaka: place \"大阪\"\n@wife: person\n\n$r1 = brother(@self, @kevin)\n$r2 = occupation(@kevin, \"外科医生\")\n$r3 = work_at(@kevin, @mayo)\n$c1 = correct_intent(@self, $r3)\nnote($c1, \"CORRECTION: 原说约翰霍普金斯医院，更正为梅奥诊所\")\n\n$l1 = speak(@kevin, \"英语\")\n$l2 = speak(@kevin, \"普通话\")\n$l3 = speak(@kevin, \"法语\")\n$l3d = degree($l3, \"一点\")\n\n$s1 = spouse(@kevin, @wife)\n$s2 = nationality(@wife, \"日本人\")\n$f1 = believe(@self, $s2)\nnote($f1, \"用户说'可能是日本人'，不确定\")\n\n$e1 = meet(@kevin, @wife)\n$e1_loc = location($e1, @tokyo)\n$e1_time = time($e1, \"去年\")\n\n$e2 = marry(@kevin, @wife)\n$e2_loc = location($e2, @osaka)\n$c2 = correct_intent(@self, $e2_loc)\nnote($c2, \"CORRECTION: 结婚地点从东京更正为大阪\")"
+}

@@ -1,0 +1,33 @@
+{
+  "id": "po-health-001",
+  "category": "health_consultation",
+  "description": "健康咨询场景：用户描述症状、生活习惯、家族病史、用药情况，从医疗对话中提取个人健康信息",
+  "turns": [
+    {
+      "messages": [
+        {"role": "user", "content": "最近老是头疼，睡眠也不好，每天大概只能睡四五个小时。"},
+        {"role": "assistant", "content": "这种情况持续多久了？有没有看过医生？"},
+        {"role": "user", "content": "大概两三周了。还没去看医生，想先在这问问。我35岁，男，在一家会计事务所上班。"}
+      ]
+    },
+    {
+      "messages": [
+        {"role": "assistant", "content": "工作压力大吗？平时有运动习惯吗？"},
+        {"role": "user", "content": "压力确实大，最近在忙年审。我以前每周游泳两次，最近完全没时间了。"}
+      ]
+    },
+    {
+      "messages": [
+        {"role": "user", "content": "对了我有家族高血压史，我爸和我奶奶都有高血压。我自己去年体检血压正常。"}
+      ]
+    },
+    {
+      "messages": [
+        {"role": "user", "content": "我现在没吃什么药，就是每天喝杯枸杞水。我不抽烟但偶尔喝点红酒。"},
+        {"role": "assistant", "content": "生活习惯还算不错。建议还是去专业医院检查一下。"},
+        {"role": "user", "content": "好的，我老婆也一直催我去。她是护士，在协和医院上班，她比我还着急。"}
+      ]
+    }
+  ],
+  "golden_stl": "@dad: person\n@grandma: person\n@wife: person\n@xiehe: org \"协和医院\"\n\n$a1 = age(@self, 35)\n$o1 = occupation(@self, \"会计\")\n$w1 = work_at:type(@self, \"会计事务所\")\n$h1 = habit(@self, \"游泳\")\n$h1f = frequency($h1, \"每周两次\")\nnote($h1, \"最近没时间了\")\n$r1 = father(@self, @dad)\n$r2 = mother:mother(@dad, @grandma)\n$hp1 = habit:health(@dad, \"高血压\")\n$hp2 = habit:health(@grandma, \"高血压\")\n$dk1 = habit(@self, \"喝枸杞水\")\n$dk1f = frequency($dk1, \"每天\")\n$dk2 = drink(@self, \"红酒\")\n$dk2f = frequency($dk2, \"偶尔\")\n$neg1 = habit(@self, \"抽烟\")\n$neg1n = neg($neg1)\n$r3 = spouse(@self, @wife)\n$o2 = occupation(@wife, \"护士\")\n$w2 = work_at(@wife, @xiehe)"
+}

@@ -1,0 +1,13 @@
+{
+  "id": "po-multi-event-001",
+  "category": "multi_event",
+  "description": "多事件拆分 + 修饰符正确归属：认识地点与结婚地点是两个独立事件",
+  "turns": [
+    {
+      "messages": [
+        {"role": "user", "content": "我表姐去年在巴黎认识了她男朋友，他们上个月在伦敦订婚了。"}
+      ]
+    }
+  ],
+  "golden_stl": "@cousin: person \"表姐\"\n@bf: person\n@paris: place \"巴黎\"\n@london: place \"伦敦\"\n$p1 = cousin(@self, @cousin)\n$p2 = partner(@cousin, @bf)\n$e1 = meet(@cousin, @bf)\n$e1_loc = location($e1, @paris)\n$e1_time = time($e1, \"去年\")\n$e2 = event(@cousin, @bf):engagement\n$e2_loc = location($e2, @london)\n$e2_time = time($e2, \"上个月\")"
+}

@@ -1,0 +1,1122 @@
+[
+  {
+    "model": "MiniMax-M2.7",
+    "case_id": "po-alias-001",
+    "status": "ok",
+    "elapsed_ms": 19898,
+    "output": "@bj: place \"北大\"\n@lxy: person \"林小雨\"\n$r1 = friend(@self, @lxy)\n$n1 = name(@lxy, \"林小雨\")\n$n2 = name(@lxy, \"小雨\")\n$e1 = education(@lxy, \"研究生\")\n$e2 = education(@lxy, \"计算机\")\n$s1 = study_at(@lxy, @bj)"
+  },
+  {
+    "model": "MiniMax-M2.7",
+    "case_id": "po-basic-001",
+    "status": "ok",
+    "elapsed_ms": 4058,
+    "output": "@hz: place \"杭州\"\n$p1 = name(@self, \"张伟\")\n$p2 = age(@self, 28)\n$p3 = occupation(@self, \"前端工程师\")\n$p4 = live_in(@self, @hz)\n$p5 = work_at(@self, @hz)"
+  },
+  {
+    "model": "MiniMax-M2.7",
+    "case_id": "po-career-001",
+    "status": "ok",
+    "elapsed_ms": 29034,
+    "output": "@hg: org \"衡水中学\"\n@hz: place \"杭州\"\n@hk: place \"香港\"\n@mit: org \"MIT\"\n@fdu: org \"复旦大学\"\n@stanford: org \"斯坦福\"\n@gs: org \"高盛\"\n@ms: org \"摩根士丹利\"\n@zx: org \"星辰智能\"\n@zt: person \"张韬\"\n$p1 = name(@self, \"用户\")\n$e1 = education(@self, @hg)\n$e2 = study_at(@self, @fdu)\n$e3 = study_at(@self, @mit)\n$e4 = study_at(@self, @stanford)\n$w1 = work_at(@self, @gs)\n$w2 = work_at(@self, @ms)\n$w3 = work_at(@self, @zx)\n$c1 = start(@self, @zx)\n$c2 = partner(@self, @zt)\nnote($e1, \"高中\")\nnote($e2, \"金融系\")\nnote($e3, \"大二交换一学期\")\nnote($e4, \"CS硕士\")\nnote($w1, \"实习半年\")\nnote($w2, \"分析师, 三年\")\nnote($w3, \"企业级AI助手, 50多人\")\nnote($c1, \"29岁创业, 在杭州\")"
+  },
+  {
+    "model": "MiniMax-M2.7",
+    "case_id": "po-comprehensive-001",
+    "status": "ok",
+    "elapsed_ms": 22158,
+    "output": "@osaka: place \"大阪\"\n@mayo_clinic: org \"梅奥诊所\"\n@tokyo: place \"东京\"\n@kevin: person \"凯文\"\n$1 = brother(@self, @kevin)\n$2 = work_at(@kevin, @mayo_clinic)\n$3 = occupation(@kevin, \"外科医生\")\n$4 = speak(@kevin, \"英语\", \"普通话\", \"法语\")\n$5 = spouse(@kevin, @japanese_wife)\n@japanese_wife: person\n$6 = nationality(@japanese_wife, \"日本\")\n$7 = meet(@kevin, @japanese_wife, @osaka)\n$8 = marry(@kevin, @japanese_wife, @osaka)\nnote($8, \"大阪\")"
+  },
+  {
+    "model": "MiniMax-M2.7",
+    "case_id": "po-correction-001",
+    "status": "ok",
+    "elapsed_ms": 6025,
+    "output": "@xl: person \"小李\"\n@tx: org \"腾讯\"\n$w1 = workplace(@xl, @tx)\n$c = correct_intent(@self, $w1)"
+  },
+  {
+    "model": "MiniMax-M2.7",
+    "case_id": "po-family-001",
+    "status": "ok",
+    "elapsed_ms": 22714,
+    "output": "@福州老家: place \"福州老家\"\n@福州: place \"福州\"\n@厦门大学: org \"厦门大学\"\n@温州: place \"温州\"\n@义乌: place \"义乌\"\n@广州: place \"广州\"\n@中山大学附属医院: org \"中山大学附属医院\"\n@美咲: person \"美咲\"\n$g1 = name(@美咲, \"美咲\")\n$g2 = name(@self, \"爷爷\")\n$g3 = name(@self, \"奶奶\")\n$g4 = name(@self, \"大伯\")\n$g5 = name(@self, \"小叔\")\n$g6 = name(@self, \"小姨\")\n$g7 = name(@self, \"小豪\")\n$g8 = name(@self, \"林芳\")\n$g9 = name(@self, \"朵朵\")\n$s1 = live_in(@self, @福州老家)\n$s2 = live_in(@g3, @福州老家)\n$s3 = age(@self, number(\"90多\"))\n$s4 = occupation(@self, \"渔民\")\n$s5 = live_in(@g4, @福州)\n$s6 = occupation(@g4, \"海鲜餐厅\")\n$s7 = live_in(@g5, @厦门大学)\n$s8 = occupation(@g5, \"物理教授\")\n$s9 = spouse(@g5, @美咲)\n$s10 = nationality(@美咲, \"日本\")\n$s11 = live_in(@g6, @义乌)\n$s12 = occupation(@g6, \"外贸生意\")\n$s13 = occupation(@g7, \"外贸生意\")\n$s14 = child(@g7, @g6)\n$s15 = nationality(@self, \"温州\")\n$s16 = live_in(@self, @广州)\n$s17 = spouse(@self, @g8)\n$s18 = occupation(@g8, \"医生\")\n$s19 = workplace(@g8, @中山大学附属医院)\n$s20 = child(@g9, @self)\n$s21 = child(@g9, @g8)\n$s22 = name(@g9, \"朵朵\")\n$s23 = education(@g9, \"幼儿园\")"
+  },
+  {
+    "model": "MiniMax-M2.7",
+    "case_id": "po-food-001",
+    "status": "ok",
+    "elapsed_ms": 28679,
+    "output": "@sister: person \"姐\"\n@cheesecake: food \"巴斯克芝士蛋糕\"\n$allergy1 = allergy(@self, \"peanut\")\nnote($allergy1, \"严重过敏\")\n$f1 = cause($allergy1, @self)\nnote($f1, \"导致不能吃泰国菜\")\n$f2 = neg(eat(@self, \"泰国菜\"))\n$f3 = neg(eat(@self, \"猪肉\"))\nnote($f3, \"宗教原因\")\n$f4 = like(@self, \"意大利面\")\n$f5 = frequency(@self, \"pasta\", \"至少每周三次\")\n$f6 = hobby(@self, \"做饭\")\nnote($f6, \"尤其喜欢烘焙\")\n$f7 = gift(@self, @sister, @cheesecake)\n$f8 = event(@sister, \"birthday\")\nnote($f7, \"上周做蛋糕给姐过生日\")\n$drink1 = like(@self, \"黑咖啡\")\n$drink2 = like(@self, \"茶\")\n$f9 = neg(like(@self, \"奶茶\"))\n$f10 = neg(like(@self, \"可乐\"))\n$f11 = degree(@drink1, \"high\")\nnote($f11, \"一天三杯以上，可能咖啡因上瘾\")"
+  },
+  {
+    "model": "MiniMax-M2.7",
+    "case_id": "po-health-001",
+    "status": "ok",
+    "elapsed_ms": 22762,
+    "output": "@xiehe: org \"协和医院\"\n$p1 = name(@self, \"小明\")\n$p2 = age(@self, number)\n$p3 = occupation(@self, \"会计\")\n$p4 = live_in(@self, \"杭州\")\n$p5 = time(@self, \"最近两到三周\")\n$symptom1 = health_issue(@self, \"头疼\")\n$symptom2 = health_issue(@self, \"睡眠不好\")\n$e1 = event($symptom1, $p5)\n$e2 = event($symptom2, $p5)\n$p6 = degree($e2, \"每天睡四五个小时\")\n$h1 = family_history(@self, \"高血压\")\n$h2 = family_history(@self, \"高血压\")\n$h3 = family_history(@self, \"高血压\")\n$p7 = habit(@self, \"喝枸杞水\")\n$p8 = habit(@self, \"偶尔喝红酒\")\n$hobby1 = hobby(@self, \"游泳\")\n$p9 = frequency($hobby1, \"每周两次\")\n$p10 = time($p9, \"以前\")\n$neg($hobby1, $p10)\n$w1 = work_at(@self, \"会计事务所\")\n$work1 = event($w1)\n$p11 = time($work1, \"最近\")\n$task1 = task($work1, \"年审\")\n$task2 = task($work1, \"压力大\")\n@wife: person \"老婆\"\n$p12 = name(@wife, \"护士\")\n$p13 = work_at(@wife, @xiehe)\n$rel1 = spouse(@self, @wife)"
+  },
+  {
+    "model": "MiniMax-M2.7",
+    "case_id": "po-long-complex-001",
+    "status": "ok",
+    "elapsed_ms": 52097,
+    "output": "@hz: place \"杭州\"\n@sh: place \"上海\"\n@my: place \"绵阳\"\n@sy: place \"三亚\"\n@hs: place \"黄山\"\n@hw: org \"华为\"\n@zj: org \"浙大\"\n@ali: org \"阿里\"\n@bd: org \"北大\"\n@tx: org \"腾讯\"\n@zr: person \"周然\"\n@sq: person \"苏晴\"\n@lz: person \"老赵\"\n@ly: animal \"Lucky\"\n@mc: animal \"Mochi\"\n@lz_mom: person\n$1 = occupation(@zr, \"算法工程师\")\n$2 = workplace(@zr, @hw)\n$3 = location(@hw, @sh)\n$4 = education(@zr, \"本科\")\n$5 = grad_school(@zr, @zj)\n$6 = year(@zr, \"去年\")\n$7 = spouse(@zr, @sq)\n$8 = occupation(@sq, \"产品经理\")\n$9 = workplace(@sq, @tx)\n$10 = location(@tx, @sh)\n$11 = location(@zr, @sh)\n$12 = neg($7)\n$c1 = correct_intent(@self, $12)\n$13 = intend(@zr, \"独立开发者\")\n$14 = emotion(@zr, \"压力大\")\n$15 = neg($14)\n$16 = name(@self, \"数据分析师\")\n$17 = occupation(@self, \"数据分析师\")\n$18 = workplace(@self, @sh)\n$19 = workplace(@self, @ali)\n$20 = location(@ali, @hz)\n$21 = duration(@19, \"两年\")\n$22 = education(@self, \"统计学硕士\")\n$23 = study_at(@self, @bd)\n$24 = roommate(@self, @lz)\n$25 = occupation(@lz, \"后端开发\")\n$26 = pet(@lz, @ly)\n$27 = pet(@lz, @mc)\n$28 = name(@ly, \"Lucky\")\n$29 = breed(@ly, \"拉布拉多\")\n$30 = name(@mc, \"Mochi\")\n$31 = breed(@mc, \"柯基\")\n$32 = hobby(@self, \"徒步\")\n$33 = hobby(@lz, \"徒步\")\n$34 = frequency($32, \"周末\")\n$35 = companion($36, @self, @lz)\n$36 = companion($36, @zr, @lz)\n$37 = visit(@zr, @hs)\n$38 = visit(@self, @hs)\n$39 = visit(@lz, @hs)\n$40 = visit(@sq, @hs)\n$41 = action($42, \"日出\")\n$42 = event(@hs)\n$43 = time($42, \"上个月\")\n$44 = intend($45, \"婚礼\")\n$45 = event(@sy)\n$46 = time($44, \"明年\")\n$c2 = correct_intent(@self, $44)\n$47 = neg($7)\n$c3 = correct_intent(@self, $47)\n$48 = believe(@self, $7)\n$49 = neg(emotion(@self, \"海鲜\"))\n$c4 = correct_intent(@self, $49)\n$50 = dislike(@self, \"海鲜\")\n$51 = like(@self, \"川菜\")\n$52 = location(@self, @my)\n$53 = nationality(@self, \"四川人\")\n$54 = location(@my, \"绵阳\")\n$55 = resign(@lz)\n$56 = time($55, \"上周\")\n$57 = study_at(@lz, \"日本\")\n$58 = education(@lz, \"CS博士\")\n$59 = pet_owner(@lz_mom, @ly)\n$60 = pet_owner(@lz_mom, @mc)\n$61 = duration($59, \"暂时\")\nnote(@lz_mom, \"老赵的妈妈帮忙养Lucky和Mochi\")"
+  },
+  {
+    "model": "MiniMax-M2.7",
+    "case_id": "po-long-simple-001",
+    "status": "ok",
+    "elapsed_ms": 28888,
+    "output": "@北航: place \"北航\"\n@清华: place \"清华\"\n@字节: org \"字节跳动\"\n@百度: org \"百度\"\n@成都: place \"成都\"\n@北京: place \"北京\"\n@东京: place \"东京\"\n@大阪: place \"大阪\"\n@美团: org \"美团\"\n$s1 = name(@self, \"陈思远\")\n$s2 = age(@self, number)\n$s3 = occupation(@self, \"产品经理\")\n$s4 = work_at(@self, @字节)\n$s5 = live_in(@self, @北京)\n$s6 = live_in(@self, @成都)\n$e1 = like(@self, \"火锅\")\n@姐: person \"陈思雨\"\n$s7 = sibling(@self, @姐)\n$s8 = name(@姐, \"陈思雨\")\n$s9 = occupation(@姐, \"高中数学老师\")\n$s10 = location(@姐, @成都)\n@爸: person\n@妈: person\n$s11 = parent(@self, @爸)\n$s12 = parent(@self, @妈)\n$s13 = location(@爸, @成都)\n$s14 = location(@妈, @成都)\n$s15 = neg($e2) if $e2 = occupation(@爸, \"护士\")\n$s16 = neg($e3) if $e3 = occupation(@妈, \"护士\")\n$s17 = occupation(@妈, \"护士\")\n$s18 = neg($e4) if $e4 = occupation(@爸, \"护士\")\n$s19 = retire(@爸)\n$s20 = neg($e5) if $e5 = retire(@妈)\n@猫: animal \"橘猫\"\n$s21 = pet(@self, @猫)\n$s22 = name(@猫, \"豆豆\")\n$s23 = hobby(@self, \"跑步\")\n$s24 = frequency(@self, \"每周三次\")\n$s25 = hobby(@self, \"科幻电影\")\n$s26 = speak(@self, \"中文\")\n$s27 = speak(@self, \"英语\")\n$s28 = speak(@self, \"日语\")\n$s29 = education(@self, @北航)\n$s30 = education(@self, @清华)\n$s31 = study_at(@self, @清华, \"MBA\")\n$s32 = skill(@self, \"计算机\")\n$s33 = work_at(@self, @百度)\n$s34 = duration(@self, @百度, number)\n$s35 = work_at(@self, @字节)\n$s36 = intend(@self, $e6)\n$s37 = plan(@self, \"法国\")\n$s38 = plan(@self, \"意大利\")\n$s39 = time($s36, \"今年夏天\")\n$s40 = visit(@self, @东京)\n$s41 = visit(@self, @大阪)\n$s42 = time($s41, \"去年\")\n$s43 = intend(@self, \"欧洲\")\n$s44 = meet($s45, @self, @女友)\n$s45 = event(\"朋友聚会\")\n$s46 = time($s45, \"去年\")\n$s47 = like(@self, \"咖啡\")\n$s48 = frequency(@s47, \"每天至少两杯\")\n$s49 = neg($e7) if $e7 = drink(@self, \"酒\")\n@室友: person \"王磊\"\n$s50 = roommate(@self, @室友)\n$s51 = name(@室友, \"王磊\")\n$s52 = occupation(@室友, \"工程师\")\n$s53 = work_at(@室友, @美团)\n$s54 = classmate(@self, @室友)\n$s55 = teammate(@self, @室友)\n$s56 = sport(@s55, \"羽毛球\")\n@女友: person \"林悦\"\n$s57 = name(@女友, \"林悦\")\n$s58 = partner(@self, @女友)\n$s59 = occupation(@女友, \"设计师\")\n$s60 = time($s62, \"去年\")\n$s61 = meet(@self, @女友)\n$s62 = event(\"朋友聚会\")\n$s63 = know(@self, @女友)\n$s64 = believe(@self, $s28)"
+  },
+  {
+    "model": "MiniMax-M2.7",
+    "case_id": "po-multi-event-001",
+    "status": "ok",
+    "elapsed_ms": 14894,
+    "output": "@cousin1: person\n@boyfriend1: person\n@paris: place \"巴黎\"\n@london: place \"伦敦\"\n$e1 = meet(@cousin1, @boyfriend1, @paris)\ntime($e1, \"去年\")\n$e2 = engage(@cousin1, @boyfriend1, @london)\ntime($e2, \"上个月\")"
+  },
+  {
+    "model": "MiniMax-M2.7",
+    "case_id": "po-multi-value-001",
+    "status": "ok",
+    "elapsed_ms": 4520,
+    "output": "$s1 = speak(@self, \"中文\")\n$s2 = speak(@self, \"英语\")\n$s3 = speak(@self, \"日语\")\n$s4 = hobby(@self, \"跑步\")\n$s5 = hobby(@self, \"弹吉他\")"
+  },
+  {
+    "model": "MiniMax-M2.7",
+    "case_id": "po-negation-001",
+    "status": "ok",
+    "elapsed_ms": 14024,
+    "output": "$1 = dislike(@self, \"香菜\")\n$2 = skill(@self, \"游泳\")\n$3 = neg($2)\n$4 = skill(@self, \"做饭\")"
+  },
+  {
+    "model": "MiniMax-M2.7",
+    "case_id": "po-pet-001",
+    "status": "ok",
+    "elapsed_ms": 23119,
+    "output": "@dahuang: animal \"大黄\"\n@tuantuan: animal \"团子\"\n@manman: animal \"慢慢\"\n@xiaojie: person \"小杰\"\n@guangzhou: place \"广州\"\n@shanghai: place \"上海\"\n$p1 = own(@self, @dahuang)\n$p2 = pet_type(@dahuang, \"金毛\")\n$p3 = age(@dahuang, number)\n$p4 = trait(@dahuang, \"温顺\")\n$p5 = buy(@xiaojie, @dahuang)\n$p6 = location(@p5, \"宠物店\")\n$p7 = own(@self, @tuantuan)\n$p8 = pet_type(@tuantuan, \"英短蓝猫\")\n$p9 = age(@tuantuan, number)\n$p10 = trait(@tuantuan, \"调皮\")\n$p11 = habit(@tuantuan, \"抓沙发\")\n$p12 = gift(@tuantuan, @self)\n$p13 = own(@self, @manman)\n$p14 = pet_type(@manman, \"乌龟\")\n$p15 = duration(@p13, \"十多年\")\n$p16 = origin(@manman, @self)\n$p17 = move(@manman, @guangzhou, @shanghai)"
+  },
+  {
+    "model": "MiniMax-M2.7",
+    "case_id": "po-qa-001",
+    "status": "ok",
+    "elapsed_ms": 10725,
+    "output": "@sz: place \"深圳\"\n@ns: place \"南山区\"\n@hw: org \"华为\"\n$s1 = name(@self, \"朵朵爸\")\n$s2 = plan(@self, \"去新加坡出差\")\n$e1 = time($s2, \"下个月\")\n$s3 = work_at(@self, @hw)\n$s4 = workplace(@self, \"海外事业部\")\n$s5 = name(@self, \"Kevin\")\n$s6 = nationality(@s5, \"美国人\")\n$s7 = spouse(@self, @s5)\n$s8 = child(@self, @s9)\n$s9 = name(@s8, \"朵朵\")\n$s10 = age(@s8, 3)\n$s11 = live_in(@self, @ns)\n$s12 = live_in(@self, @sz)\n$s13 = occupation(@self, \"市场运营\")\n$s14 = like(@self, \"编程\")\n$s15 = skill(@self, \"Python\")\n$s16 = want(@self, \"转做数据分析\")"
+  },
+  {
+    "model": "MiniMax-M2.7",
+    "case_id": "po-retract-001",
+    "status": "ok",
+    "elapsed_ms": 20140,
+    "output": "@wang: person \"老王\"\n$new = neg(have_pet(@wang, \"dog\"))\n$c = correct_intent(@self, $new)"
+  },
+  {
+    "model": "MiniMax-M2.7",
+    "case_id": "po-temporal-001",
+    "status": "ok",
+    "elapsed_ms": 9694,
+    "output": "@dad: person \"我爸\"\n@国企: org \"国企\"\n$1 = work_at(@dad, @国企)\n$2 = resign(@dad, @国企)\n$3 = time($2, \"三年前\")\n$4 = own(@dad, \"餐厅\")\n$5 = time($4, \"去年\")\n$6 = move(@dad, @深圳)\n$7 = time($6, \"上个月\")"
+  },
+  {
+    "model": "MiniMax-M2.7",
+    "case_id": "po-travel-001",
+    "status": "ok",
+    "elapsed_ms": 16434,
+    "output": "@xiaomin: person \"小敏\"\n@piaozhixun: person \"朴智勋\"\n@liuyang: person \"刘洋\"\n@samsung: org \"三星\"\n@seoul: place \"首尔\"\n@kyoto: place \"京都\"\n@iceland: place \"冰岛\"\n@maldives: place \"马尔代夫\"\n$e1 = visit(@self, @seoul)\nnote($e1, \"看了红叶\")\n$e2 = meet(@self, @xiaomin)\nnote($e2, \"大学同学\")\n$e3 = name(@xiaomin, \"小敏\")\n$e4 = spouse(@xiaomin, @piaozhixun)\n$e5 = name(@piaozhixun, \"朴智勋\")\n$e6 = live_in(@xiaomin, @seoul)\n$e7 = work_at(@xiaomin, @samsung)\n$e8 = occupation(@xiaomin, \"芯片设计\")\n$e9 = name(@liuyang, \"刘洋\")\n$e10 = spouse(@self, @liuyang)\n$e11 = plan(@self, @iceland)\nnote($e11, \"看极光\")\n$e12 = dislike(@liuyang, \"冷\")\n$e13 = plan(@self, @maldives)\nnote($e13, \"蜜月\")"
+  },
+  {
+    "model": "MiniMax-M2.7",
+    "case_id": "po-uncertainty-001",
+    "status": "ok",
+    "elapsed_ms": 14984,
+    "output": "@boss: person\n@shanghai: place \"上海\"\n@google: org \"谷歌\"\n$l1 = location(@boss, @shanghai)\n$l2 = work_at(@boss, @google)\nbelieve(@self, $l1)\nbelieve(@self, $l2)"
+  },
+  {
+    "model": "MiniMax-M2.7",
+    "case_id": "po-vibecoding-001",
+    "status": "ok",
+    "elapsed_ms": 20914,
+    "output": "@hit: place \"哈工大\"\n@ant: org \"蚂蚁集团\"\n$e1 = correct_intent(@self, $e2)\n$e2 = work_at(@self, @ant)\nnote($e2, \"之前在 PingCAP 待过，现已跳槽\")\n$p1 = name(@self, \"陆思源\")\n$p2 = study_at(@self, @hit)\n$p3 = occupation(@self, \"前端开发\")\n$p4 = skill(@self, \"Rust\")\n$p5 = live_in(@self, @hz)\n$p6 = hobby(@self, \"摄影\")\n$p7 = like(@self, \"风景照\")\n$e3 = own(@self, \"索尼A7M4\")\n$e4 = use(@self, \"索尼A7M4\")\n$p8 = like(@self, \"技术文章\")\n$p9 = plan(@self, \"个人博客\")\n$p10 = work_at(@self, \"Next.js\")\n$p11 = skill(@self, \"TypeScript\")\n$p12 = education(@self, \"计算机系\")\n$p13 = duration(@p3, 5, \"年\")\n$p14 = plan(@self, \"Vercel\")\n$p15 = own(@self, \"siyuan.dev\")"
+  },
+  {
+    "model": "claude-opus-4-6",
+    "case_id": "po-alias-001",
+    "status": "ok",
+    "elapsed_ms": 3375,
+    "output": "@lxy: person \"林小雨\"\n@pku: org \"北大\"\n$1 = friend(@self, @lxy)\n$2 = name(@lxy, \"林小雨\")\n$3 = alias(@lxy, \"小雨\")\n$4 = study_at(@lxy, @pku)\n$5 = education(@lxy, \"研究生\")\n$6 = study_at:major(@lxy, \"计算机\")"
+  },
+  {
+    "model": "claude-opus-4-6",
+    "case_id": "po-basic-001",
+    "status": "ok",
+    "elapsed_ms": 201,
+    "output": "@hz: place \"杭州\"\n$p1 = name(@self, \"张伟\")\n$p2 = age(@self, 28)\n$p3 = occupation(@self, \"前端工程师\")\n$p4 = live_in(@self, @hz)"
+  },
+  {
+    "model": "claude-opus-4-6",
+    "case_id": "po-career-001",
+    "status": "ok",
+    "elapsed_ms": 8740,
+    "output": "@hshs: org \"衡水中学\"\n@fdu: org \"复旦大学\"\n@mit: org \"MIT\"\n@gs: org \"高盛\"\n@ms: org \"摩根士丹利\"\n@hk: place \"香港\"\n@zt: person \"张韬\"\n@xcai: org \"星辰智能\"\n@hz: place \"杭州\"\n@stanford: org \"斯坦福\"\n$1 = study_at(@self, @hshs)\n$2 = time($1, \"高中\")\n$3 = study_at(@self, @fdu)\n$4 = education(@self, \"金融\")\n$5 = study_at(@self, @mit)\n$6 = time($5, \"大二\")\n$7 = duration($5, \"一个学期\")\nnote($5, \"交换项目\")\n$8 = work_at(@self, @gs)\nnote($8, \"实习\")\n$9 = duration($8, \"半年\")\n$10 = work_at(@self, @ms)\n$11 = occupation(@self, \"分析师\")\n$12 = duration($10, \"三年\")\n$13 = live_in(@self, @hk)\n$14 = time($13, \"在摩根士丹利期间\")\n$15 = resign(@self, \"金融行业\")\n$16 = time($15, \"29岁\")\n$17 = move(@self, @hz)\n$18 = partner(@self, @zt)\n$19 = start(@self, @xcai)\n$20 = start(@zt, @xcai)\n$21 = location(@xcai, @hz)\n$22 = study_at(@self, @stanford)\n$23 = education(@self, \"CS硕士\")\nnote($22, \"在高盛/摩根士丹利和创业之间就读\")\nnote(@xcai, \"企业级AI助手方向，目前50多人规模\")"
+  },
+  {
+    "model": "claude-opus-4-6",
+    "case_id": "po-comprehensive-001",
+    "status": "ok",
+    "elapsed_ms": 6345,
+    "output": "@kevin: person \"凯文\"\n@mayo: org \"梅奥诊所\"\n@osaka: place \"大阪\"\n@kevin_wife: person\n\n$r1 = brother(@self, @kevin)\n$w1 = work_at(@kevin, @mayo)\n$c1 = correct_intent(@self, $w1)\n$o1 = occupation(@kevin, \"外科医生\")\n$s1 = speak(@kevin, \"英语\")\n$s2 = speak(@kevin, \"普通话\")\n$s3 = speak(@kevin, \"法语\")\n$s3d = degree($s3, \"一点\")\n$rel1 = spouse(@kevin, @kevin_wife)\n$n1 = nationality(@kevin_wife, \"日本人\")\n$b1 = believe(@self, $n1)\n$m1 = marry(@kevin, @kevin_wife, @osaka)\n$m1t = time($m1, \"去年\")\n$c2 = correct_intent(@self, $m1)"
+  },
+  {
+    "model": "claude-opus-4-6",
+    "case_id": "po-correction-001",
+    "status": "ok",
+    "elapsed_ms": 2987,
+    "output": "@li: person \"小李\"\n@tx: org \"腾讯\"\n$r1 = coworker(@self, @li)\n$w1 = work_at(@li, @tx)\n$c1 = correct_intent(@self, $w1)"
+  },
+  {
+    "model": "claude-opus-4-6",
+    "case_id": "po-family-001",
+    "status": "ok",
+    "elapsed_ms": 12159,
+    "output": "@grandpa: person \"爷爷\"\n@grandma: person \"奶奶\"\n@fuzhou: place \"福州\"\n@dad: person \"爸爸\"\n@uncle1: person \"大伯\"\n@uncle2: person \"小叔\"\n@xiamen_univ: org \"厦门大学\"\n@misaki: person \"美咲\"\n@mom: person \"妈妈\"\n@wenzhou: place \"温州\"\n@aunt: person \"小姨\"\n@yiwu: place \"义乌\"\n@xiaohao: person \"小豪\"\n@guangzhou: place \"广州\"\n@wife: person \"林芳\"\n@hospital: org \"中山大学附属医院\"\n@duoduo: person \"朵朵\"\n\n# 爷爷奶奶\n$g1 = father(@dad, @grandpa)\n$g2 = mother(@dad, @grandma)\n$g3 = spouse(@grandpa, @grandma)\n$g4 = live_in(@grandpa, @fuzhou)\n$g5 = live_in(@grandma, @fuzhou)\n$g6 = occupation(@grandpa, \"渔民\")\n$g7 = time($g6, \"以前\")\n$g8 = age(@grandpa, \"90多岁\")\n$g9 = note(@grandpa, \"身体还不错\")\n\n# 爸爸和兄弟\n$d1 = father(@self, @dad)\n$d2 = brother(@dad, @uncle1)\n$d3 = brother(@dad, @uncle2)\n$u1 = location(@uncle1, @fuzhou)\n$u2 = own(@uncle1, \"海鲜餐厅\")\n$u3 = occupation(@uncle2, \"物理教授\")\n$u4 = work_at(@uncle2, @xiamen_univ)\n$u5 = spouse(@uncle2, @misaki)\n$u6 = nationality(@misaki, \"日本\")\n$u7 = name(@misaki, \"美咲\")\n\n# 妈妈和小姨\n$m1 = mother(@self, @mom)\n$m2 = location(@mom, @wenzhou)\nnote($m2, \"妈妈是温州人\")\n$m3 = sister(@mom, @aunt)\n$a1 = occupation(@aunt, \"外贸生意\")\n$a2 = work_at(@aunt, @yiwu)\nnote($a1, \"做得挺大的\")\n$x1 = cousin(@self, @xiaohao)\n$x2 = mother(@xiaohao, @aunt)\n$x3 = coworker(@xiaohao, @aunt)\nnote($x3, \"小豪跟着小姨做生意\")\n\n# 自己和家庭\n$s1 = live_in(@self, @guangzhou)\n$s2 = spouse(@self, @wife)\n$s3 = name(@wife, \"林芳\")\n$s4 = occupation(@wife, \"医生\")\n$s5 = work_at(@wife, @hospital)\n$s6 = child(@self, @duoduo)\n$s7 = child(@wife, @duoduo)\n$s8 = name(@duoduo, \"朵朵\")\n$s9 = education(@duoduo, \"幼儿园\")\nnote($s9, \"刚上幼儿园\")"
+  },
+  {
+    "model": "claude-opus-4-6",
+    "case_id": "po-food-001",
+    "status": "ok",
+    "elapsed_ms": 8341,
+    "output": "@sis: person \"姐姐\"\n$h1 = hobby(@self, \"美食\")\n$a1 = dislike:allergy(@self, \"花生\")\n$a1s = degree($a1, \"严重\")\n$d1 = dislike:food(@self, \"泰国菜\")\n$d1r = cause($d1, $a1)\n$np = dislike:food(@self, \"猪肉\")\n$npr = cause($np, \"宗教原因\")\n$f1 = like(@self, \"意大利面\")\n$f1d = degree($f1, \"最爱\")\n$f1f = frequency($f1, \"每周至少三次\")\n$h2 = hobby(@self, \"做饭\")\n$h3 = hobby(@self, \"烘焙\")\n$h3d = degree($h3, \"特别喜欢\")\n$bake1 = event(@self, \"做了巴斯克芝士蛋糕\")\n$bake1t = time($bake1, \"上周\")\n$bday = birthday(@sis)\n$bake1r = cause($bake1, $bday)\n$rel1 = sister(@self, @sis)\n$nd1 = drink(@self, \"奶茶\")\n$nd1n = neg($nd1)\n$nd2 = drink(@self, \"可乐\")\n$nd2n = neg($nd2)\n$d2 = drink(@self, \"黑咖啡\")\n$d3 = drink(@self, \"茶\")\n$d2f = frequency($d2, \"一天三杯以上\")\n$d2u = believe(@self, $d2f)\nnote($d2u, \"可能咖啡喝太多了\")\n$sis_say = say(@sis, \"咖啡因上瘾\")"
+  },
+  {
+    "model": "claude-opus-4-6",
+    "case_id": "po-health-001",
+    "status": "ok",
+    "elapsed_ms": 6018,
+    "output": "@dad: person \"爸爸\"\n@grandma: person \"奶奶\"\n@wife: person \"老婆\"\n@hosp: place \"协和医院\"\n$a1 = age(@self, 35)\n$a2 = occupation(@self, \"会计事务所职员\")\n$a3 = work_at(@self, \"会计事务所\")\n$h1 = habit(@self, \"头疼\")\n$h2 = duration($h1, \"两三周\")\n$h3 = habit(@self, \"睡眠不好\")\n$h4 = quantity($h3, \"每天四五个小时\")\n$w1 = hobby(@self, \"游泳\")\n$w2 = frequency($w1, \"每周两次\")\n$w3 = stop(@self, \"游泳\")\n$w4 = cause($w3, \"忙年审没时间\")\n$f1 = father(@self, @dad)\n$f2 = habit(@dad, \"高血压\")\n$f3 = mother(@dad, @grandma)\n$f4 = habit(@grandma, \"高血压\")\n$bp1 = habit(@self, \"去年体检血压正常\")\n$d1 = drink(@self, \"枸杞水\")\n$d2 = frequency($d1, \"每天\")\n$s1 = neg($s1a)\n$s1a = habit(@self, \"抽烟\")\n$d3 = drink(@self, \"红酒\")\n$d4 = frequency($d3, \"偶尔\")\n$r1 = spouse(@self, @wife)\n$r2 = occupation(@wife, \"护士\")\n$r3 = work_at(@wife, @hosp)"
+  },
+  {
+    "model": "claude-opus-4-6",
+    "case_id": "po-long-complex-001",
+    "status": "ok",
+    "elapsed_ms": 18861,
+    "output": "@zr: person \"周然\"\n@sz: place \"深圳\"\n@hw: org \"华为\"\n@zd: org \"浙大\"\n@sq: person \"苏晴\"\n@tx: org \"腾讯\"\n@sh: place \"上海\"\n@hz: place \"杭州\"\n@ali: org \"阿里\"\n@bd: org \"北大\"\n@lz: person \"老赵\"\n@lucky: animal \"Lucky\"\n@mochi: animal \"Mochi\"\n@hs: place \"黄山\"\n@sy: place \"三亚\"\n@my: place \"绵阳\"\n@mom: person\n# 周然 - 弟弟，算法工程师，华为，深圳，浙大毕业\n$r1 = brother(@self, @zr)\n$r2 = name(@zr, \"周然\")\n$r3 = occupation(@zr, \"算法工程师\")\n$r4 = work_at(@zr, @hw)\n$r5 = location(@zr, @sz)\n$r6 = education(@zr, \"浙大\")\n$r6t = time($r6, \"去年毕业\")\n# 周然不喜欢当前工作，压力大\n$r7 = dislike(@zr, \"当前工作\")\nnote($r7, \"压力太大\")\n$r8 = want(@zr, \"转做独立开发者\")\n# 苏晴 - 周然女朋友，产品经理，腾讯（已更正）\n$r9 = partner(@zr, @sq)\n$r10 = name(@sq, \"苏晴\")\n$r11 = occupation(@sq, \"产品经理\")\n$c1 = correct_intent(@self, $r11)\n$r12 = work_at(@sq, @tx)\n# 周然没订婚，只是在考虑\n$r13 = retract_intent(@self, \"周然跟苏晴订婚了\")\n$r14 = undecided(@zr, \"跟苏晴订婚\")\n# 周然打算明年在三亚办婚礼\n$r15 = plan(@zr, \"办婚礼\")\n$r15t = time($r15, \"明年\")\n$r15l = location($r15, @sy)\n# 妈妈\n$r16 = mother(@self, @mom)\n# 自己 - 数据分析师，上海，北大统计学硕士\n$s1 = occupation(@self, \"数据分析师\")\n$s2 = live_in(@self, @sh)\n$s3 = education(@self, \"北大统计学硕士\")\n$s4 = work_at(@self, @ali)\n$s4t = duration($s4, \"两年\")\nnote($s4, \"之前在杭州的阿里干过\")\n# 老赵 - 室友，后端开发，养两条狗\n$z1 = roommate(@self, @lz)\n$z2 = name(@lz, \"老赵\")\n$z3 = occupation(@lz, \"后端开发\")\n$z4 = pet(@lz, @lucky)\n$z5 = pet(@lz, @mochi)\n$z6 = name(@lucky, \"Lucky\")\n$z7 = name(@mochi, \"Mochi\")\nnote(@lucky, \"拉布拉多\")\nnote(@mochi, \"柯基\")\n# 周末一起徒步\n$z8 = hobby(@self, \"徒步\")\n$z9 = hobby(@lz, \"徒步\")\n$z8f = frequency($z8, \"周末经常\")\n# 上个月黄山之行\n$e1 = visit(@self, @hs)\n$e1p1 = visit(@lz, @hs)\n$e1p2 = visit(@zr, @hs)\n$e1p3 = visit(@sq, @hs)\n$e1t = time($e1, \"上个月\")\nnote($e1, \"在山顶看了日出\")\n# 饮食偏好\n$f1 = eat(@self, \"海鲜\")\n$f2 = neg($f1)\nnote($f2, \"过敏\")\n$f3 = like(@self, \"川菜\")\n# 四川人，老家绵阳\n$f4 = nationality(@self, \"四川人\")\n$f5 = live_in(@self, @my)\nnote($f5, \"老家\")\n# 老赵辞职，准备去日本读CS博士\n$z10 = resign(@lz, \"工作\")\n$z10t = time($z10, \"上周\")\n$z11 = plan(@lz, \"去日本读CS博士\")\nnote($z4, \"Lucky和Mochi暂时让老赵妈妈帮忙养着\")"
+  },
+  {
+    "model": "claude-opus-4-6",
+    "case_id": "po-long-simple-001",
+    "status": "ok",
+    "elapsed_ms": 15196,
+    "output": "@cy: person \"陈思雨\"\n@dad: person\n@mom: person\n@dd: animal \"豆豆\"\n@bj: place \"北京\"\n@cd: place \"成都\"\n@cy_area: place \"朝阳区\"\n@bytedance: org \"字节跳动\"\n@baidu: org \"百度\"\n@beihang: org \"北航\"\n@tsinghua: org \"清华\"\n@wl: person \"王磊\"\n@mt: org \"美团\"\n@ly: person \"林悦\"\n@tokyo: place \"东京\"\n@osaka: place \"大阪\"\n@france: place \"法国\"\n@italy: place \"意大利\"\n@japan: place \"日本\"\n\n$n1 = name(@self, \"陈思远\")\n$a1 = age(@self, 32)\n$o1 = occupation(@self, \"产品经理\")\n$w1 = work_at(@self, @bytedance)\n$l1 = live_in(@self, @bj)\n$l2 = live_in(@self, @cy_area)\n$h1 = location(@self, @cd)\nnote($h1, \"老家是成都\")\n$like1 = like(@self, \"火锅\")\nnote($like1, \"特别想家里的火锅\")\n\n$r1 = sister(@self, @cy)\n$n2 = name(@cy, \"陈思雨\")\n$o2 = occupation(@cy, \"老师\")\n$l3 = live_in(@cy, @cd)\nnote($o2, \"教高中数学\")\n\n$r2 = father(@self, @dad)\n$l4 = live_in(@dad, @cd)\n$o3 = occupation(@dad, \"退休\")\n\n$r3 = mother(@self, @mom)\n$l5 = live_in(@mom, @cd)\n$o4 = occupation(@mom, \"护士\")\n$w2 = work_at(@mom, \"医院\")\n\n$p1 = pet(@self, @dd)\nnote($dd, \"橘猫，很胖\")\n\n$hb1 = hobby(@self, \"跑步\")\n$f1 = frequency($hb1, \"每周三次\")\n$hb2 = hobby(@self, \"看电影\")\n$hb3 = like(@self, \"科幻片\")\n\n$sp1 = speak(@self, \"中文\")\n$sp2 = speak(@self, \"英语\")\nnote($sp2, \"能工作交流\")\n$sp3 = speak(@self, \"日语\")\nnote($sp3, \"学了一点，还不太行\")\n\n$e1 = study_at(@self, @beihang)\nnote($e1, \"计算机专业\")\n$e2 = study_at(@self, @tsinghua)\nnote($e2, \"MBA方向\")\n\n$prev1 = work_at(@self, @baidu)\n$dur1 = duration($prev1, \"三年\")\nnote($prev1, \"之前在百度，后来跳到字节\")\n\n$r4 = roommate(@self, @wl)\nnote($r4, \"大学室友\")\n$n3 = name(@wl, \"王磊\")\n$o5 = occupation(@wl, \"工程师\")\n$w3 = work_at(@wl, @mt)\n$act1 = hobby(@self, \"羽毛球\")\nnote($act1, \"经常和王磊一起打\")\n\n$r5 = partner(@self, @ly)\n$n4 = name(@ly, \"林悦\")\n$o6 = occupation(@ly, \"设计师\")\n$w4 = work_at(@ly, \"广告公司\")\n$m1 = meet(@self, @ly)\n$t1 = time($m1, \"去年\")\nnote($m1, \"在朋友聚会上认识的\")\n\n$dk1 = drink(@self, \"酒\")\n$neg1 = neg($dk1)\n$dk2 = like(@self, \"咖啡\")\n$q1 = frequency($dk2, \"每天至少两杯\")\n\n$v1 = visit(@self, @japan)\n$t2 = time($v1, \"去年\")\n$v2 = visit(@self, @tokyo)\n$t3 = time($v2, \"去年\")\n$v3 = visit(@self, @osaka)\n$t4 = time($v3, \"去年\")\n\n$pl1 = plan(@self, \"去欧洲\")\n$t5 = time($pl1, \"今年夏天\")\n$pl2 = plan(@self, \"去法国\")\n$pl3 = plan(@self, \"去意大利\")"
+  },
+  {
+    "model": "claude-opus-4-6",
+    "case_id": "po-multi-event-001",
+    "status": "ok",
+    "elapsed_ms": 5915,
+    "output": "@cousin: person \"表姐\"\n@bf: person\n@paris: place \"巴黎\"\n@london: place \"伦敦\"\n$r1 = cousin(@self, @cousin)\n$r2 = partner(@cousin, @bf)\n$m1 = meet(@cousin, @bf, @paris)\n$t1 = time($m1, \"去年\")\n$e1 = engage(@cousin, @bf)\n$t2 = time($e1, \"上个月\")\n$l1 = location($e1, @london)"
+  },
+  {
+    "model": "claude-opus-4-6",
+    "case_id": "po-multi-value-001",
+    "status": "ok",
+    "elapsed_ms": 3188,
+    "output": "$s1 = speak(@self, \"中文\")\n$s2 = speak(@self, \"英语\")\n$s3 = speak(@self, \"日语\")\n$s3d = degree($s3, \"一点\")\n$s4 = hobby(@self, \"跑步\")\n$s5 = hobby(@self, \"弹吉他\")"
+  },
+  {
+    "model": "claude-opus-4-6",
+    "case_id": "po-negation-001",
+    "status": "ok",
+    "elapsed_ms": 2991,
+    "output": "@self\n\n$d1 = dislike(@self, \"香菜\")\n$s1 = skill(@self, \"游泳\")\n$s1n = neg($s1)\n$s2 = skill(@self, \"做饭\")\n$s2d = degree($s2, \"很擅长\")"
+  },
+  {
+    "model": "claude-opus-4-6",
+    "case_id": "po-pet-001",
+    "status": "ok",
+    "elapsed_ms": 6826,
+    "output": "@dh: animal \"大黄\"\n@tz: animal \"团子\"\n@mm: animal \"慢慢\"\n@xj: person \"小杰\"\n@gz: place \"广州\"\n@sh: place \"上海\"\n$1 = pet(@self, @dh)\n$2 = name(@dh, \"大黄\")\n$3 = like:breed(@dh, \"金毛\")\n$4 = age(@dh, 5)\n$5 = like:temperament(@dh, \"温顺\")\n$6 = pet(@self, @tz)\n$7 = name(@tz, \"团子\")\n$8 = like:breed(@tz, \"英短蓝猫\")\n$9 = age(@tz, \"8个月\")\n$10 = like:temperament(@tz, \"调皮\")\n$11 = habit(@tz, \"抓沙发\")\n$12 = pet(@self, @mm)\n$13 = name(@mm, \"慢慢\")\n$14 = like:species(@mm, \"乌龟\")\n$15 = own(@self, @mm)\n$16 = duration($15, \"十多年\")\n$17 = partner(@self, @xj)\n$18 = buy(@xj, @dh)\n$19 = like:source($18, \"宠物店\")\n$20 = gift:receive(@self, @tz)\n$21 = like:source($20, \"朋友\")\n$22 = move(@self, @sh)\n$23 = like:from($22, @gz)"
+  },
+  {
+    "model": "claude-opus-4-6",
+    "case_id": "po-qa-001",
+    "status": "ok",
+    "elapsed_ms": 6733,
+    "output": "@hw: org \"华为\"\n@sg: place \"新加坡\"\n@kevin: person \"Kevin\"\n@dd: person \"朵朵\"\n@sz: place \"深圳南山区\"\n\n$1 = visit(@self, @sg)\n$1t = time($1, \"下个月\")\n$1p = cause($1, \"出差\")\n$2 = work_at(@self, @hw)\n$3 = occupation:department(@self, \"海外事业部\")\n$4 = spouse(@self, @kevin)\n$5 = nationality(@kevin, \"美国人\")\n$6 = visit(@kevin, @sg)\n$6t = time($6, \"之前\")\n$7 = like(@kevin, \"肉骨茶\")\n$8 = skill:learning(@self, \"Python\")\n$9 = skill:learning(@self, \"数据分析\")\n$10 = occupation(@self, \"市场运营\")\n$11 = child(@self, @dd)\n$12 = age(@dd, 3)\n$13 = live_in(@self, @sz)"
+  },
+  {
+    "model": "claude-opus-4-6",
+    "case_id": "po-retract-001",
+    "status": "ok",
+    "elapsed_ms": 2444,
+    "output": "@lw: person \"老王\"\n$r1 = neighbor(@self, @lw)\n$r2 = retract_intent(@self, \"老王养了一条金毛\")"
+  },
+  {
+    "model": "claude-opus-4-6",
+    "case_id": "po-temporal-001",
+    "status": "ok",
+    "elapsed_ms": 3684,
+    "output": "@dad: person\n@sz: place \"深圳\"\n\n$f1 = father(@self, @dad)\n$f2 = resign(@dad, \"国企\")\n$f3 = time($f2, \"三年前\")\n$f4 = start(@dad, \"餐厅\")\n$f5 = time($f4, \"去年\")\n$f6 = move(@dad, @sz)\n$f7 = time($f6, \"上个月\")"
+  },
+  {
+    "model": "claude-opus-4-6",
+    "case_id": "po-travel-001",
+    "status": "ok",
+    "elapsed_ms": 12053,
+    "output": "@bangkok: place \"曼谷\"\n@thailand: place \"泰国\"\n@kyoto: place \"京都\"\n@japan: place \"日本\"\n@seoul: place \"首尔\"\n@korea: place \"韩国\"\n@xiaoming: person \"小敏\"\n@pjx: person \"朴智勋\"\n@gangnam: place \"江南区\"\n@iceland: place \"冰岛\"\n@liuyang: person \"刘洋\"\n@maldives: place \"马尔代夫\"\n@samsung: org \"三星\"\n\n# 去年旅行\n$v1 = visit(@self, @bangkok)\n$v1t = time($v1, \"去年\")\n$v1loc = location($v1, @thailand)\n$e1 = eat(@self, \"芒果糯米饭\")\n$e1loc = location($e1, @bangkok)\n\n$v2 = visit(@self, @kyoto)\n$v2t = time($v2, \"去年\")\n$v2loc = location($v2, @japan)\n$v2n = note($v2, \"看了红叶\")\n\n$v3 = visit(@self, @seoul)\n$v3t = time($v3, \"去年\")\n$v3loc = location($v3, @korea)\n$v3n = note($v3, \"找大学同学小敏\")\n\n# 小敏相关\n$r1 = classmate(@self, @xiaoming)\n$r1n = note($r1, \"大学同学\")\n$m1 = marry(@xiaoming, @pjx)\n$n1 = nationality(@pjx, \"韩国人\")\n$l1 = live_in(@xiaoming, @gangnam)\n$l1b = location($l1, @seoul)\n$l2 = live_in(@pjx, @gangnam)\n$w1 = work_at(@xiaoming, @samsung)\n$o1 = occupation(@xiaoming, \"芯片设计\")\n\n# 老公刘洋\n$sp = spouse(@self, @liuyang)\n$nm = name(@liuyang, \"刘洋\")\n\n# 今年计划去冰岛\n$p1 = plan(@self, \"去冰岛看极光\")\n$p1v = visit(@self, @iceland)\n$p1t = time($p1, \"今年\")\n$p1w = note($p1, \"跟老公一起去\")\n$p1a = plan(@liuyang, \"去冰岛看极光\")\n$d1 = dislike(@liuyang, \"冷\")\n$d1n = note($d1, \"特别怕冷但是很想去\")\n$w2 = want(@liuyang, $p1a)\n\n# 明年蜜月计划\n$p2 = plan(@self, \"蜜月去马尔代夫\")\n$p2t = time($p2, \"明年\")\n$p2v = visit(@self, @maldives)\n$p2a = plan(@liuyang, \"蜜月去马尔代夫\")"
+  },
+  {
+    "model": "claude-opus-4-6",
+    "case_id": "po-uncertainty-001",
+    "status": "ok",
+    "elapsed_ms": 3825,
+    "output": "@boss: person\n@sh: place \"上海\"\n$f1 = boss(@self, @boss)\n$f2 = location(@boss, @sh)\n$b1 = believe(@self, $f2)\n$f3 = work_at(@boss, \"谷歌\")\n$b2 = believe(@self, $f3)"
+  },
+  {
+    "model": "claude-opus-4-6",
+    "case_id": "po-vibecoding-001",
+    "status": "ok",
+    "elapsed_ms": 6480,
+    "output": "@pingcap: org \"PingCAP\"\n@ant: org \"蚂蚁集团\"\n@hz: place \"杭州\"\n@hit: org \"哈工大\"\n@sony: brand \"索尼\"\n$n = name(@self, \"陆思源\")\n$occ = occupation(@self, \"前端开发\")\n$exp = duration($occ, \"五年\")\n$w_old = work_at(@self, @pingcap)\n$w_new = work_at(@self, @ant)\n$c = correct_intent(@self, $w_new)\n$loc = live_in(@self, @hz)\n$edu = study_at(@self, @hit)\n$edu_major = note($edu, \"计算机系\")\n$sk1 = skill(@self, \"TypeScript\")\n$sk2 = skill(@self, \"前端开发\")\n$learn = study_at(@self, \"Rust\")\n$hobby = hobby(@self, \"摄影\")\n$h_detail = note($hobby, \"喜欢拍风景照\")\n$cam = own(@self, \"索尼A7M4\")\n$blog = plan(@self, \"搭建个人博客\")\n$b_tech = note($blog, \"使用 Next.js + TypeScript\")\n$deploy = plan(@self, \"部署到 Vercel\")\n$domain = own(@self, \"siyuan.dev\")"
+  },
+  {
+    "model": "deepseek-v3.2",
+    "case_id": "po-alias-001",
+    "status": "ok",
+    "elapsed_ms": 4913,
+    "output": "@self: person\n@lin_xiaoyu: person \"林小雨\"\n$p1 = friend(@self, @lin_xiaoyu)\n$p2 = name(@lin_xiaoyu, \"小雨\")\n$p3 = study_at(@lin_xiaoyu, \"北京大学\")\n$p4 = education(@lin_xiaoyu, \"研究生\")\n$p5 = skill(@lin_xiaoyu, \"计算机\")"
+  },
+  {
+    "model": "deepseek-v3.2",
+    "case_id": "po-basic-001",
+    "status": "ok",
+    "elapsed_ms": 4050,
+    "output": "@hz: place \"杭州\"\n$n1 = name(@self, \"张伟\")\n$a1 = age(@self, 28)\n$o1 = occupation(@self, \"前端工程师\")\n$l1 = live_in(@self, @hz)"
+  },
+  {
+    "model": "deepseek-v3.2",
+    "case_id": "po-career-001",
+    "status": "ok",
+    "elapsed_ms": 9805,
+    "output": "@mit: org \"MIT\"\n@stanford: org \"斯坦福\"\n@zhangtao: person \"张韬\"\n@hz: place \"杭州\"\n@hs: org \"衡水中学\"\n@fudan: org \"复旦大学\"\n@gs: org \"高盛\"\n@ms: org \"摩根士丹利\"\n@hk: place \"香港\"\n$1 = study_at(@self, @hs)\n$2 = education(@self, \"高中\")\n$3 = education(@self, \"金融系\")\n$4 = study_at(@self, @fudan)\nnote($4, \"高考考上\")\n$5 = exchange(@self, @mit)\n$6 = study_at(@self, @stanford)\n$7 = education(@self, \"CS硕士\")\n$8 = internship(@self, @gs)\n$9 = work_at(@self, @ms)\n$10 = occupation(@self, \"分析师\")\n$11 = live_in(@self, @hk)\n$12 = start($9, @self)\n$13 = move(@self, @hz)\n$14 = partner(@self, @zhangtao)\n$15 = found(@self, \"星辰智能\")\n$16 = work_at(@self, $15)\nnote($16, \"AI公司\")\n$17 = degree($15, number(50))\nnote($17, \"公司有50多人\")"
+  },
+  {
+    "model": "deepseek-v3.2",
+    "case_id": "po-comprehensive-001",
+    "status": "ok",
+    "elapsed_ms": 6902,
+    "output": "@kevin: person \"凯文\"\n@mayo: org \"梅奥诊所\"\n@osaka: place \"大阪\"\n\n$s1 = brother(@self, @kevin)\n$s2 = occupation(@kevin, \"外科医生\")\n$s3 = work_at(@kevin, @mayo)\n$s4 = speak(@kevin, \"英语\")\n$s5 = speak(@kevin, \"普通话\")\n$s6 = speak(@kevin, \"法语\")\n$b1 = believe(@self, $b2)\n$b2 = spouse(@kevin, @spouse)\nnote($b2, \"老婆可能是日本人\")\n$m1 = meet(@kevin, @spouse, @tokyo)\n$t1 = time($m1, \"去年\")\n$c1 = correct_intent(@self, $s3)\n$m2 = marry(@kevin, @spouse, @osaka)"
+  },
+  {
+    "model": "deepseek-v3.2",
+    "case_id": "po-correction-001",
+    "status": "ok",
+    "elapsed_ms": 4158,
+    "output": "@xiaoli: person \"小李\"\n$tengxun: org \"腾讯\"\n$b1 = work_at(@xiaoli, @tengxun)\n$c1 = correct_intent(@self, $b1)\n# nothing to extract"
+  },
+  {
+    "model": "deepseek-v3.2",
+    "case_id": "po-family-001",
+    "status": "ok",
+    "elapsed_ms": 18773,
+    "output": "@fuzhou: place \"福州\"\n@grampa: person\n@granny: person\n@dad: person\n@uncle1: person \"大伯\"\n@uncle2: person \"小叔\"\n@xiamen: place \"厦门\"\n@michiru: person \"美咲\"\n@mom: person\n@wenzhou: place \"温州\"\n@aunt: person \"小姨\"\n@yiwu: place \"义乌\"\n@biao: person \"小豪\"\n@wife: person \"老婆\"\n@guangzhou: place \"广州\"\n@linfang: person \"林芳\"\n@daughter: person \"朵朵\"\n$p1 = live_in(@grampa, @fuzhou)\n$p2 = live_in(@granny, @fuzhou)\n$p3 = occupation(@grampa, \"渔民\")\n$p4 = age(@grampa, 90)\n$p5 = brother(@dad, @uncle1)\n$p6 = brother(@dad, @uncle2)\n$p7 = own(@uncle1, \"海鲜餐厅\")\n$p8 = location($p7, @fuzhou)\n$p9 = occupation(@uncle2, \"教授\")\n$p10 = workplace(@uncle2, \"厦门大学\")\n$p11 = field($p9, \"物理\")\n$p12 = spouse(@uncle2, @michiru)\n$p13 = nationality(@michiru, \"日本人\")\n$p14 = location(@mom, @wenzhou)\n$p15 = sister(@mom, @aunt)\n$p16 = occupation(@aunt, \"外贸生意\")\n$p17 = location($p16, @yiwu)\n$p18 = note($p16, \"做得挺大的\")\n$p19 = cousin(@self, @biao)\n$p20 = work_at(@biao, $p16)\n$p21 = live_in(@self, @guangzhou)\n$p22 = spouse(@self, @wife)\n$p23 = live_in(@wife, @guangzhou)\n$p24 = name(@wife, \"林芳\")\n$p25 = occupation(@wife, \"医生\")\n$p26 = workplace(@wife, \"中山大学附属医院\")\n$p27 = child(@self, @daughter)\n$p28 = child(@wife, @daughter)\n$p29 = name(@daughter, \"朵朵\")\n$p30 = event(@daughter, \"上幼儿园\")"
+  },
+  {
+    "model": "deepseek-v3.2",
+    "case_id": "po-food-001",
+    "status": "ok",
+    "elapsed_ms": 10112,
+    "output": "@sis: person \"我姐\"\n$n1 = hobby(@self, \"美食\")\n$n2 = dislike(@self, \"花生\")\n$n3 = allergy(@self, \"花生\")\n$n4 = cause($n3, $n5)\n$n5 = neg($n6)\n$n6 = eat(@self, \"泰国菜\")\n$n7 = dislike(@self, \"猪肉\")\n$n8 = because($n7, \"宗教原因\")\n$n9 = like(@self, \"意大利面\")\n$n10 = frequency($n9, \"每周至少三次\")\n$n11 = hobby(@self, \"做饭\")\n$n12 = hobby(@self, \"烘焙\")\n$n13 = bake(@self, \"巴斯克芝士蛋糕\")\n$n14 = event(@sis, \"生日\")\n$n15 = time($n13, \"上周\")\n$n16 = for_purpose($n13, $n14)\n$n17 = dislike(@self, \"奶茶\")\n$n18 = dislike(@self, \"可乐\")\n$n19 = like(@self, \"黑咖啡\")\n$n20 = like(@self, \"茶\")\n$n21 = frequency($n19, \"一天三杯以上\")\nnote($n21, \"咖啡因上瘾\")"
+  },
+  {
+    "model": "deepseek-v3.2",
+    "case_id": "po-health-001",
+    "status": "ok",
+    "elapsed_ms": 17698,
+    "output": "@self: person\n@org1: org \"会计事务所\"\n@hospital1: org \"协和医院\"\n@spouse: person \"老婆\"\n$p1 = age(@self, 35)\n$p2 = gender(@self, \"男\")\n$p3 = workplace(@self, @org1)\n$p4 = occupation(@self, \"会计师\")\n$p5 = symptom(@self, \"头疼\")\n$p6 = symptom(@self, \"睡眠不好\")\n$p7 = sleep_duration(@self, 4.5)\nnote($p7, \"每天大概只能睡四五个小时\")\n$t1 = time(@p6, \"recent\")\n$t2 = duration(@p6, \"2-3 weeks\")\nnote($t2, \"大概两三周了\")\n$p8 = plan(@self, \"看医生\")\n$t3 = retract_intent(@self, \"去看医生\")\nnote($t3, \"还没去看医生，想先在这问问\")\n$p9 = work_stress(@self, \"大\")\n$t4 = time(@p9, \"recent\")\n$p10 = work_task(@self, \"年审\")\n$p11 = habit(@self, \"运动\")\n$h1 = frequency(@p11, \"每周两次\")\n$p12 = exercise(@self, \"游泳\")\n$f1 = frequency(@p12, \"每周两次\")\n$t5 = stop(@self, $p12)\n$t6 = time(@t5, \"recent\")\n$c1 = cause(@t5, @p10)\n@father: person \"爸\"\n@grandmother: person \"奶奶\"\n$p13 = father(@self, @father)\n$p14 = grandmother(@self, @grandmother)\n$p15 = symptom(@father, \"高血压\")\n$p16 = symptom(@grandmother, \"高血压\")\n$p17 = diagnosis(@self, \"血压正常\")\n$t7 = time(@p17, \"去年\")\n$p18 = take_medicine(@self, \"无\")\n$p19 = drink(@self, \"枸杞水\")\n$f2 = frequency(@p19, \"每天一杯\")\n$p20 = smoke(@self, \"否\")\n$p21 = drink(@self, \"红酒\")\n$f3 = frequency(@p21, \"偶尔\")\n$s1 = spouse(@self, @spouse)\n$p22 = recommend(@spouse, \"看医生\")\n$p23 = emotion(@spouse, \"着急\")\n$p24 = occupation(@spouse, \"护士\")\n$p25 = workplace(@spouse, @hospital1)\n$p26 = degree(@p23, \"more_than_self\")"
+  },
+  {
+    "model": "deepseek-v3.2",
+    "case_id": "po-long-complex-001",
+    "status": "ok",
+    "elapsed_ms": 31342,
+    "output": "@zhou_ran: person \"周然\"\n@su_qing: person \"苏晴\"\n@m: person \"妈\"\n@lao_zhao: person \"老赵\"\n@sz: place \"深圳\"\n@hz: place \"杭州\"\n@sh: place \"上海\"\n@huazhong: place \"华为\"\n@zheda: org \"浙大\"\n@tencent: org \"腾讯\"\n@ali: org \"阿里\"\n@beida: org \"北大\"\n@mianyang: place \"绵阳\"\n@sanya: place \"三亚\"\n@huangshan: place \"黄山\"\n@japan: place \"日本\"\n$1 = brother(@self, @zhou_ran)\n$2 = work_at(@zhou_ran, @huazhong)\n$3 = live_in(@zhou_ran, @sz)\n$4 = occupation(@zhou_ran, \"算法工程师\")\n$5 = graduate_from(@zhou_ran, @zheda)\n$t1 = time($5, \"去年\")\n$6 = partner(@zhou_ran, @su_qing)\n$c1 = correct_intent(@self, $7)\n$7 = occupation(@su_qing, \"产品经理\")\n$8 = work_at(@su_qing, @tencent)\n$9 = dislike(@zhou_ran, $4)\nnote($9, \"压力太大了\")\n$10 = want(@zhou_ran, $11)\n$11 = occupation(@zhou_ran, \"独立开发者\")\n$12 = say(@m, $13)\n$b1 = believe(@self, $12)\n$13 = engage(@zhou_ran, @su_qing)\n$c2 = correct_intent(@self, $14)\n$14 = consider(@zhou_ran, $13)\n$15 = plan(@zhou_ran, $16)\n$16 = marry(@zhou_ran, @su_qing)\n$t2 = time($15, \"明年\")\n$17 = location($15, @sanya)\n$18 = occupation(@self, \"数据分析师\")\n$19 = live_in(@self, @sh)\n$20 = work_at(@self, @ali)\n$t3 = time($20, \"之前\")\n$d1 = duration($20, \"两年\")\n$21 = graduate_from(@self, @beida)\n$22 = degree(@self, \"硕士\")\n$23 = major(@self, \"统计学\")\n$24 = roommate(@self, @lao_zhao)\n$25 = occupation(@lao_zhao, \"后端开发\")\n$26 = own(@lao_zhao, $27)\n$27 = animal(\"Lucky\")\n$28 = breed($27, \"拉布拉多\")\n$29 = name($27, \"Lucky\")\n$30 = own(@lao_zhao, $31)\n$31 = animal(\"Mochi\")\n$32 = breed($31, \"柯基\")\n$33 = name($31, \"Mochi\")\n$34 = habit(@self, $35)\n$35 = activity(\"徒步\")\n$f1 = frequency($34, \"周末\")\n$p1 = partner($34, @lao_zhao)\n$36 = visit(@self, @huangshan)\n$t4 = time($36, \"上个月\")\n$p2 = partner($36, @lao_zhao)\n$p3 = partner($36, @zhou_ran)\n$37 = bring(@zhou_ran, @su_qing, $36)\n$38 = event($36, \"看日出\")\n$l1 = location($38, \"山顶\")\n$39 = dislike(@self, \"海鲜\")\n$40 = cause($39, \"过敏\")\n$41 = like(@self, \"川菜\")\n$42 = nationality(@self, \"四川人\")\n$43 = hometown(@self, @mianyang)\n$44 = resign(@lao_zhao, \"工作\")\n$t5 = time($44, \"上周\")\n$45 = want(@lao_zhao, $46)\n$46 = study_at(@lao_zhao, @japan)\n$47 = major(@lao_zhao, \"CS\")\n$48 = degree(@lao_zhao, \"博士\")\n$49 = intend(@lao_zhao, $50)\n$50 = cause($44, $45)\n$51 = take_care_of(@lao_zhao_mother, $27)\nnote($51, \"让他妈帮忙养着\")\n$52 = take_care_of(@lao_zhao_mother, $31)\nnote($52, \"让他妈帮忙养着\")"
+  },
+  {
+    "model": "deepseek-v3.2",
+    "case_id": "po-long-simple-001",
+    "status": "ok",
+    "elapsed_ms": 32620,
+    "output": "@bj: place \"北京\"\n@chaoyang: place \"朝阳区\"\n@cd: place \"成都\"\n@bytedance: org \"字节跳动\"\n@baidu: org \"百度\"\n@bupt: place \"北航\"\n@tsinghua: place \"清华\"\n@csy: person \"陈思雨\"\n@father: person\n@mother: person\n@wangl: person \"王磊\"\n@liny: person \"林悦\"\n@tokyo: place \"东京\"\n@osaka: place \"大阪\"\n@france: place \"法国\"\n@italy: place \"意大利\"\n@cat: animal \"豆豆\"\n$p1 = name(@self, \"陈思远\")\n$p2 = age(@self, 32)\n$p3 = occupation(@self, \"产品经理\")\n$p4 = work_at(@self, @bytedance)\n$p5 = live_in(@self, @bj)\n$p6 = location(@bj, @chaoyang)\n$p7 = location(@self, @chaoyang)\n$p8 = live_in(@self, @cd)\nnote($p8, \"老家是成都的\")\n$p9 = sibling(@self, @csy)\n$p10 = name(@csy, \"陈思雨\")\n$p11 = occupation(@csy, \"老师\")\n$p12 = live_in(@csy, @cd)\n$p13 = subject(@csy, \"高中数学\")\n$p14 = father(@self, @father)\n$p15 = mother(@self, @mother)\n$p16 = live_in(@father, @cd)\n$p17 = live_in(@mother, @cd)\n$p18 = status(@father, \"退休\")\n$p19 = occupation(@mother, \"护士\")\n$p20 = workplace(@mother, \"医院\")\n$p21 = pet(@self, @cat)\n$p22 = name(@cat, \"豆豆\")\n$p23 = breed(@cat, \"橘猫\")\nnote($p23, \"太胖了\")\n$h1 = hobby(@self, \"跑步\")\n$f1 = frequency($h1, \"每周三次\")\n$h2 = hobby(@self, \"看电影\")\n$p24 = like(@self, \"科幻片\")\n$p25 = speak(@self, \"中文\")\n$p26 = speak(@self, \"英语\")\nnote($p26, \"还行吧，能工作交流\")\n$p27 = speak(@self, \"日语\")\nnote($p27, \"学了一点，还不太行\")\n$p28 = study_at(@self, @bupt)\n$p29 = major(@self, \"计算机\")\n$p30 = study_at(@self, @tsinghua)\n$p31 = degree(@self, \"研究生\")\n$p32 = major(@self, \"MBA\")\n$p33 = work_at(@self, @baidu)\n$d1 = duration($p33, \"三年\")\n$p34 = roommate(@self, @wangl)\n$p35 = name(@wangl, \"王磊\")\n$p36 = occupation(@wangl, \"工程师\")\n$p37 = work_at(@wangl, \"美团\")\n$h3 = hobby(@self, \"打羽毛球\")\n$p38 = activity_partner($h3, @wangl)\n$f2 = frequency($p38, \"经常\")\n$p39 = partner(@self, @liny)\n$p40 = name(@liny, \"林悦\")\n$p41 = occupation(@liny, \"设计师\")\n$p42 = work_at(@liny, \"广告公司\")\n$t1 = time($p39, \"去年\")\n$p43 = meet(@self, @liny)\n$p44 = location($p43, \"朋友聚会上\")\n$p45 = drink(@self, \"酒\")\n$n1 = neg($p45)\n$p46 = like(@self, \"咖啡\")\n$q1 = quantity($p46, \"每天至少两杯\")\n$p47 = visit(@self, @tokyo)\n$t2 = time($p47, \"去年\")\n$p48 = visit(@self, @osaka)\n$t3 = time($p48, \"去年\")\n$p49 = plan(@self, \"去欧洲\")\n$t4 = time($p49, \"今年夏天\")\n$p50 = plan(@self, \"去法国\")\n$p51 = plan(@self, \"去意大利\")\n$i1 = intend(@self, $p50)\n$i2 = intend(@self, $p51)"
+  },
+  {
+    "model": "deepseek-v3.2",
+    "case_id": "po-multi-event-001",
+    "status": "ok",
+    "elapsed_ms": 5125,
+    "output": "@cousin: person\n$e1 = cousin(@self, @cousin)\n$e2 = meet(@cousin, \"男朋友\", @paris)\n$e3 = time($e2, \"去年\")\n@paris: place \"巴黎\"\n@london: place \"伦敦\"\n$e4 = engage(@cousin, \"男朋友\", @london)\n$e5 = time($e4, \"上个月\")"
+  },
+  {
+    "model": "deepseek-v3.2",
+    "case_id": "po-multi-value-001",
+    "status": "ok",
+    "elapsed_ms": 3988,
+    "output": "@self: person\n$1 = speak(@self, \"中文\")\n$2 = speak(@self, \"英语\")\n$3 = speak(@self, \"日语\")\nnote($3, \"一点\")\n$4 = hobby(@self, \"跑步\")\n$5 = hobby(@self, \"弹吉他\")"
+  },
+  {
+    "model": "deepseek-v3.2",
+    "case_id": "po-negation-001",
+    "status": "ok",
+    "elapsed_ms": 3608,
+    "output": "@self: person\n$f1 = dislike(@self, \"香菜\")\n$f2 = neg(ability(@self, \"游泳\"))\n$f3 = skill(@self, \"做饭\")\n$f4 = degree($f3, \"很\")"
+  },
+  {
+    "model": "deepseek-v3.2",
+    "case_id": "po-pet-001",
+    "status": "ok",
+    "elapsed_ms": 13348,
+    "output": "@pet_dog: animal \"大黄\"\n@pet_cat: animal \"团子\"\n@pet_turtle: animal \"慢慢\"\n@bf: person \"小杰\"\n@pet_shop: org \"宠物店\"\n@friend: person \"朋友\"\n@gz: place \"广州\"\n@sh: place \"上海\"\n\n$p1 = own(@self, @pet_dog)\n$p2 = own(@self, @pet_cat)\n$p3 = own(@self, @pet_turtle)\n$p4 = breed(@pet_dog, \"金毛\")\n$p5 = age(@pet_dog, 5)\n$p6 = attribute(@pet_dog, \"温顺\")\n$p7 = breed(@pet_cat, \"英短蓝猫\")\n$p8 = age(@pet_cat, 8)\n$p9 = attribute(@pet_cat, \"调皮\")\n$p10 = habit(@pet_cat, \"抓沙发\")\n$p11 = name(@pet_turtle, \"慢慢\")\n$p12 = age(@pet_turtle, 10)\n$t1 = time($p12, \"year\")\n$p13 = buy(@bf, @pet_dog, @pet_shop)\n$p14 = gift(@friend, @pet_cat, @self)\n$p15 = start(@self, @pet_turtle, \"养\")\n$t2 = time($p15, \"小时候\")\n$p16 = move(@self, @gz, @sh)\n$p17 = move_with(@pet_turtle, @self)"
+  },
+  {
+    "model": "deepseek-v3.2",
+    "case_id": "po-qa-001",
+    "status": "ok",
+    "elapsed_ms": 12879,
+    "output": "@sg: place \"新加坡\"\n@huawei: org \"华为海外事业部\"\n@kevin: person \"Kevin\"\n@sz: place \"深圳\"\n@nanshan: place \"南山区\"\n@duoduo: person \"朵朵\"\n$v1 = plan(@self, @sg)\n$t1 = time($v1, \"下个月\")\n$p1 = purpose($v1, \"出差\")\n$w1 = work_at(@self, @huawei)\n$p2 = occupation(@self, \"市场运营\")\n$f1 = food(@sg, \"肉骨茶\")\n$r1 = spouse(@self, @kevin)\n$p3 = nationality(@kevin, \"美国人\")\n$e1 = visit(@kevin, @sg)\n$p4 = interest(@self, \"编程\")\n$p5 = skill(@self, \"Python\")\n$p6 = study_at(@self, \"数据分析\")\n$p7 = location(@self, @sz)\n$l1 = live_in(@self, @nanshan)\n$p8 = child(@self, @duoduo)\n$p9 = name(@duoduo, \"朵朵\")\n$p10 = age(@duoduo, 3)\n$q1 = ask(@self, \"Python 的 asyncio 库怎么用\")\n$q2 = ask(@self, \"新加坡有什么好吃的\")\n$q3 = ask(@self, \"家里小孩三岁了应该上什么早教班\")"
+  },
+  {
+    "model": "deepseek-v3.2",
+    "case_id": "po-retract-001",
+    "status": "ok",
+    "elapsed_ms": 3768,
+    "output": "@neighbor: person \"老王\"\n$n1 = neighbor(@self, @neighbor)\n$r1 = retract_intent(@self, \"老王养了一条金毛\")"
+  },
+  {
+    "model": "deepseek-v3.2",
+    "case_id": "po-temporal-001",
+    "status": "ok",
+    "elapsed_ms": 6669,
+    "output": "@father1: person\n$f1 = father(@self, @father1)\n$f2 = time($f1, \"三年前\")\n$f3 = resign(@father1, \"国企\")\n$f4 = time($f3, \"三年前\")\n$f5 = start(@father1, \"餐厅\")\n$f6 = time($f5, \"去年\")\n$f7 = move(@father1, @sz)\n$f8 = time($f7, \"上个月\")\n@sz: place \"深圳\""
+  },
+  {
+    "model": "deepseek-v3.2",
+    "case_id": "po-travel-001",
+    "status": "ok",
+    "elapsed_ms": 14179,
+    "output": "@man: place \"曼谷\"\n@kyoto: place \"京都\"\n@seoul: place \"首尔\"\n@iceland: place \"冰岛\"\n@maldives: place \"马尔代夫\"\n@sam: brand \"三星\"\n@min: person \"小敏\"\n@zhi: person \"朴智勋\"\n@liu: person \"刘洋\"\n$v1 = visit(@self, @man)\n$t1 = time($v1, \"last year\")\n$e1 = eat(@self, \"芒果糯米饭\")\n$t2 = time($e1, \"last year\")\n$l1 = location($e1, @man)\n$v2 = visit(@self, @kyoto)\n$t3 = time($v2, \"last year\")\n$p1 = plan(@self, @iceland)\n$t4 = time($p1, \"this year\")\n$v3 = visit(@self, @seoul)\n$t5 = time($v3, \"last year\")\n$m1 = meet(@self, @min)\n$l2 = location($m1, @seoul)\n$s1 = spouse(@min, @zhi)\n$n1 = name(@zhi, \"朴智勋\")\n$n2 = nationality(@zhi, \"韩国人\")\n$l3 = live_in(@min, @seoul)\n$l4 = live_in(@zhi, @seoul)\nnote($l4, \"江南区\")\n$o1 = occupation(@min, \"芯片设计\")\n$w1 = work_at(@min, @sam)\n$s2 = spouse(@self, @liu)\n$n3 = name(@liu, \"刘洋\")\n$p2 = plan(@self, @maldives)\n$t6 = time($p2, \"next year\")\nnote($p2, \"蜜月\")\n$d1 = dislike(@liu, \"冷\")\nnote($liu, \"特别怕冷\")"
+  },
+  {
+    "model": "deepseek-v3.2",
+    "case_id": "po-uncertainty-001",
+    "status": "ok",
+    "elapsed_ms": 4646,
+    "output": "@boss: person \"老板\"\n$b1 = location(@boss, \"上海\")\n$b2 = workplace(@boss, \"谷歌\")\n$b3 = believe(@self, $b1)\n$b4 = believe(@self, $b2)"
+  },
+  {
+    "model": "deepseek-v3.2",
+    "case_id": "po-vibecoding-001",
+    "status": "ok",
+    "elapsed_ms": 9628,
+    "output": "@hz: place \"杭州\"\n@ant: org \"蚂蚁集团\"\n@hit: org \"哈工大计算机系\"\n$s1 = plan(@self, \"搭一个 Next.js 的项目\")\n$s2 = want(@self, \"做个个人博客\")\n$s3 = skill(@self, \"TypeScript\")\n$s4 = speak(@self, \"TypeScript\")\n$s5 = work_at(@self, @ant)\n$s6 = occupation(@self, \"前端\")\n$s7 = use(@self, \"索尼A7M4\")\n$s8 = hobby(@self, \"拍风景照\")\n$s9 = plan(@self, \"部署在 Vercel 上\")\n$s10 = own(@self, \"域名 siyuan.dev\")\n$s11 = name(@self, \"陆思源\")\n$s12 = location(@self, @hz)\n$s13 = study_at(@self, @hit)\n$s14 = education(@self, \"计算机系\")\nnote($s14, \"毕业于\")\n$s15 = experience(@self, \"前端开发\", 5)\n$s16 = skill(@self, \"Rust\")\n$s17 = plan(@self, \"学 Rust\")\n$c1 = correct_intent(@self, $s5)"
+  },
+  {
+    "model": "glm-5",
+    "case_id": "po-alias-001",
+    "status": "ok",
+    "elapsed_ms": 63202,
+    "output": "@friend1: person \"林小雨\"\n@pk: place \"北大\"\n$s1 = friend(@self, @friend1)\n$s2 = name(@friend1, \"林小雨\")\n$s3 = alias(@friend1, \"小雨\")\n$s4 = study_at(@friend1, @pk)\n$s5 = education(@friend1, \"研究生\")\n$s6 = skill(@friend1, \"计算机\")"
+  },
+  {
+    "model": "glm-5",
+    "case_id": "po-basic-001",
+    "status": "ok",
+    "elapsed_ms": 9139,
+    "output": "@hz: place \"杭州\"\n$p1 = name(@self, \"张伟\")\n$p2 = age(@self, 28)\n$p3 = live_in(@self, @hz)\n$p4 = occupation(@self, \"前端工程师\")"
+  },
+  {
+    "model": "glm-5",
+    "case_id": "po-career-001",
+    "status": "ok",
+    "elapsed_ms": 148727,
+    "output": "@hs: place \"衡水中学\"\n@fd: place \"复旦大学\"\n@mit: place \"MIT\"\n@gs: org \"高盛\"\n@ms: org \"摩根士丹利\"\n@hk: place \"香港\"\n@zt: person \"张韬\"\n@xc: org \"星辰智能\"\n@hz: place \"杭州\"\n@stanford: place \"斯坦福\"\n\n$e1 = study_at(@self, @hs)\nnote($e1, \"特别卷\")\n$e2 = study_at(@self, @fd)\nnote($e2, \"金融系，高考考上\")\n$e3 = study_at(@self, @mit)\ntime($e3, \"大二\")\nduration($e3, \"一个学期\")\n$e4 = work_at(@self, @gs)\nnote($e4, \"实习\")\ntime($e4, \"毕业后\")\nduration($e4, \"半年\")\n$e5 = work_at(@self, @ms)\nnote($e5, \"分析师\")\nduration($e5, \"三年\")\n$e6 = live_in(@self, @hk)\ntime($e6, \"那时候\")\n$w1 = want(@self, \"做金融\")\nneg($w1)\n$e7 = study_at(@self, @stanford)\nnote($e7, \"CS硕士\")\ntime($e7, \"中间\")\n$e8 = start(@self, @xc)\ntime($e8, \"29岁\")\npartner(@self, @zt)\nname(@xc, \"星辰智能\")\nlocation(@xc, @hz)\nnote(@xc, \"50多人，主要做企业级AI助手\")"
+  },
+  {
+    "model": "glm-5",
+    "case_id": "po-comprehensive-001",
+    "status": "ok",
+    "elapsed_ms": 182384,
+    "output": "@kevin: person \"凯文\"\n@mayo: place \"梅奥诊所\"\n@wife: person\n@osaka: place \"大阪\"\n\n$b1 = brother(@kevin, @self)\n$n1 = name(@kevin, \"凯文\")\n$o1 = occupation(@kevin, \"外科医生\")\n$w1 = work_at(@kevin, @mayo)\n$c1 = correct_intent(@self, $w1)\n$s1 = speak(@kevin, \"英语\")\n$s2 = speak(@kevin, \"普通话\")\n$s3 = speak(@kevin, \"法语\")\ndegree($s3, \"一点\")\n$sp = spouse(@kevin, @wife)\n$nat = nationality(@wife, \"日本\")\n$b2 = believe(@self, $nat)\n$m1 = marry(@kevin, @wife)\nlocation($m1, @osaka)\n$c2 = correct_intent(@self, $m1)"
+  },
+  {
+    "model": "glm-5",
+    "case_id": "po-correction-001",
+    "status": "ok",
+    "elapsed_ms": 18446,
+    "output": "@xl: person \"小李\"\n@tx: org \"腾讯\"\n$r1 = coworker(@self, @xl)\n$r2 = work_at(@xl, @tx)\n$c = correct_intent(@self, $r2)"
+  },
+  {
+    "model": "glm-5",
+    "case_id": "po-family-001",
+    "status": "ok",
+    "elapsed_ms": 248574,
+    "output": "@father: person \"爸爸\"\n@mother: person \"妈妈\"\n@wz: place \"温州\"\n@grandfather: person \"爷爷\"\n@grandmother: person \"奶奶\"\n@fz: place \"福州\"\n@uncle1: person \"大伯\"\n@uncle2: person \"小叔\"\n@misaki: person \"美咲\"\n@aunt: person \"小姨\"\n@yw: place \"义乌\"\n@cousin: person \"小豪\"\n@gz: place \"广州\"\n@wife: person \"林芳\"\n@daughter: person \"朵朵\"\n$1 = father(@self, @father)\n$2 = mother(@self, @mother)\n$3 = live_in:origin(@mother, @wz)\n$4 = father(@father, @grandfather)\n$5 = mother(@father, @grandmother)\n$6 = live_in(@grandfather, @fz)\n$7 = live_in(@grandmother, @fz)\n$8 = occupation(@grandfather, \"渔民\")\nnote($8, \"以前\")\n$9 = age(@grandfather, 90)\nnote($9, \"90多岁，身体还不错\")\n$10 = brother(@father, @uncle1)\n$11 = brother(@father, @uncle2)\n$12 = live_in(@uncle1, @fz)\n$13 = own(@uncle1, \"海鲜餐厅\")\nnote($13, \"在福州\")\n$14 = work_at(@uncle2, \"厦门大学\")\n$15 = occupation(@uncle2, \"物理教授\")\n$16 = spouse(@uncle2, @misaki)\n$17 = nationality(@misaki, \"日本\")\n$18 = name(@misaki, \"美咲\")\n$19 = sister(@mother, @aunt)\n$20 = live_in(@aunt, @yw)\n$21 = occupation(@aunt, \"外贸生意\")\nnote($21, \"做得挺大\")\n$22 = cousin(@self, @cousin)\n$23 = name(@cousin, \"小豪\")\n$24 = child(@aunt, @cousin)\n$25 = occupation(@cousin, \"外贸生意\")\nnote($25, \"跟着小姨\")\n$26 = live_in(@self, @gz)\n$27 = spouse(@self, @wife)\n$28 = name(@wife, \"林芳\")\n$29 = occupation(@wife, \"医生\")\n$30 = work_at(@wife, \"中山大学附属医院\")\n$31 = child(@self, @daughter)\n$32 = name(@daughter, \"朵朵\")\n$33 = study_at(@daughter, \"幼儿园\")\nnote($33, \"刚上\")"
+  },
+  {
+    "model": "glm-5",
+    "case_id": "po-food-001",
+    "status": "ok",
+    "elapsed_ms": 207363,
+    "output": "@sister: person \"姐\"\n$food = like(@self, \"美食\")\nnote($food, \"爱好者，有很多忌口\")\n$e1 = eat(@self, \"花生\")\nneg($e1)\nnote($e1, \"严重过敏\")\n$e2 = eat(@self, \"泰国菜\")\nneg($e2)\nnote($e2, \"花生过敏导致不能吃\")\n$e3 = eat(@self, \"猪肉\")\nneg($e3)\nnote($e3, \"宗教原因\")\n$f1 = like(@self, \"意大利面\")\ndegree($f1, \"最爱\")\n$m1 = eat:make(@self, \"意大利面\")\nfrequency($m1, \"每周至少三次\")\n$h1 = hobby(@self, \"做饭\")\n$h2 = hobby(@self, \"烘焙\")\ndegree($h2, \"特别喜欢\")\n$b1 = birthday(@sister)\ntime($b1, \"上周\")\n$m2 = eat:make(@self, \"巴斯克芝士蛋糕\")\ntime($m2, \"上周\")\nnote($m2, \"为姐姐生日\")\n$d1 = drink(@self, \"奶茶\")\nneg($d1)\n$d2 = drink(@self, \"可乐\")\nneg($d2)\n$d3 = drink(@self, \"黑咖啡\")\nfrequency($d3, \"一天三杯以上\")\nnote($d3, \"可能太多了\")\n$d4 = drink(@self, \"茶\")\n$s1 = say(@sister, \"咖啡因上瘾\")"
+  },
+  {
+    "model": "glm-5",
+    "case_id": "po-health-001",
+    "status": "ok",
+    "elapsed_ms": 206482,
+    "output": "@father: person \"爸\"\n@grandmother: person \"奶奶\"\n@wife: person \"老婆\"\n@xiehe: place \"协和医院\"\n$s1 = age(@self, 35)\nnote(@self, \"男\")\n$s2 = work_at(@self, \"会计事务所\")\n$s3 = habit:condition(@self, \"工作压力大\")\nnote($s3, \"最近忙年审\")\n$s4 = habit:condition(@self, \"头疼\")\ntime($s4, \"最近\")\n$s5 = habit:condition(@self, \"睡眠不好\")\nduration($s5, \"两三周\")\nquantity($s5, \"四五个小时\")\n$s6 = neg(visit(@self, \"医生\"))\n$s7 = habit(@self, \"游泳\")\nfrequency($s7, \"每周两次\")\ntime($s7, \"以前\")\n$s8 = stop(@self, \"游泳\")\ntime($s8, \"最近\")\nnote($s8, \"没时间\")\n$s9 = habit:condition(@father, \"高血压\")\n$s10 = habit:condition(@grandmother, \"高血压\")\nnote($s9, \"家族高血压史\")\n$s11 = habit:condition(@self, \"血压正常\")\ntime($s11, \"去年\")\n$s12 = neg(use(@self, \"药\"))\n$s13 = drink(@self, \"枸杞水\")\nfrequency($s13, \"每天\")\n$s14 = neg(habit(@self, \"抽烟\"))\n$s15 = drink(@self, \"红酒\")\nfrequency($s15, \"偶尔\")\n$s16 = spouse(@self, @wife)\n$s17 = occupation(@wife, \"护士\")\n$s18 = work_at(@wife, @xiehe)\n$s19 = recommend(@wife, @self, \"去医院检查\")\nnote($s19, \"一直催\")\n$s20 = emotion(@wife, \"着急\")\nnote($s20, \"比我还着急\")"
+  },
+  {
+    "model": "glm-5",
+    "case_id": "po-long-complex-001",
+    "status": "error",
+    "elapsed_ms": 902538,
+    "output": "<html>\r\n<head><title>504 Gateway Time-out</title></head>\r\n<body>\r\n<center><h1>504 Gateway Time-out</h1></center>\r\n<hr><center>nginx</center>\r\n</body>\r\n</html>"
+  },
+  {
+    "model": "glm-5",
+    "case_id": "po-long-simple-001",
+    "status": "ok",
+    "elapsed_ms": 269053,
+    "output": "@bj: place \"北京\"\n@cd: place \"成都\"\n@sister: person \"陈思雨\"\n@father: person\n@mother: person\n@cat: animal \"豆豆\"\n@baidu: org \"百度\"\n@bytedance: org \"字节跳动\"\n@beihang: org \"北航\"\n@tsinghua: org \"清华\"\n@roommate: person \"王磊\"\n@meituan: org \"美团\"\n@girlfriend: person \"林悦\"\n@tokyo: place \"东京\"\n@osaka: place \"大阪\"\n\n$n1 = name(@self, \"陈思远\")\n$a1 = age(@self, 32)\n$o1 = occupation(@self, \"产品经理\")\n$w1 = work_at(@self, @bytedance)\nnote($w1, \"压力也大\")\n$l1 = live_in(@self, @bj)\nnote($l1, \"朝阳区\")\n$l2 = live_in(@self, @cd)\nnote($l2, \"老家\")\n$like1 = like(@self, \"火锅\")\nnote($like1, \"家里的\")\n$sis = sister(@self, @sister)\n$n2 = name(@sister, \"陈思雨\")\n$o2 = occupation(@sister, \"高中数学老师\")\n$l3 = live_in(@sister, @cd)\n$f = father(@self, @father)\n$l4 = live_in(@father, @cd)\nnote($f, \"退休\")\n$m = mother(@self, @mother)\n$l5 = live_in(@mother, @cd)\n$o3 = occupation(@mother, \"护士\")\n$w2 = work_at(@mother, \"医院\")\n$p = pet(@self, @cat)\nnote($p, \"橘猫，太胖了\")\n$hb1 = hobby(@self, \"跑步\")\n$f1 = frequency($hb1, \"每周三次\")\n$hb2 = hobby(@self, \"看电影\")\n$like2 = like(@self, \"科幻片\")\nnote($like2, \"最喜欢\")\n$sp1 = speak(@self, \"中文\")\n$sp2 = speak(@self, \"英语\")\nnote($sp2, \"能工作交流\")\n$sp3 = speak(@self, \"日语\")\nnote($sp3, \"学了一点，还不太行\")\n$edu1 = study_at(@self, @beihang)\nnote($edu1, \"计算机专业\")\n$edu2 = study_at(@self, @tsinghua)\nnote($edu2, \"研究生，MBA方向\")\n$w3 = work_at(@self, @baidu)\n$d1 = duration($w3, 3)\nnote($w3, \"之前\")\n$rm = roommate(@self, @roommate)\n$n3 = name(@roommate, \"王磊\")\n$o4 = occupation(@roommate, \"工程师\")\n$w4 = work_at(@roommate, @meituan)\n$bad = event(@self, @roommate, \"打羽毛球\")\n$f2 = frequency($bad, \"经常\")\n$gf = partner(@self, @girlfriend)\n$n4 = name(@girlfriend, \"林悦\")\n$o5 = occupation(@girlfriend, \"设计师\")\n$w5 = work_at(@girlfriend, \"广告公司\")\n$meet = meet(@self, @girlfriend)\n$t1 = time($meet, \"去年\")\nnote($meet, \"朋友聚会上认识\")\n$hb3 = habit(@self, \"不喝酒\")\n$like3 = like(@self, \"咖啡\")\n$q1 = quantity($like3, \"每天至少两杯\")\n$v1 = visit(@self, @tokyo)\n$t2 = time($v1, \"去年\")\n$v2 = visit(@self, @osaka)\n$t3 = time($v2, \"去年\")\n$plan = plan(@self, \"去欧洲\")\n$t4 = time($plan, \"今年夏天\")\n$want1 = want(@self, \"去法国\")\n$want2 = want(@self, \"去意大利\")"
+  },
+  {
+    "model": "glm-5",
+    "case_id": "po-multi-event-001",
+    "status": "ok",
+    "elapsed_ms": 23473,
+    "output": "@cousin: person \"表姐\"\n@boyfriend: person\n@paris: place \"巴黎\"\n@london: place \"伦敦\"\n\n$meet = meet(@cousin, @boyfriend)\ntime($meet, \"去年\")\nnote($meet, \"在巴黎\")\n\n$engage = engage(@cousin, @boyfriend)\ntime($engage, \"上个月\")\nnote($engage, \"在伦敦\")"
+  },
+  {
+    "model": "glm-5",
+    "case_id": "po-multi-value-001",
+    "status": "ok",
+    "elapsed_ms": 26853,
+    "output": "$s1 = speak(@self, \"中文\")\n$s2 = speak(@self, \"英语\")\n$s3 = speak(@self, \"日语\")\ndegree($s3, \"一点\")\n$s4 = like(@self, \"跑步\")\n$s5 = like(@self, \"弹吉他\")\nfrequency($s4, \"平时\")\nfrequency($s5, \"平时\")"
+  },
+  {
+    "model": "glm-5",
+    "case_id": "po-negation-001",
+    "status": "ok",
+    "elapsed_ms": 28181,
+    "output": "$dis = dislike(@self, \"香菜\")\n$swim = skill(@self, \"游泳\")\nneg($swim)\n$cook = skill(@self, \"做饭\")\ndegree($cook, \"很擅长\")"
+  },
+  {
+    "model": "glm-5",
+    "case_id": "po-pet-001",
+    "status": "ok",
+    "elapsed_ms": 296412,
+    "output": "@dh: animal \"大黄\"\n@tz: animal \"团子\"\n@mm: animal \"慢慢\"\n@xj: person \"小杰\"\n@gz: place \"广州\"\n@sh: place \"上海\"\n@f1: person\n$1 = pet(@self, @dh)\n$2 = name(@dh, \"大黄\")\n$3 = age(@dh, 5)\nnote($1, \"金毛，特别温顺\")\n$4 = pet(@self, @tz)\n$5 = name(@tz, \"团子\")\n$6 = age(@tz, \"8个月\")\nnote($4, \"英短蓝猫，很调皮老是抓沙发\")\n$7 = pet(@self, @mm)\n$8 = name(@mm, \"慢慢\")\n$9 = duration($7, \"十多年\")\ntime($7, \"小时候\")\nnote($7, \"乌龟\")\n$10 = boyfriend(@self, @xj)\n$11 = name(@xj, \"小杰\")\n$12 = buy(@xj, @dh)\nnote($12, \"从宠物店买的\")\n$13 = friend(@self, @f1)\n$14 = gift(@f1, @tz)\n$15 = live_in(@self, @gz)\n$16 = live_in(@self, @sh)\n$17 = move(@self, @sh)\nnote($17, \"从广州搬来，带着慢慢\")"
+  },
+  {
+    "model": "glm-5",
+    "case_id": "po-qa-001",
+    "status": "ok",
+    "elapsed_ms": 118491,
+    "output": "@sg: place \"新加坡\"\n@hw: org \"华为海外事业部\"\n@husband: person \"Kevin\"\n@daughter: person \"朵朵\"\n@sz: place \"深圳南山区\"\n\n$e1 = plan(@self, \"去新加坡出差\")\ntime($e1, \"下个月\")\n\n$p1 = work_at(@self, @hw)\n$p2 = occupation(@self, \"市场运营\")\n\n$r1 = spouse(@self, @husband)\n$r2 = name(@husband, \"Kevin\")\n$r3 = nationality(@husband, \"美国\")\n$r4 = visit(@husband, @sg)\n$r5 = like(@husband, \"肉骨茶\")\n\n$r6 = child(@self, @daughter)\n$r7 = name(@daughter, \"朵朵\")\n$r8 = age(@daughter, 3)\n\n$p3 = live_in(@self, @sz)\n\n$a1 = hobby(@self, \"编程\")\n$a2 = want(@self, \"转做数据分析\")\n$a3 = want(@self, \"多学点技术\")"
+  },
+  {
+    "model": "glm-5",
+    "case_id": "po-retract-001",
+    "status": "ok",
+    "elapsed_ms": 15263,
+    "output": "@lw: person \"老王\"\n$r1 = neighbor(@self, @lw)\n$r2 = retract_intent(@self, \"老王养狗\")"
+  },
+  {
+    "model": "glm-5",
+    "case_id": "po-temporal-001",
+    "status": "ok",
+    "elapsed_ms": 38759,
+    "output": "@d: person \"爸\"\n@rest: place \"餐厅\"\n@sz: place \"深圳\"\n$r1 = resign(@d, \"国企\")\ntime($r1, \"三年前\")\n$r2 = start(@d, @rest)\ntime($r2, \"去年\")\n$r3 = move(@d, @sz)\ntime($r3, \"上个月\")"
+  },
+  {
+    "model": "glm-5",
+    "case_id": "po-travel-001",
+    "status": "error",
+    "elapsed_ms": 900871,
+    "output": "<html>\r\n<head><title>504 Gateway Time-out</title></head>\r\n<body>\r\n<center><h1>504 Gateway Time-out</h1></center>\r\n<hr><center>nginx</center>\r\n</body>\r\n</html>"
+  },
+  {
+    "model": "glm-5",
+    "case_id": "po-uncertainty-001",
+    "status": "ok",
+    "elapsed_ms": 18802,
+    "output": "@boss: person \"老板\"\n@shanghai: place \"上海\"\n@google: org \"谷歌\"\n$f1 = live_in(@boss, @shanghai)\n$b1 = believe(@self, $f1)\n$f2 = work_at(@boss, @google)\n$b2 = believe(@self, $f2)"
+  },
+  {
+    "model": "glm-5",
+    "case_id": "po-vibecoding-001",
+    "status": "ok",
+    "elapsed_ms": 542895,
+    "output": "@antgroup: org \"蚂蚁集团\"\n@pingcap: org \"PingCAP\"\n@sony_a7m4: object \"索尼A7M4\"\n@domain: object \"siyuan.dev\"\n@hz: place \"杭州\"\n$plan1 = plan(@self, \"搭建Next.js个人博客\")\nnote($plan1, \"使用TypeScript，主要写技术文章，展示摄影作品\")\n$ts1 = skill(@self, \"TypeScript\")\n$w1 = work_at(@self, @antgroup)\n$c1 = correct_intent(@self, $w1)\n$w2 = work_at(@self, @pingcap)\nnote($w2, \"之前待过\")\n$occ1 = occupation(@self, \"前端开发\")\n$photo1 = like(@self, \"拍风景照\")\n$cam1 = use(@self, @sony_a7m4)\n$dep1 = plan(@self, \"部署到Vercel\")\n$dom1 = own(@self, @domain)\n$name1 = name(@self, \"陆思源\")\n$loc1 = live_in(@self, @hz)\n$edu1 = education(@self, \"哈工大计算机系\")\n$exp1 = skill(@self, \"前端开发\")\nnote($exp1, \"五年经验\")\n$rust1 = skill(@self, \"Rust\")\nnote($rust1, \"目前在学\")"
+  },
+  {
+    "model": "gpt-5.4",
+    "case_id": "po-alias-001",
+    "status": "ok",
+    "elapsed_ms": 2579,
+    "output": "@lxy: person \"林小雨\"\n@bd: org \"北大\"\n$p1 = friend(@self, @lxy)\n$p2 = name(@lxy, \"林小雨\")\n$p3 = alias(@lxy, \"小雨\")\n$p4 = study_at(@lxy, @bd)\n$p5 = education(@lxy, \"研究生\")\n$p6 = study_at(@lxy, \"计算机\")"
+  },
+  {
+    "model": "gpt-5.4",
+    "case_id": "po-basic-001",
+    "status": "ok",
+    "elapsed_ms": 1959,
+    "output": "@hz: place \"杭州\"\n$p1 = name(@self, \"张伟\")\n$p2 = age(@self, 28)\n$p3 = occupation(@self, \"前端工程师\")\n$p4 = live_in(@self, @hz)"
+  },
+  {
+    "model": "gpt-5.4",
+    "case_id": "po-career-001",
+    "status": "ok",
+    "elapsed_ms": 7073,
+    "output": "@hs: place \"衡水中学\"\n@fdu: org \"复旦大学\"\n@mit: org \"MIT\"\n@gs: org \"高盛\"\n@ms: org \"摩根士丹利\"\n@hk: place \"香港\"\n@zt: person \"张韬\"\n@xc: org \"星辰智能\"\n@hz: place \"杭州\"\n@stanford: org \"斯坦福\"\n\n$p1 = study_at(@self, @hs)\n$p2 = education(@self, \"复旦大学金融系\")\n$p3 = study_at(@self, @mit)\n$p4 = duration($p3, \"一个学期\")\n$p5 = work_at(@self, @gs)\n$p6 = occupation(@self, \"分析师\")\n$p7 = work_at(@self, @ms)\n$p8 = duration($p5, \"半年\")\n$p9 = duration($p7, \"三年\")\n$p10 = live_in(@self, @hk)\n$p11 = age(@self, 29)\n$p12 = start(@self, \"创业\")\n$p13 = partner(@self, @zt)\n$p14 = start(@self, @xc)\n$p15 = location(@xc, @hz)\n$p16 = education(@self, \"CS硕士\")\n$p17 = study_at(@self, @stanford)\n$p18 = quantity(@xc, 50)\nnote($p18, \"公司有50多人\")\n$p19 = occupation(@self, \"创业者\")\n$p20 = event(@xc, \"主要做企业级AI助手\")"
+  },
+  {
+    "model": "gpt-5.4",
+    "case_id": "po-comprehensive-001",
+    "status": "ok",
+    "elapsed_ms": 4431,
+    "output": "@kevin: person \"凯文\"\n@spouse: person \"老婆\"\n@mayo: org \"梅奥诊所\"\n@osaka: place \"大阪\"\n$r1 = brother(@self, @kevin)\n$r2 = occupation(@kevin, \"外科医生\")\n$r3 = work_at(@kevin, @mayo)\n$r4 = correct_intent(@self, $r3)\n$r5 = speak(@kevin, \"英语\")\n$r6 = speak(@kevin, \"普通话\")\n$r7 = speak(@kevin, \"法语\")\n$r8 = degree($r7, \"一点\")\n$r9 = nationality(@spouse, \"日本人\")\n$r10 = believe(@self, $r9)\n$r11 = spouse(@kevin, @spouse)\n$r12 = marry(@kevin, @spouse)\n$r13 = location($r12, @osaka)\n$r14 = correct_intent(@self, $r12)"
+  },
+  {
+    "model": "gpt-5.4",
+    "case_id": "po-correction-001",
+    "status": "ok",
+    "elapsed_ms": 2200,
+    "output": "@xl: person \"小李\"\n@tx: org \"腾讯\"\n$x1 = coworker(@self, @xl)\n$x2 = work_at(@xl, @tx)\n$x3 = correct_intent(@self, $x2)"
+  },
+  {
+    "model": "gpt-5.4",
+    "case_id": "po-family-001",
+    "status": "ok",
+    "elapsed_ms": 11295,
+    "output": "@p1: person \"爷爷\"\n@p2: person \"奶奶\"\n@pl1: place \"福州\"\n@p3: person \"爸爸\"\n@p4: person \"大伯\"\n@p5: person \"小叔\"\n@pl2: place \"厦门大学\"\n@p6: person \"美咲\"\n@p7: person \"妈妈\"\n@pl3: place \"温州\"\n@p8: person \"小姨\"\n@pl4: place \"义乌\"\n@p9: person \"小豪\"\n@p10: person \"老婆\"\n@pl5: place \"广州\"\n@p11: person \"林芳\"\n@p12: person \"女儿\"\n@p13: person \"朵朵\"\n@org1: org \"中山大学附属医院\"\n\n$p1 = grandfather(@self, @p1)\n$p2 = grandmother(@self, @p2)\n$p3 = live_in(@p1, @pl1)\n$p4 = live_in(@p2, @pl1)\n$p5 = occupation(@p1, \"渔民\")\n$p6 = age(@p1, \"90多岁\")\n$p7 = health(@p1, \"身体还不错\")\n\n$p8 = father(@self, @p3)\n$p9 = brother(@p3, @p4)\n$p10 = brother(@p3, @p5)\n$p11 = location(@p4, @pl1)\n$p12 = start(@p4, \"海鲜餐厅\")\n$p13 = workplace(@p5, @pl2)\n$p14 = occupation(@p5, \"物理教授\")\n$p15 = spouse(@p5, @p6)\n$p16 = nationality(@p6, \"日本\")\n$p17 = name(@p6, \"美咲\")\n\n$p18 = mother(@self, @p7)\n$p19 = nationality(@p7, \"温州\")\n$p20 = sister(@p7, @p8)\n$p21 = occupation(@p8, \"外贸生意\")\n$p22 = location(@p8, @pl4)\n$p23 = degree($p21, \"挺大\")\n\n$p24 = cousin(@self, @p9)\n$p25 = child(@p8, @p9)\n$p26 = occupation(@p9, \"做生意\")\n\n$p27 = spouse(@self, @p10)\n$p28 = name(@p10, \"林芳\")\n$p29 = live_in(@self, @pl5)\n$p30 = live_in(@p10, @pl5)\n$p31 = doctor(@p10, @org1)\n$p32 = work_at(@p10, @org1)\n\n$p33 = child(@self, @p12)\n$p34 = child(@p10, @p12)\n$p35 = name(@p12, \"朵朵\")\n$p36 = education(@p12, \"幼儿园\")\n$p37 = start(@p12, \"幼儿园\")\n$p38 = time($p37, \"刚\")"
+  },
+  {
+    "model": "gpt-5.4",
+    "case_id": "po-food-001",
+    "status": "ok",
+    "elapsed_ms": 6681,
+    "output": "@sis: person \"姐\"\n$p1 = hobby(@self, \"美食\")\n$p2 = allergy:severity(@self, \"花生\")\n$p3 = cause($p2, \"严重\")\n$p4 = eat(@self, \"泰国菜\")\n$p5 = neg($p4)\n$p6 = cause($p5, \"对花生严重过敏\")\n$p7 = eat(@self, \"猪肉\")\n$p8 = neg($p7)\n$p9 = cause($p8, \"宗教原因\")\n$p10 = like(@self, \"意大利面\")\n$p11 = degree($p10, \"最爱\")\n$p12 = frequency(@self, \"每周至少三次\")\n$p13 = hobby(@self, \"做饭\")\n$p14 = degree($p13, \"特别喜欢\")\n$p15 = hobby(@self, \"烘焙\")\n$p16 = degree($p15, \"尤其\")\n$p17 = birthday(@sis)\n$p18 = time($p17, \"上周\")\n$p19 = food \"巴斯克芝士蛋糕\"\n$p20 = make:food(@self, \"巴斯克芝士蛋糕\")\n$p21 = time($p20, \"上周\")\n$p22 = gift($p20, @sis)\n$p23 = drink(@self, \"奶茶\")\n$p24 = neg($p23)\n$p25 = drink(@self, \"可乐\")\n$p26 = neg($p25)\n$p27 = drink(@self, \"黑咖啡\")\n$p28 = drink(@self, \"茶\")\n$p29 = quantity($p27, \"一天三杯以上\")\n$p30 = believe(@self, $p29)\n$p31 = say(@sis, \"我咖啡因上瘾\")"
+  },
+  {
+    "model": "gpt-5.4",
+    "case_id": "po-health-001",
+    "status": "ok",
+    "elapsed_ms": 7720,
+    "output": "@work: org \"会计事务所\"\n@father: person \"爸\"\n@grandmother: person \"奶奶\"\n@wife: person \"老婆\"\n@xh: org \"协和医院\"\n$1 = age(@self, 35)\n$2 = occupation(@self, \"男\")\n$3 = work_at(@self, @work)\n$4 = emotion(@self, \"头疼\")\n$5 = duration($4, \"两三周\")\n$6 = neg($4)\n$7 = habit(@self, \"睡眠不好\")\n$8 = quantity($7, \"每天四五个小时\")\n$9 = emotion(@self, \"压力大\")\n$10 = cause($9, \"最近在忙年审\")\n$11 = hobby(@self, \"游泳\")\n$12 = frequency($11, \"以前每周两次\")\n$13 = stop(@self, \"游泳\")\n$14 = time($13, \"最近\")\n$15 = father(@father, @self)\n$16 = habit(@father, \"高血压\")\n$17 = grandmother(@grandmother, @self)\n$18 = habit(@grandmother, \"高血压\")\n$19 = know(@self, \"有家族高血压史\")\n$20 = event(@self, \"去年体检血压正常\")\n$21 = drink(@self, \"枸杞水\")\n$22 = frequency($21, \"每天一杯\")\n$23 = neg($24)\n$24 = habit(@self, \"抽烟\")\n$25 = drink(@self, \"红酒\")\n$26 = frequency($25, \"偶尔\")\n$27 = spouse(@self, @wife)\n$28 = occupation(@wife, \"护士\")\n$29 = work_at(@wife, @xh)\n$30 = emotion(@wife, \"着急\")\n$31 = degree($30, \"比我还\")"
+  },
+  {
+    "model": "gpt-5.4",
+    "case_id": "po-long-complex-001",
+    "status": "ok",
+    "elapsed_ms": 13396,
+    "output": "@zr: person \"周然\"\n@sz: place \"深圳\"\n@hw: org \"华为\"\n@zd: org \"浙大\"\n@sq: person \"苏晴\"\n@tx: org \"腾讯\"\n@mother: person \"妈\"\n@sh: place \"上海\"\n@hz: place \"杭州\"\n@ali: org \"阿里\"\n@pku: org \"北大\"\n@lz: person \"老赵\"\n@lucky: animal \"Lucky\"\n@mochi: animal \"Mochi\"\n@hs: place \"黄山\"\n@sy: place \"三亚\"\n@sc: place \"四川\"\n@my: place \"绵阳\"\n@japan: place \"日本\"\n@zr_mother: person \"妈\"\n\n$p1 = brother(@self, @zr)\n$p2 = live_in(@zr, @sz)\n$p3 = work_at(@zr, @hw)\n$p4 = occupation(@zr, \"算法工程师\")\n$p5 = education(@zr, \"浙大毕业\")\n$p6 = time($p5, \"去年\")\n$p7 = partner(@zr, @sq)\n$p8 = occupation(@sq, \"产品经理\")\n$p9 = work_at(@sq, @tx)\n$p10 = like(@zr, \"这个工作\")\n$p11 = neg($p10)\n$p12 = cause($p11, \"压力太大了\")\n$p13 = want(@zr, \"转做独立开发者\")\n$p14 = correct_intent(@self, $p8)\n$p15 = mother(@self, @mother)\n$p16 = engage(@zr, @sq)\n$p17 = believe(@self, $p16)\n$p18 = doubt(@self, $p16)\n$p19 = occupation(@self, \"数据分析师\")\n$p20 = work_at(@self, \"上海\")\n$p21 = work_at(@self, @ali)\n$p22 = duration($p21, \"两年\")\n$p23 = location(@ali, @hz)\n$p24 = education(@self, \"北大统计学硕士\")\n$p25 = roommate(@self, @lz)\n$p26 = occupation(@lz, \"后端开发\")\n$p27 = own(@lz, @lucky)\n$p28 = own(@lz, @mochi)\n$p29 = animal(@lucky, \"拉布拉多\")\n$p30 = animal(@mochi, \"柯基\")\n$p31 = hobby(@self, \"徒步\")\n$p32 = frequency($p31, \"周末经常\")\n$p33 = visit(@self, @hs)\n$p34 = time($p33, \"上个月\")\n$p35 = visit(@lz, @hs)\n$p36 = time($p35, \"上个月\")\n$p37 = visit(@zr, @hs)\n$p38 = time($p37, \"上个月\")\n$p39 = visit(@sq, @hs)\n$p40 = time($p39, \"上个月\")\n$p41 = event(@self, \"在山顶看了日出\")\n$p42 = location($p41, \"黄山山顶\")\n$p43 = emotion(@self, \"特别棒\")\n$p44 = retract_intent(@self, \"周然跟苏晴可能订婚了\")\n$p45 = undecided(@zr, \"跟苏晴订婚\")\n$p46 = plan(@zr, \"明年在三亚办婚礼\")\n$p47 = eat(@self, \"海鲜\")\n$p48 = neg($p47)\n$p49 = cause($p48, \"过敏\")\n$p50 = like(@self, \"川菜\")\n$p51 = nationality(@self, \"四川人\")\n$p52 = live_in(@self, @my)\n$p53 = resign(@lz, \"工作\")\n$p54 = time($p53, \"上周\")\n$p55 = plan(@lz, \"去日本读CS的博士\")\n$p56 = mother(@lz, @zr_mother)\n$p57 = help(@zr_mother, \"养Lucky和Mochi\")\n$p58 = duration($p57, \"暂时\")"
+  },
+  {
+    "model": "gpt-5.4",
+    "case_id": "po-long-simple-001",
+    "status": "ok",
+    "elapsed_ms": 12713,
+    "output": "@bbd: org \"百度\"\n@bd: org \"字节跳动\"\n@bj: place \"北京\"\n@cy: place \"朝阳区\"\n@cd: place \"成都\"\n@bh: org \"北航\"\n@qh: org \"清华\"\n@mt: org \"美团\"\n@jp: place \"日本\"\n@tk: place \"东京\"\n@os: place \"大阪\"\n@eu: place \"欧洲\"\n@fr: place \"法国\"\n@it: place \"意大利\"\n@sis: person \"陈思雨\"\n@father: person \"爸爸\"\n@mother: person \"妈妈\"\n@cat: animal \"豆豆\"\n@wl: person \"王磊\"\n@gf: person \"林悦\"\n\n$p1 = name(@self, \"陈思远\")\n$p2 = age(@self, 32)\n$p3 = occupation(@self, \"产品经理\")\n$p4 = work_at(@self, @bd)\n$p5 = live_in(@self, @bj)\n$p6 = location(@self, @cy)\n$p7 = nationality(@self, \"成都的\")\n$p8 = like(@self, \"家里的火锅\")\n$p9 = sister(@self, @sis)\n$p10 = name(@sis, \"陈思雨\")\n$p11 = work_at(@sis, @cd)\n$p12 = occupation(@sis, \"老师\")\n$p13 = skill(@sis, \"教高中数学\")\n$p14 = father(@self, @father)\n$p15 = mother(@self, @mother)\n$p16 = live_in(@father, @cd)\n$p17 = live_in(@mother, @cd)\n$p18 = occupation(@father, \"退休\")\n$p19 = work_at(@mother, \"医院\")\n$p20 = occupation(@mother, \"护士\")\n$p21 = pet(@self, @cat)\n$p22 = name(@cat, \"豆豆\")\n$p23 = alias(@cat, \"橘猫\")\n$p24 = hobby(@self, \"跑步\")\n$p25 = frequency($p24, \"每周三次\")\n$p26 = hobby(@self, \"看电影\")\n$p27 = like(@self, \"科幻片\")\n$p28 = speak(@self, \"中文\")\n$p29 = speak(@self, \"英语\")\n$p30 = believe(@self, $p29)\n$p31 = speak(@self, \"日语\")\n$p32 = degree($p31, \"学了一点，还不太行\")\n$p33 = study_at(@self, @bh)\n$p34 = education(@self, \"计算机专业\")\n$p35 = study_at(@self, @qh)\n$p36 = education(@self, \"MBA方向\")\n$p37 = work_at(@self, @bbd)\n$p38 = duration($p37, \"三年\")\n$p39 = roommate(@self, @wl)\n$p40 = name(@wl, \"王磊\")\n$p41 = work_at(@wl, @mt)\n$p42 = occupation(@wl, \"工程师\")\n$p43 = teammate(@self, @wl)\n$p44 = hobby(@self, \"打羽毛球\")\n$p45 = frequency($p44, \"经常一起\")\n$p46 = partner(@self, @gf)\n$p47 = name(@gf, \"林悦\")\n$p48 = occupation(@gf, \"设计师\")\n$p49 = work_at(@gf, \"一家广告公司\")\n$p50 = meet(@self, @gf)\n$p51 = time($p50, \"去年\")\n$p52 = location($p50, \"朋友聚会\")\n$p53 = drink(@self, \"酒\")\n$p54 = neg($p53)\n$p55 = drink(@self, \"咖啡\")\n$p56 = like(@self, \"咖啡\")\n$p57 = quantity($p55, \"每天至少两杯\")\n$p58 = visit(@self, @jp)\n$p59 = time($p58, \"去年\")\n$p60 = visit(@self, @tk)\n$p61 = time($p60, \"去年\")\n$p62 = visit(@self, @os)\n$p63 = time($p62, \"去年\")\n$p64 = plan(@self, \"今年夏天去欧洲\")\n$p65 = want(@self, \"去法国\")\n$p66 = want(@self, \"去意大利\")"
+  },
+  {
+    "model": "gpt-5.4",
+    "case_id": "po-multi-event-001",
+    "status": "ok",
+    "elapsed_ms": 3202,
+    "output": "@c1: person \"表姐\"\n@p1: place \"巴黎\"\n@b1: person \"男朋友\"\n@l1: place \"伦敦\"\n$r1 = cousin(@self, @c1)\n$r2 = partner(@c1, @b1)\n$e1 = meet(@c1, @b1)\n$e2 = time($e1, \"去年\")\n$e3 = location($e1, @p1)\n$e4 = engage(@c1, @b1)\n$e5 = time($e4, \"上个月\")\n$e6 = location($e4, @l1)"
+  },
+  {
+    "model": "gpt-5.4",
+    "case_id": "po-multi-value-001",
+    "status": "ok",
+    "elapsed_ms": 2556,
+    "output": "$p1 = speak(@self, \"中文\")\n$p2 = speak(@self, \"英语\")\n$p3 = speak(@self, \"一点日语\")\n$p4 = hobby(@self, \"跑步\")\n$p5 = hobby(@self, \"弹吉他\")"
+  },
+  {
+    "model": "gpt-5.4",
+    "case_id": "po-negation-001",
+    "status": "ok",
+    "elapsed_ms": 2331,
+    "output": "$f1 = eat(@self, \"香菜\")\n$f2 = dislike(@self, \"香菜\")\n$f3 = skill(@self, \"游泳\")\n$f4 = neg($f3)\n$f5 = skill(@self, \"做饭\")\n$f6 = degree($f5, \"很\")"
+  },
+  {
+    "model": "gpt-5.4",
+    "case_id": "po-pet-001",
+    "status": "ok",
+    "elapsed_ms": 5150,
+    "output": "@dh: animal \"大黄\"\n@tz: animal \"团子\"\n@mm: animal \"慢慢\"\n@gz: place \"广州\"\n@sh: place \"上海\"\n@xj: person \"小杰\"\n$1 = pet(@self, @dh)\n$2 = pet(@self, @tz)\n$3 = pet(@self, @mm)\n$4 = quantity($1, 3)\n$5 = animal:breed(@dh, \"金毛\")\n$6 = age(@dh, 5)\n$7 = emotion(@dh, \"特别温顺\")\n$8 = animal:breed(@tz, \"英短蓝猫\")\n$9 = age(@tz, 0.67)\n$10 = habit(@tz, \"很调皮老是抓沙发\")\n$11 = name(@mm, \"慢慢\")\n$12 = duration($3, \"十多年\")\n$13 = partner(@self, @xj)\n$14 = buy(@xj, \"大黄\")\n$15 = place:source($14, \"宠物店\")\n$16 = gift(@, @tz)\nnote($16, \"朋友送的\")\n$17 = move(@self, @gz, @sh)\n$18 = move(@mm, @gz, @sh)\n$19 = time($18, \"我小时候\")"
+  },
+  {
+    "model": "gpt-5.4",
+    "case_id": "po-qa-001",
+    "status": "ok",
+    "elapsed_ms": 3981,
+    "output": "@huawei: org \"华为海外事业部\"\n@sg: place \"新加坡\"\n@husband: person \"Kevin\"\n@child: person \"朵朵\"\n@szns: place \"深圳南山区\"\n$p1 = work_at(@self, @huawei)\n$p2 = plan(@self, \"去新加坡出差\")\n$m1 = time($p2, \"下个月\")\n$p3 = spouse(@self, @husband)\n$p4 = visit(@husband, @sg)\n$p5 = say(@husband, \"肉骨茶很好喝\")\n$p6 = nationality(@husband, \"美国\")\n$p7 = study_at(@self, \"编程\")\n$p8 = want(@self, \"转做数据分析\")\n$p9 = occupation(@self, \"市场运营\")\n$p10 = child(@self, @child)\n$p11 = age(@child, 3)\n$p12 = live_in(@self, @szns)"
+  },
+  {
+    "model": "gpt-5.4",
+    "case_id": "po-retract-001",
+    "status": "ok",
+    "elapsed_ms": 1901,
+    "output": "@lw: person \"老王\"\n$r1 = neighbor(@self, @lw)\n$r2 = retract_intent(@self, \"老王养了一条金毛\")"
+  },
+  {
+    "model": "gpt-5.4",
+    "case_id": "po-temporal-001",
+    "status": "ok",
+    "elapsed_ms": 2442,
+    "output": "@father: person \"爸\"\n@sz: place \"深圳\"\n$1 = father(@self, @father)\n$2 = resign(@father, \"国企\")\n$3 = time($2, \"三年前\")\n$4 = start(@father, \"一家餐厅\")\n$5 = time($4, \"去年\")\n$6 = move(@father, @sz)\n$7 = time($6, \"上个月\")"
+  },
+  {
+    "model": "gpt-5.4",
+    "case_id": "po-travel-001",
+    "status": "ok",
+    "elapsed_ms": 9274,
+    "output": "@th: place \"泰国\"\n@bk: place \"曼谷\"\n@jp: place \"日本\"\n@ky: place \"京都\"\n@kr: place \"韩国\"\n@se: place \"首尔\"\n@xm: person \"小敏\"\n@pjh: person \"朴智勋\"\n@gn: place \"江南区\"\n@ss: org \"三星\"\n@is: place \"冰岛\"\n@husband: person \"老公\"\n@md: place \"马尔代夫\"\n$1 = visit(@self, @th)\n$2 = quantity($1, 3)\n$3 = time($1, \"去年\")\n$4 = visit(@self, @bk)\n$5 = time($4, \"去年\")\n$6 = eat(@self, \"芒果糯米饭\")\n$7 = quantity($6, \"好多\")\n$8 = location($6, @bk)\n$9 = visit(@self, @jp)\n$10 = time($9, \"去年\")\n$11 = visit(@self, @ky)\n$12 = time($11, \"去年\")\n$13 = event(@self, \"看红叶\")\n$14 = location($13, @ky)\n$15 = visit(@self, @kr)\n$16 = time($15, \"去年\")\n$17 = visit(@self, @se)\n$18 = time($17, \"去年\")\n$19 = classmate(@self, @xm)\n$20 = education(@xm, \"大学\")\n$21 = meet(@self, @xm)\n$22 = location($21, @se)\n$23 = spouse(@xm, @pjh)\n$24 = nationality(@pjh, \"韩国\")\n$25 = name(@pjh, \"朴智勋\")\n$26 = live_in(@xm, @gn)\n$27 = live_in(@pjh, @gn)\n$28 = location(@gn, @se)\n$29 = work_at(@xm, @ss)\n$30 = occupation(@xm, \"芯片设计\")\n$31 = plan(@self, \"去冰岛看极光\")\n$32 = time($31, \"今年\")\n$33 = visit(@self, @is)\n$34 = event(@self, \"看极光\")\n$35 = location($34, @is)\n$36 = spouse(@self, @husband)\n$37 = name(@husband, \"刘洋\")\n$38 = emotion(@husband, \"特别怕冷\")\n$39 = want(@husband, \"去冰岛\")\n$40 = plan(@self, \"明年蜜月去马尔代夫\")\n$41 = time($40, \"明年\")\n$42 = visit(@self, @md)"
+  },
+  {
+    "model": "gpt-5.4",
+    "case_id": "po-uncertainty-001",
+    "status": "ok",
+    "elapsed_ms": 2583,
+    "output": "@boss: person \"老板\"\n@sh: place \"上海\"\n@g: org \"谷歌\"\n$b1 = nationality(@boss, \"上海人\")\n$b2 = believe(@self, $b1)\n$b3 = work_at(@boss, @g)\n$b4 = believe(@self, $b3)\n$b5 = time($b3, \"之前\")"
+  },
+  {
+    "model": "gpt-5.4",
+    "case_id": "po-vibecoding-001",
+    "status": "ok",
+    "elapsed_ms": 3676,
+    "output": "@pc: org \"PingCAP\"\n@ant: org \"蚂蚁集团\"\n@sony: brand \"索尼A7M4\"\n@vercel: org \"Vercel\"\n@hz: place \"杭州\"\n@hit: org \"哈工大\"\n$1 = skill(@self, \"TypeScript\")\n$2 = frequency($1, \"天天\")\n$3 = occupation(@self, \"前端\")\n$4 = work_at(@self, @ant)\n$5 = correct_intent(@self, $4)\n$6 = like(@self, \"拍风景照\")\n$7 = use(@self, @sony)\n$8 = plan(@self, \"部署到Vercel\")\n$9 = own(@self, \"域名 siyuan.dev\")\n$10 = name(@self, \"陆思源\")\n$11 = live_in(@self, @hz)\n$12 = education(@self, \"哈工大计算机系\")\n$13 = experience(@self, \"前端开发五年\")\n$14 = start(@self, \"学 Rust\")\n$15 = work_at(@self, @pc)\n$16 = time($15, \"之前\")"
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-alias-001",
+    "status": "ok",
+    "elapsed_ms": 2984,
+    "output": "@linxiaoyu: person \"林小雨\"\n@pku: org \"北大\"\n\n$p_name = name(@linxiaoyu, \"林小雨\")\n$p_alias = alias(@linxiaoyu, \"小雨\")\n$p_study = study_at(@linxiaoyu, @pku)\n$p_edu = education(@linxiaoyu, \"研究生\")\n$p_skill = skill(@linxiaoyu, \"计算机\")"
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-basic-001",
+    "status": "ok",
+    "elapsed_ms": 4478,
+    "output": "@zw: person \"张伟\"\n@hz: place \"杭州\"\n$c1 = name(@self, \"张伟\")\n$c2 = age(@self, 28)\n$c3 = occupation(@self, \"前端工程师\")\n$c4 = live_in(@self, @hz)"
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-career-001",
+    "status": "ok",
+    "elapsed_ms": 6722,
+    "output": "@hs: place \"衡水中学\"\n@fudan: org \"复旦大学\"\n@mit: org \"MIT\"\n@ga: org \"高盛\"\n@ms: org \"摩根士丹利\"\n@hk: place \"香港\"\n@stn: org \"斯坦福\"\n@company: org \"星辰智能\"\n@hangzhou: place \"杭州\"\n@partner: person \"张韬\"\n\n$e1 = study_at(@self, @hs, \"高中\")\n$e2 = recommend(@self, \"很卷\")\n$e3 = start(@self, \"高考\")\n$e4 = study_at(@self, @fudan, \"金融系\")\n$e5 = event(@self, \"交换学习\", @mit, \"一个学期\")\n\n$e6 = plan(@self, \"实习\", @ga, \"半年\")\n$e7 = work_at(@self, @ga, \"实习\", $e6)\n$e8 = work_at(@self, @ms, \"分析师\")\n$e9 = work_at(@self, @ms, \"分析师\", $e8)\n$e10 = move(@self, @hk)\n\n$e11 = start(@self, \"回国创业\")\n$e12 = start(@self, \"开AI公司\")\n$e13 = engage(@self, @partner, \"合伙开设\")\n$e14 = company(@company, \"星辰智能\", @hangzhou)\n$name_company = name(@company, \"星辰智能\")\n$e15 = work_at(@self, @company, \"联合创始人\")\n$e16 = move(@self, @hangzhou)\n\n$e17 = education(@self, \"CS硕士\", @stn)\n$e18 = start(@self, \"现在公司规模\", \"50多人\")\n$e19 = plan(@self, \"主要做\", @company, \"企业级AI助手\")"
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-comprehensive-001",
+    "status": "ok",
+    "elapsed_ms": 5877,
+    "output": "@kevin: person \"凯文\"\n@jhu: org \"约翰霍普金斯医院\"\n@mayo: org \"梅奥诊所\"\n@japan: place \"日本\"\n@tokyo: place \"东京\"\n@osaka: place \"大阪\"\n@may: person\n@hopkins: org \"约翰霍普金斯医院\"\n@mayo: org \"梅奥诊所\"\n\n$1 = occupation(@kevin, \"外科医生\")\n$2 = work_at(@kevin, @jhu)\n$name_kevin = name(@kevin, \"凯文\")\n$3 = speak(@kevin, \"英语\")\n$4 = speak(@kevin, \"普通话\")\n$5 = speak(@kevin, \"法语\")\n\n$6 = believe(@self, $uncertain_fact_1)\n$uncertain_fact_1 = nationality(@may, \"日本人\")\n$7 = believe(@self, $uncertain_fact_2)\n$uncertain_fact_2 = meet(@kevin, @may)\n\n$8 = retract_intent(@self, \"凯文是在约翰霍普金斯医院工作\") \n$c1 = correct_intent(@self, $new_fact_1)\n$new_fact_1 = work_at(@kevin, @mayo)\n\n$9 = retract_intent(@self, \"他们是在东京结的婚\") \n$c2 = correct_intent(@self, $new_fact_2)\n$new_fact_2 = marry(@kevin, @may)\n\n$10 = live_in(@kevin, @mayo)"
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-correction-001",
+    "status": "ok",
+    "elapsed_ms": 3313,
+    "output": "@li: person \"小李\"\n@baidu: org \"百度\"\n@tencent: org \"腾讯\"\nnote($li, \"同事\")\n\n$1 = coworker(@self, @li)\n$2 = work_at(@li, \"百度\")\n$c = correct_intent(@self, work_at(@li, \"腾讯\"))"
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-family-001",
+    "status": "ok",
+    "elapsed_ms": 8800,
+    "output": "@fuzhou: place \"福州\"\n$g1 = live_in(@self, @fuzhou)\n\n@grandpa: person \"爷爷\"\n@grandma: person \"奶奶\"\n@fujian_fulu_home: place \"福州老家\"\n$g2 = live_in(@grandpa, @fujian_fulu_home)\n$g3 = live_in(@grandma, @fujian_fulu_home)\n$g4 = occupation(@grandpa, \"渔民\")\n$g5 = age(@grandpa, 90)\n\n@uncle_dabu: person \"大伯\"\n@xiamen: place \"厦门\"\n@fuzhou2: place \"福州\"\n@seafood_restaurant: object \"海鲜餐厅\"\n$g6 = work_at(@uncle_dabu, @fuzhou2)\n$g7 = own(@uncle_dabu, @seafood_restaurant)\n\n@uncle_xiao: person \"小叔\"\n@xmu: org \"厦门大学\"\n@physics_professor: concept \"物理教授\"\n$g8 = work_at(@uncle_xiao, @xmu)\n$g9 = occupation(@uncle_xiao, \"物理教授\")\n\n@uncle_xiao_wife: person \"美咲\"\n@japan: place \"日本\"\n$g10 = spouse(@uncle_xiao, @uncle_xiao_wife)\n$n1 = nationality(@uncle_xiao_wife, \"日本\")\n$n2 = name(@uncle_xiao_wife, \"美咲\")\n\n@wenzhou: place \"温州\"\n@aunt: person \"我妈\"\n$g11 = location(@aunt, @wenzhou)\n$g12 = nationality(@aunt, \"温州\")\n\n@xiaoyi: person \"小姨\"\n@yiwu: place \"义乌\"\n$g13 = live_in(@xiaoyi, @yiwu)\n@trade_business: object \"外贸生意\"\n$g14 = own(@xiaoyi, @trade_business)\n\n@cousin_ha: person \"小豪\"\n$g15 = live_in(@cousin_ha, @yiwu)\n$g16 = work_at(@cousin_ha, @trade_business)\n\n@guangzhou: place \"广州\"\n$lgh: person \"林芳\"\n@zhongshan_affiliated_hospital: org \"中山大学附属医院\"\n@g1 = live_in(@self, @guangzhou)\n$sp1 = spouse(@self, @lgh)\n$nm1 = name(@lgh, \"林芳\")\n$oc1 = occupation(@lgh, \"医生\")\n$wk1 = work_at(@lgh, @zhongshan_affiliated_hospital)\n@child_duoduo: person \"朵朵\"\n$ch1 = child(@self, @child_duoduo)\n$nm2 = name(@child_duoduo, \"朵朵\")\n$edu1 = education(@child_duoduo, \"幼儿园\")\n$edu2 = start(@child_duoduo, @child_duoduo)"
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-food-001",
+    "status": "ok",
+    "elapsed_ms": 6485,
+    "output": "@self: person\n@it: food \"意大利面\"\n@th: place \"泰国\"\n@i: food \"花生\"\n@p: food \"猪肉\"\n@bak: hobby \"烘焙\"\n@cake: food \"巴斯克芝士蛋糕\"\n@sister: person\n@birthday: event \"过生日\"\n\n$i1 = like(@self, \"美食\")\n$i2 = allergy(@self, \"花生\")\n$i3 = neg($i2)\n$i4 = dislike(@self, \"猪肉\")\n$i5 = cause(@self, $i4, \"宗教原因\")\n$i6 = like(@self, @it)\n$i7 = habit(@self, \"做饭\")\n$i8 = hobby(@self, @bak)\n$i9 = make(@self, @it, \"每周至少做三次\")\n$i10 = bake(@self, $i8, @bak)\n\n@eve1: event \"做巴斯克芝士蛋糕\"\n$e1 = make(@self, @cake, @eve1)\n$e2 = birthday(@sister, @birthday)\n$e3 = gift(@self, @cake, @sister)\n$e4 = meet(@self, @sister, @birthday)\n\n@drink: object \"饮品\"\n$k1 = dislike(@self, \"奶茶\")\n$k2 = dislike(@self, \"可乐\")\n$k3 = drink(@self, \"黑咖啡\")\n$k4 = drink(@self, \"茶\")\n$k5 = frequency($k3, \"一天三杯以上\")\n$k6 = believe(@self, \"咖啡因上瘾\")\n\n# note: Assistant提问未被用户采用，未提取\nnote($e1, \"上周做了个巴斯克芝士蛋糕给我姐过生日\")"
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-health-001",
+    "status": "ok",
+    "elapsed_ms": 8210,
+    "output": "@p: person \"我\"\n@wife: person \"我老婆\"\n@clinic: org \"协和医院\"\n@hz: concept \"头疼\"\n@sleep: concept \"睡眠不好\"\n@insomnia: concept \"睡眠\"\n@pressure: concept \"工作压力\"\n@swim: hobby \"游泳\"\n@htn: concept \"高血压\"\n@bp: concept \"血压\"\n@lq: food \"枸杞水\"\n@wine: food \"红酒\"\n\n$p_name = name(@p, \"我\")\n$headache = have(@p, @hz)\n$sleep_bad = have(@p, $sleep)\n$headache_time = duration($headache, \"最近两三周\")\n$sleep_bad_time = duration($sleep_bad, \"最近两三周\")\n$sleep_hours = sleep(@p, 4.5)\n$age = age(@p, 35)\n$gender = like(@p, \"男\")\n$workplace = workplace(@p, \"一家会计事务所\")\n$occupation = occupation(@p, \"会计事务所上班\")\n$pressure_large = believe(@p, $pressure)\n$busy = cause(@p, \"最近在忙年审\", $pressure_large)\n$no_time_swim = neg($swim)\n$swim_freq = frequency($swim, \"每周两次\")\n$last_year_bp_normal = believe(@p, $bp)\n$family_htn = believe(@p, @htn)\n$father_has_htn = believe(@p, @htn)\n$grandmother_has_htn = believe(@p, @htn)\n$no_drugs = neg(\"没有吃药\")\n$drink_lq = drink(@p, @lq)\n$no_smoke = neg(\"不抽烟\")\n$drink_wine = drink(@p, @wine)\n$wife_job = occupation(@wife, \"护士\")\n$wife_workplace = work_at(@wife, @clinic)\n$wife_emotion = want(@wife, \"催我去看医生\")\n$wife_more_anxious = believe(@wife, \"比我还着急\")"
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-long-complex-001",
+    "status": "ok",
+    "elapsed_ms": 15568,
+    "output": "@zhou: person \"周然\"\n@shenzhen: place \"深圳\"\n@huawei: org \"华为\"\n@suz: person \"苏晴\"\n@tencent: org \"腾讯\"\n@mother: person \"我妈\"\n@self2: person\n@shanghai: place \"上海\"\n@hz: place \"杭州\"\n@ali: org \"阿里\"\n@beida: org \"北大\"\n@laozhao: person \"老赵\"\n@huangshan: place \"黄山\"\n@sanya: place \"三亚\"\n@self: person\n@myanyang: place \"绵阳\"\n@lucky: animal\n@mochi: animal\n@self: person \"我\"\n@self: person \"我\"\n@cs: concept \"CS\"\n@zju: org \"浙大\"\n@pian: concept \"独立开发者\"\n@data: concept \"数据分析\"\n@stats: concept \"统计学\"\n@alg: concept \"算法工程师\"\n@ui: concept \"UI设计\"\n@product: concept \"产品经理\"\n@backend: concept \"后端开发\"\n\n@hz: place \"杭州\"\n@self: person\n\n$p_name = name(@self, \"我\")\n$bro = brother(@self, @zhou)\n$job1 = occupation(@zhou, \"算法工程师\")\n$loc1 = location(@zhou, @shenzhen)\n$work1 = work_at(@zhou, @huawei)\n$edu1 = education(@zhou, \"浙大毕业\")\n$job2 = occupation(@suz, \"UI设计\")\n$loc2 = location(@suz, @shenzhen)\n$work2 = work_at(@suz, @tencent)\n\n$dislike = dislike(@self, \"他其实不太喜欢这个工作\")\n$pressure = like(@self, \"压力太大\") \n$wish = want(@zhou, \"转做独立开发者\")\n\n$correct1 = correct_intent($job2, product_manager)\n$c1 = correct_intent(@suz, $correct1)\n\n$mother_mentioned = believe(@self, \"周然跟苏晴可能订婚了\")\n$mother_comment = uncertain(@self, \"我妈有时候会夸大其词\")\n\n$work_self = occupation(@self, \"数据分析师\")\n$live_self = live_in(@self, @shanghai)\n$work_prev = work_at(@self, @ali)\n$duration_prev = duration(@work_prev, 2)\n$edu_self = education(@self, \"北大统计学硕士\")\n\n$roommate = roommate(@self, @laozhao)\n$jobz = occupation(@laozhao, \"后端开发\")\n$pet1 = pet(@laozhao, @lucky)\n$name_lucky = name(@lucky, \"Lucky\")\n$pet2 = pet(@laozhao, @mochi)\n$name_mochi = name(@mochi, \"Mochi\")\n$like_pet = like(@self, \"周末我们经常一起去徒步\")\n\n$visit1 = visit(@self, @huangshan)\n$visit2 = visit(@laozhao, @huangshan)\n$visit3 = visit(@zhou, @huangshan)\n$with1 = meet(@self, @laozhao)\n$with2 = meet(@self, @zhou)\n$with3 = meet(@laozhao, @zhou)\n\n$daybreak = start(@huangshan, \"看日出\")\n$see1 = plan(@self, \"山顶看了日出\")\n$event1 = meet(@zhou, @suz)\n$at_time1 = time($event1, \"上个月\")\n$at_place1 = location($event1, @huangshan)\n$view = like(@self, \"我们在山顶看了日出，特别棒\")\n\n$retract = retract_intent(@self, \"周然已经订婚\")\n$c2 = correct_intent(@zhou, \"周然没订婚\")\n\n$plan_wedding = plan(@zhou, \"在三亚办婚礼\")\n$time_wedding = time($plan_wedding, \"明年\")\n$loc_wedding = location($plan_wedding, @sanya)\n\n$neg1 = neg(@self, \"不吃海鲜\")\n$allergy = believe(@self, \"过敏\")\n$like_cuisine = like(@self, \"吃川菜\")\n$from = location(@self, @myanyang)\n$origin = live_in(@self, @myanyang)\n\n$resign = resign(@laozhao, @ali)\n$time_resign = time($resign, \"上周\")\n$plan_phd = plan(@laozhao, \"去日本读CS的博士\")\n$study_loc = location($plan_phd, \"日本\")\n$study_edu = education(@laozhao, \"CS博士\")\n$pet_free = stop(@lucky, \"让他妈帮忙养着\")\n$pet_free2 = stop(@mochi, \"让他妈帮忙养着\")"
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-long-simple-001",
+    "status": "ok",
+    "elapsed_ms": 12325,
+    "output": "@chen_siyuan: person \"陈思远\"\n@bj: place \"北京\"\n@chaoyang: place \"朝阳区\"\n@chengdu: place \"成都\"\n@dad: person\n@mom: person\n@sister: person \"陈思雨\"\n@cat: animal\n@dd: object \"豆豆\"\n@p: person \"王磊\"\n@gf: person \"林悦\"\n@beijing: place \"北京\"\n@chaoyangqu: place \"朝阳区\"\n@origin: place \"成都\"\n@buaa: place \"北航\"\n@qinghua: place \"清华\"\n@baidu: org \"百度\"\n@bytedance: org \"字节跳动\"\n@meituan: org \"美团\"\n@ad_company: org\n@paris_like: place \"法国\"\n@italy_like: place \"意大利\"\n@japan: place \"日本\"\n@tokyo: place \"东京\"\n@osaka: place \"大阪\"\n@europe: place \"欧洲\"\n@hat: object \"火锅\"\n@product_manager: literal \"产品经理\"\n@psych: literal \"压力也大\"\n@c1: concept \"科幻片\"\n@step: literal \"跑步\"\n@movie: literal \"电影\"\n@programming: literal \"计算机专业\"\n@mba: concept \"MBA方向\"\n@language_cn: literal \"中文\"\n@language_en: literal \"英语\"\n@language_jp: literal \"日语\"\n@marriage: event\n\n$p_name = name(@self, \"陈思远\")\n$p_age = age(@self, 32)\n$p_occ = occupation(@self, \"产品经理\")\n$p_work = work_at(@self, \"字节跳动\")\n$p_live = live_in(@self, @bj)\n$p_live2 = live_in(@self, @chaoyang)\n$p_origin = location(@self, @chengdu)\n$rf = friend(@self, @p)\n$rf2 = coworker(@p, @meituan)\n$cat_own = pet(@self, @cat)\n$cat_name = name(@cat, \"豆豆\")\n$cat_like = like(@self, \"橘猫\")\n$fat_note = note($cat_like, \"太胖了\")\n$run_habit = habit(@self, \"跑步\")\n$run_freq = frequency($run_habit, 3)\n$movie_like = like(@self, \"电影\")\n$movie_best = like(@self, \"科幻片\")\n$speak_cn = speak(@self, \"中文\")\n$speak_en = speak(@self, \"英语\")\n$job_en = like(@self, \"能工作交流\")\n$speak_jp = speak(@self, \"日语\")\n$edu1 = education(@self, \"计算机专业\")\n$edu2 = study_at(@self, @buaa)\n$edu3 = study_at(@self, @qinghua)\n$edu4 = education(@self, \"MBA方向\")\n$prev_work = work_at(@self, \"百度\")\n$jump_to = move(@self, @bytedance)\n$bf = partner(@self, @gf)\n$gf_occ = occupation(@gf, \"设计师\")\n$gf_work = workplace(@gf, \"广告公司\")\n$meet1 = meet(@self, @gf)\n$meet2 = event(@meet1, \"朋友聚会\")\n$drink1 = drink(@self, \"咖啡\")\n$coffee_daily = frequency($drink1, 2)\n$no_drink = neg($drink1)\n$old_family_dad = father(@self, @dad)\n$dad_retire = retire(@dad)\n$old_family_mom = mother(@self, @mom)\n$mom_job = occupation(@mom, \"护士\")\n$mom_work = work_at(@mom, \"医院\")\n$sis = sister(@self, @sister)\n$sis_work = work_at(@sister, \"成都\")\n$sis_occ = occupation(@sister, \"老师\")\n$sis_edu = education(@sister, \"教授高中数学\")\n$cat_pet_event = visit(@self, @hat)\n$want_food = want(@self, \"想家里的火锅\")\n$want_food2 = emotion(@self, \"想家里的火锅\")\n$trip_jp = travel(@self, @japan)\n$trip_tokyo = visit($trip_jp, @tokyo)\n$trip_osaka = visit($trip_jp, @osaka)\n$plan_eu = plan(@self, \"去欧洲\")\n$plan_fr = intend(@self, \"去法国\")\n$plan_it = intend(@self, \"去意大利\")\n$play_badminton = meet(@self, @p)\n$play_time = event($play_badminton, \"经常一起打羽毛球\")\n$bye = stop(@self, \"今天就聊到这吧，拜拜\")"
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-multi-event-001",
+    "status": "ok",
+    "elapsed_ms": 2625,
+    "output": "@paris: place \"巴黎\"\n@london: place \"伦敦\"\n@ref姐: person \"表姐\"\n@bf姐: person \"男朋友\"\n\n$rel1 = mother(@ref姐, @self)\n$act1 = meet(@ref姐, @bf姐, \"认识\")\n$time1 = birthday(@ref姐, number(0))\n$plan1 = engage(@ref姐, @bf姐, \"订婚\")\n$time2 = start(@ref姐, \"上个月\")\n$loc1 = visit(@ref姐, \"巴黎\")\n$loc2 = visit(@ref姐, \"伦敦\")"
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-multi-value-001",
+    "status": "ok",
+    "elapsed_ms": 3220,
+    "output": "@p: literal\nnote($p, \"我会说中文、英语和一点日语。平时喜欢跑步和弹吉他。\")\n$name_cn: literal\n$name_en: literal\n$name_jp: literal\n@run: literal\n@guitar: literal\n$speak_cn = speak(@self, \"中文\")\n$speak_en = speak(@self, \"英语\")\n$speak_jp = speak(@self, \"日语\")\n$like_run = like(@self, \"跑步\")\n$like_guitar = like(@self, \"弹吉他\")"
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-negation-001",
+    "status": "ok",
+    "elapsed_ms": 2147,
+    "output": "@food: literal \"香菜\"\n$1 = dislike(@self, \"吃香菜\")\n$2 = uncertain(@self, \"不会游泳\")\n$3 = like(@self, \"擅长做饭\")\nnote($3, \"我很擅长做饭\")"
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-pet-001",
+    "status": "ok",
+    "elapsed_ms": 4932,
+    "output": "@dahuang: animal \"大黄\"\n@g: object\n@tuzi: animal \"团子\"\n@manman: animal \"慢慢\"\n@xiaojie: person \"小杰\"\n@gz: place \"广州\"\n@sh: place \"上海\"\n@petshop: org \"宠物店\"\n\n$name_d = name(@dahuang, \"大黄\")\n$breed_d = like(@dahuang, \"金毛\")\n$age_d = age(@dahuang, 5)\n$habit_d = habit(@dahuang, \"特别温顺\")\n\n$name_t = name(@tuzi, \"团子\")\n$breed_t = like(@tuzi, \"英短蓝猫\")\n$age_t = age(@tuzi, 8)\n$habit_t = habit(@tuzi, \"很调皮老是抓沙发\")\n\n$name_m = name(@manman, \"慢慢\")\n$age_m = age(@manman, 10)\n\n$pet1 = pet(@self, @dahuang)\n$pet2 = pet(@self, @tuzi)\n$pet3 = pet(@self, @manman)\n\n$buy1 = buy(@xiaojie, \"大黄\")\n$petshop_buy = buy(@self, \"大黄\")\n$source1 = alias(@dahuang, \"我男朋友小杰从宠物店买的\")\n$give1 = alias(@tuzi, \"朋友送的\")\n$own1 = own(@self, @manman)\n$move1 = move(@self, @gz, @sh)"
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-qa-001",
+    "status": "ok",
+    "elapsed_ms": 6807,
+    "output": "@sg: place \"新加坡\"\n@sz: place \"深圳南山区\"\n@kv: person \"Kevin\"\n@dd: person \"朵朵\"\n@hw: org \"华为海外事业部\"\n@self: person \"我\"\n@w: concept \"新加坡签证\"\n@asyncio: concept \"Python 的 asyncio 库\"\n@edu: concept \"数据分析\"\n@market: concept \"市场运营\"\n@childedu: concept \"早教班\"\n@passport: object \"护照\"\n@workproof: object \"工作证明\"\n@meat: food \"肉骨茶\"\n@python: concept \"Python\"\n@programming: concept \"编程\"\n\n$pname = name(@self, \"我\")\n$visa_need = want(@self, \"办理新加坡签证\")\n$visa_to = plan(@self, \"去新加坡出差\")\n$visa_time = start(@visa_to, \"下个月\")\n$passport_need = want(@self, \"准备护照等材料\")\n$workproof_need = want(@self, \"准备工作证明等材料\")\n$workplace = workplace(@self, @hw)\n$occupation = occupation(@self, \"市场运营\")\n$country = nationality(@kv, \"美国人\")\n$spouse = spouse(@self, @kv)\n$feed = like(@self, @meat)\n$ask_food = ask(@self, \"新加坡有什么好吃的\")\n$child_age = age(@dd, 3)\n$child_education = plan(@self, \"为女儿选择早教班\")\n$child_name = name(@dd, \"朵朵\")\n$live = live_in(@self, @sz)\n$learn_asyncio = study_at(@self, \"学习 asyncio\")\n$learn_python = study_at(@self, \"学习 Python\")\n$asyncio_use = ask(@self, \"asyncio 库怎么用\")\n$learn_programming = study_at(@self, @programming)\n$want_data = want(@self, \"转做数据分析\")\n$market_more = hope(@self, \"多学点技术\")\n$child_question = ask(@self, \"家里小孩三岁了应该上什么早教班？\")\n\nnote($visa_need, \"新加坡签证怎么办理\")\nnote($visa_to, \"我下个月要去新加坡出差\")\nnote($workplace, \"我在华为海外事业部工作\")\nnote($ask_food, \"我老公之前去过说肉骨茶很好喝，他叫Kevin是美国人\")\nnote($asyncio_use, \"我最近在学编程，想转做数据分析\")\nnote($child_education, \"我女儿叫朵朵，我住在深圳南山区\")"
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-retract-001",
+    "status": "ok",
+    "elapsed_ms": 2280,
+    "output": "@wang: person \"老王\"\n$dog = hobby(@wang, \"金毛\")\n$retract = retract_intent(@self, \"老王养了一条金毛\")\n# nothing to extract"
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-temporal-001",
+    "status": "ok",
+    "elapsed_ms": 2652,
+    "output": "@dad: person \"我爸\"\n@sz: place \"深圳\"\n$1 = resign(@dad, \"国企\")\n$2 = time($1, \"三年前\")\n$3 = start(@dad, \"餐厅\")\n$4 = time($3, \"去年\")\n$5 = move(@self, @sz)\n$6 = time($5, \"上个月\")"
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-travel-001",
+    "status": "ok",
+    "elapsed_ms": 8965,
+    "output": "@bangkok: place \"泰国曼谷\"\n@kyoto: place \"日本京都\"\n@seoul: place \"韩国首尔\"\n@gangnam: place \"首尔江南区\"\n@iceland: place \"冰岛\"\n@maldives: place \"马尔代夫\"\n@self: person\n\n@xiaomin: person \"小敏\"\n@zhizhun: person \"朴智勋\"\n@myhusband: person \"刘洋\"\n\n@trip1: event\n$trip1 = visit(@self, @bangkok)\n$trip1 = eat(@self, \"芒果糯米饭\")\nnote($trip1, \"去年先去了泰国曼谷吃了好多芒果糯米饭\")\n\n@trip2: event\n$trip2 = visit(@self, @kyoto)\nnote($trip2, \"去年飞到日本京都看了红叶\")\n\n@trip3: event\n$trip3 = visit(@self, @seoul)\n$trip3 = meet(@self, @xiaomin)\nnote($trip3, \"去年最后去了韩国首尔找我大学同学小敏\")\n\n@marry1: event\n$marry1 = marry(@xiaomin, @zhizhun)\nnote($marry1, \"小敏嫁给了一个韩国人叫朴智勋\")\n\n$loc1 = location(@xiaomin, @gangnam)\n$work1 = work_at(@xiaomin, \"三星\")\n$occ1 = occupation(@xiaomin, \"芯片设计\")\n\n@plan1: event\n$plan1 = plan(@self, @iceland)\nnote($plan1, \"今年打算去冰岛看极光\")\n\n$wish1 = intend(@self, $plan1)\nnote($wish1, \"和我老公一起看极光\")\n\n@see1: event\n$see1 = visit(@self, @iceland)\nnote($see1, \"看极光\")\n$see1 = move(@myhusband, @iceland)\nnote($see1, \"跟我老公一起去冰岛看极光\")\n\n$loc2 = live_in(@myhusband, @seoul)\nnote($loc2, \"未明确居住地；仅提到去年的首尔行程与之后的夫妻出行，故不作必然居住事实\")\n\n@husbandFearCold: concept\n$husbandFearCold = fear(@myhusband, \"怕冷\")\nnote($husbandFearCold, \"刘洋特别怕冷\")\n\n@likeTripAurora: concept\n$likeTripAurora = hope(@myhusband, \"去冰岛看极光\")\nnote($likeTripAurora, \"但是很想去哈哈\")\n\n@honeymoon: event\n$honeymoon = plan(@self, @maldives)\nnote($honeymoon, \"我们还计划明年蜜月去马尔代夫\")"
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-uncertainty-001",
+    "status": "ok",
+    "elapsed_ms": 2734,
+    "output": "@boss: person \"老板\"\n@sh: place \"上海\"\n@google: org \"谷歌\"\n$boss_name = name(@boss, \"老板\")\n$feel_boss_is_shanghai = believe($boss = occupation(@boss, \"上海人\"))\n$boss_nationality = believe(nationality(@boss, \"上海人\"))\n$boss_worked_at_google = believe(work_at(@boss, @google))\nnote($boss_worked_at_google, \"他可能之前在谷歌工作过\")"
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-vibecoding-001",
+    "status": "ok",
+    "elapsed_ms": 6675,
+    "output": "@nextjs: concept \"Next.js\"\n@typescript: concept \"TypeScript\"\n@vercel: org \"Vercel\"\n@siyuan.dev: place \"siyuan.dev\"\n@lusi yuan: person \"陆思源\"\n@hutuad: org \"哈工大\"\n@hangzhou: place \"杭州\"\n@lusi yuan: person \"陆思源\"\n@annigroup: org \"蚂蚁集团\"\n@pingcap: org \"PingCAP\"\n@rust: concept \"Rust\"\n@a7m4: object \"索尼A7M4\"\n\n$l1 = work_at(@self, \"前端开发\")\n$l2 = name(@self, \"陆思源\")\n$l3 = occupation(@self, \"前端开发\")\n$l4 = location(@self, \"杭州\")\n$l5 = education(@self, \"哈工大计算机系\")\n$l6 = education(@self, \"计算机系\")\n$l7 = study_at(@self, \"Rust\")\n$l8 = current_emotion(@self, \"想做个人博客\")\n$l9 = work_at(@self, @annigroup)\n$l10 = study_at(@self, @rust)\n$l11 = like(@self, \"拍风景照\")\n$l12 = like(@self, \"技术文章\")\n$l13 = like(@self, \"摄影作品展示\")\n$l14 = use(@self, @a7m4)\n$blogtype1 = own(@self, \"个人博客\")\n$techarticles = plan(@self, \"写技术文章\")\n$photoarticles = plan(@self, \"展示摄影作品\")\n$deploy1 = plan(@self, \"部署到 Vercel\")\n$deploy_domain = plan(@self, \"使用域名 siyuan.dev\")\n$about1 = plan(@self, \"添加关于页\")\n$about_content1 = plan(@self, \"在 About 页写基本信息\")\n$life1 = live_in(@self, @hangzhou)\n$hobby1 = habit(@self, \"拍风景照\")\n$learn1 = study_at(@self, \"Rust\")\n\n$correct1 = correct_intent(@self, \"我在一家叫蚂蚁集团的数据库/相关公司做前端。\")\nnote($correct1, \"更正：不是 PingCAP，是蚂蚁集团；之前在 PingCAP 待过，现在跳槽。\")\n# nothing"
+  },
+  {
+    "model": "grok-code-fast-1",
+    "case_id": "po-alias-001",
+    "status": "ok",
+    "elapsed_ms": 4153,
+    "output": "@beida: org \"北大\"\n@friend: person \"林小雨\"\n$1 = friend(@self, @friend)\n$2 = alias(@friend, \"小雨\")\n$3 = study_at(@friend, @beida)\n$4 = education(@friend, \"计算机研究生\")"
+  },
+  {
+    "model": "grok-code-fast-1",
+    "case_id": "po-basic-001",
+    "status": "ok",
+    "elapsed_ms": 897,
+    "output": "@hz: place \"杭州\"\n$p1 = name(@self, \"张伟\")\n$p2 = age(@self, 28)\n$p3 = occupation(@self, \"前端工程师\")\n$p4 = live_in(@self, @hz)"
+  },
+  {
+    "model": "grok-code-fast-1",
+    "case_id": "po-career-001",
+    "status": "ok",
+    "elapsed_ms": 42068,
+    "output": "@hs: org \"衡水中学\"\n@fudan: org \"复旦大学\"\n@mit: org \"MIT\"\n@gs: org \"高盛\"\n@ms: org \"摩根士丹利\"\n@hk: place \"香港\"\n@stanford: org \"斯坦福\"\n@zt: person \"张韬\"\n@xczn: org \"星辰智能\"\n@hz: place \"杭州\"\n$s1 = study_at(@self, @hs)\nnote($s1, \"特别卷\")\n$s2 = study_at(@self, @fudan)\nnote($s2, \"金融系\")\n$s3 = study_at(@self, @mit)\n$s4 = time($s3, \"大二\")\n$s5 = duration($s3, \"一个学期\")\nnote($s3, \"交换\")\n$s6 = work_at(@self, @gs)\n$s7 = time($s6, \"毕业后\")\n$s8 = duration($s6, \"半年\")\nnote($s6, \"实习\")\n$s9 = work_at(@self, @ms)\n$s10 = time($s9, \"然后\")\n$s11 = duration($s9, \"三年\")\n$s12 = location(@self, @hk)\n$s13 = time($s12, \"那时候\")\n$s14 = neg(want(@self, \"做金融\"))\n$s15 = time($s14, \"后来\")\n$s16 = move(@self, \"回国\")\n$s17 = time($s16, \"29岁\")\n$s18 = start(@self, \"创业\")\n$s19 = time($s18, \"29岁\")\n$s20 = start(@self, @xczn)\n$s21 = partner(@self, @zt)\n$s22 = own(@self, @xczn)\n$s23 = name(@xczn, \"星辰智能\")\nnote($s20, \"在杭州\")\nnote($s20, \"现在公司有50多人，主要做企业级AI助手\")\n$s24 = study_at(@self, @stanford)\n$s25 = education(@self, \"CS硕士\")\n$s26 = time($s24, \"中间\")"
+  },
+  {
+    "model": "grok-code-fast-1",
+    "case_id": "po-comprehensive-001",
+    "status": "ok",
+    "elapsed_ms": 23330,
+    "output": "@k: person \"凯文\"\n@mc: org \"梅奥诊所\"\n@osaka: place \"大阪\"\n@w: person\n$1 = brother(@self, @k)\n$2 = name(@k, \"凯文\")\n$3 = occupation(@k, \"外科医生\")\n$4 = work_at(@k, @mc)\n$5 = correct_intent(@self, $4)\n$6 = speak(@k, \"英语\")\n$7 = speak(@k, \"普通话\")\n$8 = speak(@k, \"法语\")\n$9 = degree($8, \"一点\")\n$10 = spouse(@k, @w)\n$11 = nationality(@w, \"日本人\")\n$12 = believe(@self, $11)\n$13 = meet(@k, @w)\n$14 = location($13, @osaka)\n$15 = time($13, \"去年\")\n$16 = correct_intent(@self, $14)\n$17 = believe(@self, $13)\n$18 = marry(@k, @w)\n$19 = location($18, @osaka)"
+  },
+  {
+    "model": "grok-code-fast-1",
+    "case_id": "po-correction-001",
+    "status": "ok",
+    "elapsed_ms": 3949,
+    "output": "@xl: person \"小李\"\n@tx: org \"腾讯\"\n$1 = coworker(@self, @xl)\n$2 = work_at(@xl, @tx)\n$c = correct_intent(@self, $2)"
+  },
+  {
+    "model": "grok-code-fast-1",
+    "case_id": "po-family-001",
+    "status": "ok",
+    "elapsed_ms": 16987,
+    "output": "@gf: person \"爷爷\"\n@gm: person \"奶奶\"\n@f: person \"爸\"\n@eu: person \"大伯\"\n@yu: person \"小叔\"\n@a1: person \"美咲\"\n@m: person \"妈\"\n@ma: person \"小姨\"\n@c1: person \"小豪\"\n@w: person \"林芳\"\n@d: person \"朵朵\"\n@fz: place \"福州\"\n@xmu: org \"厦门大学\"\n@yw: place \"义乌\"\n@gz: place \"广州\"\n@zsu: org \"中山大学附属医院\"\n@wz: place \"温州\"\n$s1 = live_in(@gf, @fz)\n$s2 = live_in(@gm, @fz)\n$s3 = occupation(@gf, \"渔民\")\n$s4 = time($s3, \"以前\")\n$s5 = age(@gf, 90)\n$s6 = habit(@gf, \"身体不错\")\n$s7 = brother(@f, @eu)\n$s8 = brother(@f, @yu)\n$s9 = live_in(@eu, @fz)\n$s10 = own(@eu, \"海鲜餐厅\")\n$s11 = work_at(@yu, @xmu)\n$s12 = occupation(@yu, \"物理教授\")\n$s13 = spouse(@yu, @a1)\n$s14 = name(@a1, \"美咲\")\n$s15 = nationality(@a1, \"日本人\")\n$s16 = nationality(@m, \"温州人\")\n$s17 = sister(@m, @ma)\n$s18 = live_in(@ma, @yw)\n$s19 = occupation(@ma, \"外贸生意\")\n$s20 = degree($s19, \"挺大的\")\n$s21 = name(@c1, \"小豪\")\n$s22 = child(@ma, @c1)\n$s23 = coworker(@c1, @ma)\n$s24 = live_in(@self, @gz)\n$s25 = live_in(@w, @gz)\n$s26 = name(@w, \"林芳\")\n$s27 = occupation(@w, \"医生\")\n$s28 = work_at(@w, @zsu)\n$s29 = name(@d, \"朵朵\")\n$s30 = child(@self, @d)\n$s31 = child(@w, @d)\n$s32 = study_at(@d, \"幼儿园\")\n$s33 = time($s32, \"刚上\")"
+  },
+  {
+    "model": "grok-code-fast-1",
+    "case_id": "po-food-001",
+    "status": "ok",
+    "elapsed_ms": 30117,
+    "output": "@sis: person \"姐\"\n$1 = hobby(@self, \"美食\")\n$2 = dislike(@self, \"花生\")\nnote($2, \"严重过敏\")\n$3 = dislike(@self, \"猪肉\")\nnote($3, \"宗教原因\")\n$4 = dislike(@self, \"泰国菜\")\n$5 = because($4, $2)\n$6 = dislike(@self, \"奶茶\")\n$7 = dislike(@self, \"可乐\")\n$8 = like(@self, \"意大利面\")\n$9 = eat(@self, \"意大利面\")\n$10 = frequency($9, \"每周至少三次\")\n$11 = hobby(@self, \"做饭\")\n$12 = hobby(@self, \"烘焙\")\n$13 = drink(@self, \"黑咖啡\")\n$14 = drink(@self, \"茶\")\n$15 = frequency($13, \"一天三杯以上\")\n$16 = degree($15, \"太多\")\n$17 = uncertain(@self, $16)\n$18 = habit(@self, \"咖啡因上瘾\")\n$19 = believe(@sis, $18)\n$20 = say(@sis, \"咖啡因上瘾\")\n$21 = frequency($20, \"老\")\n$22 = birthday(@sis)\n$23 = make(@self, \"巴斯克芝士蛋糕\")\n$24 = time($23, \"上周\")\n$25 = gift(@self, @sis, $23)\n$26 = because($25, $22)"
+  },
+  {
+    "model": "grok-code-fast-1",
+    "case_id": "po-health-001",
+    "status": "ok",
+    "elapsed_ms": 82452,
+    "output": "@dad: person \"爸\"\n@gm: person \"奶奶\"\n@firm: org \"会计事务所\"\n@hospital: place \"协和医院\"\n@wife: person\n$1 = habit(@self, \"头疼\")\n$2 = time($1, \"最近\")\n$3 = duration($1, \"两三周\")\n$4 = habit(@self, \"睡眠不好\")\n$5 = quantity($4, 4)\n$6 = quantity($4, 5)\n$7 = frequency($4, \"每天\")\n$8 = duration($4, \"两三周\")\n$9 = age(@self, 35)\n$10 = occupation(@self, \"会计\")\n$11 = work_at(@self, @firm)\n$12 = habit(@self, \"工作压力大\")\n$13 = habit(@self, \"忙年审\")\n$14 = habit(@self, \"游泳\")\n$15 = frequency($14, \"每周两次\")\n$16 = time($14, \"以前\")\n$17 = habit(@self, \"最近没时间游泳\")\n$18 = father(@self, @dad)\n$19 = habit(@dad, \"高血压\")\n$20 = habit(@gm, \"高血压\")\n$21 = neg(habit(@self, \"吃药\"))\n$22 = habit(@self, \"每天喝杯枸杞水\")\n$23 = neg(habit(@self, \"抽烟\"))\n$24 = habit(@self, \"偶尔喝红酒\")\n$25 = spouse(@self, @wife)\n$26 = occupation(@wife, \"护士\")\n$27 = work_at(@wife, @hospital)\n$28 = recommend(@wife, \"去医院检查\")\n$29 = emotion(@wife, \"着急\")\n$30 = degree($29, \"比我还\")\n$31 = intend(@self, \"去医院检查\")\nnote($9, \"男\")\nnote(@self, \"去年体检血压正常\")\nnote(@self, \"有家族高血压史\")"
+  },
+  {
+    "model": "grok-code-fast-1",
+    "case_id": "po-long-complex-001",
+    "status": "ok",
+    "elapsed_ms": 16276,
+    "output": "@zr: person \"周然\"\n@sq: person \"苏晴\"\n@sz: place \"深圳\"\n@hw: org \"华为\"\n@zju: org \"浙大\"\n@tx: org \"腾讯\"\n@sh: place \"上海\"\n@hz: place \"杭州\"\n@ali: org \"阿里\"\n@pku: org \"北大\"\n@lz: person \"老赵\"\n@lucky: animal \"Lucky\"\n@mochi: animal \"Mochi\"\n@hs: place \"黄山\"\n@sanya: place \"三亚\"\n@jp: place \"日本\"\n@my: place \"绵阳\"\n@mom: person\n$1 = brother(@self, @zr)\n$2 = occupation(@zr, \"算法工程师\")\n$3 = work_at(@zr, @hw)\n$4 = live_in(@zr, @sz)\n$5 = study_at(@zr, @zju)\n$6 = event(@zr, \"毕业\")\n$7 = time($6, \"去年\")\n$8 = girlfriend(@zr, @sq)\n$9 = dislike(@zr, \"算法工程师工作\")\n$10 = want(@zr, \"转做独立开发者\")\n$11 = correct_intent(@self, $12)\n$12 = occupation(@sq, \"产品经理\")\n$13 = work_at(@sq, @tx)\n$14 = occupation(@self, \"数据分析师\")\n$15 = live_in(@self, @sh)\n$16 = work_at(@self, @ali)\n$17 = time($16, \"之前\")\n$18 = duration($16, \"两年\")\n$19 = education(@self, \"统计学硕士\")\n$20 = study_at(@self, @pku)\n$21 = roommate(@self, @lz)\n$22 = occupation(@lz, \"后端开发\")\n$23 = own(@lz, @lucky)\n$24 = own(@lz, @mochi)\nnote($23, \"拉布拉多\")\nnote($24, \"柯基\")\n$25 = event(@self, @lz, \"徒步\")\n$26 = time($25, \"周末\")\n$27 = frequency($25, \"经常\")\n$28 = visit(@self, @lz, @zr, @sq, @hs)\n$29 = time($28, \"上个月\")\n$30 = event($28, \"看日出\")\n$31 = location($30, \"山顶\")\nnote($28, \"特别棒\")\n$32 = retract_intent(@self, \"周然跟苏晴订婚了\")\n$33 = intend(@zr, $34)\n$34 = marry(@zr, @sq)\n$35 = time($34, \"明年\")\n$36 = location($34, \"三亚\")\n$37 = dislike(@self, \"海鲜\")\n$38 = like(@self, \"川菜\")\n$39 = nationality(@self, \"四川人\")\n$40 = live_in(@self, @my)\n$41 = resign(@lz)\n$42 = time($41, \"上周\")\n$43 = plan(@lz, $44)\n$44 = study_at(@lz, @jp)\n$45 = education(@lz, \"CS博士\")\n$46 = mother(@lz, @mom)\n$47 = own(@mom, @lucky)\n$48 = time($47, \"暂时\")\n$49 = own(@mom, @mochi)\n$50 = time($49, \"暂时\")"
+  },
+  {
+    "model": "grok-code-fast-1",
+    "case_id": "po-long-simple-001",
+    "status": "ok",
+    "elapsed_ms": 325800,
+    "output": "@beijing: place \"北京\"\n@chengdu: place \"成都\"\n@bytedance: org \"字节跳动\"\n@baidu: org \"百度\"\n@beihang: org \"北航\"\n@tsinghua: org \"清华\"\n@meituan: org \"美团\"\n@hospital: place \"医院\"\n@cat: animal\n@sister: person \"陈思雨\"\n@father: person\n@mother: person\n@roommate: person \"王磊\"\n@gf: person \"林悦\"\n@ad_company: org \"广告公司\"\n@japan: place \"日本\"\n@tokyo: place \"东京\"\n@osaka: place \"大阪\"\n@france: place \"法国\"\n@italy: place \"意大利\"\n$name = name(@self, \"陈思远\")\n$age = age(@self, 32)\n$busy = habit(@self, \"工作忙\")\n$occ = occupation(@self, \"产品经理\")\n$bytedance_job = work_at(@self, @bytedance)\n$live = live_in(@self, @beijing)\nnote($live, \"朝阳区\")\n$hometown = live_in(@self, @chengdu)\nnote($hometown, \"老家\")\n$miss_hotpot = want(@self, \"家里的火锅\")\n$sister_rel = sister(@self, @sister)\n$sister_occ = occupation(@sister, \"高中数学老师\")\n$sister_live = live_in(@sister, @chengdu)\n$father_rel = father(@self, @father)\n$mother_rel = mother(@self, @mother)\n$father_occ = occupation(@father, \"退休\")\n$mother_occ = occupation(@mother, \"护士\")\n$mother_work = work_at(@mother, @hospital)\n$father_live = live_in(@father, @chengdu)\n$mother_live = live_in(@mother, @chengdu)\n$pet = pet(@self, @cat)\n$name_cat = name(@cat, \"豆豆\")\nnote($pet, \"橘猫\")\n$fat = habit(@cat, \"太胖\")\n$run = hobby(@self, \"跑步\")\n$freq_run = frequency($run, \"每周三次\")\n$movie = hobby(@self, \"看电影\")\n$like_scifi = like(@self, \"科幻片\")\n$chinese = speak(@self, \"中文\")\n$english = speak(@self, \"英语\")\nnote($english, \"还行吧，能工作交流\")\n$japanese = speak(@self, \"日语\")\nnote($japanese, \"学了一点，还不太行\")\n$undergrad = study_at(@self, @beihang)\n$major = education(@self, \"计算机专业\")\n$grad = study_at(@self, @tsinghua)\n$mba = education(@self, \"MBA\")\n$baidu_job = work_at(@self, @baidu)\n$time_baidu = time($baidu_job, \"三年\")\n$roommate_rel = roommate(@self, @roommate)\n$roommate_work = work_at(@roommate, @meituan)\n$roommate_occ = occupation(@roommate, \"工程师\")\n$badminton = meet(@self, @roommate)\nnote($badminton, \"经常一起打羽毛球\")\n$gf_rel = partner(@self, @gf)\n$gf_occ = occupation(@gf, \"设计师\")\n$gf_work = work_at(@gf, @ad_company)\n$meet_gf = meet(@self, @gf)\n$time_meet = time($meet_gf, \"去年\")\n$loc_meet = location($meet_gf, \"朋友聚会\")\n$no_alcohol = dislike(@self, \"酒\")\n$like_coffee = like(@self, \"咖啡\")\n$drink_coffee = drink(@self, \"咖啡\")\n$freq_coffee = frequency($drink_coffee, \"每天至少两杯\")\n$visit_japan = visit(@self, @japan)\n$time_japan = time($visit_japan, \"去年\")\n$visit_tokyo = visit(@self, @tokyo)\n$visit_osaka = visit(@self, @osaka)\n$plan_europe = plan(@self, \"去欧洲\")\n$time_plan = time($plan_europe, \"今年夏天\")\n$want_france = want(@self, \"去法国\")\n$want_italy = want(@self, \"去意大利\")"
+  },
+  {
+    "model": "grok-code-fast-1",
+    "case_id": "po-multi-event-001",
+    "status": "ok",
+    "elapsed_ms": 5335,
+    "output": "@paris: place \"巴黎\"\n@london: place \"伦敦\"\n@cousin: person\n@bf: person\n$rel1 = cousin(@self, @cousin)\n$rel2 = partner(@cousin, @bf)\n$meet = meet(@cousin, @bf)\n$time_meet = time($meet, \"去年\")\n$loc_meet = location($meet, @paris)\n$engage = engage(@cousin, @bf)\n$time_engage = time($engage, \"上个月\")\n$loc_engage = location($engage, @london)"
+  },
+  {
+    "model": "grok-code-fast-1",
+    "case_id": "po-multi-value-001",
+    "status": "ok",
+    "elapsed_ms": 3318,
+    "output": "$s1 = speak(@self, \"中文\")\n$s2 = speak(@self, \"英语\")\n$s3 = speak(@self, \"日语\")\n$s4 = degree($s3, \"一点\")\n$s5 = like(@self, \"跑步\")\n$s6 = like(@self, \"弹吉他\")\n$s7 = frequency($s5, \"平时\")\n$s8 = frequency($s6, \"平时\")"
+  },
+  {
+    "model": "grok-code-fast-1",
+    "case_id": "po-negation-001",
+    "status": "ok",
+    "elapsed_ms": 6110,
+    "output": "$d1 = dislike(@self, \"香菜\")\n$s1 = skill(@self, \"游泳\")\n$n1 = neg($s1)\n$s2 = skill(@self, \"做饭\")\n$d2 = degree($s2, \"很\")"
+  },
+  {
+    "model": "grok-code-fast-1",
+    "case_id": "po-pet-001",
+    "status": "ok",
+    "elapsed_ms": 20101,
+    "output": "@xiaojie: person \"小杰\"\n@friend: person\n@dahuang: animal \"大黄\"\n@tuanzi: animal \"团子\"\n@manman: animal \"慢慢\"\n@gz: place \"广州\"\n@sh: place \"上海\"\n$rel1 = partner(@self, @xiaojie)\n$rel2 = friend(@self, @friend)\n$own_d = own(@self, @dahuang)\nnote($own_d, \"金毛，5岁，特别温顺\")\n$own_t = own(@self, @tuanzi)\nnote($own_t, \"英短蓝猫，8个月，很调皮老是抓沙发\")\n$own_m = own(@self, @manman)\nnote($own_m, \"乌龟，养了十多年\")\n$buy = buy(@xiaojie, @dahuang)\nnote($buy, \"从宠物店\")\n$gift = gift(@self, @tuanzi)\nnote($gift, \"朋友送的\")\n$start_own = start(@self, $own_m)\ntime($start_own, \"小时候\")\n$move_self = move(@self, @gz, @sh)\n$move_manman = move(@manman, @gz, @sh)"
+  },
+  {
+    "model": "grok-code-fast-1",
+    "case_id": "po-qa-001",
+    "status": "ok",
+    "elapsed_ms": 16527,
+    "output": "@sg: place \"新加坡\"\n@huawei: org \"华为\"\n@kevin: person \"Kevin\"\n@duoduo: person \"朵朵\"\n@szns: place \"深圳南山区\"\n$1 = plan(@self, visit(@self, @sg))\n$2 = time($1, \"下个月\")\nnote($1, \"出差\")\n$3 = work_at(@self, @huawei)\nnote($3, \"海外事业部\")\n$4 = spouse(@self, @kevin)\n$5 = name(@kevin, \"Kevin\")\n$6 = nationality(@kevin, \"美国\")\n$7 = visit(@kevin, @sg)\n$8 = time($7, \"之前\")\n$9 = like(@kevin, \"肉骨茶\")\n$10 = habit(@self, \"学编程\")\n$11 = time($10, \"最近\")\n$12 = want(@self, \"转做数据分析\")\n$13 = occupation(@self, \"市场运营\")\n$14 = want(@self, \"多学点技术\")\n$15 = child(@self, @duoduo)\n$16 = name(@duoduo, \"朵朵\")\n$17 = age(@duoduo, 3)\n$18 = live_in(@self, @szns)"
+  },
+  {
+    "model": "grok-code-fast-1",
+    "case_id": "po-retract-001",
+    "status": "ok",
+    "elapsed_ms": 4288,
+    "output": "@lw: person \"老王\"\n$1 = neighbor(@self, @lw)\n$2 = retract_intent(@self, \"老王养了一条金毛\")"
+  },
+  {
+    "model": "grok-code-fast-1",
+    "case_id": "po-temporal-001",
+    "status": "ok",
+    "elapsed_ms": 8974,
+    "output": "@father: person \"爸\"\n@sz: place \"深圳\"\n@restaurant: org\n$1 = resign(@father, \"国企\")\n$2 = time($1, \"三年前\")\n$3 = own(@father, @restaurant)\n$4 = start(@father, @restaurant)\n$5 = time($4, \"去年\")\n$6 = move(@father, @sz)\n$7 = time($6, \"上个月\")"
+  },
+  {
+    "model": "grok-code-fast-1",
+    "case_id": "po-travel-001",
+    "status": "ok",
+    "elapsed_ms": 9673,
+    "output": "@xiaomin: person \"小敏\"\n@park: person \"朴智勋\"\n@liuyang: person \"刘洋\"\n@bangkok: place \"曼谷\"\n@kyoto: place \"京都\"\n@seoul: place \"首尔\"\n@gangnam: place \"首尔江南区\"\n@iceland: place \"冰岛\"\n@maldives: place \"马尔代夫\"\n@samsung: org \"三星\"\n@mangosticky: food \"芒果糯米饭\"\n@aurora: concept \"极光\"\n@lastyear: time \"去年\"\n@thisyear: time \"今年\"\n@nextyear: time \"明年\"\n$1 = visit(@self, @bangkok)\n$2 = time($1, @lastyear)\n$3 = eat(@self, @mangosticky)\n$4 = time($3, @lastyear)\n$5 = visit(@self, @kyoto)\n$6 = time($5, @lastyear)\n$7 = visit(@self, @seoul)\n$8 = time($7, @lastyear)\n$9 = meet(@self, @xiaomin)\n$10 = time($9, @lastyear)\n$11 = classmate(@self, @xiaomin)\n$12 = marry(@xiaomin, @park)\n$13 = live_in(@xiaomin, @gangnam)\n$14 = live_in(@park, @gangnam)\n$15 = work_at(@xiaomin, @samsung)\n$16 = occupation(@xiaomin, \"芯片设计\")\n$17 = spouse(@self, @liuyang)\n$18 = name(@liuyang, \"刘洋\")\n$19 = plan(@self, $20)\n$20 = visit(@self, @iceland)\n$21 = time($20, @thisyear)\n$22 = want(@liuyang, $20)\n$23 = dislike(@liuyang, \"冷\")\n$24 = plan(@self, $25)\n$25 = visit(@self, @maldives)\n$26 = time($25, @nextyear)\n$27 = event($25, \"蜜月\")"
+  },
+  {
+    "model": "grok-code-fast-1",
+    "case_id": "po-uncertainty-001",
+    "status": "ok",
+    "elapsed_ms": 11238,
+    "output": "@boss: person\n@sh: place \"上海\"\n@google: org \"谷歌\"\n$r = boss(@self, @boss)\n$f1 = nationality(@boss, \"上海人\")\n$w = work_at(@boss, @google)\n$t = time($w, \"之前\")\n$b1 = believe(@self, $f1)\n$b2 = believe(@self, $w)"
+  },
+  {
+    "model": "grok-code-fast-1",
+    "case_id": "po-vibecoding-001",
+    "status": "ok",
+    "elapsed_ms": 58224,
+    "output": "@hz: place \"杭州\"\n@hit: org \"哈工大\"\n@pingcap: org \"PingCAP\"\n@ant: org \"蚂蚁集团\"\n@sony: object \"索尼A7M4\"\n$1 = name(@self, \"陆思源\")\n$2 = live_in(@self, @hz)\n$3 = education(@self, \"哈工大计算机系\")\n$4 = time($3, \"毕业\")\n$5 = occupation(@self, \"前端开发\")\n$6 = duration($5, 5)\n$7 = skill(@self, \"TypeScript\")\n$8 = hobby(@self, \"摄影\")\n$9 = like(@self, \"拍风景照\")\n$10 = use(@self, @sony)\n$11 = own(@self, \"siyuan.dev\")\n$12 = start(@self, \"learning Rust\")\n$13 = time($12, \"目前\")\n$14 = work_at(@self, @ant)\n$15 = work_at(@self, @pingcap)\n$16 = time($15, \"之前\")\n$17 = correct_intent(@self, $14)"
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-alias-001",
+    "status": "ok",
+    "elapsed_ms": 1911,
+    "output": "@self: person\n@lin: person \"林小雨\"\n@pku: place \"北大\"\n$1 = name(@self, \"林小雨\")\n$2 = alias(@self, \"小雨\")\n$3 = study_at(@lin, @pku)\n$4 = occupation(@lin, \"研究生\")\n$5 = skill(@lin, \"计算机\")"
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-basic-001",
+    "status": "ok",
+    "elapsed_ms": 1405,
+    "output": "@hz: place \"杭州\"\n$p1 = name(@self, \"张伟\")\n$p2 = age(@self, 28)\n$p3 = occupation(@self, \"前端工程师\")\n$p4 = live_in(@self, @hz)"
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-career-001",
+    "status": "ok",
+    "elapsed_ms": 3655,
+    "output": "@hz: place \"杭州\"\n@mit: place \"MIT\"\n@stanford: place \"斯坦福\"\n@fudan: org \"复旦大学\"\n@gs: org \"高盛\"\n@ms: org \"摩根士丹利\"\n@zt: person \"张韬\"\n@xtzn: org \"星辰智能\"\n\n$s1 = study_at(@self, @fudan)\n$s2 = study_at(@self, @mit)\n$s3 = study_at(@self, @stanford)\n$s4 = work_at(@self, @gs)\n$s5 = work_at(@self, @ms)\n$s6 = live_in(@self, @hz)\n$s7 = coworker(@self, @zt)\n$s8 = own(@self, @xtzn)\n$s9 = occupation(@self, \"分析师\")\n$s10 = occupation(@self, \"创业者\")\n$s11 = skill(@self, \"AI\")\n$s12 = skill(@self, \"CS\")\n\n$e1 = event(\"高考\")\n$e2 = event(\"创业\")\n$e3 = event(\"交换\")\n\n$mod1 = time($e1, \"高中\")\n$mod2 = time($e2, \"29岁\")\n$mod3 = time($e3, \"大二\")\n$mod4 = duration($s4, \"半年\")\n$mod5 = duration($s5, \"三年\")\n$mod6 = degree($s3, \"硕士\")\n\nnote($s11, \"主要做企业级AI助手\")\nnote($s12, \"公司有50多人了\")"
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-comprehensive-001",
+    "status": "ok",
+    "elapsed_ms": 2895,
+    "output": "@self: person\n@kevin: person \"凯文\"\n@jhu: org \"约翰霍普金斯医院\"\n@mayo: org \"梅奥诊所\"\n@tokyo: place \"东京\"\n@osaka: place \"大阪\"\n\n$1 = brother(@self, @kevin)\n$2 = occupation(@kevin, \"外科医生\")\n$3 = workplace(@kevin, @jhu)\n$4 = speak(@kevin, \"英语\")\n$5 = speak(@kevin, \"普通话\")\n$6 = speak(@kevin, \"法语\")\n$7 = spouse(@kevin, @p1)\n$8 = name(@p1, \"凯文的老婆\")\n$9 = believe(@self, $10)\n$10 = nationality(@p1, \"日本人\")\n$11 = meet(@kevin, @p1, @tokyo)\n$12 = time($11, \"去年\")\n$13 = correct_intent(@self, $3)\n$14 = workplace(@kevin, @mayo)\n$15 = correct_intent(@self, $11)\n$16 = marry(@kevin, @p1, @osaka)"
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-correction-001",
+    "status": "ok",
+    "elapsed_ms": 1495,
+    "output": "@self: person\n@baidu: org \"百度\"\n@tencent: org \"腾讯\"\n@li: person \"小李\"\n$1 = coworker(@self, @li)\n$2 = work_at(@li, @tencent)\n$c = correct_intent(@self, $2)"
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-family-001",
+    "status": "ok",
+    "elapsed_ms": 6553,
+    "output": "@fz: place \"福州\"\n@xm: place \"厦门\"\n@wz: place \"温州\"\n@yw: place \"义乌\"\n@guangzhou: place \"广州\"\n@sysu_hospital: place \"中山大学附属医院\"\n@grandpa: person\n@grandma: person\n@dad: person\n@uncle1: person\n@uncle2: person\n@aunt2: person\n@mom: person\n@aunt1: person\n@cousin: person\n@wife: person\n@daughter: person\n\n$g1 = name(@grandpa, \"爷爷\")\n$g2 = name(@grandma, \"奶奶\")\n$g3 = occupation(@grandpa, \"渔民\")\n$g4 = age(@grandpa, 90)\n$g5 = live_in(@grandpa, @fz)\n$g6 = live_in(@grandma, @fz)\n$d1 = name(@dad, \"爸爸\")\n$u1 = name(@uncle1, \"大伯\")\n$u2 = occupation(@uncle1, \"餐厅老板\")\n$u3 = workplace(@uncle1, \"海鲜餐厅\")\n$u4 = live_in(@uncle1, @fz)\n$u5 = name(@uncle2, \"小叔\")\n$u6 = occupation(@uncle2, \"物理教授\")\n$u7 = workplace(@uncle2, @xm)\n$a2 = name(@aunt2, \"美咲\")\n$a3 = nationality(@aunt2, \"日本人\")\n$a4 = spouse(@uncle2, @aunt2)\n$m1 = name(@mom, \"妈妈\")\n$m2 = nationality(@mom, \"温州人\")\n$a1 = name(@aunt1, \"小姨\")\n$a5 = occupation(@aunt1, \"外贸生意\")\n$a6 = workplace(@aunt1, @yw)\n$a7 = own(@aunt1, \"外贸生意\")\n$c1 = name(@cousin, \"小豪\")\n$c2 = coworker(@cousin, @aunt1)\n$s1 = name(@self, \"我\")\n$s2 = live_in(@self, @guangzhou)\n$w1 = name(@wife, \"林芳\")\n$w2 = occupation(@wife, \"医生\")\n$w3 = workplace(@wife, @sysu_hospital)\n$w4 = spouse(@self, @wife)\n$d2 = name(@daughter, \"朵朵\")\n$d3 = occupation(@daughter, \"幼儿园学生\")"
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-food-001",
+    "status": "ok",
+    "elapsed_ms": 3169,
+    "output": "@self: person\n@peanut: object \"花生\"\n@pork: food \"猪肉\"\n@italian_pasta: food \"意大利面\"\n@basque_cheesecake: food \"巴斯克芝士蛋糕\"\n@coffee: drink \"黑咖啡\"\n@tea: drink \"茶\"\n@姐姐: person\n\n$1 = dislike(@self, @peanut)\n$2 = neg(eat(@self, @pork))\n$3 = like(@self, @italian_pasta)\n$4 = habit(@self, \"每周至少做三次意大利面\")\n$5 = like(@self, \"做饭\")\n$6 = like(@self, \"烘焙\")\n$7 = event(@self, \"做巴斯克芝士蛋糕\", @姐姐, \"生日\")\n$8 = dislike(@self, \"奶茶\")\n$9 = dislike(@self, \"可乐\")\n$10 = drink(@self, @coffee)\n$11 = drink(@self, @tea)\n$12 = habit(@self, \"一天三杯以上咖啡\")\n$13 = believe(@姐姐, $12)"
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-health-001",
+    "status": "ok",
+    "elapsed_ms": 2442,
+    "output": "@self: person\n@hz: place \"协和医院\"\n@p1: person \"我爸\"\n@p2: person \"我奶奶\"\n@p3: person \"我老婆\"\n$1 = name(@self, \"我\")\n$2 = age(@self, 35)\n$3 = occupation(@self, \"会计事务所上班\")\n$4 = live_in(@self, @hz)\n$5 = habit(@self, \"游泳\")\n$6 = habit(@self, \"喝枸杞水\")\n$7 = dislike(@self, \"抽烟\")\n$8 = like(@self, \"喝红酒\")\n$9 = own(@self, \"家族高血压史\")\n$10 = mother(@p1, @p2)\n$11 = occupation(@p3, \"护士\")\n$12 = work_at(@p3, @hz)\n$13 = emotion(@self, \"着急\")\n$14 = neg($5)"
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-long-complex-001",
+    "status": "ok",
+    "elapsed_ms": 8388,
+    "output": "@self: person\n@zr: person \"周然\"\n@sz: place \"深圳\"\n@hw: org \"华为\"\n@zj: place \"浙大\"\n@sq: person \"苏晴\"\n@tx: org \"腾讯\"\n@mom: person \"妈妈\"\n@sh: place \"上海\"\n@hz: place \"杭州\"\n@al: org \"阿里\"\n@pk: org \"北大\"\n@lz: person \"老赵\"\n@mt: place \"黄山\"\n@my: place \"绵阳\"\n@jp: place \"日本\"\n$lz1 = name(@lz, \"老赵\")\n$zr1 = name(@zr, \"周然\")\n$sq1 = name(@sq, \"苏晴\")\n$zr2 = occupation(@zr, \"算法工程师\")\n$zr3 = work_at(@zr, @hw)\n$zr4 = live_in(@zr, @sz)\n$zr5 = education(@zr, @zj)\n$zr6 = graduate_from(@zr, @zj)\n$sq2 = occupation(@sq, \"产品经理\")\n$sq3 = work_at(@sq, @tx)\n$self1 = occupation(@self, \"数据分析师\")\n$self2 = live_in(@self, @sh)\n$self3 = work_at(@self, @al)\n$self4 = duration($self3, \"两年\")\n$self5 = education(@self, \"硕士\")\n$self6 = study_at(@self, @pk)\n$lz2 = occupation(@lz, \"后端开发\")\n$lz3 = own(@lz, \"狗\")\n$lz4 = pet(@lz, \"Lucky\")\n$lz5 = pet(@lz, \"Mochi\")\n$lz6 = breed(\"Lucky\", \"拉布拉多\")\n$lz7 = breed(\"Mochi\", \"柯基\")\n$e1 = meet(@self, @lz, @zr)\n$e2 = visit(@self, @mt)\n$e3 = event(@self, \"看日出\")\n$e4 = time($e3, \"上个月\")\n$e5 = cause($e3, \"特别棒\")\n$zr7 = plan(@zr, \"办婚礼\")\n$e6 = time($zr7, \"明年\")\n$e7 = location($zr7, @jp)\n$self7 = dislike(@self, \"海鲜\")\n$self8 = like(@self, \"川菜\")\n$self9 = nationality(@self, \"四川人\")\n$self10 = live_in(@self, @my)\n$lz8 = resign(@lz, @hw)\n$lz9 = plan(@lz, \"读CS的博士\")\n$lz10 = study_at(@lz, @jp)\n$lz11 = cause($lz9, \"Lucky和Mochi暂时让他妈帮忙养着\")\n$e8 = time($lz8, \"上周\")\n$e9 = time($zr7, \"明年\")\n$e10 = location($zr7, @jp)\n$zr8 = believe(@self, $zr7)\n$zr9 = retract_intent(@self, \"周然跟苏晴可能订婚了\")\n$zr10 = correct_intent(@self, $zr7)"
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-long-simple-001",
+    "status": "ok",
+    "elapsed_ms": 8241,
+    "output": "@self: person\n@bj: place \"北京\"\n@chaoyang: place \"朝阳区\"\n@cd: place \"成都\"\n@hz: place \"杭州\"\n@tt: org \"字节跳动\"\n@baidu: org \"百度\"\n@meituan: org \"美团\"\n@ad_agency: org \"广告公司\"\n@tsuyu: person \"陈思雨\"\n@wang_lei: person \"王磊\"\n@lin_yue: person \"林悦\"\n@cat: animal \"豆豆\"\n@tokyo: place \"东京\"\n@osaka: place \"大阪\"\n@france: place \"法国\"\n@italy: place \"意大利\"\n@beihang: org \"北航\"\n@tsinghua: org \"清华\"\n$name1 = name(@self, \"陈思远\")\n$age1 = age(@self, 32)\n$occ1 = occupation(@self, \"产品经理\")\n$work1 = work_at(@self, @tt)\n$live1 = live_in(@self, @bj)\n$live2 = live_in(@self, @chaoyang)\n$origin1 = live_in(@cd, @self)\n$eat1 = like(@self, \"火锅\")\n$sis1 = sister(@self, @tsuyu)\n$occ2 = occupation(@tsuyu, \"老师\")\n$teach1 = teach(@tsuyu, \"高中数学\")\n$live3 = live_in(@tsuyu, @cd)\n$parent1 = parent(@self, @father)\n$father1 = retire(@father)\n$parent2 = parent(@self, @mother)\n$occ3 = occupation(@mother, \"护士\")\n$work2 = work_at(@mother, \"医院\")\n$pet1 = own(@self, @cat)\n$breed1 = breed(@cat, \"橘猫\")\n$habit1 = like(@self, \"跑步\")\n$freq1 = frequency($habit1, \"每周三次\")\n$habit2 = like(@self, \"看电影\")\n$like1 = like(@self, \"科幻片\")\n$speak1 = speak(@self, \"中文\")\n$speak2 = speak(@self, \"英语\")\n$skill1 = skill(@self, \"英语\")\n$skill2 = skill(@self, \"日语\")\n$study1 = study_at(@self, @beihang)\n$major1 = major(@self, \"计算机专业\")\n$study2 = study_at(@self, @tsinghua)\n$major2 = major(@self, \"MBA方向\")\n$work3 = work_at(@self, @baidu)\n$duration1 = duration($work3, \"三年\")\n$work4 = work_at(@self, @tt)\n$friend1 = friend(@self, @wang_lei)\n$work5 = work_at(@wang_lei, @meituan)\n$occ4 = occupation(@wang_lei, \"工程师\")\n$habit3 = like(@self, \"打羽毛球\")\n$habit4 = like(@wang_lei, \"打羽毛球\")\n$partner1 = partner(@self, @lin_yue)\n$occ5 = occupation(@lin_yue, \"设计师\")\n$work6 = work_at(@lin_yue, @ad_agency)\n$meet1 = meet(@self, @lin_yue)\n$time1 = time($meet1, \"去年\")\n$loc1 = location($meet1, \"朋友聚会上\")\n$drink1 = dislike(@self, \"喝酒\")\n$drink2 = like(@self, \"咖啡\")\n$freq2 = frequency($drink2, \"每天至少两杯\")\n$visit1 = visit(@self, @tokyo)\n$visit2 = visit(@self, @osaka)\n$plan1 = plan(@self, \"去欧洲\")\n$time2 = time($plan1, \"今年夏天\")\n$dest1 = destination($plan1, @france)\n$dest2 = destination($plan1, @italy)"
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-multi-event-001",
+    "status": "ok",
+    "elapsed_ms": 3129,
+    "output": "@paris: place \"巴黎\"\n@london: place \"伦敦\"\n$c1 = cousin(@self, @p1)\n$p1 = name(@p1, \"表姐\")\n$c2 = meet(@p1, @p2, @paris)\n$c3 = time($c2, \"去年\")\n$c4 = partner(@p1, @p2)\n$c5 = engage(@p1, @p2, @london)\n$c6 = time($c5, \"上个月\")"
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-multi-value-001",
+    "status": "ok",
+    "elapsed_ms": 2316,
+    "output": "@self: person\n$s1 = speak(@self, \"中文\")\n$s2 = speak(@self, \"英语\")\n$s3 = speak(@self, \"日语\")\n$s4 = like(@self, \"跑步\")\n$s5 = like(@self, \"弹吉他\")"
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-negation-001",
+    "status": "ok",
+    "elapsed_ms": 1875,
+    "output": "@self\n$1 = dislike(@self, \"香菜\")\n$2 = neg(skill(@self, \"游泳\"))\n$3 = skill(@self, \"做饭\")"
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-pet-001",
+    "status": "ok",
+    "elapsed_ms": 3863,
+    "output": "@self: person\n@pet1: animal \"大黄\"\n@pet2: animal \"团子\"\n@pet3: animal \"慢慢\"\n@pet_shop: place \"宠物店\"\n@guangzhou: place \"广州\"\n@shanghai: place \"上海\"\n@xiao_jie: person \"小杰\"\n@friend: person \"朋友\"\n\n$1 = own(@self, @pet1)\n$2 = own(@self, @pet2)\n$3 = own(@self, @pet3)\n$4 = name(@pet1, \"大黄\")\n$5 = breed(@pet1, \"金毛\")\n$6 = age(@pet1, 5)\n$7 = habit(@pet1, \"温顺\")\n$8 = name(@pet2, \"团子\")\n$9 = breed(@pet2, \"英短蓝猫\")\n$10 = age(@pet2, 8)\n$11 = habit(@pet2, \"调皮\")\n$12 = habit(@pet2, \"抓沙发\")\n$13 = name(@pet3, \"慢慢\")\n$14 = duration(@pet3, \"十多年\")\n$15 = buy(@xiao_jie, @pet1, @pet_shop)\n$16 = gift(@friend, @pet2, @self)\n$17 = live_in(@self, @guangzhou)\n$18 = live_in(@self, @shanghai)\n$19 = move(@self, @guangzhou, @shanghai)"
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-qa-001",
+    "status": "ok",
+    "elapsed_ms": 2385,
+    "output": "@sg: place \"新加坡\"\n@hw: org \"华为\"\n@kevin: person \"Kevin\"\n@duoduo: person \"朵朵\"\n@sz: place \"深圳南山区\"\n$1 = plan(@self, \"新加坡出差\")\n$2 = work_at(@self, @hw)\n$3 = occupation(@self, \"市场运营\")\n$4 = spouse(@self, @kevin)\n$5 = nationality(@kevin, \"美国\")\n$6 = like(@kevin, \"肉骨茶\")\n$7 = child(@self, @duoduo)\n$8 = age(@duoduo, 3)\n$9 = live_in(@self, @sz)\nnote($1, \"下个月\")"
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-retract-001",
+    "status": "ok",
+    "elapsed_ms": 1694,
+    "output": "@w: person \"老王\"\n$1 = neighbor(@self, @w)\n$2 = own(@w, \"金毛\")\n$3 = neg($2)\n$4 = retract_intent(@self, \"老王养了一条金毛\")"
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-temporal-001",
+    "status": "ok",
+    "elapsed_ms": 2232,
+    "output": "@self: person\n@国企: org \"国企\"\n@餐厅: org \"餐厅\"\n@深圳: place \"深圳\"\n$d1 = father(@self, @f1)\n@f1: person\n$d2 = resign(@f1, @国企)\n$d3 = time($d2, \"三年前\")\n$d4 = own(@f1, @餐厅)\n$d5 = time($d4, \"去年\")\n$d6 = move(@f1, @深圳)\n$d7 = time($d6, \"上个月\")"
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-travel-001",
+    "status": "ok",
+    "elapsed_ms": 3497,
+    "output": "@th: place \"泰国\"\n@bkk: place \"曼谷\"\n@jp: place \"日本\"\n@kyoto: place \"京都\"\n@kr: place \"韩国\"\n@seoul: place \"首尔\"\n@min: person \"小敏\"\n@sk: org \"三星\"\n@iceland: place \"冰岛\"\n@maldives: place \"马尔代夫\"\n@liu: person \"刘洋\"\n$1 = name(@self, \"小明\")\n$2 = visit(@self, @th)\n$3 = visit(@self, @bkk)\n$4 = eat(@self, \"芒果糯米饭\")\n$5 = visit(@self, @jp)\n$6 = visit(@self, @kyoto)\n$7 = visit(@self, @kr)\n$8 = visit(@self, @seoul)\n$9 = friend(@self, @min)\n$10 = marry(@min, @pzh)\n$11 = name(@pzh, \"朴智勋\")\n$12 = live_in(@min, @seoul)\n$13 = occupation(@min, \"芯片设计\")\n$14 = work_at(@min, @sk)\n$15 = plan(@self, @iceland)\n$16 = spouse(@self, @liu)\n$17 = name(@liu, \"刘洋\")\n$18 = dislike(@liu, \"冷\")\n$19 = plan(@self, @maldives)\n$20 = time($15, \"今年\")\n$21 = time($19, \"明年\")"
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-uncertainty-001",
+    "status": "ok",
+    "elapsed_ms": 1749,
+    "output": "@sh: place \"上海\"\n@org: org \"谷歌\"\n$b1 = believe(@self, $f1)\n$f1 = origin(@boss, @sh)\n$f2 = work_at(@boss, @org)\nnote($f1, \"老板好像是上海人\")\nnote($f2, \"他可能之前在谷歌工作过\")"
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-vibecoding-001",
+    "status": "ok",
+    "elapsed_ms": 3351,
+    "output": "@self: person\n@hz: place \"杭州\"\n@hit: org \"哈工大\"\n@ant: org \"蚂蚁集团\"\n@pingcap: org \"PingCAP\"\n@vercel: brand \"Vercel\"\n@sony: brand \"索尼\"\n@a7m4: object \"A7M4\"\n@siyuan: place \"siyuan.dev\"\n$name = name(@self, \"陆思源\")\n$occ = occupation(@self, \"前端\")\n$exp = occupation(@self, \"前端开发五年经验\")\n$edu = study_at(@self, @hit)\n$live = live_in(@self, @hz)\n$work = work_at(@self, @ant)\n$old_work = work_at(@self, @pingcap)\n$skill = skill(@self, \"TypeScript\")\n$plan = plan(@self, \"个人博客\")\n$use = use(@self, @sony)\n$use2 = use(@self, @a7m4)\n$deploy = work_at(@self, @vercel)\n$domain = own(@self, @siyuan)\n$learn = study_at(@self, \"Rust\")\n$c1 = correct_intent(@self, $work)\nnote($c1, \"之前说错了，不是 PingCAP，是蚂蚁集团\")"
+  }
+]

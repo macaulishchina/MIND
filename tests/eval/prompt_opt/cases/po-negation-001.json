@@ -1,0 +1,13 @@
+{
+  "id": "po-negation-001",
+  "category": "negation",
+  "description": "否定事实：用户明确说不喜欢/不会某事，应使用 neg() 或 dislike()",
+  "turns": [
+    {
+      "messages": [
+        {"role": "user", "content": "我不喜欢吃香菜，也不会游泳，但是我很擅长做饭。"}
+      ]
+    }
+  ],
+  "golden_stl": "$p1 = dislike(@self, \"香菜\")\n$p2 = neg(@self, $p3)\n$p3 = skill(@self, \"游泳\")\n$p4 = skill(@self, \"做饭\")"
+}

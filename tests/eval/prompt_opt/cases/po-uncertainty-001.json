@@ -1,0 +1,13 @@
+{
+  "id": "po-uncertainty-001",
+  "category": "uncertainty",
+  "description": "不确定性表达：'我觉得'、'好像'、'可能' → believe()",
+  "turns": [
+    {
+      "messages": [
+        {"role": "user", "content": "我觉得我老板好像是上海人，他可能之前在谷歌工作过。"}
+      ]
+    }
+  ],
+  "golden_stl": "@boss: person \"老板\"\n@google: org \"谷歌\"\n$p1 = boss(@self, @boss)\n$p2 = nationality(@boss, \"上海人\")\n$f1 = believe(@self, $p2)\nnote($f1, \"用户说'好像'，不确定\")\n$p3 = work_at(@boss, @google)\n$f2 = believe(@self, $p3)\nnote($f2, \"用户说'可能'，不确定\")"
+}

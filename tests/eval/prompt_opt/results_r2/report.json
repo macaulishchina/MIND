@@ -1,0 +1,353 @@
+{
+  "config": {
+    "models": [
+      "claude-opus-4-6",
+      "gpt-5.4-nano",
+      "gpt-5.4",
+      "gpt-5.4-mini",
+      "mimo-v2-flash",
+      "mimo-v2-pro",
+      "deepseek-v3.2",
+      "MiniMax-M2.7-highspeed"
+    ],
+    "timeout_s": 10,
+    "judge_model": "gpt-5.4-nano",
+    "cases": 20
+  },
+  "extraction_stats": {
+    "claude-opus-4-6": {
+      "ok": 15,
+      "timeouts": 5,
+      "errors": 0,
+      "avg_ms": 4731.933333333333,
+      "median_ms": 5344,
+      "min_ms": 274,
+      "max_ms": 8515,
+      "avg_stmts": 14.466666666666667,
+      "total_stmts": 217,
+      "timeout_cases": [
+        "po-family-001",
+        "po-food-001",
+        "po-long-complex-001",
+        "po-long-simple-001",
+        "po-travel-001"
+      ],
+      "error_cases": []
+    },
+    "gpt-5.4-nano": {
+      "ok": 18,
+      "timeouts": 2,
+      "errors": 0,
+      "avg_ms": 3807.8888888888887,
+      "median_ms": 3804,
+      "min_ms": 1949,
+      "max_ms": 7776,
+      "avg_stmts": 21.0,
+      "total_stmts": 378,
+      "timeout_cases": [
+        "po-long-complex-001",
+        "po-long-simple-001"
+      ],
+      "error_cases": []
+    },
+    "gpt-5.4": {
+      "ok": 16,
+      "timeouts": 4,
+      "errors": 0,
+      "avg_ms": 3755.8125,
+      "median_ms": 2927,
+      "min_ms": 396,
+      "max_ms": 8112,
+      "avg_stmts": 15.875,
+      "total_stmts": 254,
+      "timeout_cases": [
+        "po-family-001",
+        "po-long-complex-001",
+        "po-long-simple-001",
+        "po-travel-001"
+      ],
+      "error_cases": []
+    },
+    "gpt-5.4-mini": {
+      "ok": 20,
+      "timeouts": 0,
+      "errors": 0,
+      "avg_ms": 2594.3,
+      "median_ms": 2152,
+      "min_ms": 1237,
+      "max_ms": 6341,
+      "avg_stmts": 22.7,
+      "total_stmts": 454,
+      "timeout_cases": [],
+      "error_cases": []
+    },
+    "mimo-v2-flash": {
+      "ok": 20,
+      "timeouts": 0,
+      "errors": 0,
+      "avg_ms": 3089.5,
+      "median_ms": 2948,
+      "min_ms": 1175,
+      "max_ms": 6656,
+      "avg_stmts": 21.4,
+      "total_stmts": 428,
+      "timeout_cases": [],
+      "error_cases": []
+    },
+    "mimo-v2-pro": {
+      "ok": 0,
+      "timeouts": 20,
+      "errors": 0,
+      "avg_ms": 0,
+      "median_ms": 0,
+      "min_ms": 0,
+      "max_ms": 0,
+      "avg_stmts": 0,
+      "total_stmts": 0,
+      "timeout_cases": [
+        "po-alias-001",
+        "po-basic-001",
+        "po-career-001",
+        "po-comprehensive-001",
+        "po-correction-001",
+        "po-family-001",
+        "po-food-001",
+        "po-health-001",
+        "po-long-complex-001",
+        "po-long-simple-001",
+        "po-multi-event-001",
+        "po-multi-value-001",
+        "po-negation-001",
+        "po-pet-001",
+        "po-qa-001",
+        "po-retract-001",
+        "po-temporal-001",
+        "po-travel-001",
+        "po-uncertainty-001",
+        "po-vibecoding-001"
+      ],
+      "error_cases": []
+    },
+    "deepseek-v3.2": {
+      "ok": 10,
+      "timeouts": 10,
+      "errors": 0,
+      "avg_ms": 4638.5,
+      "median_ms": 4421,
+      "min_ms": 3209,
+      "max_ms": 8731,
+      "avg_stmts": 7.4,
+      "total_stmts": 74,
+      "timeout_cases": [
+        "po-career-001",
+        "po-family-001",
+        "po-food-001",
+        "po-health-001",
+        "po-long-complex-001",
+        "po-long-simple-001",
+        "po-pet-001",
+        "po-qa-001",
+        "po-travel-001",
+        "po-vibecoding-001"
+      ],
+      "error_cases": []
+    },
+    "MiniMax-M2.7-highspeed": {
+      "ok": 9,
+      "timeouts": 11,
+      "errors": 0,
+      "avg_ms": 7798.444444444444,
+      "median_ms": 8657,
+      "min_ms": 3700,
+      "max_ms": 9232,
+      "avg_stmts": 8.222222222222221,
+      "total_stmts": 74,
+      "timeout_cases": [
+        "po-career-001",
+        "po-family-001",
+        "po-food-001",
+        "po-health-001",
+        "po-long-complex-001",
+        "po-long-simple-001",
+        "po-multi-event-001",
+        "po-pet-001",
+        "po-retract-001",
+        "po-travel-001",
+        "po-vibecoding-001"
+      ],
+      "error_cases": []
+    }
+  },
+  "quality_stats": {
+    "claude-opus-4-6": {
+      "avg_weighted": 7.180000000000001,
+      "min_weighted": 0.0,
+      "max_weighted": 10.0,
+      "count": 15,
+      "dim_avgs": {
+        "completeness": 7.0,
+        "predicate_choice": 6.4,
+        "argument_correctness": 6.666666666666667,
+        "correction_handling": 8.333333333333334,
+        "modifier_attachment": 7.0,
+        "no_hallucination": 7.533333333333333,
+        "format_compliance": 7.4
+      }
+    },
+    "gpt-5.4-nano": {
+      "avg_weighted": 6.183333333333334,
+      "min_weighted": 2.5,
+      "max_weighted": 8.7,
+      "count": 18,
+      "dim_avgs": {
+        "completeness": 5.833333333333333,
+        "predicate_choice": 4.888888888888889,
+        "argument_correctness": 4.611111111111111,
+        "correction_handling": 8.444444444444445,
+        "modifier_attachment": 5.833333333333333,
+        "no_hallucination": 6.944444444444445,
+        "format_compliance": 7.0
+      }
+    },
+    "gpt-5.4": {
+      "avg_weighted": 6.675,
+      "min_weighted": 0.0,
+      "max_weighted": 9.85,
+      "count": 16,
+      "dim_avgs": {
+        "completeness": 6.1875,
+        "predicate_choice": 6.125,
+        "argument_correctness": 5.875,
+        "correction_handling": 7.625,
+        "modifier_attachment": 6.5,
+        "no_hallucination": 7.25,
+        "format_compliance": 7.5625
+      }
+    },
+    "gpt-5.4-mini": {
+      "avg_weighted": 6.085,
+      "min_weighted": 2.5,
+      "max_weighted": 9.9,
+      "count": 20,
+      "dim_avgs": {
+        "completeness": 5.65,
+        "predicate_choice": 5.3,
+        "argument_correctness": 4.35,
+        "correction_handling": 8.15,
+        "modifier_attachment": 5.1,
+        "no_hallucination": 7.4,
+        "format_compliance": 6.65
+      }
+    },
+    "mimo-v2-flash": {
+      "avg_weighted": 6.1175,
+      "min_weighted": 0.0,
+      "max_weighted": 9.8,
+      "count": 20,
+      "dim_avgs": {
+        "completeness": 5.7,
+        "predicate_choice": 5.2,
+        "argument_correctness": 5.2,
+        "correction_handling": 7.7,
+        "modifier_attachment": 5.65,
+        "no_hallucination": 6.65,
+        "format_compliance": 7.0
+      }
+    },
+    "deepseek-v3.2": {
+      "avg_weighted": 6.470000000000001,
+      "min_weighted": 0.0,
+      "max_weighted": 9.85,
+      "count": 10,
+      "dim_avgs": {
+        "completeness": 6.2,
+        "predicate_choice": 6.0,
+        "argument_correctness": 5.0,
+        "correction_handling": 7.1,
+        "modifier_attachment": 6.4,
+        "no_hallucination": 7.9,
+        "format_compliance": 6.9
+      }
+    },
+    "MiniMax-M2.7-highspeed": {
+      "avg_weighted": 6.394444444444444,
+      "min_weighted": 0.0,
+      "max_weighted": 9.7,
+      "count": 9,
+      "dim_avgs": {
+        "completeness": 5.666666666666667,
+        "predicate_choice": 5.222222222222222,
+        "argument_correctness": 5.444444444444445,
+        "correction_handling": 7.888888888888889,
+        "modifier_attachment": 7.222222222222222,
+        "no_hallucination": 7.555555555555555,
+        "format_compliance": 6.222222222222222
+      }
+    }
+  },
+  "composite_ranking": [
+    {
+      "rank": 1,
+      "model": "claude-opus-4-6",
+      "total": 0.7527997504293185,
+      "speed": 0.5892440426753891,
+      "quality": 1.0,
+      "reliability": 0.75,
+      "throughput": 0.2602653762670175
+    },
+    {
+      "rank": 2,
+      "model": "gpt-5.4",
+      "total": 0.6497921692619391,
+      "speed": 0.7768100957997153,
+      "quality": 0.5388127853881274,
+      "reliability": 0.8,
+      "throughput": 0.41224026366773475
+    },
+    {
+      "rank": 3,
+      "model": "gpt-5.4-mini",
+      "total": 0.6,
+      "speed": 1.0,
+      "quality": 0.0,
+      "reliability": 1.0,
+      "throughput": 1.0
+    },
+    {
+      "rank": 4,
+      "model": "mimo-v2-flash",
+      "total": 0.5596333992888287,
+      "speed": 0.9048450700616817,
+      "quality": 0.02968036529680341,
+      "reliability": 1.0,
+      "throughput": 0.7630773215160289
+    },
+    {
+      "rank": 5,
+      "model": "gpt-5.4-nano",
+      "total": 0.5039238110600791,
+      "speed": 0.7668033810659454,
+      "quality": 0.08980213089802151,
+      "reliability": 0.9,
+      "throughput": 0.5796194438108689
+    },
+    {
+      "rank": 6,
+      "model": "deepseek-v3.2",
+      "total": 0.4298285816351017,
+      "speed": 0.6071976821891953,
+      "quality": 0.35159817351598216,
+      "reliability": 0.5,
+      "throughput": 0.07030007571950238
+    },
+    {
+      "rank": 7,
+      "model": "MiniMax-M2.7-highspeed",
+      "total": 0.20303906646372377,
+      "speed": 0.0,
+      "quality": 0.28259766615930937,
+      "reliability": 0.45,
+      "throughput": 0.0
+    }
+  ]
+}

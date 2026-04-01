@@ -1,0 +1,18 @@
+{
+  "id": "po-retract-001",
+  "category": "retraction",
+  "description": "纯撤回场景：用户否定一个事实但不给替代 → retract_intent",
+  "turns": [
+    {
+      "messages": [
+        {"role": "user", "content": "我邻居老王养了一条金毛。"}
+      ]
+    },
+    {
+      "messages": [
+        {"role": "user", "content": "哦不，我记错了，老王没养狗。"}
+      ]
+    }
+  ],
+  "golden_stl": "@wang: person \"老王\"\n$p1 = neighbor(@self, @wang)\n$r1 = retract_intent(@self, \"老王养了一条金毛\")"
+}

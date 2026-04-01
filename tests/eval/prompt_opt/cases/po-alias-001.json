@@ -1,0 +1,13 @@
+{
+  "id": "po-alias-001",
+  "category": "alias_and_implicit",
+  "description": "别名+隐含主语：同一个人有多个称呼，后续省略主语的句子需正确归因",
+  "turns": [
+    {
+      "messages": [
+        {"role": "user", "content": "我闺蜜叫林小雨，我们都叫她小雨。她在北大读研究生，学的是计算机。"}
+      ]
+    }
+  ],
+  "golden_stl": "@lxy: person \"林小雨\"\n@pku: org \"北大\"\n$p1 = friend(@self, @lxy)\n$p2 = name(@lxy, \"林小雨\")\n$p3 = alias(@lxy, \"小雨\")\n$p4 = study_at(@lxy, @pku)\n$p5 = education(@lxy, \"研究生\")\n$p6 = skill(@lxy, \"计算机\")"
+}

@@ -1,0 +1,60 @@
+{
+  "id": "po-long-complex-001",
+  "category": "long_complex",
+  "description": "10轮复杂对话：纠正、否定、不确定、多人关系、时间线交错、观点变化，综合压力测试",
+  "turns": [
+    {
+      "messages": [
+        {"role": "user", "content": "我弟弟周然在深圳的华为做算法工程师，去年刚从浙大毕业的。他女朋友苏晴是做UI设计的。"}
+      ]
+    },
+    {
+      "messages": [
+        {"role": "assistant", "content": "你弟弟很优秀呢，浙大毕业又进了华为。"},
+        {"role": "user", "content": "嗯，不过他其实不太喜欢这个工作，压力太大了。他想转做独立开发者。"}
+      ]
+    },
+    {
+      "messages": [
+        {"role": "user", "content": "对了我说错了，苏晴不是做UI设计的，她是产品经理，在腾讯上班。"}
+      ]
+    },
+    {
+      "messages": [
+        {"role": "user", "content": "我妈好像说过周然跟苏晴可能订婚了，我也不太确定。我妈有时候会夸大其词。"}
+      ]
+    },
+    {
+      "messages": [
+        {"role": "user", "content": "我自己在上海做数据分析师，之前在杭州的阿里干过两年。我是北大统计学硕士。"}
+      ]
+    },
+    {
+      "messages": [
+        {"role": "user", "content": "我室友老赵是做后端开发的，他养了两条狗，一只叫Lucky是拉布拉多，一只叫Mochi是柯基。周末我们经常一起去徒步。"}
+      ]
+    },
+    {
+      "messages": [
+        {"role": "user", "content": "上个月我跟老赵和周然一起去了黄山。周然带了苏晴一起来的。我们在山顶看了日出，特别棒。"}
+      ]
+    },
+    {
+      "messages": [
+        {"role": "assistant", "content": "黄山日出确实很美！"},
+        {"role": "user", "content": "是啊。对了其实我想起来了，周然没订婚，他跟我说只是在考虑而已。不过他打算明年在三亚办婚礼。"}
+      ]
+    },
+    {
+      "messages": [
+        {"role": "user", "content": "我不吃海鲜，过敏。但我特别喜欢吃川菜，毕竟我是四川人嘛。我老家绵阳的。"}
+      ]
+    },
+    {
+      "messages": [
+        {"role": "user", "content": "对了还有件事，老赵上周辞职了，他准备去日本读CS的博士。Lucky和Mochi暂时让他妈帮忙养着。"}
+      ]
+    }
+  ],
+  "golden_stl": "@zr: person \"周然\"\n@sz: place \"深圳\"\n@huawei: org \"华为\"\n@zju: org \"浙大\"\n@sq: person \"苏晴\"\n@tencent: org \"腾讯\"\n@sh: place \"上海\"\n@hz: place \"杭州\"\n@ali: org \"阿里\"\n@pku: org \"北大\"\n@zhao: person \"老赵\"\n@lucky: animal \"Lucky\"\n@mochi: animal \"Mochi\"\n@hs: place \"黄山\"\n@sanya: place \"三亚\"\n@my: place \"绵阳\"\n\n$r1 = brother(@self, @zr)\n$o1 = occupation(@zr, \"算法工程师\")\n$w1 = work_at(@zr, @huawei)\n$e1 = study_at(@zr, @zju)\n$e1t = time($e1, \"去年毕业\")\n$dis1 = dislike(@zr, \"工作\")\nnote($dis1, \"压力太大\")\n$want1 = want(@zr, \"转做独立开发者\")\n\n$r2 = partner(@zr, @sq)\n$o2 = occupation(@sq, \"产品经理\")\n$w2 = work_at(@sq, @tencent)\n$c1 = correct_intent(@self, $o2)\n$c2 = correct_intent(@self, $w2)\n\n$eng1 = engage(@zr, @sq)\n$eng1d = defer($eng1)\nnote($eng1d, \"只是在考虑\")\n$wed1 = plan(@zr, \"婚礼\")\n$wed1l = location($wed1, @sanya)\n$wed1t = time($wed1, \"明年\")\n\n$o3 = occupation(@self, \"数据分析师\")\n$l1 = live_in(@self, @sh)\n$pw1 = work_at(@self, @ali)\n$pw1t = duration($pw1, \"两年\")\n$edu1 = study_at(@self, @pku)\n$edu1m = education(@self, \"统计学硕士\")\n\n$r3 = roommate(@self, @zhao)\n$o4 = occupation(@zhao, \"后端开发\")\n$p1 = pet(@zhao, @lucky)\n$p2 = pet(@zhao, @mochi)\n$hob1 = hobby:shared(@self, \"徒步\")\n\n$v1 = visit(@self, @hs)\n$v1t = time($v1, \"上个月\")\n\n$nat1 = nationality(@self, \"四川人\")\n$loc1 = location:hometown(@self, @my)\n$dis2 = dislike(@self, \"海鲜\")\nnote($dis2, \"过敏\")\n$lik1 = like(@self, \"川菜\")\n\n$res1 = resign(@zhao)\n$res1t = time($res1, \"上周\")\n$plan1 = plan(@zhao, \"日本读CS博士\")"
+}

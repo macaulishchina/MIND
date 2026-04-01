@@ -1,0 +1,28 @@
+{
+  "id": "po-family-001",
+  "category": "family_network",
+  "description": "复杂家庭关系网：三代人、姻亲、多段关系、居住分布，测试大规模关系图谱提取",
+  "turns": [
+    {
+      "messages": [
+        {"role": "user", "content": "我们家挺复杂的。我爷爷和奶奶住在福州老家，爷爷以前是渔民，现在90多岁了身体还不错。"}
+      ]
+    },
+    {
+      "messages": [
+        {"role": "user", "content": "我爸有两个兄弟。大伯在福州开了个海鲜餐厅，小叔在厦门大学当物理教授。小叔的老婆是日本人，叫美咲。"}
+      ]
+    },
+    {
+      "messages": [
+        {"role": "user", "content": "我妈是温州人，她有个妹妹我叫小姨，小姨在义乌做外贸生意，做得挺大的。我表弟小豪跟着小姨做生意。"}
+      ]
+    },
+    {
+      "messages": [
+        {"role": "user", "content": "我自己跟我老婆住在广州。老婆叫林芳，她是医生，在中山大学附属医院工作。我们有个女儿叫朵朵，刚上幼儿园。"}
+      ]
+    }
+  ],
+  "golden_stl": "@grandpa: person \"爷爷\"\n@grandma: person \"奶奶\"\n@fuzhou: place \"福州\"\n@uncle1: person \"大伯\"\n@uncle2: person \"小叔\"\n@xmu: org \"厦门大学\"\n@misaki: person \"美咲\"\n@mom: person\n@aunt: person \"小姨\"\n@yw: place \"义乌\"\n@xh: person \"小豪\"\n@gz: place \"广州\"\n@wife: person \"林芳\"\n@hosp: org \"中山大学附属医院\"\n@dd: person \"朵朵\"\n\n$r1 = father:father(@self, @grandpa)\n$r2 = mother:father(@self, @grandma)\n$l1 = live_in(@grandpa, @fuzhou)\n$l2 = live_in(@grandma, @fuzhou)\n$a1 = age(@grandpa, \"90多岁\")\n$o1 = occupation:past(@grandpa, \"渔民\")\n$r3 = father(@self, @uncle1)\nnote($r3, \"大伯，爸爸的兄弟\")\n$o2 = occupation(@uncle1, \"海鲜餐厅老板\")\n$l3 = live_in(@uncle1, @fuzhou)\n$r4 = father:brother(@self, @uncle2)\n$o3 = occupation(@uncle2, \"物理教授\")\n$w1 = work_at(@uncle2, @xmu)\n$r5 = spouse(@uncle2, @misaki)\n$n1 = nationality(@misaki, \"日本人\")\n$r6 = mother(@self, @mom)\n$r7 = sister(@mom, @aunt)\n$l4 = live_in(@aunt, @yw)\n$o4 = occupation(@aunt, \"外贸\")\n$r8 = cousin(@self, @xh)\n$r9 = coworker(@xh, @aunt)\n$l5 = live_in(@self, @gz)\n$r10 = spouse(@self, @wife)\n$o5 = occupation(@wife, \"医生\")\n$w2 = work_at(@wife, @hosp)\n$r11 = child(@self, @dd)\n$e1 = education:stage(@dd, \"幼儿园\")"
+}

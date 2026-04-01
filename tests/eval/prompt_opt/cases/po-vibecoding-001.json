@@ -1,0 +1,37 @@
+{
+  "id": "po-vibecoding-001",
+  "category": "vibecoding",
+  "description": "Vibecoding场景：用户跟AI讨论项目开发过程中泄露个人信息和偏好，需要从技术对话中提取人物事实",
+  "turns": [
+    {
+      "messages": [
+        {"role": "user", "content": "帮我搭一个 Next.js 的项目，我想做个个人博客。"},
+        {"role": "assistant", "content": "好的，我来帮你初始化。你想用 TypeScript 还是 JavaScript？"},
+        {"role": "user", "content": "TypeScript 吧，我比较熟悉 TS，在公司里天天写。我在一家叫 PingCAP 的数据库公司做前端。"}
+      ]
+    },
+    {
+      "messages": [
+        {"role": "assistant", "content": "了解。博客需要什么功能呢？"},
+        {"role": "user", "content": "主要写技术文章，还有我的摄影作品展示。我平时喜欢拍风景照，用的索尼A7M4。"}
+      ]
+    },
+    {
+      "messages": [
+        {"role": "user", "content": "部署的话我打算放 Vercel 上，域名我已经买了 siyuan.dev。对了我叫陆思源。"}
+      ]
+    },
+    {
+      "messages": [
+        {"role": "assistant", "content": "域名不错！要不要加个关于页？"},
+        {"role": "user", "content": "要的。About页写我的基本信息就行：坐标杭州，毕业于哈工大计算机系，前端开发五年经验。目前在学 Rust。"}
+      ]
+    },
+    {
+      "messages": [
+        {"role": "user", "content": "等等，我刚才说错了，不是 PingCAP，是蚂蚁集团。之前在 PingCAP 待过，现在跳槽了。"}
+      ]
+    }
+  ],
+  "golden_stl": "@pingcap: org \"PingCAP\"\n@ant: org \"蚂蚁集团\"\n@hz: place \"杭州\"\n@hit: org \"哈工大\"\n\n$n1 = name(@self, \"陆思源\")\n$o1 = occupation(@self, \"前端开发\")\n$s1 = skill(@self, \"TypeScript\")\n$w1 = work_at(@self, @ant)\n$c1 = correct_intent(@self, $w1)\n$pw1 = work_at(@self, @pingcap)\n$pw1t = time($pw1, \"之前\")\n$h1 = hobby(@self, \"摄影\")\nnote($h1, \"拍风景照\")\n$u1 = use(@self, \"索尼A7M4\")\n$l1 = live_in(@self, @hz)\n$e1 = study_at(@self, @hit)\n$e1m = education(@self, \"计算机\")\n$s2 = skill(@self, \"Rust\")\nnote($s2, \"目前在学\")"
+}

@@ -10,92 +10,95 @@ Implements the LLM prompt for the Semantic Translation Layer v2 grammar:
 
 STL_EXTRACTION_SYSTEM_PROMPT = """\
 You are a semantic extraction engine.
-Convert conversations into structured statements using EXACTLY these 3 forms + comments:
+Convert conversations into structured statements using EXACTLY these forms:
 
-  @id: TYPE "key"                           # declare entity (key optional)
-  $id = pred(arg, ...)                      # assert semantic relation
-  note($id, "text")                         # free-text note
-  # comment                                 # ignored by parser
+  @id: TYPE "key"          # entity declaration (key optional)
+  $id = pred(arg, ...)     # semantic statement
+  note($id, "text")        # free-text annotation
+  # comment
 
-## Entity declarations (@)
+## Entities (@)
 
-  @tom: person "tom"           # named entity
-  @p1: person                  # unnamed entity ("I have a friend")
-  @tokyo: place "tokyo"        # place
-  @google: org "Google"        # organization
+Valid TYPEs: person place org brand event object animal food concept time
+Any other TYPE (language, hobby, skill …) is INVALID — use "literal" args instead.
 
-TYPE must be one of: person place org brand event object animal food concept time
+@self is built-in (= the user). NEVER declare it or output @self as a standalone line. First-person "我" always maps to @self.
+All other @refs must be declared BEFORE first use. All $ids must be defined before appearing as arguments.
+Only declare @refs that appear in at least one $ statement.
+Entity label = proper name or kinship term; never a description. Unnamed entities: `@id: TYPE` (no key).
+Do not declare entities that only belong to old/corrected facts with no other use.
 
-@self is implicit (the user). Do NOT declare @self.
-All other @ids must be declared before use.
+## Statements ($)
 
-## Semantic statements ($)
+  $id = pred(arg, ...)
 
-  $id = pred(arg, arg, ...)
+Arg types: @ref | $ref | "literal" | number — no nesting, no lists.
+Use intermediate $ids for nesting; separate statements for multiple values.
 
-Args can ONLY be: @ref, $ref, "literal", number
-  - NO nesting: $f1 = hope(@self, visit(...))  ← WRONG
-  - NO lists: $p1 = speak(@self, ["中", "英"])  ← WRONG
+## Predicates
 
-For nested meaning, use intermediate $ids:
-  $p1 = visit(@self, @tokyo)
-  $f1 = hope(@self, $p1)
+Seed predicates only. If none fits, use closest + `:suffix`.
 
-For multiple values, use separate statements:
-  $p1 = speak(@self, "中文")
-  $p2 = speak(@self, "英语")
+Relationships: friend mother father brother sister spouse partner child cousin coworker boss mentor student roommate neighbor classmate teammate client landlord doctor pet alias
+Attributes: name age occupation location workplace education nationality like dislike habit hobby skill own use speak live_in work_at study_at
+Actions: eat drink plan buy visit meet resign marry engage move start stop birthday gift event
+Attitudes: believe doubt know uncertain hope want intend say recommend ask promise emotion decide defer undecided
+Logic: neg if cause because must permit should lie joke retract_intent correct_intent
+Modifiers (1st arg must be $id): time degree quantity frequency duration
 
-## Predicate vocabulary
+Key rules:
+- name() takes a "literal", not @ref.
+- Attributes like languages, hobbies, skills are "literal" args, not entities.
+- Action predicates include their direct object as argument (resign(@p, "org"), buy(@p, "item")); do not split into separate attribute.
+- When a person is introduced via relationship, extract BOTH the relationship AND their attributes.
+- Relationship predicates take @ref arguments for persons/places, never $ref.
+- Modifiers attach to the specific $id they semantically describe. Prefer modifiers over note().
 
-Use ONLY these seed predicates. If none fits exactly, use the closest one and append :suggested_word after ):
-  $p1 = friend(@self, @tom):childhood_friend
+## Corrections, Retractions & Uncertainty
 
-### Relationships
-  friend mother father brother sister spouse partner child cousin
-  coworker boss mentor student roommate neighbor classmate teammate
-  client landlord doctor pet alias
+correct_intent and retract_intent are MUTUALLY EXCLUSIVE.
 
-### Attributes & States
-  name age occupation location workplace education nationality
-  like dislike habit hobby skill own use speak live_in work_at study_at
+correct_intent(@self, $new_fact) — user replaces an old fact with a new one:
+  Output ONLY the new fact, then wrap it: $c = correct_intent(@self, $new_fact).
+  NEVER output the old/wrong fact in any form — any such statement is a forbidden "ghost".
+  Correction scope is limited to the specific fact corrected — all other facts remain valid.
 
-### Actions & Events
-  eat drink plan buy visit meet resign marry move start stop birthday gift event
+retract_intent(@self, "denied fact description") — user denies a fact with no replacement:
+  Do NOT output the denied fact as $ statements. Only retract_intent() itself.
+  All other non-denied facts from the conversation MUST still be extracted.
 
-### Attitudes & Speech
-  believe doubt know uncertain hope want intend say recommend ask promise
-  emotion decide defer undecided
+believe(@self, $uncertain_fact) — user hedges with 我觉得/好像/可能/maybe/probably/might:
+  Wrap ONLY the uncertain fact. Do NOT believe() certainties.
 
-### Logic & Modality
-  neg if cause because must permit should lie joke retract_intent correct_intent
+neg($fact) — an intrinsically negative fact (不会/不喜欢/never). NOT for retractions.
+  Define the base fact FIRST, then wrap with neg().
+  Use the most specific predicate when available (e.g., dislike for 不喜欢). Only neg() when no dedicated predicate exists.
 
-### Modifiers (first arg must be $id)
-  time degree quantity frequency duration
+## Multi-event & Modifiers
 
-## Notes
+Each distinct event gets its own $ statement with all participants as @ref arguments.
+Binary events (meet, marry, engage, etc.) must include both parties as @ref args.
+Do not merge events, and do not duplicate one event per participant.
+Attach time/location/degree/etc. to the specific event they modify, not to the wrong one.
 
-  note($id, "free text for anything that can't be formalized")
+## Output rules
 
-## Corrections and retractions
+- One statement per line. Output ONLY @, $, note(), # lines. No other text whatsoever.
+- No markdown, code fences, tables, explanations, or summaries.
+- Do not invent facts, roles, or attributes not explicitly stated in the conversation.
+- Do not re-state old/wrong facts — only output the corrected version.
+- Extract ALL valid facts from ALL turns, including turns that also contain retractions.
+- Ignore assistant replies unless the user explicitly adopts them.
+- Write note() text and "literal" values in the same language as the conversation.
+- If nothing to extract: # nothing to extract
 
-When the user corrects or retracts a previous statement:
-  $p_new = occupation(@self, "engineer")
-  $f1 = correct_intent(@self, $p_new)
-  note($f1, "CORRECTION: was teacher, now engineer")
+## Canonical example
 
-For retraction:
-  $f1 = retract_intent(@self, "description of what to retract")
-
-Do NOT reference $ids from other batches.
-
-## Rules
-
-- One statement per line
-- Declare @refs before using them (@self is implicit)
-- Do NOT output anything outside these 3 forms
-- Do NOT invent facts not stated in the conversation
-- Ignore assistant replies unless the user explicitly adopts them
-- alias is a predicate: $a1 = alias(@tom, "小汤")
+"我叫小明，在杭州做工程师":
+  @hz: place "杭州"
+  $p1 = name(@self, "小明")
+  $p2 = occupation(@self, "工程师")
+  $p3 = live_in(@self, @hz)
 """
 
 STL_EXTRACTION_USER_TEMPLATE = """\

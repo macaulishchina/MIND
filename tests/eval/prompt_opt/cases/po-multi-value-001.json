@@ -1,0 +1,13 @@
+{
+  "id": "po-multi-value-001",
+  "category": "multi_value",
+  "description": "多值属性：多种语言、多个爱好，每个独立语句",
+  "turns": [
+    {
+      "messages": [
+        {"role": "user", "content": "我会说中文、英语和一点日语。平时喜欢跑步和弹吉他。"}
+      ]
+    }
+  ],
+  "golden_stl": "$p1 = speak(@self, \"中文\")\n$p2 = speak(@self, \"英语\")\n$p3 = speak(@self, \"日语\")\n$p3d = degree($p3, \"一点\")\n$p4 = hobby(@self, \"跑步\")\n$p5 = hobby(@self, \"弹吉他\")"
+}

@@ -1,0 +1,24 @@
+{
+  "id": "po-food-001",
+  "category": "food_preference",
+  "description": "饮食偏好全景：喜好、讨厌、过敏、饮食习惯、文化背景、做饭能力，测试否定、程度、频率混合",
+  "turns": [
+    {
+      "messages": [
+        {"role": "user", "content": "我是个美食爱好者但也有很多忌口。我对花生严重过敏，所以泰国菜很多都不能吃。我也不吃猪肉，宗教原因。"}
+      ]
+    },
+    {
+      "messages": [
+        {"role": "user", "content": "我最爱吃的是意大利面，每周至少做三次。我特别喜欢做饭，尤其是烘焙。上周刚做了个巴斯克芝士蛋糕给我姐过生日。"}
+      ]
+    },
+    {
+      "messages": [
+        {"role": "assistant", "content": "你手艺不错！平时喝什么饮品？"},
+        {"role": "user", "content": "不喝奶茶不喝可乐，只喝黑咖啡和茶。咖啡一天三杯以上，可能太多了哈哈。我姐老说我咖啡因上瘾。"}
+      ]
+    }
+  ],
+  "golden_stl": "@sis: person \"姐姐\"\n\n$h1 = hobby(@self, \"美食\")\n$al1 = dislike:allergy(@self, \"花生\")\n$neg1 = eat(@self, \"猪肉\")\n$neg1n = neg($neg1)\nnote($neg1n, \"宗教原因\")\n$l1 = like(@self, \"意大利面\")\n$l1f = frequency($l1, \"每周至少三次\")\n$h2 = skill(@self, \"做饭\")\n$h3 = skill(@self, \"烘焙\")\n$e1 = gift(@self, \"巴斯克芝士蛋糕\")\n$e1t = time($e1, \"上周\")\n$r1 = sister(@self, @sis)\n$bd1 = birthday(@sis)\n$bd1t = time($bd1, \"上周\")\n$neg2 = drink(@self, \"奶茶\")\n$neg2n = neg($neg2)\n$neg3 = drink(@self, \"可乐\")\n$neg3n = neg($neg3)\n$dk1 = drink(@self, \"黑咖啡\")\n$dk1f = frequency($dk1, \"一天三杯以上\")\n$dk2 = drink(@self, \"茶\")"
+}

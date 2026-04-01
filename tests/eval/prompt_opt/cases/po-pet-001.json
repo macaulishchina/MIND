@@ -1,0 +1,19 @@
+{
+  "id": "po-pet-001",
+  "category": "pet_multi",
+  "description": "多宠物场景：多只宠物各有名字、品种、年龄和行为属性，测试实体密度和属性归属",
+  "turns": [
+    {
+      "messages": [
+        {"role": "user", "content": "我家有三只宠物。大黄是只金毛，今年5岁了，特别温顺。团子是只英短蓝猫，才8个月，很调皮老是抓沙发。还有一只乌龟叫慢慢，养了十多年了。"}
+      ]
+    },
+    {
+      "messages": [
+        {"role": "assistant", "content": "家里挺热闹的！三只性格都不一样。"},
+        {"role": "user", "content": "是啊。大黄是我男朋友小杰从宠物店买的，团子是朋友送的。慢慢是我小时候养的，跟了我从广州搬到上海。"}
+      ]
+    }
+  ],
+  "golden_stl": "@dh: animal \"大黄\"\n@tz: animal \"团子\"\n@mm: animal \"慢慢\"\n@bf: person \"小杰\"\n@gz: place \"广州\"\n@sh: place \"上海\"\n\n$p1 = pet(@self, @dh)\n$a1 = age(@dh, 5)\n$p2 = pet(@self, @tz)\n$a2 = age(@tz, \"8个月\")\n$p3 = pet(@self, @mm)\n$a3 = duration($p3, \"十多年\")\n$r1 = partner(@self, @bf)\n$b1 = buy(@bf, @dh)\n$m1 = move(@self, @sh)\nnote($m1, \"从广州搬到上海\")"
+}

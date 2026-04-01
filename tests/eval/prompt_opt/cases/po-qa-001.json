@@ -1,0 +1,32 @@
+{
+  "id": "po-qa-001",
+  "category": "qa_scenario",
+  "description": "知识问答场景：用户在问各种问题的过程中无意间暴露个人信息",
+  "turns": [
+    {
+      "messages": [
+        {"role": "user", "content": "新加坡签证怎么办理呀？我下个月要去新加坡出差。"},
+        {"role": "assistant", "content": "需要准备护照、工作证明等材料，可以通过旅行社代办。"},
+        {"role": "user", "content": "好的，我让公司行政帮我弄吧。我在华为海外事业部工作。"}
+      ]
+    },
+    {
+      "messages": [
+        {"role": "user", "content": "对了顺便问下，新加坡有什么好吃的？我老公之前去过说肉骨茶很好喝，他叫Kevin是美国人。"}
+      ]
+    },
+    {
+      "messages": [
+        {"role": "user", "content": "还有个问题，Python 的 asyncio 库怎么用？我最近在学编程，想转做数据分析。"},
+        {"role": "assistant", "content": "asyncio 是 Python 的异步编程框架..."},
+        {"role": "user", "content": "谢谢！我现在是做市场运营的，想多学点技术。"}
+      ]
+    },
+    {
+      "messages": [
+        {"role": "user", "content": "最后问一下，家里小孩三岁了应该上什么早教班？我女儿叫朵朵。我住在深圳南山区。"}
+      ]
+    }
+  ],
+  "golden_stl": "@sg: place \"新加坡\"\n@huawei: org \"华为\"\n@husband: person \"Kevin\"\n@dodo: person \"朵朵\"\n@shenzhen: place \"深圳\"\n\n$w1 = work_at(@self, @huawei)\nnote($w1, \"海外事业部\")\n$plan1 = plan(@self, \"新加坡出差\")\n$plan1t = time($plan1, \"下个月\")\n$r1 = spouse(@self, @husband)\n$n1 = nationality(@husband, \"美国人\")\n$vis1 = visit(@husband, @sg)\n$rec1 = recommend(@husband, \"肉骨茶\")\n$o1 = occupation(@self, \"市场运营\")\n$s1 = skill(@self, \"Python\")\nnote($s1, \"最近在学\")\n$want1 = want(@self, \"转做数据分析\")\n$r2 = child(@self, @dodo)\n$a1 = age(@dodo, 3)\n$l1 = live_in(@self, @shenzhen)\nnote($l1, \"南山区\")"
+}

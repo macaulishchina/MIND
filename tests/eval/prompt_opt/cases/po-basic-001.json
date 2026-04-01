@@ -1,0 +1,13 @@
+{
+  "id": "po-basic-001",
+  "category": "basic_facts",
+  "description": "基础属性提取：姓名、年龄、职业、居住地",
+  "turns": [
+    {
+      "messages": [
+        {"role": "user", "content": "我叫张伟，今年28岁，在杭州做前端工程师。"}
+      ]
+    }
+  ],
+  "golden_stl": "@hangzhou: place \"杭州\"\n$p1 = name(@self, \"张伟\")\n$p2 = age(@self, 28)\n$p3 = occupation(@self, \"前端工程师\")\n$p4 = live_in(@self, @hangzhou)"
+}

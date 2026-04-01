@@ -1,0 +1,25 @@
+{
+  "id": "po-career-001",
+  "category": "career_trajectory",
+  "description": "职业变迁+教育背景：多段工作经历、跳槽、升职、技能积累，测试时间线和工作关系链",
+  "turns": [
+    {
+      "messages": [
+        {"role": "user", "content": "我高中在衡水中学读的，特别卷。高考考上了复旦大学金融系。大二的时候去MIT交换了一个学期。"}
+      ]
+    },
+    {
+      "messages": [
+        {"role": "user", "content": "毕业后先去了高盛实习了半年，然后正式入职了摩根士丹利做分析师，干了三年。那时候在香港。"}
+      ]
+    },
+    {
+      "messages": [
+        {"role": "user", "content": "后来不想做金融了，29岁的时候回国创业，跟我的合伙人张韬一起开了一家AI公司叫星辰智能，在杭州。"},
+        {"role": "assistant", "content": "跨度挺大的，从金融到AI创业。"},
+        {"role": "user", "content": "对，中间还去斯坦福读了个CS的硕士。现在公司有50多人了，主要做企业级AI助手。"}
+      ]
+    }
+  ],
+  "golden_stl": "@hs: org \"衡水中学\"\n@fudan: org \"复旦大学\"\n@mit: org \"MIT\"\n@gs: org \"高盛\"\n@ms: org \"摩根士丹利\"\n@hk: place \"香港\"\n@zt: person \"张韬\"\n@xcai: org \"星辰智能\"\n@hz: place \"杭州\"\n@stanford: org \"斯坦福\"\n\n$e1 = study_at(@self, @hs)\n$e2 = study_at(@self, @fudan)\n$e2m = education(@self, \"金融\")\n$e3 = visit:exchange(@self, @mit)\n$e3t = time($e3, \"大二\")\n$e3d = duration($e3, \"一个学期\")\n$w1 = work_at(@self, @gs)\n$w1d = duration($w1, \"半年\")\nnote($w1, \"实习\")\n$w2 = work_at(@self, @ms)\n$o1 = occupation(@self, \"分析师\")\n$w2d = duration($w2, \"三年\")\n$l1 = live_in(@self, @hk)\n$e4 = study_at(@self, @stanford)\n$e4m = education(@self, \"CS硕士\")\n$w3 = start(@self, @xcai)\n$w3t = time($w3, \"29岁\")\n$l2 = location(@xcai, @hz)\n$r1 = coworker:partner(@self, @zt)"
+}

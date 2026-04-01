@@ -1,0 +1,23 @@
+{
+  "id": "po-travel-001",
+  "category": "travel",
+  "description": "旅行经历+计划：过去多次旅行、计划中的旅行、旅途中的事件和偏好",
+  "turns": [
+    {
+      "messages": [
+        {"role": "user", "content": "我去年去了三个国家。先去了泰国曼谷吃了好多芒果糯米饭，然后飞到日本京都看了红叶，最后去了韩国首尔找我大学同学小敏。"}
+      ]
+    },
+    {
+      "messages": [
+        {"role": "user", "content": "小敏嫁给了一个韩国人叫朴智勋，他们住在首尔江南区。小敏在三星做芯片设计。"}
+      ]
+    },
+    {
+      "messages": [
+        {"role": "user", "content": "今年打算去冰岛看极光，跟我老公一起。他叫刘洋，特别怕冷但是很想去哈哈。我们还计划明年蜜月去马尔代夫。"}
+      ]
+    }
+  ],
+  "golden_stl": "@bkk: place \"曼谷\"\n@kyoto: place \"京都\"\n@seoul: place \"首尔\"\n@xm: person \"小敏\"\n@pjh: person \"朴智勋\"\n@samsung: org \"三星\"\n@iceland: place \"冰岛\"\n@husband: person \"刘洋\"\n@maldives: place \"马尔代夫\"\n\n$v1 = visit(@self, @bkk)\n$v1t = time($v1, \"去年\")\n$v2 = visit(@self, @kyoto)\n$v2t = time($v2, \"去年\")\n$v3 = visit(@self, @seoul)\n$v3t = time($v3, \"去年\")\n$r1 = classmate(@self, @xm)\n$r2 = spouse(@xm, @pjh)\n$n1 = nationality(@pjh, \"韩国人\")\n$l1 = live_in(@xm, @seoul)\nnote($l1, \"江南区\")\n$o1 = occupation(@xm, \"芯片设计\")\n$w1 = work_at(@xm, @samsung)\n$r3 = spouse(@self, @husband)\n$pl1 = plan(@self, \"冰岛看极光\")\n$pl1t = time($pl1, \"今年\")\n$pl2 = plan(@self, \"马尔代夫蜜月\")\n$pl2t = time($pl2, \"明年\")"
+}

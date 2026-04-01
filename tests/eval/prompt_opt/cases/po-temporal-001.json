@@ -1,0 +1,13 @@
+{
+  "id": "po-temporal-001",
+  "category": "temporal_chain",
+  "description": "时序链：多个事件有明确先后关系和不同时间修饰，需正确分离和附着",
+  "turns": [
+    {
+      "messages": [
+        {"role": "user", "content": "我爸三年前从国企辞职了，去年自己开了一家餐厅，上个月刚搬到深圳。"}
+      ]
+    }
+  ],
+  "golden_stl": "@dad: person\n@sz: place \"深圳\"\n$p1 = father(@self, @dad)\n$e1 = resign(@dad, \"国企\")\n$t1 = time($e1, \"三年前\")\n$e2 = start(@dad, \"餐厅\")\n$t2 = time($e2, \"去年\")\n$e3 = move(@dad, @sz)\n$t3 = time($e3, \"上个月\")"
+}

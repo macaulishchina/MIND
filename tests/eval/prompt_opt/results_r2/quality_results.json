@@ -1,0 +1,4106 @@
+[
+  {
+    "model": "MiniMax-M2.7-highspeed",
+    "case_id": "po-alias-001",
+    "judge_ms": 4340,
+    "weighted_score": 7.6,
+    "scores": {
+      "completeness": {
+        "score": 6,
+        "reason": "缺少别名“小雨”、以及“研究生”教育层次；同时“计算机”被当作study_at而非技能。其余“林小雨/北大/我们都叫她”核心关系部分有体现。"
+      },
+      "predicate_choice": {
+        "score": 4,
+        "reason": "将“学的是计算机”错误用成study_at(@lxy, \"计算机\")，应为skill；教育“研究生”未用合适谓词。别名未使用alias。"
+      },
+      "argument_correctness": {
+        "score": 7,
+        "reason": "friend(@self,@lxy)与name(@lxy,\"林小雨\")参数对应正确；study_at(@lxy,@bd)参数形式正确但谓词语义不符合“学科/技能/教育层次”。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中无更正/撤回语句，未出现相关结构，视为正确。"
+      },
+      "modifier_attachment": {
+        "score": 10,
+        "reason": "对话无时间/数量/频率/持续等修饰信息需要挂载。"
+      },
+      "no_hallucination": {
+        "score": 9,
+        "reason": "未引入对话未提及的额外实体或关系；仅是谓词与属性映射错误，但不属于明显虚构新事实。"
+      },
+      "format_compliance": {
+        "score": 9,
+        "reason": "整体符合STL三种形式语法；但未按参考使用@pku与education/alias等形式，属于内容问题而非语法。"
+      }
+    },
+    "overall_comment": "输出抓住了“林小雨”“北大”“我们叫她小雨”的部分信息，但在谓词选择与对应属性表达上存在关键缺失（别名、研究生教育层次）和错误映射（计算机用study_at表示）。",
+    "parse_error": ""
+  },
+  {
+    "model": "MiniMax-M2.7-highspeed",
+    "case_id": "po-basic-001",
+    "judge_ms": 4218,
+    "weighted_score": 9.7,
+    "scores": {
+      "completeness": {
+        "score": 10,
+        "reason": "All facts from the conversation (name, age, occupation, and living in Hangzhou) are present and mapped to the correct semantic statements."
+      },
+      "predicate_choice": {
+        "score": 10,
+        "reason": "Uses appropriate predicates: name, age, occupation, and live_in, matching the intended semantics."
+      },
+      "argument_correctness": {
+        "score": 8,
+        "reason": "Arguments match the golden reference except the place entity is declared as @杭州 instead of @hangzhou; structurally correct, but identifier mismatch may break cross-linking expectations."
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "No corrections or contradictory statements are present."
+      },
+      "modifier_attachment": {
+        "score": 10,
+        "reason": "No additional time/quantity modifiers beyond age, which is attached correctly."
+      },
+      "no_hallucination": {
+        "score": 10,
+        "reason": "No extra facts beyond the conversation are introduced."
+      },
+      "format_compliance": {
+        "score": 10,
+        "reason": "Output follows the STL 3-form structure with valid syntax and no extraneous text."
+      }
+    },
+    "overall_comment": "The output captures all required facts correctly with only a minor entity-id mismatch for the Hangzhou place reference.",
+    "parse_error": ""
+  },
+  {
+    "model": "MiniMax-M2.7-highspeed",
+    "case_id": "po-comprehensive-001",
+    "judge_ms": 7955,
+    "weighted_score": 4.7,
+    "scores": {
+      "completeness": {
+        "score": 6,
+        "reason": "基本覆盖凯文的身份、工作（梅奥诊所/外科医生）、语言、配偶与日本人国籍、认识时间地点（去年东京）以及结婚地点大阪；但缺少“兄弟关系/哥”用 brother 谓词（实际用 sibling）、缺少用户“相信/可能”的不确定性建模（相信谓词缺失）、以及缺少关于更正的注释文本（golden 的 note 未出现）。"
+      },
+      "predicate_choice": {
+        "score": 6,
+        "reason": "语言与职业/工作地点选择合理；但哥-弟兄关系应使用 brother 对应，输出使用 sibling；“配偶地点/结婚地点/认识地点”的谓词选择也较臆测（spouse_location 未在参考出现），且 spouse 为 self 与凯文的配偶可能不匹配参考结构（参考是 spouse(@kevin,@wife）。"
+      },
+      "argument_correctness": {
+        "score": 4,
+        "reason": "多处参数指向不符合参考：spouse(@self,@km) 与 meet/marry 使用(@km,@spouse,...)但 @spouse 未声明，且 meet/marry的变量名与地点/时间参数位置不确定；此外 correct_intent 用在$o3上不等同于参考的“更正为梅奥诊所”论元组织方式（缺少对原错误语句的明确替换表达）。"
+      },
+      "correction_handling": {
+        "score": 3,
+        "reason": "出现了两次 correct_intent，但缺少 note 注释，且第二次 correct_intent(@self,$m1) 的目标论元不清晰；未体现“从约翰霍普金斯更正为梅奥诊所”的语义替换对（参考明确用更正到具体语句/地点），也未保证与措辞一致（并疑似缺少对原错误事实的正确关系）。"
+      },
+      "modifier_attachment": {
+        "score": 6,
+        "reason": "“去年”作为时间修饰被纳入 meet，但未正确为语言“法语+一点”建模（参考是 degree(l3,'一点')；输出缺少该度量）。"
+      },
+      "no_hallucination": {
+        "score": 5,
+        "reason": "整体未明显添加未在对话出现的事件，但引入了 spouse_location 以及 @spouse 未定义的结构，且很可能把“配偶是日本人/认识地点东京/结婚大阪/自信不确定”关联错位，属于非对话事实结构化偏差。"
+      },
+      "format_compliance": {
+        "score": 2,
+        "reason": "STL 语法不合规：使用了 @spouse（未声明），并且 $m1 同时作为 place 的声明却在 correct_intent 中作为 $ref 使用方式不清；另外输出中包含 name/变量命名方式不完全与参考一致，但主要扣分在未定义引用导致无法被解析。"
+      }
+    },
+    "overall_comment": "输出仅部分覆盖对话事实，但在配偶与关系建模、纠错结构（以及缺少参考中的 note/degree）和若干未定义引用方面存在明显问题，导致整体质量不高。",
+    "parse_error": ""
+  },
+  {
+    "model": "MiniMax-M2.7-highspeed",
+    "case_id": "po-correction-001",
+    "judge_ms": 3995,
+    "weighted_score": 6.4,
+    "scores": {
+      "completeness": {
+        "score": 4,
+        "reason": "输出包含“小李”和“腾讯”以及纠正意图，但缺少“原说百度”对应的错误工作地点事实以及同事/自我与“小李”的关系（coworker）等关键语义。"
+      },
+      "predicate_choice": {
+        "score": 3,
+        "reason": "使用了workplace来表达“在腾讯上班”，但对照参考应为work_at(@li, @tencent)且还需明确为同事关系coworker。"
+      },
+      "argument_correctness": {
+        "score": 4,
+        "reason": "correct_intent(@self, $w1)的参数结构基本合理，但$w1的谓词与论元语义不匹配参考（缺少work_at的实体绑定方式）。"
+      },
+      "correction_handling": {
+        "score": 8,
+        "reason": "使用correct_intent来表示“从百度更正为腾讯”的纠正，且未同时使用retract_intent，整体方向正确；但缺少对原错误事实“百度”的显式处理与注释。"
+      },
+      "modifier_attachment": {
+        "score": 10,
+        "reason": "对话中无时间/数量等修饰项，故不存在错误的修饰绑定。"
+      },
+      "no_hallucination": {
+        "score": 9,
+        "reason": "未引入对话中不存在的新实体或事件；仅谓词选择与结构可能不符合参考。"
+      },
+      "format_compliance": {
+        "score": 10,
+        "reason": "输出仅使用了@声明与$语句与无额外格式，符合STL语法要求。"
+      }
+    },
+    "overall_comment": "输出正确表达了“从@self的旧说法纠正为“小李在腾讯””这一核心纠正意图，但在实体关系（coworker/work_at）与缺失原始错误“百度”的显式对应及注释方面明显不足。",
+    "parse_error": ""
+  },
+  {
+    "model": "MiniMax-M2.7-highspeed",
+    "case_id": "po-multi-value-001",
+    "judge_ms": 4094,
+    "weighted_score": 8.2,
+    "scores": {
+      "completeness": {
+        "score": 8,
+        "reason": "Captured speaking languages and the two hobbies, but the '喜欢' predicate type differs from the golden 'hobby' and omits explicit '喜欢' wording as a separate fact."
+      },
+      "predicate_choice": {
+        "score": 6,
+        "reason": "Uses 'speak' correctly for languages, but uses 'like' instead of 'hobby' for the hobbies, which deviates from the reference predicates."
+      },
+      "argument_correctness": {
+        "score": 7,
+        "reason": "Arguments for speak(@self, language) and degree($s3, 0.5) are in the right pattern; hobby/like attaches to @self appropriately, but predicate choice mismatch affects semantic alignment."
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "No corrections were present in the conversation/output."
+      },
+      "modifier_attachment": {
+        "score": 9,
+        "reason": "The '一点' modifier is attached to the Japanese speaking fact (via degree($s3,...)), which is consistent with the intended meaning."
+      },
+      "no_hallucination": {
+        "score": 9,
+        "reason": "No extra entities or facts beyond the stated languages, '一点日语', and two activities appear."
+      },
+      "format_compliance": {
+        "score": 9,
+        "reason": "Output is valid STL-like statements using the $id = pred(...) form and contains no extraneous text/markup."
+      }
+    },
+    "overall_comment": "Overall it captures the intended content well, but it deviates from the golden reference by using 'like' instead of 'hobby' for the activities.",
+    "parse_error": ""
+  },
+  {
+    "model": "MiniMax-M2.7-highspeed",
+    "case_id": "po-negation-001",
+    "judge_ms": 4076,
+    "weighted_score": 8.45,
+    "scores": {
+      "completeness": {
+        "score": 8,
+        "reason": "包含不喜欢香菜、不会游泳（以neg/否定形式表达）以及擅长做饭三类事实，但否定的表达不够标准且未明确对应“不会”这一语义到同一谓词结构。"
+      },
+      "predicate_choice": {
+        "score": 8,
+        "reason": "香菜使用dislike正确；游泳用skill且加neg基本对应“不会游泳”；做饭用skill对应“很擅长做饭”总体合理。"
+      },
+      "argument_correctness": {
+        "score": 7,
+        "reason": "@self指向正确；但neg的参数是$s1（一个skill声明）而非与金参考中对应的谓词/论元结构，可能导致链接/语义对应不严格。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中无更正/撤回，因此不存在纠错处理问题。"
+      },
+      "modifier_attachment": {
+        "score": 10,
+        "reason": "对话未出现可识别的时间/频率/程度等需要额外修饰的修正项；“很擅长”已隐含在skill选择中。"
+      },
+      "no_hallucination": {
+        "score": 10,
+        "reason": "未添加任何对话中未提及的额外事实；仅涉及香菜、游泳、做饭。"
+      },
+      "format_compliance": {
+        "score": 6,
+        "reason": "整体是STL语句形式，但golden reference使用了$p3等变量命名与neg的写法；当前输出包含neg($s1)这种不在参考中的结构，可能影响解析一致性。"
+      }
+    },
+    "overall_comment": "内容覆盖基本正确，但“不喜欢/不会/擅长”的部分在游泳否定表达与语义绑定方式上与参考不完全一致，因此扣分。",
+    "parse_error": ""
+  },
+  {
+    "model": "MiniMax-M2.7-highspeed",
+    "case_id": "po-qa-001",
+    "judge_ms": 8805,
+    "weighted_score": 7.9,
+    "scores": {
+      "completeness": {
+        "score": 6,
+        "reason": "大多信息都有覆盖（新加坡出差、下个月、配偶Kevin/美国人、肉骨茶、Python/编程、想转数据分析、孩子3岁、女儿朵朵、深圳南山区、市场运营、华为海外事业部/工作关联），但缺少金参照中的“vis it(@husband, @sg)”以及“海外事业部”作为自由文本note；另外实际输出把Python使用意图拆得不完全等同于ref表述（把asyncio独立为学习/技能）。"
+      },
+      "predicate_choice": {
+        "score": 7,
+        "reason": "多数学谓词较贴切（plan/time/spouse/nationality/child/age/live_in/work_at等），但“肉骨茶”用like替代recommend不完全等价；“Python asyncio”用study/hobby与“学习Python库怎么用/想多学技术”存在一定偏差（gold用skill+note）。"
+      },
+      "argument_correctness": {
+        "score": 8,
+        "reason": "大部分论元指向合理（Kevin作为配偶、国籍为美国人、女儿age为3、住在南山区、下个月作为plan的时间）。但age使用number:3这一参数形式不与参考一致，且“work_at(@self, @hw)”将org=“华为海外事业部”与参考中的work_at(@self,@huawei)略有不一致的主体/层级表达方式。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中没有更正/撤回事实的行为，因此无需处理纠错。"
+      },
+      "modifier_attachment": {
+        "score": 8,
+        "reason": "“下个月”正确附着在出差plan上；“3岁”正确附着在孩子age上；但“想转做数据分析/最近在学编程”相关的时间/状态修饰在实际输出中没有使用与参考相同的note或等价表述，asyncio与学习状态的关联略弱。"
+      },
+      "no_hallucination": {
+        "score": 9,
+        "reason": "未发现明显凭空新增的事实；所有实体与关系均来自对话内容（签证虽在对话提到但参考未要求入库，实际输出也未擅自加入签证相关谓词）。"
+      },
+      "format_compliance": {
+        "score": 8,
+        "reason": "整体遵循STL形式，但输出未使用note注解，且age采用了number:3的命名参数写法；如果STL严格要求与参考一致的参数/语法，该点可能导致部分不兼容。"
+      }
+    },
+    "overall_comment": "输出基本覆盖了对话核心事实并保持了较好的结构一致性，但在谓词选择（肉骨茶recommend/like）、note缺失、以及部分参数/语法细节（age的number:3、work_at的org粒度）上与黄金参考存在差距。",
+    "parse_error": ""
+  },
+  {
+    "model": "MiniMax-M2.7-highspeed",
+    "case_id": "po-temporal-001",
+    "judge_ms": 5040,
+    "weighted_score": 0.0,
+    "scores": {
+      "completeness": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "predicate_choice": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "argument_correctness": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "correction_handling": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "modifier_attachment": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "no_hallucination": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "format_compliance": {
+        "score": 0,
+        "reason": "judge response parse error"
+      }
+    },
+    "overall_comment": "",
+    "parse_error": "JSON parse error: Expecting ',' delimiter: line 9 column 79 (char 801)"
+  },
+  {
+    "model": "MiniMax-M2.7-highspeed",
+    "case_id": "po-uncertainty-001",
+    "judge_ms": 4986,
+    "weighted_score": 4.6,
+    "scores": {
+      "completeness": {
+        "score": 3,
+        "reason": "覆盖了“老板是上海人/可能在谷歌工作”的部分，但遗漏了“老板”实体属性声明（具体为 nationality 谓词）、以及“好像/可能”的不确定性通过 believe(pred)结构与对应 note 注释，且实体@google未声明。"
+      },
+      "predicate_choice": {
+        "score": 3,
+        "reason": "使用了错误/不一致的谓词与结构：用 believe(location(...))与 believe(work_at(...))代替参考中的 nationality 与 work_at 通过 $ref 进行 believe；“location”不等同于“nationality”。"
+      },
+      "argument_correctness": {
+        "score": 4,
+        "reason": "boss(@self,@boss) 的引用方向类似但语法上未按金标给出 $id 声明；其余 believe 的参数结构不符合参考（缺少对可被 believe 的命题ID引用）。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中没有更正/撤回语句，因此未涉及 retract_intent/correct_intent，满足要求。"
+      },
+      "modifier_attachment": {
+        "score": 2,
+        "reason": "“好像/可能”的不确定性应通过 believe + note 注释体现，但实际输出没有 note，且“上海人/谷歌”未明确以对应命题ID的 believe 方式承载不确定性。"
+      },
+      "no_hallucination": {
+        "score": 7,
+        "reason": "未明显引入对话中不存在的新事实，但“谷歌”作为 work_at 的参数写成了字符串且缺少 @google 实体声明；“location(@boss,'上海')”把“上海人”替换成了可能不等价的地理位置表述。"
+      },
+      "format_compliance": {
+        "score": 2,
+        "reason": "未使用 STL 的@id声明和 $id 机制来表达命题，且出现了不符合金标风格的谓词复合用法（如 believe(@self, location(...))），整体不满足预期的 STL 表达规范。"
+      }
+    },
+    "overall_comment": "输出只保留了部分核心含义，但在谓词选择、命题建模（$id）、不确定性注释以及结构格式合规性方面与金标准偏差较大。",
+    "parse_error": ""
+  },
+  {
+    "model": "claude-opus-4-6",
+    "case_id": "po-alias-001",
+    "judge_ms": 4081,
+    "weighted_score": 8.1,
+    "scores": {
+      "completeness": {
+        "score": 7,
+        "reason": "缺少“skill(@lxy, 计算机)”的对应事实形式（输出用study_at:major替代，可能导致事实类型不一致），其余主要事实均覆盖。"
+      },
+      "predicate_choice": {
+        "score": 6,
+        "reason": "“计算机”应为skill谓词；输出使用了study_at:major，谓词选择不等价于黄金参考。"
+      },
+      "argument_correctness": {
+        "score": 8,
+        "reason": "大多数谓词参数指向正确人物@lxy与机构@pku，name/alias/study_at/education的参数顺序正确；但“study_at:major(@lxy, 计算机)”的谓词与论元结构不符合参考约定。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中无更正/撤回，输出也未出现correction_intent或retract_intent。"
+      },
+      "modifier_attachment": {
+        "score": 10,
+        "reason": "对话无时间/数量等修饰信息，未出现不当修饰。"
+      },
+      "no_hallucination": {
+        "score": 10,
+        "reason": "未引入对话之外的实体或关系；仅有“计算机”的表达形式与参考不同。"
+      },
+      "format_compliance": {
+        "score": 6,
+        "reason": "存在谓词写法“study_at:major(@lxy, ...)”不符合给定STL谓词风格要求（黄金多为单一谓词+参数），虽整体仍接近三形式，但可能判为不合规。"
+      }
+    },
+    "overall_comment": "输出基本覆盖了人名、别名、就读机构与研究生教育，但“计算机专业/技能”的谓词与格式处理偏离黄金参考，影响了谓词选择与格式合规性评分。",
+    "parse_error": ""
+  },
+  {
+    "model": "claude-opus-4-6",
+    "case_id": "po-basic-001",
+    "judge_ms": 3851,
+    "weighted_score": 9.65,
+    "scores": {
+      "completeness": {
+        "score": 10,
+        "reason": "所有关键信息（姓名、年龄、职业、居住地杭州）均已覆盖。"
+      },
+      "predicate_choice": {
+        "score": 10,
+        "reason": "使用的谓词与事实匹配（place/name/age/occupation/live_in）。"
+      },
+      "argument_correctness": {
+        "score": 9,
+        "reason": "论元基本正确；居住地实体从@hangzhou替换为@hz但其仍对应“杭州”，未破坏语义链接。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中无更正/撤回行为，未出现correction处理问题。"
+      },
+      "modifier_attachment": {
+        "score": 10,
+        "reason": "无需要处理的时间/频率/持续等修饰语，或均未出现错误修饰。"
+      },
+      "no_hallucination": {
+        "score": 10,
+        "reason": "未引入对话中不存在的新事实。"
+      },
+      "format_compliance": {
+        "score": 8,
+        "reason": "STL结构正确且语法基本合规；唯一差异是地点实体@hangzhou被改为@hz，但格式仍符合要求。"
+      }
+    },
+    "overall_comment": "输出准确复现了对话的全部事实，主要差异仅在地点实体ID命名而非语义。",
+    "parse_error": ""
+  },
+  {
+    "model": "claude-opus-4-6",
+    "case_id": "po-career-001",
+    "judge_ms": 6604,
+    "weighted_score": 0.0,
+    "scores": {
+      "completeness": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "predicate_choice": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "argument_correctness": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "correction_handling": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "modifier_attachment": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "no_hallucination": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "format_compliance": {
+        "score": 0,
+        "reason": "judge response parse error"
+      }
+    },
+    "overall_comment": "",
+    "parse_error": "JSON parse error: Expecting ',' delimiter: line 25 column 49 (char 1232)"
+  },
+  {
+    "model": "claude-opus-4-6",
+    "case_id": "po-comprehensive-001",
+    "judge_ms": 5638,
+    "weighted_score": 0.0,
+    "scores": {
+      "completeness": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "predicate_choice": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "argument_correctness": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "correction_handling": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "modifier_attachment": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "no_hallucination": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "format_compliance": {
+        "score": 0,
+        "reason": "judge response parse error"
+      }
+    },
+    "overall_comment": "",
+    "parse_error": "JSON parse error: Expecting ',' delimiter: line 13 column 55 (char 495)"
+  },
+  {
+    "model": "claude-opus-4-6",
+    "case_id": "po-correction-001",
+    "judge_ms": 4100,
+    "weighted_score": 9.45,
+    "scores": {
+      "completeness": {
+        "score": 8,
+        "reason": "Captured both entities (小李、腾讯) and the corrected employment fact, plus the coworker relation; however, it omits the explicit note annotation present in the golden reference."
+      },
+      "predicate_choice": {
+        "score": 10,
+        "reason": "Uses appropriate predicates: coworker and work_at, and correct_intent for the correction."
+      },
+      "argument_correctness": {
+        "score": 10,
+        "reason": "Arguments are correctly linked: coworker(@self,@li) and work_at(@li,@tx) with correct_intent(@self, $w1)."
+      },
+      "correction_handling": {
+        "score": 9,
+        "reason": "Uses correct_intent appropriately for the A→B replacement and does not state the incorrect '百度' employment fact; slight deduction because the explanatory note is missing."
+      },
+      "modifier_attachment": {
+        "score": 10,
+        "reason": "No time/quantity/frequency modifiers appear in the conversation."
+      },
+      "no_hallucination": {
+        "score": 10,
+        "reason": "No additional entities or facts beyond the conversation and the correction are introduced."
+      },
+      "format_compliance": {
+        "score": 10,
+        "reason": "STL syntax is valid and limited to @id declarations and $ statements, with no extra narrative or invalid formatting."
+      }
+    },
+    "overall_comment": "The output correctly represents the entities and the corrected 'work_at' relation using correct_intent, with only minor loss of the golden reference note.",
+    "parse_error": ""
+  },
+  {
+    "model": "claude-opus-4-6",
+    "case_id": "po-health-001",
+    "judge_ms": 7067,
+    "weighted_score": 6.85,
+    "scores": {
+      "completeness": {
+        "score": 6,
+        "reason": "Major entities and most facts captured (age, spouse, CoXiehe hospital, family HTN, no smoking, red wine, prior normal BP, swim habit changed). Missing/incorrect: self is male and 头疼/睡眠不好/持续多久需与“最近老是头疼、睡眠也不好、每天只能睡4-5小时”对应，但输出拆分且部分修饰对应不准；“还没去看医生/想先问问/建议去检查/老婆催去”没被结构化成任何意图/建议信息。"
+      },
+      "predicate_choice": {
+        "score": 5,
+        "reason": "Uses reasonable predicates for most items, but key predicate types deviate from reference: occupation/work_at modeled with extra roles (\"会计事务所职员\" vs reference), and self swim change modeled as stop/cause rather than capturing “最近完全没时间了” directly as a note on the habit. Some health-related items are encoded as habit(@self,'高血压') instead of modeling self BP normal."
+      },
+      "argument_correctness": {
+        "score": 6,
+        "reason": "Several argument attachments align (wife->occupation, work_at->hospital, father/mother links). However, there are issues: duration($h1,'两三周') attached to a habit that represents 头疼; quantity($h2,'每天四五个小时') attached to sleep-not-good; self HTN normal year check is only noted, and negation for smoking/HTN uses inconsistent structure (neg($bp3base) with $bp3base habit(@self,'高血压') not stated as a belief/diagnosis)."
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "No explicit A→B or retract corrections present in the conversation content; output does not apply correction intents incorrectly."
+      },
+      "modifier_attachment": {
+        "score": 4,
+        "reason": "Time/quantity modifiers are largely present but attached to potentially wrong statements: '两三周' applies to the ongoing condition (headaches/sleep problems) rather than specifically as duration of habit('头疼'); '每天四五个小时' is about sleep duration, but mapped to quantity on '睡眠不好' habit rather than on a sleep/duration concept. Swim frequency captured, but the '最近没时间了' modifier is not properly attached to the swim habit (only indirectly represented via stop/cause)."
+      },
+      "no_hallucination": {
+        "score": 8,
+        "reason": "No major invented facts; hospital is correct, family HTN correct, red wine and occasional frequency correct. Minor overreach: introducing explicit self HTN habit negation structure implies self has (or had) hypertension, which is not stated as a condition—only that last year's check was normal."
+      },
+      "format_compliance": {
+        "score": 9,
+        "reason": "STL syntax is mostly valid (entity/type, semantic statements, note). Minor concern: place type key '协和医院' treated as place without declaration, but syntax remains parseable; overall compliant with no extraneous prose."
+      }
+    },
+    "overall_comment": "总体覆盖了主要人物关系与生活习惯，但在自我状况（持续时间/睡眠时长/既往体检正常）以及对枸杞水、游泳“没时间了”的修饰与谓词建模上与参考存在较多偏差，并引入了不恰当的自我高血压否定结构。",
+    "parse_error": ""
+  },
+  {
+    "model": "claude-opus-4-6",
+    "case_id": "po-multi-event-001",
+    "judge_ms": 3901,
+    "weighted_score": 9.2,
+    "scores": {
+      "completeness": {
+        "score": 9,
+        "reason": "覆盖了表姐、男朋友、巴黎/伦敦、相识时间“去年”、订婚时间“上个月”及地点，但缺少黄金参考中的 engage 事件类型标注（event:engagement）及 meet/engage命名差异对应关系不明确。"
+      },
+      "predicate_choice": {
+        "score": 7,
+        "reason": "相识使用 meet 较合理，但订婚使用 engage 可能接近黄金的 engagement，但未使用参考中的 event(...):engagement 结构，谓词/类型选择可能不一致。"
+      },
+      "argument_correctness": {
+        "score": 9,
+        "reason": "cousin(@self,@cousin) 与 partner(@cousin,@bf) 的参数指向正确；time/location 都绑定在对应的会面/订婚事件上。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中无纠错/更正，因此无需 retract_intent 或 correct_intent，输出也未引入任何不必要的更正。"
+      },
+      "modifier_attachment": {
+        "score": 10,
+        "reason": "“去年”正确附着在 meet/相识事件上，“上个月”正确附着在订婚事件上。"
+      },
+      "no_hallucination": {
+        "score": 10,
+        "reason": "未引入对话中不存在的新实体、地点或事件；仅使用对话明确提到的信息。"
+      },
+      "format_compliance": {
+        "score": 10,
+        "reason": "输出仅使用了允许的@声明与$语句形式，且语法风格符合STL（无多余文字/Markdown/代码块）。"
+      }
+    },
+    "overall_comment": "整体忠实覆盖了对话事实与修饰信息，主要差异在于订婚事件的谓词/类型表达未完全匹配黄金参考。",
+    "parse_error": ""
+  },
+  {
+    "model": "claude-opus-4-6",
+    "case_id": "po-multi-value-001",
+    "judge_ms": 3605,
+    "weighted_score": 10.0,
+    "scores": {
+      "completeness": {
+        "score": 10,
+        "reason": "All mentioned languages and hobbies, including the '一点' degree modifier for Japanese, are captured."
+      },
+      "predicate_choice": {
+        "score": 10,
+        "reason": "Predicates used (speak, hobby, degree) match the conversation facts and reference."
+      },
+      "argument_correctness": {
+        "score": 10,
+        "reason": "Arguments attach correctly to @self; degree is correctly applied to the Japanese speak statement."
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "No corrections or retractions are present in the conversation/output."
+      },
+      "modifier_attachment": {
+        "score": 10,
+        "reason": "The '一点' modifier is attached to the Japanese speaking statement as intended."
+      },
+      "no_hallucination": {
+        "score": 10,
+        "reason": "No extra entities, statements, or attributes beyond the conversation are added."
+      },
+      "format_compliance": {
+        "score": 10,
+        "reason": "Output uses valid STL $id = pred(arg, ...) statements with correct syntax and no extraneous text."
+      }
+    },
+    "overall_comment": "The actual STL output perfectly matches the conversation and the golden reference.",
+    "parse_error": ""
+  },
+  {
+    "model": "claude-opus-4-6",
+    "case_id": "po-negation-001",
+    "judge_ms": 3714,
+    "weighted_score": 8.45,
+    "scores": {
+      "completeness": {
+        "score": 9,
+        "reason": "Captures all three stated preferences/skills (不喜欢吃香菜、不会游泳、很擅长做饭), with a close match to the reference intent."
+      },
+      "predicate_choice": {
+        "score": 8,
+        "reason": "Uses dislike and skill correctly; however, represents '不会游泳' via neg(skill) instead of the reference's separate neg(@self, $p) pattern."
+      },
+      "argument_correctness": {
+        "score": 7,
+        "reason": "Arguments mostly correct (items attached to @self), but the negation structure differs from the golden reference and the output introduces an internal variable pattern not aligned with $p3 usage."
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "No corrections present in the conversation; no incorrect correction handling observed."
+      },
+      "modifier_attachment": {
+        "score": 8,
+        "reason": "Attaches degree('很擅长') to '做饭' appropriately; but uses degree predicate rather than expressing the '很擅长' semantics as in the reference (skill alone), which is a minor mismatch."
+      },
+      "no_hallucination": {
+        "score": 10,
+        "reason": "No additional entities, events, or attributes beyond the conversation facts."
+      },
+      "format_compliance": {
+        "score": 6,
+        "reason": "Uses $ / @self in statements but lacks the golden-style entity declaration and uses nonstandard variable naming/structure (e.g., $s1n = neg($s1)), though it appears close to STL-like syntax."
+      }
+    },
+    "overall_comment": "The output is largely faithful to the conversation but deviates from the golden reference in negation representation and minor semantic/modifier encoding, with some format-structure noncompliance.",
+    "parse_error": ""
+  },
+  {
+    "model": "claude-opus-4-6",
+    "case_id": "po-pet-001",
+    "judge_ms": 5720,
+    "weighted_score": 6.75,
+    "scores": {
+      "completeness": {
+        "score": 8,
+        "reason": "基本覆盖三只宠物与年龄/养成信息、伴侣与购买/搬家事实，但多余添加了若干属性谓词（如name/like:breed/like:temperament/habit/生活在）且未显式体现“慢慢是我小时候养的”（虽然有持续时长可部分覆盖）。"
+      },
+      "predicate_choice": {
+        "score": 4,
+        "reason": "使用了不在参考中的谓词体系（如like:breed、like:temperament、gift:receive、location:from、live_in），且宠物店购买应与参考一致表达为buy(小杰,大黄)即可；另外“抓沙发”应表达为习惯/行为但当前谓词不够贴切（habit与谓词参数形式可能偏差）。"
+      },
+      "argument_correctness": {
+        "score": 5,
+        "reason": "主要论元绑定方向基本合理（buy(@xj,@dh)、partner(@self,@xj)、move(@self,@sh)、duration($12,...)），但像 location($17, \"宠物店\") 与 $17 的语义链条不清晰；另外 note($19,...)对应 gift:receive(@self,@tz) 的主语/对象不完全匹配对话“团子是朋友送的”。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中没有更正/撤回信息，未出现纠错意图，符合要求。"
+      },
+      "modifier_attachment": {
+        "score": 7,
+        "reason": "年龄与时长修饰基本正确（age(@dh,5)、age(@tz,\"8个月\")、duration(慢慢,\"十多年\")）；搬家相关修饰以 location:from($20,@gz) 与 note 从广州搬到上海呈现，但“从广州搬到上海”的表达分散且可能不够规范。"
+      },
+      "no_hallucination": {
+        "score": 6,
+        "reason": "未看到明确违背对话的新增事实，但加入了额外且可能不被对话直接支持的细节谓词（如name字段、like:breed/temperament/ habit 具体落点、live_in(@self,@sh)、location($17,\"宠物店\")）可能属于不当扩展而非纯复述。"
+      },
+      "format_compliance": {
+        "score": 7,
+        "reason": "总体为@id与$语句+note，符合STL风格；但使用了带冒号的谓词（like:breed、gift:receive、location:from）与“$12作为谓词参数”的写法虽可能可被接受，但语法一致性不确定，仍存在较高格式风险。"
+      }
+    },
+    "overall_comment": "输出覆盖了核心实体与关系，但谓词选择与论元/修饰的表达方式偏离参考较多且包含若干可疑的扩展事实与潜在格式不一致。",
+    "parse_error": ""
+  },
+  {
+    "model": "claude-opus-4-6",
+    "case_id": "po-qa-001",
+    "judge_ms": 6572,
+    "weighted_score": 8.45,
+    "scores": {
+      "completeness": {
+        "score": 9,
+        "reason": "大部分关键信息均覆盖（新加坡出差、华为海外事业部、配偶Kevin及美国人身份、肉骨茶推荐、学Python/想转数据分析、孩子朵朵三岁、住深圳南山区）。但缺少“我在华为海外事业部工作”的海外事业部注释、缺少“想多学点技术/市场运营”中的技术多学点表述、以及async相关（虽对目标任务不一定需要但对话提到了）。"
+      },
+      "predicate_choice": {
+        "score": 6,
+        "reason": "“肉骨茶”使用like(@kevin,肉骨茶)较不精确；对话是“他叫Kevin说肉骨茶很好喝/推荐”，更贴近recommend。另有hobby/occupation替换使用存在语义偏差（编程作为爱好而非学Python/想学技术）。"
+      },
+      "argument_correctness": {
+        "score": 8,
+        "reason": "大部分实体与参数指向正确（Kevin为丈夫、孩子为朵朵、深圳南山区为居住地）。但work_at(@self,@hw)未区分“海外事业部”说明，且“想转做数据分析”被写成 want(@self,$12)+occupation(@self,'数据分析')的组合方式不够直观（应为want(@self,'转做数据分析')或类似want(@self,数据分析)而非嵌入occupation）。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中无更正/撤回情形，输出未出现纠错相关谓词，符合要求。"
+      },
+      "modifier_attachment": {
+        "score": 8,
+        "reason": "“下个月”正确作为time挂在visit/出差计划的语义上（但实际输出以visit表示新加坡出差，且未提供明确plan对象；不过time的挂载层级合理）。“三岁”正确挂在age。未出现额外时间/频次等修饰。"
+      },
+      "no_hallucination": {
+        "score": 9,
+        "reason": "未发现明显编造的新事实；但将“编程”抽象成hobby并不完全对应原句“我最近在学编程，想转做数据分析”，属于轻度过度概括/替换而非硬性杜撰。"
+      },
+      "format_compliance": {
+        "score": 9,
+        "reason": "STL语法整体合规：仅使用@实体声明、$id=谓词、note未必必须；但没有note($id,...)注释且使用了占位$12用于want参数，虽然在语法层面可能可接受，但语义结构略可疑。总体仍接近合法STL输出。"
+      }
+    },
+    "overall_comment": "输出基本忠实覆盖主要实体与关系，但在“海外事业部”注释、肉骨茶推荐谓词选择、以及“转做数据分析/编程学习”的语义表达上存在偏差。",
+    "parse_error": ""
+  },
+  {
+    "model": "claude-opus-4-6",
+    "case_id": "po-retract-001",
+    "judge_ms": 5744,
+    "weighted_score": 9.35,
+    "scores": {
+      "completeness": {
+        "score": 8,
+        "reason": "包含了人物“老王”、他与说话者的邻居关系，以及“老王养了一条金毛”的撤回意图；未显式保留“没养狗/更正为不养狗”的后续事实表达，但撤回已覆盖关键更正点。"
+      },
+      "predicate_choice": {
+        "score": 10,
+        "reason": "使用 neighbor 以及 retract_intent 来处理“我记错了，老王没养狗”的撤回正确。"
+      },
+      "argument_correctness": {
+        "score": 9,
+        "reason": "retract_intent 的论元与金毛养狗的原句一致；neighbor/@self 指向说话者、@lw 指向“老王”基本正确。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "本对话为撤回旧事实而非替换新事实，且未出现 retraction 与 correction_intent 同时使用或重复陈述旧事实本身（除撤回意图外）。"
+      },
+      "modifier_attachment": {
+        "score": 10,
+        "reason": "对话中无时间/数量等需要挂载的修饰语。"
+      },
+      "no_hallucination": {
+        "score": 10,
+        "reason": "未添加对话中不存在的事实或人物，仅出现“老王”“邻居”及被撤回的“养金毛”。"
+      },
+      "format_compliance": {
+        "score": 9,
+        "reason": "STL语法形式正确（@id 声明与 $id=/note 形式一致），但变量命名为 $n1/@r1 与参考不同不影响语义。"
+      }
+    },
+    "overall_comment": "整体忠实于对话的撤回更正，格式与语义表达都很接近金标准。",
+    "parse_error": ""
+  },
+  {
+    "model": "claude-opus-4-6",
+    "case_id": "po-temporal-001",
+    "judge_ms": 3985,
+    "weighted_score": 9.75,
+    "scores": {
+      "completeness": {
+        "score": 10,
+        "reason": "所有对话中的事实均被覆盖：父亲从国企辞职（三年前）、去年自己开餐厅、上个月搬到深圳（实体与地点齐全）。"
+      },
+      "predicate_choice": {
+        "score": 10,
+        "reason": "谓词与语义匹配良好：father、resign、start、move均符合对话。"
+      },
+      "argument_correctness": {
+        "score": 9,
+        "reason": "参数指向正确（@dad/ @sz及语义链条正确）；但父亲与事件关系使用了$e/$t体系的等价替代（变量命名为$f），可能对严格比对略有影响。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话无更正内容，未产生不应有的correct_intent/retract_intent。"
+      },
+      "modifier_attachment": {
+        "score": 10,
+        "reason": "时间修饰正确挂载到相应事件：三年前→resign，去年→start，上个月→move。"
+      },
+      "no_hallucination": {
+        "score": 10,
+        "reason": "未加入对话未提及的新事实或属性，地点与时间均来自原文。"
+      },
+      "format_compliance": {
+        "score": 9,
+        "reason": "STL语法结构正确（仅使用@id与$id语句），但使用了$f变量而非黄金参考中的$e/$t命名风格；若系统严格校验命名，可能轻微扣分。"
+      }
+    },
+    "overall_comment": "该输出在覆盖内容、语义谓词、参数与修饰关系上高度准确，只有变量命名风格与可能的严格规范差异带来少量扣分。",
+    "parse_error": ""
+  },
+  {
+    "model": "claude-opus-4-6",
+    "case_id": "po-uncertainty-001",
+    "judge_ms": 5792,
+    "weighted_score": 6.7,
+    "scores": {
+      "completeness": {
+        "score": 6,
+        "reason": "覆盖了老板/上海与可能在谷歌工作两类信息，但遗漏了“谷歌工作过”的不确定性表述为believe(…,$p3)形式（输出虽有believe但工作时关联与谓词结构不一致），并且“好像/可能”对应的不确定性注释note也缺失；还新增了时间“之前”的挂接方式不完整。"
+      },
+      "predicate_choice": {
+        "score": 6,
+        "reason": "“location”用于表达“上海人”不够准确（应体现nationality/上海人作为身份）；工作地点使用work_at但工作语义缺少与不确定信念及正确参数的对应（谷歌应为org实体而非字符串）"
+      },
+      "argument_correctness": {
+        "score": 5,
+        "reason": "believe指向位置/字符串等参数不匹配golden结构：believe(@self,$f2)其中$f2是location语句而非可被该结构接受的nationality语句；work_at(@boss,\"谷歌\")未与@google实体及$f3引用结构一致；时间time($f3,\"之前\")位置不符合golden（golden未单独time该语句）。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中无更正/撤回，因此未出现错误的更正意图，表现良好。"
+      },
+      "modifier_attachment": {
+        "score": 4,
+        "reason": "“之前”虽出现，但以time($f3,\"之前\")方式挂接，且$f3的谓词实参又不匹配golden；“好像/可能”的不确定性并未通过note或对应结构体现，导致修饰/态度信息缺失。"
+      },
+      "no_hallucination": {
+        "score": 7,
+        "reason": "未明显捏造新事实，但将“上海人”拆为location(@boss,@sh)与“之前”形式化为time(...)属于语义偏移，可能被视为不恰当推断。"
+      },
+      "format_compliance": {
+        "score": 9,
+        "reason": "整体使用了STL的@/$/note语法风格，但缺少按参考应有的note注释，且实体声明@sh与谓词结构可能仍可被解析；未见明显语法违规（如markdown/code）。"
+      }
+    },
+    "overall_comment": "输出抓住了主要主题，但在“上海人”的谓词建模、不确定性（好像/可能）表达、谷歌实体与引用结构以及“之前”修饰挂接上偏离参考较多。",
+    "parse_error": ""
+  },
+  {
+    "model": "claude-opus-4-6",
+    "case_id": "po-vibecoding-001",
+    "judge_ms": 11530,
+    "weighted_score": 5.0,
+    "scores": {
+      "completeness": {
+        "score": 5,
+        "reason": "捕获了大部分关键信息（TS、蚂蚁集团/杭州/哈工大、摄影/索尼A7M4、Rust在学、前端五年、部署Vercel、域名、姓名等），但缺少对“公司更正：之前在PingCAP待过”的时间修正对应谓词正确性（黄金用work_at(@self,@pingcap)+time(...,\"之前\")），以及“摄影作品展示/技术文章”等虽有note但与黄金引用结构不同；另外少了关于教育“毕业于哈工大计算机系”的更贴合分解（黄金只给education(@self,\"计算机\")）。"
+      },
+      "predicate_choice": {
+        "score": 4,
+        "reason": "部分谓词选得不一致：占用/技能角色有互换风险（occupation与Golden里occupation应为前端开发，输出把前端五年经验用duration而不是基于原occupation语义；学习Rust用study_at(…,Rust)而黄金用skill(Rust)并note）；摄影喜好也用note/hobby匹配但黄金对“拍风景照”标注结构不同；域名用own而黄金参考未体现。"
+      },
+      "argument_correctness": {
+        "score": 5,
+        "reason": "work_at(@self,@ant)参数正确；live_in(@self,@hz)、study_at(@self,@hit)参数正确；但对更正的旧事实：输出使用time($w_old,\"过去\")且缺少黄金里同样的结构time(@pingcap工作,“之前”)与黄金命名/连接方式（$w_old_t从未与任何语句对齐），并且 education_major/计算机系用note挂在study_at上，参数/语义连接不如黄金清晰。"
+      },
+      "correction_handling": {
+        "score": 6,
+        "reason": "使用了correct_intent(@self,$w_new)来表达从PingCAP更正到蚂蚁集团，方向基本合理；但旧事实“之前在PingCAP待过”在输出中仍以work_at(@self,@pingcap)方式呈现，且时间修饰使用了“过去”且未通过与黄金等价的链接结构体现；同时没有明确与更正意图互斥的处理方式（可能产生冗余旧事实）。"
+      },
+      "modifier_attachment": {
+        "score": 4,
+        "reason": "出现多处修饰/量化处理不对：将“五年经验”用duration($s2,\"五年\")挂到skill(TypeScript)上，明显应关联前端开发经验而非TypeScript；“之前”相关时间未正确附着到work_at(@self,@pingcap)对应谓词上（输出虽有time($w_old,\"过去\")但不等价于黄金结构）；“喜欢拍风景照”作为note挂在hobby摄影上总体可接受但与Golden结构不一致。"
+      },
+      "no_hallucination": {
+        "score": 3,
+        "reason": "引入了多条对话未直接出现或与对话不一致的事实/细节：将“搭建个人博客、使用 Next.js + TypeScript、部署到 Vercel、域名 siyuan.dev”等纳入plan与own谓词（对话确有Next.js/部署/域名，但黄金参考并未要求这些实体谓词；并且用own表达域名可能不符合原意）；“过去”与“之前”虽相近但并非逐字一致，且教育专业用note可能造成结构性偏差。整体以黄金对齐标准看存在额外/偏离项。"
+      },
+      "format_compliance": {
+        "score": 9,
+        "reason": "使用了@/$/note等结构且无明显语法错误；未使用Markdown/代码块，整体符合STL形式，但缺少@id类型声明形式（黄金未要求，但若严格需要声明实体类型，输出为类@pingcap:@ant等有实体但@self类型未声明；另外education_major/时间等谓词是否被系统接受不明）。"
+      }
+    },
+    "overall_comment": "整体抓住了核心人物信息与更正关系，但在更正的时间/旧事实连接、经验“五年”修饰指向、以及若以黄金参考为准的谓词选择与结构对齐上存在较多偏差。",
+    "parse_error": ""
+  },
+  {
+    "model": "deepseek-v3.2",
+    "case_id": "po-alias-001",
+    "judge_ms": 7008,
+    "weighted_score": 0.0,
+    "scores": {
+      "completeness": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "predicate_choice": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "argument_correctness": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "correction_handling": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "modifier_attachment": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "no_hallucination": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "format_compliance": {
+        "score": 0,
+        "reason": "judge response parse error"
+      }
+    },
+    "overall_comment": "",
+    "parse_error": "JSON parse error: Expecting ',' delimiter: line 29 column 75 (char 963)"
+  },
+  {
+    "model": "deepseek-v3.2",
+    "case_id": "po-basic-001",
+    "judge_ms": 3651,
+    "weighted_score": 9.85,
+    "scores": {
+      "completeness": {
+        "score": 10,
+        "reason": "所有关键信息（姓名、年龄、职业、所在城市/居住地）均被提取。"
+      },
+      "predicate_choice": {
+        "score": 10,
+        "reason": "谓词与金标准一致，均准确表达姓名、年龄、职业与居住地。"
+      },
+      "argument_correctness": {
+        "score": 9,
+        "reason": "live_in 的地点参数正确指向声明的地点实体；但地点实体ID从@hangzhou变为@hz，与金标准ID不同（语义链接仍成立）。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中无纠正/撤回，因此无需使用更正意图。"
+      },
+      "modifier_attachment": {
+        "score": 10,
+        "reason": "无额外时间/频率/程度等修饰需求，现有数值修饰（age=28）正确。"
+      },
+      "no_hallucination": {
+        "score": 10,
+        "reason": "未引入对话中不存在的新事实。"
+      },
+      "format_compliance": {
+        "score": 10,
+        "reason": "输出仅使用了@id声明与$id语义语句，符合STL语法要求。"
+      }
+    },
+    "overall_comment": "实际输出与金标准在语义内容上高度一致，唯一差异是地点实体的ID命名不同。",
+    "parse_error": ""
+  },
+  {
+    "model": "deepseek-v3.2",
+    "case_id": "po-comprehensive-001",
+    "judge_ms": 5939,
+    "weighted_score": 6.4,
+    "scores": {
+      "completeness": {
+        "score": 7,
+        "reason": "Captured most entities (Kevin, Mayo Clinic, languages, wife, Japan nationality, meet/marry, locations, corrections), but missed that Kevin’s wife being Japanese was framed as '可能' (uncertainty marker) via the correct belief structure/note, and missed explicit Tokyo time '去年' modifier attachment. Also spouse/nationality correction note not fully represented."
+      },
+      "predicate_choice": {
+        "score": 6,
+        "reason": "Used reasonable predicates (brother, occupation, work_at, speak, wife, believe, nationality, meet, marry). However, correction handling for the work_at location/company used correct_intent but lacks the corresponding note content and Tokyo-based meet belief/correction framing differs from the reference (reference uses location/time and belief annotation for nationality uncertainty)."
+      },
+      "argument_correctness": {
+        "score": 5,
+        "reason": "Main arguments are mostly in place, but there is a type/link mismatch: $6 = correct_intent(@self, $7) where $7 is a work_at statement—this should match the golden style with a direct reference to the statement id; also meet/marry location/time arguments are missing (no location(@e1,@tokyo) and no time '去年'), and wife entity is not explicitly declared as person."
+      },
+      "correction_handling": {
+        "score": 6,
+        "reason": "Both corrections are represented via correct_intent for work_at and marry location, but the output introduces no corresponding note annotations like the golden reference, and correction for the marriage location (Tokyo→Osaka) is not actually captured—there is no Osakan location on the marry event. No ghost wrong-fact re-statements, but one correction is effectively incomplete."
+      },
+      "modifier_attachment": {
+        "score": 3,
+        "reason": "Missing key modifiers: '还会一点法语' should be degree on the specific speak-法语 statement, but it is incorrectly attached as note($5,'还会一点') instead of degree($l3,'一点'); also '去年' on the meet event is not represented, and meet location is not specified as Tokyo."
+      },
+      "no_hallucination": {
+        "score": 9,
+        "reason": "No clear invented facts beyond the conversation; used only concepts present (Johns Hopkins vs Mayo, Tokyo vs Osaka, languages, wife Japanese, met/married). Minor structural issues don’t add new real-world claims."
+      },
+      "format_compliance": {
+        "score": 8,
+        "reason": "STL syntax mostly follows the 3-form pattern, but there are compliance problems: wife is used without a corresponding @wife person declaration, and degree is not used where expected. Also correct_intent/statement references are malformed ($6 points to $7 via a numeric id rather than a dedicated statement id in the same consistent way as reference). Still, it largely remains within STL form constructs."
+      }
+    },
+    "overall_comment": "The output captures many core facts but falls short on key modifier attachment (degree and '去年'/东京遇见), marriage location correction to 大阪, and some argument/reference and entity-declaration correctness.",
+    "parse_error": ""
+  },
+  {
+    "model": "deepseek-v3.2",
+    "case_id": "po-correction-001",
+    "judge_ms": 5589,
+    "weighted_score": 6.25,
+    "scores": {
+      "completeness": {
+        "score": 6,
+        "reason": "捕捉到人物“小李”、更正为“腾讯”的核心事实与更正意图，但未声明“百度”原说这一被更正的实体/事实（黄金未显式声明百度，但对更正说明的注释缺失也影响完整性）。"
+      },
+      "predicate_choice": {
+        "score": 7,
+        "reason": "使用了合理的“coworker/work_at/correct_intent”谓词，但“work_at”的论元应是腾讯实体而非字符串常量（导致语义表达不够贴合参考）。"
+      },
+      "argument_correctness": {
+        "score": 4,
+        "reason": "correct_intent 的对象参数应指向“$p2 = work_at(@li, @tencent)”这一语句（或其对应语义ID），但实际输出用的是 $c2 作为论元，且 $c2 是以字符串“腾讯”作为组织论元，链接结构与参考不一致。"
+      },
+      "correction_handling": {
+        "score": 3,
+        "reason": "虽有 correct_intent，但缺少黄金参考中的注释 note($c1, \"CORRECTION: 原说百度，更正为腾讯\"），且更正语义的表达不够完整。"
+      },
+      "modifier_attachment": {
+        "score": 10,
+        "reason": "对话中没有时间/数量等修饰信息，因此不存在错误的修饰绑定。"
+      },
+      "no_hallucination": {
+        "score": 9,
+        "reason": "未添加对话中没有的额外事实；主要问题在于组织用字符串而非实体声明，以及更正注释缺失。"
+      },
+      "format_compliance": {
+        "score": 6,
+        "reason": "整体遵循 STL 基本形式，但工作单位未按 @tencent: org 声明为实体，使用了字符串“腾讯”，可能仍被视为格式/建模不合规。"
+      }
+    },
+    "overall_comment": "输出包含了更正意图与核心关系，但对组织实体建模与 correct_intent 的指向/注释等关键对齐项不足。",
+    "parse_error": ""
+  },
+  {
+    "model": "deepseek-v3.2",
+    "case_id": "po-multi-event-001",
+    "judge_ms": 5210,
+    "weighted_score": 5.8,
+    "scores": {
+      "completeness": {
+        "score": 4,
+        "reason": "提到“男朋友/订婚”与“认识/订婚时间地点”均有覆盖，但缺少伙伴关系的显式建模（未声明@bf或partner谓词），且“认识”未单独用事件位置+时间结构表达；另外表姐与男朋友的实体关联不完整。"
+      },
+      "predicate_choice": {
+        "score": 5,
+        "reason": "“cousin”与“engage”方向接近订婚含义，但认识事件应使用meet并明确以男朋友为对象；实际输出把“meet”与“@巴黎”塞进同一语句但用法不符合参考（缺少partner/engagement事件类型与分离谓词）。"
+      },
+      "argument_correctness": {
+        "score": 3,
+        "reason": "@p2 使用 meet(@表姐, 男友, @巴黎) 参数数量/顺序不符合参考的 meet(@cousin,@bf) + location/time 分离；且“男友”未声明为@id实体，作为参数在STL一致性上有错误风险。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中没有更正/撤回内容，因此无correction相关问题。"
+      },
+      "modifier_attachment": {
+        "score": 4,
+        "reason": "“去年”与“上个月”用note标注但未通过 time/量词结构正确附着到对应事件（认识事件与订婚事件的 time/location 关系未规范建模）。"
+      },
+      "no_hallucination": {
+        "score": 8,
+        "reason": "除使用未在对话中显式出现为@id的“男友”标识外，其余主要信息（巴黎、伦敦、时间）与对话一致；未出现明显新增事实。"
+      },
+      "format_compliance": {
+        "score": 7,
+        "reason": "基本遵循3种形式，但存在未声明的参数实体（@表姐使用了@id但“男友”未声明）且使用note而非 $e_time/time 结构，可能仍被解析但语义结构不符合参考。"
+      }
+    },
+    "overall_comment": "输出抓住了巴黎/伦敦与“去年/上个月”的核心信息，但在事件与实体（男朋友/partner/engagement meet）建模、论元正确性及时间地点附着方式上与金标准差距较大。",
+    "parse_error": ""
+  },
+  {
+    "model": "deepseek-v3.2",
+    "case_id": "po-multi-value-001",
+    "judge_ms": 4389,
+    "weighted_score": 8.2,
+    "scores": {
+      "completeness": {
+        "score": 9,
+        "reason": "All stated facts are captured (languages: 中文/英语/日语; interests: 跑步/弹吉他), and the self-entity is present, but '一点日语' is not represented as a degree modifier predicate."
+      },
+      "predicate_choice": {
+        "score": 6,
+        "reason": "Uses 'like' instead of the reference 'hobby' for跑步/弹吉他; also represents '一点' via note rather than the degree predicate."
+      },
+      "argument_correctness": {
+        "score": 8,
+        "reason": "Arguments for speak and the self participant are correctly linked; however, hobby/like predicates differ from the intended semantic roles from the reference."
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "No corrections or retract/correct intent present; output is consistent with a non-correction scenario."
+      },
+      "modifier_attachment": {
+        "score": 4,
+        "reason": "The '一点' modifier for日语 should attach via a degree/quantifier relation to the speak(日语) statement, but it is placed as a free-text note instead of degree($p3, ...)."
+      },
+      "no_hallucination": {
+        "score": 10,
+        "reason": "No additional invented facts beyond the conversation are introduced."
+      },
+      "format_compliance": {
+        "score": 9,
+        "reason": "STL syntax is mostly valid, but the use of note to encode a structured modifier deviates from the expected semantic form (still syntactically acceptable)."
+      }
+    },
+    "overall_comment": "The output captures the main entities and relations, but misrepresents the '一点日语' modifier and uses different predicates ('like' vs 'hobby') from the golden reference.",
+    "parse_error": ""
+  },
+  {
+    "model": "deepseek-v3.2",
+    "case_id": "po-negation-001",
+    "judge_ms": 5097,
+    "weighted_score": 9.4,
+    "scores": {
+      "completeness": {
+        "score": 9,
+        "reason": "Captured dislike(香菜) and skills (游泳不擅长/不会游泳, 做饭很擅长); however, negation is represented as neg(@self, skill(...)) instead of directly expressing '不会游泳' via the exact pattern used in the reference."
+      },
+      "predicate_choice": {
+        "score": 10,
+        "reason": "Uses dislike for 香菜 and skill for 游泳/做饭; predicates align with the intended meanings."
+      },
+      "argument_correctness": {
+        "score": 8,
+        "reason": "Arguments for 香菜 and 做饭 are correct; neg(@self, skill(@self,\"游泳\")) matches the idea but differs structurally from the reference's use of an intermediate $id ($p3) for the skill being negated."
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "No corrections mentioned; output does not misuse correction intents."
+      },
+      "modifier_attachment": {
+        "score": 10,
+        "reason": "Adds note($p3,\"很擅长\") to reflect '很擅长做饭' appropriately; no other modifiers are required."
+      },
+      "no_hallucination": {
+        "score": 10,
+        "reason": "No extra entities, predicates, or facts beyond the conversation content."
+      },
+      "format_compliance": {
+        "score": 9,
+        "reason": "STL syntax is mostly valid; uses a note annotation and correct $p assignments, but negation nesting differs from the reference structure though still syntactically plausible."
+      }
+    },
+    "overall_comment": "The output largely matches the conversation and reference semantics, with only minor structural differences in how the negated '不会游泳' skill fact is represented.",
+    "parse_error": ""
+  },
+  {
+    "model": "deepseek-v3.2",
+    "case_id": "po-retract-001",
+    "judge_ms": 4591,
+    "weighted_score": 5.25,
+    "scores": {
+      "completeness": {
+        "score": 5,
+        "reason": "包含了老王的实体与一次撤回意图，但遗漏了原始的“老王养了一条金毛”的被撤回对应关系（以及缺少对撤回目标的原始表述引用）。"
+      },
+      "predicate_choice": {
+        "score": 4,
+        "reason": "neighbor 关系的谓词选择不符合金参照（应为 neighbor(@self,@wang)），且 retract_intent的使用语义方向与参考不同。"
+      },
+      "argument_correctness": {
+        "score": 3,
+        "reason": "neighbor谓词参数使用了未声明的@neighborwang（而且未按金参照的@self,@wang连接），retract_intent也绑定了“没养狗”而非对“养了金毛”的撤回。"
+      },
+      "correction_handling": {
+        "score": 2,
+        "reason": "未遵循金参照的更正建模：应撤回“老王养了一条金毛”，当前输出撤回的是“老王没养狗”，属于替换方向错误；同时出现不符合要求的“# nothing to extract”。"
+      },
+      "modifier_attachment": {
+        "score": 10,
+        "reason": "对话中无需要细粒度时间/数量/频率等修饰的内容被识别为修饰项。"
+      },
+      "no_hallucination": {
+        "score": 8,
+        "reason": "未引入明显对话之外的新事实，但使用了@neighborwang等额外实体/符号导致潜在不一致。"
+      },
+      "format_compliance": {
+        "score": 7,
+        "reason": "STL语法形式大体符合（@id与$语句与注释），但包含多余的“# nothing to extract”注释且整体链接关系不规范。"
+      }
+    },
+    "overall_comment": "输出保留了基本实体，但在纠错撤回方向、neighbor参数与论元绑定上与参考严重不一致，整体质量偏低。",
+    "parse_error": ""
+  },
+  {
+    "model": "deepseek-v3.2",
+    "case_id": "po-temporal-001",
+    "judge_ms": 6598,
+    "weighted_score": 5.9,
+    "scores": {
+      "completeness": {
+        "score": 5,
+        "reason": "覆盖了辞职（国企）、开餐厅（自营餐厅）、搬到深圳及时间（去年/上个月/三年前），但将“上个月刚搬到深圳”改成了“一个月”，并且实体/谓词建模与黄金参考存在偏差（如“餐厅”的关系谓词用own）。"
+      },
+      "predicate_choice": {
+        "score": 4,
+        "reason": "搬家使用move较合理；辞职使用resign合理；但“开了一家餐厅”用own（自有）不等同于开办/start，且父亲关系上使用father(@self,@father)的语义与golden中的father(@self,@dad)不一致。"
+      },
+      "argument_correctness": {
+        "score": 4,
+        "reason": "论元大体指向了父亲/地点/餐厅，但使用了未在输出中声明的@father实体（仅声明了@hz、@shenzhen、@restaurant），且father(@self,@father)的@self/@father绑定不符合黄金参考与常规论元设置。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中没有出现更正/撤回，因此无需处理更正意图；输出中也未出现correction-related谓词。"
+      },
+      "modifier_attachment": {
+        "score": 5,
+        "reason": "时间“三年前/去年/上个月”均有体现，但“三年前”被写成time(...,\"三年\")且“上个月刚搬到深圳”被附到move语句后的time为“一个月”，导致时间修饰不精确；此外“去年自己开了一家餐厅，上个月刚搬到深圳”中“去年”为开餐厅而不是其他事件，虽大致可对应，但谓词选择与论元使得时间落点不如黄金参考清晰。"
+      },
+      "no_hallucination": {
+        "score": 6,
+        "reason": "未引入明显新事件/新人物；但额外声明了@hz=杭州且未在任何语句中产生必要事实（无对应对话内容），属于无依据信息。"
+      },
+      "format_compliance": {
+        "score": 8,
+        "reason": "整体符合STL的@声明与$语句格式；但输出包含未声明实体@father，虽然不一定是语法错误，但会导致语义层面的合规性不足。"
+      }
+    },
+    "overall_comment": "输出大体抓住了主要事实与时间线，但存在关键的实体绑定问题（@father未声明）、“开餐厅”谓词不当、时间与地点修饰不精确以及引入了杭州等无关声明。",
+    "parse_error": ""
+  },
+  {
+    "model": "deepseek-v3.2",
+    "case_id": "po-uncertainty-001",
+    "judge_ms": 5114,
+    "weighted_score": 7.65,
+    "scores": {
+      "completeness": {
+        "score": 7,
+        "reason": "包含老板/谷歌/上海人推测与工作经历，但缺少“老板可能是上海人”的不确定性注释（note），且未用与golden一致的“相信/不确定”结构标注。"
+      },
+      "predicate_choice": {
+        "score": 8,
+        "reason": "使用 nationality 与 work_at 基本匹配；不过关于“好像/可能”的不确定表达仅用 believe 表示，缺少与golden一致的注释说明。"
+      },
+      "argument_correctness": {
+        "score": 6,
+        "reason": "$1/$2 与 $3/$4 的引用关系混乱：$2 作为 believe 的参数但在语义上应分别指向 nationality(work_at)陈述；同时缺少 $p1（boss(@self,@boss)）等关键指向。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中无更正/撤回内容，未出现 retract_intent 或 correct_intent，符合要求。"
+      },
+      "modifier_attachment": {
+        "score": 8,
+        "reason": "“好像/可能”作为不确定性应附着到对应陈述上；当前仅通过 believe 表达但未做 note 注释，仍可视为部分满足。"
+      },
+      "no_hallucination": {
+        "score": 9,
+        "reason": "未引入对话中未提及的额外事实；仅存在表达结构问题而非明显新增事实。"
+      },
+      "format_compliance": {
+        "score": 5,
+        "reason": "整体是 STL 风格但缺少 @id 的一致性声明（如 boss 实体未声明），且使用了 $1/$2 等不符合黄金参考的结构链，可能导致解析/语义对齐失败。"
+      }
+    },
+    "overall_comment": "输出覆盖了主要实体与关系，但在不确定性表达、关键实体链接（boss）以及语句引用结构上存在明显偏差。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4",
+    "case_id": "po-alias-001",
+    "judge_ms": 5289,
+    "weighted_score": 7.2,
+    "scores": {
+      "completeness": {
+        "score": 6,
+        "reason": "遗漏了“都叫她小雨”中作为同一指代的自/他关系刻画（如只建立了friend(@self,...)但未体现pku/org语义），且把“计算机”错误当成可作为study_at的地点而不是skill；总体缺少金参考中的教育/技能谓词结构。"
+      },
+      "predicate_choice": {
+        "score": 4,
+        "reason": "“北大”使用了place但黄金参考用org；更关键的是“计算机”用study_at而非skill。其余name、alias、friend较合理。"
+      },
+      "argument_correctness": {
+        "score": 5,
+        "reason": "friend(@self,@f1)、name/alias参数指向@f1正确；但$r4研究地点应指向org“北大”而非place，且$r6=study_at(@f1,'计算机')参数含义错误（应为skill）。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中无更正/撤回内容，输出未使用纠错谓词，符合要求。"
+      },
+      "modifier_attachment": {
+        "score": 10,
+        "reason": "对话未出现时间/频率/数量等修饰信息；输出也无不当修饰。"
+      },
+      "no_hallucination": {
+        "score": 9,
+        "reason": "未明显引入对话中不存在的新事实；仅是谓词/类型选择不一致，属于错误表达而非凭空编造。"
+      },
+      "format_compliance": {
+        "score": 8,
+        "reason": "整体遵循@id:TYPE与$id=pred(arg,...)与note不使用；但使用了$r1/r2等前缀且与@p1/@pku金参考风格不完全一致，虽仍接近可解析的STL形式。"
+      }
+    },
+    "overall_comment": "输出抓住了主要实体与部分关系，但在“北大”与“计算机”的谓词/类型选择上有关键错误，导致与金参考存在显著语义偏差。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4",
+    "case_id": "po-basic-001",
+    "judge_ms": 4083,
+    "weighted_score": 9.85,
+    "scores": {
+      "completeness": {
+        "score": 10,
+        "reason": "所有对话中的事实（姓名、年龄、职业、居住地）均已覆盖。"
+      },
+      "predicate_choice": {
+        "score": 10,
+        "reason": "使用的谓词均与事实匹配（name/age/occupation/live_in/place）。"
+      },
+      "argument_correctness": {
+        "score": 9,
+        "reason": "参数连接正确，除实体声明id从@hangzhou变为@hz外，其语义对应一致。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中无更正/撤回内容，未出现纠错相关问题。"
+      },
+      "modifier_attachment": {
+        "score": 10,
+        "reason": "无额外时间/频率/数量等修饰需精准挂载（仅有年龄数值与对应谓词）。"
+      },
+      "no_hallucination": {
+        "score": 10,
+        "reason": "未引入任何对话未提及的新事实。"
+      },
+      "format_compliance": {
+        "score": 10,
+        "reason": "输出遵循STL三种形式语法，无多余文本或非法格式。"
+      }
+    },
+    "overall_comment": "整体高度一致，唯一差异是居住地实体声明的@id命名不同但语义与参数引用保持正确。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4",
+    "case_id": "po-career-001",
+    "judge_ms": 6848,
+    "weighted_score": 0.0,
+    "scores": {
+      "completeness": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "predicate_choice": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "argument_correctness": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "correction_handling": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "modifier_attachment": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "no_hallucination": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "format_compliance": {
+        "score": 0,
+        "reason": "judge response parse error"
+      }
+    },
+    "overall_comment": "",
+    "parse_error": "JSON parse error: Expecting ',' delimiter: line 8 column 75 (char 1139)"
+  },
+  {
+    "model": "gpt-5.4",
+    "case_id": "po-comprehensive-001",
+    "judge_ms": 4632,
+    "weighted_score": 6.9,
+    "scores": {
+      "completeness": {
+        "score": 6,
+        "reason": "缺少关于约翰霍普金斯医院与东京的原始陈述（及其更正痕迹），且未体现“凯文是约翰霍普金斯医院的外科医生”的更正来源；其余要点（梅奥诊所、语言、妻子日本人、去年东京认识、结婚大阪、外科医生、说不确定）基本覆盖。"
+      },
+      "predicate_choice": {
+        "score": 8,
+        "reason": "工作地点（work_at）、职业（occupation）、会语言（speak+degree）和配偶（spouse）、相信不确定（believe）等谓词较合适；但未使用 meet 表达“去年在东京认识她”，导致重要谓词缺失。"
+      },
+      "argument_correctness": {
+        "score": 7,
+        "reason": "多数参数指向正确对象（凯文/妻子/梅奥诊所）；但兄弟关系中使用@bro而不是直接表达“哥凯文”且golden是 brother(@self,@kevin)；另外更正意图用于$p4和$p12尚可，但缺少东京会面地点与时间的正确参数结构。"
+      },
+      "correction_handling": {
+        "score": 5,
+        "reason": "有使用 correct_intent 标记两处更正，但未对“约翰霍普金斯→梅奥诊所”的原事实进行撤回/更正关联（也缺少东京→大阪结婚地点更正的对应旧事实）；同时输出中没有 note 注释，且会面更正（认识地点东京）未体现。"
+      },
+      "modifier_attachment": {
+        "score": 6,
+        "reason": "“一点法语”处理正确（degree 绑定到 speak）；但“去年在东京认识她”中的时间修饰缺失，因为没有 meet/时间/地点语句。"
+      },
+      "no_hallucination": {
+        "score": 8,
+        "reason": "大体未加入对话未提内容；但加入了@bro和alias(@bro,@kevin)属于对“哥凯文”这点的额外形式化，虽不一定错误但有未在golden中出现的额外事实表达。"
+      },
+      "format_compliance": {
+        "score": 9,
+        "reason": "整体为STL三种形式结构（实体声明与$语句与correct_intent赋值）且无明显语法错误；未使用note但不影响语法合规。"
+      }
+    },
+    "overall_comment": "输出覆盖了多数核心事实，但对两处更正的完整语义链（尤其是约翰霍普金斯/东京旧事实与“去年东京认识”事件）体现不足，并且兄弟关系的建模与golden不一致。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4",
+    "case_id": "po-correction-001",
+    "judge_ms": 4131,
+    "weighted_score": 7.25,
+    "scores": {
+      "completeness": {
+        "score": 6,
+        "reason": "Captures that 小李 works at 腾讯 and includes a correction intent, but omits the coworker relationship with 自己 and misses that the original statement was 百度→腾讯 (only partially reflected)."
+      },
+      "predicate_choice": {
+        "score": 8,
+        "reason": "Uses correct predicates for work_at and correct_intent; however coworker is missing rather than misused."
+      },
+      "argument_correctness": {
+        "score": 6,
+        "reason": "work_at(@xl, @tx) matches 小李→腾讯, but the correction is attached to $p1 without explicitly tying it to the original wrong claim (e.g., not linked to the incorrect 百度 statement as in the reference)."
+      },
+      "correction_handling": {
+        "score": 4,
+        "reason": "correct_intent is used, but the system does not clearly represent the A→B correction from 百度 to 腾讯 as the golden reference does, and the annotation note is missing."
+      },
+      "modifier_attachment": {
+        "score": 10,
+        "reason": "No time/quantity/frequency modifiers mentioned in the conversation."
+      },
+      "no_hallucination": {
+        "score": 9,
+        "reason": "No extra entities or facts beyond 小李、腾讯与工作关系 and a correction intent."
+      },
+      "format_compliance": {
+        "score": 10,
+        "reason": "Valid STL syntax using @id declarations, $ statements, and note is optional per spec; no extraneous text."
+      }
+    },
+    "overall_comment": "The output correctly states 小李 works at 腾讯 with a correction intent, but it misses the coworker relation and does not faithfully encode the full A→B correction structure from 百度 to 腾讯 as in the reference.",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4",
+    "case_id": "po-food-001",
+    "judge_ms": 6279,
+    "weighted_score": 6.6,
+    "scores": {
+      "completeness": {
+        "score": 6,
+        "reason": "覆盖了花生严重过敏、忌猪肉、泰国菜不能吃、偏好意大利面及每周至少三次、擅长做饭/烘焙、上周给姐过生日的巴斯克芝士蛋糕、奶茶和可乐不喝、黑咖啡/茶摄入及咖啡因上瘾这类信息，但对“喝茶/黑咖啡和茶只这两种”与“姐老说/可能太多了”未能准确体现；且“姐姐”生日时点与礼物/行为链路部分不等价于金标。"
+      },
+      "predicate_choice": {
+        "score": 4,
+        "reason": "多处谓词不匹配金标：过敏用 allergy:severe 而非 dislike:allergy；忌口猪肉用 eat+neg 但金标用 dislike:allergy 及 neg 结构；泰国菜不能吃被建成 eat/neg 但语义应为“不能吃/不吃”；做饭/烘焙谓词用 make:cook/make/hobby 混用，且“宗教原因”用 cause 代替 note/neg($neg1)的金标结构。"
+      },
+      "argument_correctness": {
+        "score": 5,
+        "reason": "大体上人物/食物参数连接合理，但关键关系链有偏差：礼物与生日的绑定（金标用 birthday(@sis)）在输出中由 birthday(@person1)与因为($p17,$p16)替代且参数不清晰；“我咖啡因上瘾”缺少对应的原句“可能太多了哈哈/老说”的语义承接，且 make:@food5 与 gift 的关系链不符合金标的 gift(@self, ...) 直接建模。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中无更正/撤回操作需求，输出也未引入 retract_intent 或 correct_intent。"
+      },
+      "modifier_attachment": {
+        "score": 6,
+        "reason": "“每周至少三次”与意大利面相关表达已附着到 make:cook(@self, @food4)上；“一天三杯以上”附着在黑咖啡 drink 上；但“最爱/特别/尤其/上周”部分与金标的载体谓词类型不同（如时间用于 gift/制作行为而非蛋糕/礼物主体），导致精确归属不一致。"
+      },
+      "no_hallucination": {
+        "score": 7,
+        "reason": "未明显添加原对话不存在的新事实，但存在语义层面的偏移：泰国菜被建成“吃/不吃”的具体谓词链，且“believe(@self, $p27)”与原句“可能太多了哈哈”不一致（更像推测/自嘲，而非信念/确认）。"
+      },
+      "format_compliance": {
+        "score": 9,
+        "reason": "整体使用了 @id 声明与 $id 语句形式，且无额外说明/Markdown；但存在一些谓词/命题形式不完全贴合金标风格（如 make:cook、believe、cause 的使用方式），不过仍在可解析的STL风格范围内。"
+      }
+    },
+    "overall_comment": "输出覆盖了大部分关键忌口与偏好信息，但在谓词选择、关系/时间/礼物链路建模以及对“可能”语气的处理上与金标及原对话语义存在较大偏差。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4",
+    "case_id": "po-health-001",
+    "judge_ms": 5419,
+    "weighted_score": 5.05,
+    "scores": {
+      "completeness": {
+        "score": 4,
+        "reason": "多项关键事实缺失或错误：缺少“睡眠不好/头疼持续多久+每天只能睡四五个小时”的正确建模（把头疼和睡眠混成同一链），缺少“没吃药”与“只是喝杯枸杞水/每天一杯”的关键限制语义（仅保留喝的行为但未表达不吃药），也缺少“父亲与奶奶都有高血压史”的等价家庭关系建模（父高血压保留但与奶奶的关系链出现混乱：用habit但未关联到father/mother结构）。老婆“催我去”的意图建模也不完整（问与建议给出的对象不清）。"
+      },
+      "predicate_choice": {
+        "score": 3,
+        "reason": "多处谓词不匹配：把“男”用occupation表达（性别不应作为occupation），用say/ask/recommend等谓词但与原对话语义对应不稳；用hobby/stop/cause等来表达运动中止与原因的方式不符合参考谓词体系；“比我还着急”用emotion+degree不稳定且多余。"
+      },
+      "argument_correctness": {
+        "score": 3,
+        "reason": "部分参数指向错误或不一致：抽烟用neg($20)且$20是habit(@self,\"抽烟\")但谓词/论元结构不清晰；家族关系使用father(@self,@father)正确但奶奶关系未按参考用母亲/母系链表达；duration/quantity分别挂在头疼habit链上，且“每天四五个小时”应属于睡眠时长而非对同一症状链的数量。老婆催去与ask(@spouse,@self)的方向也疑似不当。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中无更正（A→B 或 A撤回）现象，因此无需处理更正；输出未出现纠错意图谓词。"
+      },
+      "modifier_attachment": {
+        "score": 2,
+        "reason": "主要修饰语挂错：原文“最近老是头疼”“大概两三周”“每天大概只能睡四五个小时”应分别与头疼与睡眠持续时长对应；输出把“睡眠不好/两三周/每天四五个小时”混入同一结构，且“最近老是”作为frequency(头疼)不严谨。枸杞水“每天一杯”比参考更细但与原意“每天喝杯枸杞水”基本一致。"
+      },
+      "no_hallucination": {
+        "score": 7,
+        "reason": "整体未明显编造全新实体与事件（协和医院、家族高血压、游泳中止、喝枸杞水/红酒、抽烟否、老婆催诊）基本都在对话中；但出现“情绪/建议/一直”的具体谓词化内容可能是对原话的过度结构化或不准确细化（如ask/ recommend的具体因果与对象不明确）。"
+      },
+      "format_compliance": {
+        "score": 6,
+        "reason": "语法整体接近STL格式（@id声明、$id=语句、note未必需要），但存在明显不合规或可解析性问题：如$pos结构的numbered predicates与谓词不一致（例如 $2=occupation(@self,\"男\"），以及 neg($20) 作为独立语句缺少中间语义命题id的一致性；整体仍可能被解析但不够稳健。"
+      }
+    },
+    "overall_comment": "输出覆盖了一部分对话要点，但在关键症状/时长的修饰挂接、谓词选择与论元连接上多处偏离参考，导致语义完整性与结构正确性不足。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4",
+    "case_id": "po-multi-event-001",
+    "judge_ms": 2667,
+    "weighted_score": 7.8,
+    "scores": {
+      "completeness": {
+        "score": 7,
+        "reason": "Captures: cousin, Paris meet, boyfriend, London engagement, and both time modifiers; however misses explicit partner/relationship predicate for the boyfriend after meeting (only meet + engage), and uses engage event without an @london location entity reference matching the meet event in the reference."
+      },
+      "predicate_choice": {
+        "score": 5,
+        "reason": "Uses meet and engage appropriately, but the engagement is modeled with engage predicate instead of the reference's engagement-typed event; also lacks partner(@cousin,@bf) predicate used in the golden."
+      },
+      "argument_correctness": {
+        "score": 7,
+        "reason": "Arguments generally attached correctly: cousin(self,c1), meet(c1,b1) with time '去年', engage(c1,b1) with time '上个月' and location London; minor concern: engagement event modeled directly rather than separate event entity as in reference."
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "No corrections or retractions present; thus no correction handling issues."
+      },
+      "modifier_attachment": {
+        "score": 9,
+        "reason": "Time modifiers '去年' attached to the meet statement and '上个月' attached to the engagement statement; location attached to engagement, matching the conversation."
+      },
+      "no_hallucination": {
+        "score": 10,
+        "reason": "No extra facts beyond the conversation are introduced."
+      },
+      "format_compliance": {
+        "score": 7,
+        "reason": "Uses valid STL-like declarations and $ statements, but lacks consistent event-typing form from the reference (e.g., event(...) usage); still appears syntactically aligned with the 3 forms (entity declarations + semantic statements) without extraneous text."
+      }
+    },
+    "overall_comment": "The output correctly represents the main entities and events (meeting in Paris last year and engagement in London last month) with proper time/location attachment, but deviates from the golden reference’s predicate modeling for partner/engagement event structure.",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4",
+    "case_id": "po-multi-value-001",
+    "judge_ms": 1918,
+    "weighted_score": 9.0,
+    "scores": {
+      "completeness": {
+        "score": 9,
+        "reason": "遗漏了“日语”作为独立语言的表达方式：输出把“日语”与“一个点”合成到同一句里，导致结构不完全对齐参考，但整体仍覆盖了所有信息点。"
+      },
+      "predicate_choice": {
+        "score": 10,
+        "reason": "使用了正确的谓词 speak 表达会说语言、hobby 表达爱好。"
+      },
+      "argument_correctness": {
+        "score": 8,
+        "reason": "speak(@self,\"中文\"/\"英语\") 与 hobby(@self,...) 参数正确；但“日语一点”应拆成 speak(...,\"日语\") + degree(...,\"一点\")，现将“日语”错误地并入了语言参数。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中无纠正信息，因此无需处理 retract/appropriate correction_intent。"
+      },
+      "modifier_attachment": {
+        "score": 5,
+        "reason": "“一点”应作为程度修饰语言“日语”的 degree 修饰对象（degree($p3,\"一点\")），但当前输出把“一个点”直接放进 speak 的语言字符串，修饰落点不正确。"
+      },
+      "no_hallucination": {
+        "score": 10,
+        "reason": "未引入任何对话中不存在的新事实。"
+      },
+      "format_compliance": {
+        "score": 10,
+        "reason": "输出为STL语义语句形式，未包含不允许的解释或格式。"
+      }
+    },
+    "overall_comment": "主要问题在于“日语一点”的程度修饰未按预期用 degree 结构进行绑定，导致修饰与论元对应关系不正确。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4",
+    "case_id": "po-negation-001",
+    "judge_ms": 2030,
+    "weighted_score": 8.8,
+    "scores": {
+      "completeness": {
+        "score": 9,
+        "reason": "Captures all three core facts (dislike 香菜, not good at swimming/negated swimming, and skill at cooking), but uses an explicit degree modifier for cooking that isn’t present in the golden reference."
+      },
+      "predicate_choice": {
+        "score": 8,
+        "reason": "Uses dislike, skill, and neg correctly; however cooking is represented as skill plus degree instead of just skill as in the reference."
+      },
+      "argument_correctness": {
+        "score": 9,
+        "reason": "Arguments generally align: subject is @self for dislike and skills; negation correctly applies to the swimming skill statement."
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "No corrections appear in the conversation, and the output does not misuse retract_intent/correct_intent or add ghost statements."
+      },
+      "modifier_attachment": {
+        "score": 6,
+        "reason": "Adds degree('很擅长') attached to the cooking skill, which is plausible from the Chinese, but the golden reference does not include any degree modifier."
+      },
+      "no_hallucination": {
+        "score": 9,
+        "reason": "No invented entities/predicates; only an added modifier degree for cooking based on '很擅长' from the conversation."
+      },
+      "format_compliance": {
+        "score": 10,
+        "reason": "Uses valid STL statement form ($id = pred(...)) only; syntax matches the required format."
+      }
+    },
+    "overall_comment": "The output is largely faithful and well-structured, with a minor mismatch due to adding a degree modifier for cooking that wasn’t in the golden reference.",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4",
+    "case_id": "po-pet-001",
+    "judge_ms": 5318,
+    "weighted_score": 6.0,
+    "scores": {
+      "completeness": {
+        "score": 7,
+        "reason": "捕获了3只宠物、年龄/时长、宠物关系（买/送）、以及广州到上海搬迁；但未明确“大黄是金毛”、以及“大黄/团子/慢慢分别是金毛/英短蓝猫/乌龟”这类品种信息在输出中缺失，且“团子是朋友送的”与实体指向用法存在偏差。"
+      },
+      "predicate_choice": {
+        "score": 5,
+        "reason": "使用了buy/partner/move/age/duration等大体合理；但把“特别温顺/很调皮老是抓沙发/养了十多年了”用habit表达，且把“有三只宠物”用quantity(own(...),1)不符合金参照的建模方式；“朋友送的”对应gift(@, @tz)谓词参数不清晰且不像标准表达。"
+      },
+      "argument_correctness": {
+        "score": 4,
+        "reason": "大量论元链路不匹配：age(@tz, 8)与后续quantity($p9,\"个月\")拆分不如直接表达；gift(@, @tz)中@缺失主体；move(@self, @gz, @sh)以及move(@mm, @gz, @sh)参数结构与是否应移动的对象不一致；还出现重复/冲突的pet与own语句而未严格对应对话含义。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中无明确更正（A→B或撤回旧事实），因此无需使用correct_intent/retract_intent。"
+      },
+      "modifier_attachment": {
+        "score": 6,
+        "reason": "“十多年”作为duration附在慢慢的自有关系上接近正确，但“养了十多年了”原句中的时长更应直接/明确对应慢慢；“8个月”被拆成age与quantity，虽最终表示单位，但结构不够稳健。"
+      },
+      "no_hallucination": {
+        "score": 3,
+        "reason": "引入了金参照/对话未提及的新事实或错误事实：如“大黄特别温顺/团子很调皮老是抓沙发/慢慢养了十多年”虽在对话出现但谓词和实体关联可能被错误重组；另外gift(@, @tz)和move(@mm,...)等表达导致可能产生未被明确陈述的额外事件/主体移动。"
+      },
+      "format_compliance": {
+        "score": 7,
+        "reason": "整体使用了@声明与$语句，符合STL形式；但出现gift(@, @tz)中使用裸“@”作为论元，且有多处结构可能不符合预期谓词签名，降低语法/语义合规性。"
+      }
+    },
+    "overall_comment": "输出覆盖了主要人物与事件（买/送/搬家/年龄时长），但在谓词与论元链接上多处不准确，且存在疑似语法或主体指向错误，整体可靠性偏低。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4",
+    "case_id": "po-qa-001",
+    "judge_ms": 6435,
+    "weighted_score": 0.0,
+    "scores": {
+      "completeness": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "predicate_choice": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "argument_correctness": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "correction_handling": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "modifier_attachment": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "no_hallucination": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "format_compliance": {
+        "score": 0,
+        "reason": "judge response parse error"
+      }
+    },
+    "overall_comment": "",
+    "parse_error": "JSON parse error: Expecting ',' delimiter: line 9 column 160 (char 441)"
+  },
+  {
+    "model": "gpt-5.4",
+    "case_id": "po-retract-001",
+    "judge_ms": 5718,
+    "weighted_score": 8.7,
+    "scores": {
+      "completeness": {
+        "score": 7,
+        "reason": "包含了主要事实：老王为邻居且对“老王养了一条金毛”进行了撤回；但未出现“我记错了”这类更细的指代信息（如“我邻居老王”是否有“我”作为说话主体的明确建模）。"
+      },
+      "predicate_choice": {
+        "score": 9,
+        "reason": "使用neighbor与retract_intent匹配对“邻居/没养狗”的语义更正；无明显谓词误用。"
+      },
+      "argument_correctness": {
+        "score": 8,
+        "reason": "retract_intent参数字符串匹配被撤回的原句语义；neighbor(@self, @lw)方向与代称一致。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "仅使用retract_intent，没有同时出现correct_intent；且未保留旧错误事实的肯定陈述。"
+      },
+      "modifier_attachment": {
+        "score": 10,
+        "reason": "对话中未包含需要精确挂接的时间/频率等修饰语；本输出无此类修饰问题。"
+      },
+      "no_hallucination": {
+        "score": 9,
+        "reason": "未新增对话中没有的额外事实；仅出现“老王是邻居”和撤回“老王养了一条金毛”。"
+      },
+      "format_compliance": {
+        "score": 9,
+        "reason": "使用了@id与$id样式的两条语句，整体符合STL语法风格；但变量/ID命名与是否严格遵循示例（如@wang）存在轻微不一致风险，不过不影响语法有效性。"
+      }
+    },
+    "overall_comment": "整体忠实捕捉了对“老王没养狗”的撤回意图，只有轻微的主体建模/ID命名一致性方面的不足。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4",
+    "case_id": "po-temporal-001",
+    "judge_ms": 4098,
+    "weighted_score": 9.1,
+    "scores": {
+      "completeness": {
+        "score": 8,
+        "reason": "基本覆盖所有关键信息（辞职-国企、时间“三年前/去年/上个月”、开餐厅、搬到深圳、人物为父亲），但“去年自己开了一家餐厅”中“自己开”未被明确表达为对应语义（虽已用start捕获餐厅开业）。"
+      },
+      "predicate_choice": {
+        "score": 9,
+        "reason": "使用father/resign/start/move与时间time均匹配对话与参考；仅“开了一家餐厅”用start表达合理。"
+      },
+      "argument_correctness": {
+        "score": 9,
+        "reason": "参数指向正确：father(@self,@father)对应父亲；resign(@father,国企)与start(@father,餐厅)的主语一致；move(@father,@sz)地点也正确；时间分别挂在对应事件上。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话无更正/撤回，未使用correction相关机制，符合要求。"
+      },
+      "modifier_attachment": {
+        "score": 10,
+        "reason": "“三年前/去年/上个月”分别正确连接到辞职、开餐厅、搬家事件上；无额外修饰缺失或错挂。"
+      },
+      "no_hallucination": {
+        "score": 10,
+        "reason": "未引入对话未提及的实体、地点或事件；谓词与参数均与原句一致。"
+      },
+      "format_compliance": {
+        "score": 8,
+        "reason": "STL语法整体合规，但与参考相比实体标识使用了@father而非@dad、且start的餐厅表述为“ 一家餐厅”（语义等价），虽不违反语法但属于轻微偏离参考约定/命名。"
+      }
+    },
+    "overall_comment": "输出与参考在事件、地点与时间绑定上高度一致，只有人物命名与“自己开”这类细微意图表达存在轻微差距。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4",
+    "case_id": "po-uncertainty-001",
+    "judge_ms": 3258,
+    "weighted_score": 8.55,
+    "scores": {
+      "completeness": {
+        "score": 7,
+        "reason": "Captured boss’s Shanghai nationality and Google employment, and both hedged beliefs, but omitted two required note annotations for '好像/可能' uncertainty from the conversation."
+      },
+      "predicate_choice": {
+        "score": 9,
+        "reason": "Used nationality, work_at, and believe predicates appropriately."
+      },
+      "argument_correctness": {
+        "score": 8,
+        "reason": "Arguments are mostly correct: belief targets the intended nationality/work_at statements; however, entity declarations use @sh for place instead of the reference’s simple nationality predicate setup (still acceptable but less aligned)."
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "No corrections were present in the conversation or output."
+      },
+      "modifier_attachment": {
+        "score": 10,
+        "reason": "No explicit time/quantity/duration modifiers were mentioned; uncertainty is handled via believe predicate targets."
+      },
+      "no_hallucination": {
+        "score": 8,
+        "reason": "No clear invented facts, but introducing a separate place entity (@sh: place '上海') is extra structure not present in the golden reference (though consistent with '上海人')."
+      },
+      "format_compliance": {
+        "score": 9,
+        "reason": "Output uses the required @id declarations and $id-style statements, but lacks note(...) annotations; syntax appears valid STL."
+      }
+    },
+    "overall_comment": "The output captures the core semantic facts correctly but misses the crucial uncertainty note annotations and adds minor extra structure for Shanghai.",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4",
+    "case_id": "po-vibecoding-001",
+    "judge_ms": 8280,
+    "weighted_score": 6.0,
+    "scores": {
+      "completeness": {
+        "score": 7,
+        "reason": "包含了TS、个人名、蚂蚁集团/杭州/哈工大/摄影与索尼A7M4、Rust学习、域名Vercel等多数事实；但缺少“毕业于哈工大计算机系”的拆分细节（golden里有education/skill分法）、以及“前端开发五年经验”应作为occupation/前端经验而非仅note上；同时缺少“PingCAP之前在过”中正确的旧工作时态表达（golden里有time(before)）。"
+      },
+      "predicate_choice": {
+        "score": 6,
+        "reason": "PingCAP使用了resign代替work_at+time（谓词选择偏离golden）；对地点/品牌/爱好等基本合理，但“plan(@self, 放 Vercel 上)”和“buy(@self, siyuan.dev)”是否与golden的语义表达一致性较弱（golden未显式用这些谓词）。"
+      },
+      "argument_correctness": {
+        "score": 6,
+        "reason": "关键链接如正确的org参数（蚂蚁集团、杭州、哈工大）整体正确；但name/occupation/hobby/use等参数命名与golden结构不一致，且education与study_at的对象/顺序在语义上可能混淆（golden将education与计算机分开）。"
+      },
+      "correction_handling": {
+        "score": 3,
+        "reason": "对“不是PingCAP，是蚂蚁集团”的更正处理不符合golden：应对PingCAP的旧事实使用正确的纠正/撤回意图，并对蚂蚁集团使用correct_intent。输出使用了resign(@self,'PingCAP')但没有time('之前')，同时没有明确体现旧工作被纠正的结构（ghost旧事实也未按golden方式呈现）。"
+      },
+      "modifier_attachment": {
+        "score": 4,
+        "reason": "缺少golden中的“之前”时间修饰绑定（PingCAP旧工作）；“前端开发五年经验”被放在note里而非作为occupation的结构化修饰。其他如地点无额外时间/数量修饰。"
+      },
+      "no_hallucination": {
+        "score": 7,
+        "reason": "Vercel与域名siyuan.dev、索尼A7M4、摄影、Rust学习、蚂蚁集团、杭州、哈工大等均来自对话；但引入了brand、plan、buy、resign等谓词层面的具体表达方式未必与golden一致，且可能对“前端开发五年经验”的结构化表达有所偏差。"
+      },
+      "format_compliance": {
+        "score": 9,
+        "reason": "STL语法基本符合（@声明、$=语句、note），未出现markdown或额外说明；不过多处实体属性的建模与golden结构不同但仍属合法语法。"
+      }
+    },
+    "overall_comment": "总体覆盖面较好但在纠正处理、PingCAP“之前”时间修饰以及结构化职业经验等关键语义上偏离golden，导致质量中等偏低。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-mini",
+    "case_id": "po-alias-001",
+    "judge_ms": 6616,
+    "weighted_score": 6.8,
+    "scores": {
+      "completeness": {
+        "score": 7,
+        "reason": "丢失了明显的“北大读研究生”中的教育层级与研究生身份的拆分方式（虽有education/学习但关键关系不一致），且未出现education为“研究生”的独立陈述；另外研究生与计算机技能在语义上有错误重用。"
+      },
+      "predicate_choice": {
+        "score": 3,
+        "reason": "将“北大研究生”直接用education承载，并把“北大”与“计算机”都错误用education/education重用，缺少golden里应有的study_at、education(研究生)、skill(计算机)。"
+      },
+      "argument_correctness": {
+        "score": 6,
+        "reason": "name/alias的参数绑定到同一实体@p1是合理的，但study_at的参数位置与谓词本应不同；education(@p1, '计算机')与原意不匹配，且@pku/org实体未声明。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中没有更正/纠错意图，输出也未使用retract_intent/correct_intent。"
+      },
+      "modifier_attachment": {
+        "score": 8,
+        "reason": "“北大研究生”作为一个整体被放在同一谓词上，虽然抓住了组合信息但谓词不对，导致修饰/成分归属不符合golden拆分。"
+      },
+      "no_hallucination": {
+        "score": 9,
+        "reason": "未引入对话中不存在的全新事实，但谓词使用错误导致语义偏离（更像误标而非新增）。"
+      },
+      "format_compliance": {
+        "score": 4,
+        "reason": "STL语法形式不符合：开头出现@p1: person而应为@id: TYPE \"key\"；且实际输出缺少@pku等实体声明、使用了与给定golden不同的参数/类型组织方式。"
+      }
+    },
+    "overall_comment": "输出包含对“小雨”姓名与别名的正确提取，但对“北大/研究生/计算机”的谓词选择与参数组织严重偏离golden，并且存在明显STL格式/声明不规范问题。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-mini",
+    "case_id": "po-basic-001",
+    "judge_ms": 4100,
+    "weighted_score": 8.75,
+    "scores": {
+      "completeness": {
+        "score": 8,
+        "reason": "Conversation facts (name, age, occupation, living in Hangzhou) are captured, but the entity declaration for Hangzhou is missing (no @hangzhou declaration)."
+      },
+      "predicate_choice": {
+        "score": 10,
+        "reason": "Predicates (name/age/occupation/live_in/place) match the intended semantics."
+      },
+      "argument_correctness": {
+        "score": 7,
+        "reason": "live_in is linked to the place argument, but the place is given as an undeclared ref ($p1) rather than using the declared @hangzhou entity from the reference."
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "No corrections or retractions are present in the conversation."
+      },
+      "modifier_attachment": {
+        "score": 10,
+        "reason": "No extra time/quantity frequency modifiers beyond age are involved; age is attached correctly."
+      },
+      "no_hallucination": {
+        "score": 10,
+        "reason": "No additional unsupported facts are introduced beyond the conversation details."
+      },
+      "format_compliance": {
+        "score": 6,
+        "reason": "Uses STL-like syntax but includes an incorrect/invalid entity declaration form ($p1: place ...) instead of @id: TYPE \"key\"; also naming inconsistency ($p1 vs @hangzhou)."
+      }
+    },
+    "overall_comment": "The output captures all intended facts with correct predicates, but it deviates from STL format and entity declaration/argument linking, especially for the Hangzhou place entity.",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-mini",
+    "case_id": "po-career-001",
+    "judge_ms": 7471,
+    "weighted_score": 3.95,
+    "scores": {
+      "completeness": {
+        "score": 3,
+        "reason": "遗漏多项关键信息（如MIT大二交换时长1学期、复旦金融系/CS硕士与斯坦福关系、在高盛实习半年与“先实习后入职”链、星辰智能在杭州的地点关联方式、合伙人张韬为合伙人而非仅partner谓词、公司规模50+人及主要做企业级AI助手等虽有但谓词/论元不对且还有多余项/错位）。"
+      },
+      "predicate_choice": {
+        "score": 2,
+        "reason": "大量谓词选择不符合参考/语义：如把复旦金融系用concept而非education金融；把MIT用visit:exchange但却将斯坦福与MIT互混（实际输出里e4=MIT）；“高盛实习”用work_at但语句成分错且缺note/实习；partner/occupation/like等谓词与金标不一致或不恰当（如like应对应“主要做/从事”）。"
+      },
+      "argument_correctness": {
+        "score": 1,
+        "reason": "主要论元指向错误：e3 concept金融系被study_at绑定；e4 place MIT却用于visit到@e4（应交换MIT并带时间大二、一个学期）；$5=occupation(@self,\"实习\")参数类型不对且应为note或occupation@雇佣状态；$6 work_at(@self,@e5)但@e5是高盛org却丢失实习半年时长的关联实体；$9 live_in/@香港却没有与在香港分析师语义精确衔接；$10 duration($6,\"半年\")与$6是否为高盛实习的工作经历未正确建模。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中未出现显式更正（A改为B或撤回），因此无需使用correct_intent/retract_intent；输出也未引入冲突更正。"
+      },
+      "modifier_attachment": {
+        "score": 2,
+        "reason": "时间/时长多处未正确附着：缺少“MIT交换在大二、一个学期”的时间-时长；高盛实习半年与摩根三年虽有duration，但工作/事件绑定对象不清且参数与事件对应关系错误。"
+      },
+      "no_hallucination": {
+        "score": 2,
+        "reason": "出现与参考不一致或疑似凭空：如@e2/@e3使用概念与地点的错误绑定（如e3 concept金融系却被当学习地点）；还有像like(@e9,@e13)这种关系并非对话原话的标准表达（应为“主要做企业级AI助手”而非like）。整体存在不可靠/漂移事实结构。"
+      },
+      "format_compliance": {
+        "score": 9,
+        "reason": "整体为STL三种形式的语法风格，未出现markdown/代码框/说明性文字；但存在概念类型使用与谓词签名不匹配的潜在语法/语义层问题（例如occupation绑定到“实习”这种自由文本概念），不过仍属可解析格式。"
+      }
+    },
+    "overall_comment": "输出在格式上接近STL，但在实体-谓词选择、论元绑定以及MIT交换时间时长等关键事实捕获方面与金标严重偏离。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-mini",
+    "case_id": "po-comprehensive-001",
+    "judge_ms": 4910,
+    "weighted_score": 4.5,
+    "scores": {
+      "completeness": {
+        "score": 6,
+        "reason": "Missing key entities/predicates from the conversation: no separate wife person declaration, no spouse link, no believe/nationality uncertainty handling, missing degree modifier for “一点法语”, and incorrect/missing correction for the earlier incorrect org (no explicit correct_intent for work_at change)."
+      },
+      "predicate_choice": {
+        "score": 4,
+        "reason": "Uses non-golden predicate forms: brother(@self,@p1) uses wrong sibling target; occupation and speak are mostly fine, but correction uses correct_intent with an equality/workplace structure not aligned to reference; nationality assigned directly without believe/uncertainty predicate."
+      },
+      "argument_correctness": {
+        "score": 3,
+        "reason": "Major argument errors: person linking for brother uses @p1 as the brother target instead of the John Hopkins entity/person; correct_intent argument is malformed ($p1 = ...); spouse relationship is absent so arguments for meet/marry are inconsistent with semantics."
+      },
+      "correction_handling": {
+        "score": 2,
+        "reason": "Does not properly represent the two corrections described: the correction from John Hopkins to Mayo is not correctly modeled with retract_intent/correct_intent in an A→B form as in the reference; marital location correction to Osaka is not explicitly tied to correction_intent."
+      },
+      "modifier_attachment": {
+        "score": 4,
+        "reason": "Time/location modifiers for meet (去年, 东京) are attached correctly, and marry location is attached to marriage (大阪); but the “一点法语” degree modifier is missing."
+      },
+      "no_hallucination": {
+        "score": 7,
+        "reason": "Mostly sticks to stated facts (Mayo, languages, meet in Tokyo last year, marry in Osaka, wife Japanese); however introduces/uses an extra person entity name '约翰' and assigns brother relation involving that entity improperly."
+      },
+      "format_compliance": {
+        "score": 5,
+        "reason": "General STL structure is present, but there are syntax/semantics issues: repeated misuse of @p1 as both entity and statement id; $c1 = correct_intent(@self, $p1 = workplace(@p1, @o1)) is not valid STL form as used in the reference (assignment inside predicate)."
+      }
+    },
+    "overall_comment": "The output captures some surface facts (Mayo, languages, meet Tokyo last year, marry Osaka, wife Japanese) but has significant predicate/argument errors, improper correction modeling, and format issues.",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-mini",
+    "case_id": "po-correction-001",
+    "judge_ms": 4177,
+    "weighted_score": 6.55,
+    "scores": {
+      "completeness": {
+        "score": 6,
+        "reason": "Captures that 小李 works at 腾讯, but misses the original statement correction context (百度被否定的部分) and does not include the intended annotation text."
+      },
+      "predicate_choice": {
+        "score": 8,
+        "reason": "Uses reasonable predicates (coworker, work_at) and correct_intent for a correction, though missing the explicit modeling of the original incorrect company (百度)."
+      },
+      "argument_correctness": {
+        "score": 2,
+        "reason": "Argument linking is incorrect: coworker(@self, @p1) uses an entity where a person should be; $p1 is later reused as a name/attribute holder instead of a distinct person reference."
+      },
+      "correction_handling": {
+        "score": 6,
+        "reason": "Uses correct_intent for the corrected work_at fact, and does not restate the old wrong work_at. However, no retract/correct linkage to the original '百度' claim is represented, and the note from the reference is missing."
+      },
+      "modifier_attachment": {
+        "score": 10,
+        "reason": "No time/quantity/frequency modifiers are present in the conversation or output."
+      },
+      "no_hallucination": {
+        "score": 9,
+        "reason": "Does not introduce new entities or facts beyond 小李、腾讯、同事关系/工作关系 and the correction intent."
+      },
+      "format_compliance": {
+        "score": 6,
+        "reason": "STL syntax is mostly compliant, but references are inconsistent (uses @p1 where a typed entity should exist), which risks invalid semantics even if the surface syntax resembles STL."
+      }
+    },
+    "overall_comment": "The output gets the corrected '小李在腾讯上班' directionually right but has major reference/argument errors and omits the correction annotation and the original 百度 context.",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-mini",
+    "case_id": "po-family-001",
+    "judge_ms": 5426,
+    "weighted_score": 5.8,
+    "scores": {
+      "completeness": {
+        "score": 6,
+        "reason": "基本覆盖主要人物/地点/职业/关系/居住与孩子，但缺少关键表达如“爷爷现在90多岁身体还不错”的健康状态、以及“女儿刚上幼儿园”应为教育阶段；且未体现爸有两个兄弟这一点的结构化关系（仅部分用兄弟/父亲链补足）"
+      },
+      "predicate_choice": {
+        "score": 4,
+        "reason": "存在明显错误谓词：使用friend(@p1,@p2)（对爷爷奶奶关系不对）、brother(@p3,@p4)方向/指代不明确且与参考中‘爸的兄弟’结构不一致；国籍用“日本”对应“日本人”略不精确"
+      },
+      "argument_correctness": {
+        "score": 3,
+        "reason": "多处参数指向不对或不合理：brother(@p3,@p4)未表达‘爸爸的兄弟’与自我关系；spouse与live_in参数多处出现“@self”作为居住者/配偶的错配（如妻子林芳对应应为@wife且为@self的妻子，但这里用@p9做林芳却同时让@self居住与之冲突）；此外 work_at/occupation 的主体也与参考结构不一致"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中没有更正/撤回，因此无需处理纠错意图；输出也未出现correction意图语句"
+      },
+      "modifier_attachment": {
+        "score": 4,
+        "reason": "“90多岁”只提取为age(@p1,90)且丢失‘多岁’语义；‘刚上幼儿园’被错误地编码为occupation‘幼儿园学生’而不是教育阶段，且‘身体还不错’未作为修饰/状态出现"
+      },
+      "no_hallucination": {
+        "score": 5,
+        "reason": "除少量措辞差异外，出现了对话未提到的事实：friend(@p1,@p2)；以及把‘幼儿园’当作职业/身份（occupation‘幼儿园学生’）属于不恰当但接近于新建表述"
+      },
+      "format_compliance": {
+        "score": 9,
+        "reason": "整体为STL三种形式的声明与语句，语法风格符合（@id声明与$谓词语句），但缺少原对话中部分id类型的显式映射不影响语法；未出现额外说明性文字"
+      }
+    },
+    "overall_comment": "输出覆盖了大部分人物与地点信息，但存在多处谓词/参数指向错误（如friend、兄弟关系表达、@self与配偶居住的错配）以及幼儿园与年龄修饰的偏差。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-mini",
+    "case_id": "po-food-001",
+    "judge_ms": 6078,
+    "weighted_score": 7.8,
+    "scores": {
+      "completeness": {
+        "score": 7,
+        "reason": "覆盖了花生过敏、猪肉忌口、意大利面偏爱与频率、烹饪/烘焙、巴斯克芝士蛋糕、给姐过生日、奶茶/可乐不喝、黑咖啡/茶饮用及咖啡一天三杯以上；但缺少“泰国菜很多都不能吃”“咖啡因上瘾/可能太多了”的事实结构化表达（仅以note出现）以及姐姐实体的@sis式声明与部分关系不一致（birthday参数用@姐但未声明@姐/@sis）。"
+      },
+      "predicate_choice": {
+        "score": 7,
+        "reason": "大体使用了like/dislike/hobby/gift/birthday/frequency等；但“美食爱好者/手艺不错”未转为对应谓词（无技能表达），“黑咖啡/茶”用like而非golden的drink谓词可能不够贴合语义（对比参考用drink）。"
+      },
+      "argument_correctness": {
+        "score": 6,
+        "reason": "多数参数方向正确（如dislike花生/猪肉、意大利面频率、给姐生日的关联）；但birthday(@e8, @姐) 与参考中birthday(@sis) / gift(@self,...) 的建模方式不一致，且未提供@姐作为$sis对应的实体声明，存在引用/参数组织不严。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中没有出现更正/撤回语义，输出也未包含correction_intent或retract_intent。"
+      },
+      "modifier_attachment": {
+        "score": 7,
+        "reason": "“每周至少三次”与意大利面关联正确；“一天三杯以上”正确附着在黑咖啡；但“可能太多了哈哈”与“老说我咖啡因上瘾”更像对咖啡摄入/上瘾的说明，输出中作为note放置不够规范且未明确绑定到对应陈述（只能视为注释）。"
+      },
+      "no_hallucination": {
+        "score": 9,
+        "reason": "未新增明显对话未提及的实体或事件；note内容也来自对话原意（可能太多、咖啡因上瘾）。唯一较疑点是把黑咖啡/茶用like而非“不喝/喝”的明确谓词，但这不算新增事实。"
+      },
+      "format_compliance": {
+        "score": 9,
+        "reason": "使用了STL的$/note/注释形式，基本符合语法；但缺少@sis或对应实体声明与@id实体的完整性，会影响严格性，不过仍未违反主要语法结构。"
+      }
+    },
+    "overall_comment": "整体信息提取较完整且无明显编造，但在谓词选择（drink vs like）、姐姐/生日关系的参数建模、以及部分说明性句子的规范附着与实体声明方面与参考存在差距。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-mini",
+    "case_id": "po-health-001",
+    "judge_ms": 6083,
+    "weighted_score": 5.0,
+    "scores": {
+      "completeness": {
+        "score": 4,
+        "reason": "遗漏了妻子是护士/在协和医院工作、头疼与睡眠持续约两三周的明确表述与枸杞水的“喝一杯/每天”结构化频率（黄金有每天喝杯）；仅部分覆盖到高血压家族史、枸杞水、红酒、抽烟、游泳。"
+      },
+      "predicate_choice": {
+        "score": 3,
+        "reason": "多处谓词使用不当：把“在一家会计事务所上班/会计”拆成不一致的 occupation/work_at 语义（且谓词如 doubt/believe/maybe/say 用法与目标事实不匹配）；“以前每周两次”被当作不同时间/否定不一致；父亲/奶奶关系用谓词错误（sister instead of mother/mother:mother）。"
+      },
+      "argument_correctness": {
+        "score": 2,
+        "reason": "存在大量参数错误与悬空引用：$e4 = time($e5...) 引用了未定义的时间链；@p1/@p2 定义在末尾但多处与 $e17/father(@self,@p1) 目标不匹配于黄金的 @dad/@grandma；$e17 指向父亲但其高血压未用 habit:health；$e18 = sister(@self,@p2) 明显对象/关系不对。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中没有出现显式更正（A→B 或撤回旧事实）需要用 correct_intent/retract_intent，因此无须处理。"
+      },
+      "modifier_attachment": {
+        "score": 3,
+        "reason": "关键修饰未正确挂接：睡眠不好/头疼持续“两三周”链路被用 doubt/say 结构破坏；“每周两次”“以前每周”没有正确转成 frequency(游泳, 每周两次)；“四五个小时”作为 sleep 时长可以，但其上游结构不稳。"
+      },
+      "no_hallucination": {
+        "score": 7,
+        "reason": "整体未明显引入对话不存在的新事实，但加入了若干不符合语义的中间事实/谓词语气（如 doubt/believe/maybe/say 的组合）使得表述不准确，虽不算严格“新事实”，但会被视为偏离原意。"
+      },
+      "format_compliance": {
+        "score": 6,
+        "reason": "使用了 STL 形式，但存在语法/引用问题：例如 $e4 = time($e5, ...) 且 $e5 在同一条链中以非常规方式被用于时间参数；整体仍接近 STL 三种形式，但声明与引用关系异常。"
+      }
+    },
+    "overall_comment": "输出整体严重偏离黄金的谓词与关系建模，且存在多处参数/引用错误，导致关键事实（尤其妻子与协和医院、家族高血压关系结构）缺失或错误。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-mini",
+    "case_id": "po-long-complex-001",
+    "judge_ms": 8938,
+    "weighted_score": 2.5,
+    "scores": {
+      "completeness": {
+        "score": 3,
+        "reason": "遗漏多项关键信息/结构：缺少伙伴订婚被否定的“纠正意图”链（如$r2`后缺少与订婚相关的完整纠正表达）、未明确提到“周然考虑订婚/未订婚”的来源与否定关系；“室友老赵与两条狗由他妈暂时帮忙养着”“黄山日出由谁带去”等核心关系也处理不准确或缺失（例如多余的meet链、缺少与“他妈帮忙养着”的对应语义）。"
+      },
+      "predicate_choice": {
+        "score": 2,
+        "reason": "大量谓词不符合黄金参考：如用occupation/概念化替代breed/合适谓词、用meet与visit/时间事件结构乱连；海鲜/川菜用like/neg/dislike+cause等不对应原意；“老赵辞职去日本读CS博士”中resign与study/work关系谓词使用不当（resign后仍出现in_work/养着且不对应他妈帮忙）。"
+      },
+      "argument_correctness": {
+        "score": 2,
+        "reason": "参数绑定错误：例如使用work_at(@p3,@p28)但@p28是“黄山”的place而非日本；live_in(@self,@p12)与“杭州/上海”的归属不对（@p12=上海）；visit/meet链中主体与宾语错位（如$e26/$e27/$e28把会面关系替代徒步/同游语义）；child(@p4,@p3)等家庭关系明显不在对话中且参数对象错误。"
+      },
+      "correction_handling": {
+        "score": 1,
+        "reason": "对纠正处理严重不一致：针对“苏晴不是做UI设计、而是产品经理”使用了correct_intent但同时还保留/表达了UI设计occupation并额外说法（$e8/$e10/$e11等与纠正无关且可能引入新事实）；“周然没订婚，只在考虑”用undecided(@p1,'订婚')但缺少对“可能订婚”的明确纠正意图结构，且并未体现母亲夸大其词的更正链条（gold用defer/correct_intent/correction替代不确定与旧说法）。"
+      },
+      "modifier_attachment": {
+        "score": 3,
+        "reason": "时间/时长修饰多处错挂或丢失：如“之前在杭州的阿里干过两年”中把@self live_in指到错误地点、duration($e13,2)但@e13对应work_at(@self,@p13=阿里?)且时间“之前”未与正确工作陈述绑定；“上个月黄山”部分时间挂在visit之前，但“看日出”事件未正确与时间/地点层级一致；“暂时”与“他妈帮忙养着”未正确挂到相关谓词。"
+      },
+      "no_hallucination": {
+        "score": 1,
+        "reason": "加入多条对话未出现的事实/实体关系：例如拉布拉多/Lucky和Mochi宠物的谓词用own虽可能可接受但出现child(@p4,@p3)/child(@p6,@p3)明显未在对话中；还把“日本/CS/博士/养着”等以不合理谓词组合引入额外结构（如in_work/study_at等未对应“他妈帮忙养着两条狗”的真实表述）。"
+      },
+      "format_compliance": {
+        "score": 7,
+        "reason": "STL语法整体接近@id声明与$var = pred(...)形式，但存在不符合语义/可能不被解析的谓词与参数混用（如概念实体大量、未使用note/时间/地点链结构一致）；同时出现emotion/birthday等谓词在黄金未用且可能不在系统谓词表，且部分关系如meet链维度过深但仍属形式可解析。"
+      }
+    },
+    "overall_comment": "输出在格式上相对接近STL，但谓词选择与参数绑定大量偏离黄金参考，并且引入了多条对话未提及的事实，导致整体语义抽取质量较低。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-mini",
+    "case_id": "po-long-simple-001",
+    "judge_ms": 12374,
+    "weighted_score": 7.3,
+    "scores": {
+      "completeness": {
+        "score": 7,
+        "reason": "覆盖了大部分事实（身份/年龄/工作、住北京朝阳、家成都、家人职业、猫与橘猫豆豆、跑步频率、电影与科幻、语言、北航/清华/MBA、百度三年与跳字节、室友王磊/打羽毛球、女友林悦与广告公司、去年聚会认识、咖啡与不喝酒、去日本东京大阪去年、今年夏天去欧洲法国意大利）。但遗漏关键细节如：未表达“英语还行能工作交流”“日语学了一点还不太行”；“医院上班/护士在医院”的关联方式不完整（把医院当作工作地）；未表达“打羽毛球（在一起）”而仅出现 teammate/共享羽毛球缺失；且“酒”与“不喝酒”的语义用 neg(drink)但未对应原始陈述‘我不喝酒但爱喝咖啡’的整体语义结构。"
+      },
+      "predicate_choice": {
+        "score": 6,
+        "reason": "多处谓词选择不如参考：像“like(科幻片)”应通过“最喜欢/偏好”但仍可接受；“habit/跑步”与“频率”不够贴合参考的 hobby 表达；不喝酒用 neg(drink)不符合参考的 dislike 形式；‘去日本/东京/大阪去年’中 visit/intend 的谓词选择基本合理，但与参考时间建模存在偏差。"
+      },
+      "argument_correctness": {
+        "score": 6,
+        "reason": "多数参数绑定到正确对象（人物/关系如姐姐、父母、猫、女友与公司）。但存在明显错误：@p4=母亲后将其 work_at(@p4, @h1) 且@h1=org\"医院\"，参考应是“occupation(护士)”并且母亲在医院上班（医院作为work_at:type），当前把医院放在 work_at 的第二参数但缺少医院类型/结构一致性；跑步频率把 3 与“每周”拆成两个 frequency 参数不一致；打羽毛球相关谓词与参数没有表达为共享/一起打（仅出现 teammate/仍缺关键事实）。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中没有出现更正（A→B 或撤回旧事实）语义，因此未触发更正处理问题。"
+      },
+      "modifier_attachment": {
+        "score": 5,
+        "reason": "存在多处修饰/数量频率挂载不规范：跑步“每周跑三次”应挂到同一爱好/活动并用‘三次/每周’一致形式；咖啡“每天至少两杯”被拆为 quantity=2 且 frequency='每天'，可算接近但未体现‘至少’；日本访问时间“去年”在 visit 上应分别或至少与东京/大阪访问一致（当前只对一个 visit('日本')加time，东京/大阪未挂时间）。"
+      },
+      "no_hallucination": {
+        "score": 8,
+        "reason": "未发现明显编造的新事实（如不存在的国家/城市/人名）。但有少量潜在语义偏移：把“每周跑三次”的频率结构改写为 frequency(@e21, 3) 与 frequency(@e21,'每周')，虽不算新增事实，但属于形式性偏差；对“医院上班”用工作关系表达方式不同，可能引入轻微语义漂移。"
+      },
+      "format_compliance": {
+        "score": 9,
+        "reason": "整体遵循 STL 三种形式（@id: TYPE/ $id=pred/... / note），未见明显语法错误或额外文本。但使用了 neg(drink(...))、place($id, ...) 与复杂关系参数的写法是否被系统接受存在不确定性；此外缺少 #comment 但这不影响合规性。"
+      }
+    },
+    "overall_comment": "输出基本覆盖主要人物与事件，但在语言能力细节、打羽毛球事实表达、时间/频率/数量修饰挂载以及“不喝酒/医院上班”等谓词与论元结构上与参考存在较多偏差。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-mini",
+    "case_id": "po-multi-event-001",
+    "judge_ms": 4017,
+    "weighted_score": 4.6,
+    "scores": {
+      "completeness": {
+        "score": 2,
+        "reason": "仅包含一次见面事件（且参数不正确），缺少表姐/男友/巴黎/伦敦/去年/上个月及订婚事件等关键信息。"
+      },
+      "predicate_choice": {
+        "score": 7,
+        "reason": "meet 作为“认识了男朋友”的事件谓词是合理的，但缺少订婚（engagement）等必要谓词。"
+      },
+      "argument_correctness": {
+        "score": 1,
+        "reason": "meet(@self, @self) 使用了错误的论元：没有区分表姐与男友，@self 与论元角色不符合参考结构。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中无更正/撤回内容，因此不存在纠错逻辑问题。"
+      },
+      "modifier_attachment": {
+        "score": 0,
+        "reason": "缺少“去年”“上个月”等时间修饰的任何附着表达。"
+      },
+      "no_hallucination": {
+        "score": 10,
+        "reason": "未引入对话中未提及的新事实；输出只有一个 meet 语句（虽然论元错误）。"
+      },
+      "format_compliance": {
+        "score": 0,
+        "reason": "缺少所需的实体声明（@cousin/@bf/@paris/@london 等），且格式可能导致引用/语义不完整；未严格满足参考所用的STL结构要求。"
+      }
+    },
+    "overall_comment": "输出基本未覆盖对话的实体、地点、时间和订婚事件信息，且见面事件论元错误，整体质量很低。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-mini",
+    "case_id": "po-multi-value-001",
+    "judge_ms": 4069,
+    "weighted_score": 9.9,
+    "scores": {
+      "completeness": {
+        "score": 10,
+        "reason": "All stated language abilities and hobbies (including '一点日语' degree) are captured with no missing facts."
+      },
+      "predicate_choice": {
+        "score": 10,
+        "reason": "Uses speak for languages, degree for '一点日语', and hobby for running and guitar, matching the intended predicates."
+      },
+      "argument_correctness": {
+        "score": 10,
+        "reason": "Arguments are correctly attached: self as the speaker for speak/hobby, and degree applied to the correct speak event."
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "No corrections or replacement/withdrawal events appear in the conversation or output."
+      },
+      "modifier_attachment": {
+        "score": 10,
+        "reason": "The '一点' modifier is correctly attached via degree to the '日语' speak statement."
+      },
+      "no_hallucination": {
+        "score": 10,
+        "reason": "No extra entities, predicates, or facts beyond the conversation are introduced."
+      },
+      "format_compliance": {
+        "score": 9,
+        "reason": "Output is valid STL-like syntax using $-statements only; however, it omits the @id entity declarations used in the golden reference, though no parser requirement is explicitly violated by the given rules."
+      }
+    },
+    "overall_comment": "The output faithfully reproduces all conversation facts with correct predicates, arguments, and modifier attachment, with only minor potential schema-declaration omission.",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-mini",
+    "case_id": "po-negation-001",
+    "judge_ms": 3614,
+    "weighted_score": 3.0,
+    "scores": {
+      "completeness": {
+        "score": 0,
+        "reason": "未提供任何“Actual STL Output”，无法判断是否覆盖“不喜欢香菜/不会游泳/很擅长做饭”等事实。"
+      },
+      "predicate_choice": {
+        "score": 0,
+        "reason": "由于没有实际输出，无法评估谓词是否正确（例如 dislike、neg(skill) 等）。"
+      },
+      "argument_correctness": {
+        "score": 0,
+        "reason": "缺少实际输出，无法检查参数是否绑定到正确谓词与正确顺序。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中没有更正/撤回内容；但因无实际输出，仍无法验证是否正确处理（此项按对话特征给高分）。"
+      },
+      "modifier_attachment": {
+        "score": 0,
+        "reason": "未提供实际输出，无法检查“很擅长”这类程度修饰是否正确附着。"
+      },
+      "no_hallucination": {
+        "score": 10,
+        "reason": "未给出实际输出，因此不会出现可归因的虚构事实（保守按无证据处理）。"
+      },
+      "format_compliance": {
+        "score": 0,
+        "reason": "未提供STL语句，无法验证是否符合 STL 3形式语法要求。"
+      }
+    },
+    "overall_comment": "未提供“Actual STL Output”，因此无法进行有效的逐项对比评估。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-mini",
+    "case_id": "po-pet-001",
+    "judge_ms": 8224,
+    "weighted_score": 7.0,
+    "scores": {
+      "completeness": {
+        "score": 8,
+        "reason": "覆盖了三只宠物、年龄、性格/习性、品种归属、男友小杰、购买、搬家、从广州到上海与慢慢十多年等大部分信息；但“慢慢是我小时候养的”与之相关的时段/背景未按参考用“小时候养”准确表达（输出改成了d3的age为小时候），且缺少“慢慢跟了我”这一随迁语义表达（仅有move）。"
+      },
+      "predicate_choice": {
+        "score": 6,
+        "reason": "使用own/partner/buy/move/duration等基本合理；但“特别温顺”“很调皮老是抓沙发”用habit不一定贴合原语义且品种/宠物类型关系用occupation较别扭；“小时候养”用age(@d3, '小时候')谓词选择不恰当。"
+      },
+      "argument_correctness": {
+        "score": 6,
+        "reason": "buy(@p1,@d1)和partner参数位置正确；move(@d3,@pl1,@pl2)参数与参考不同（参考是move(@self,'上海')并注释从广州搬到上海），且“慢慢是我小时候养的”被编码为age参数为“小时候”，在参数含义上不匹配。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话无明确更正/撤回；输出未使用或混用correct_intent/retract_intent，符合要求。"
+      },
+      "modifier_attachment": {
+        "score": 5,
+        "reason": "“从广州搬到上海”应作为搬家动作的修饰/注释（参考note绑定move），但输出仅以move(@d3,@pl1,@pl2)且缺少注释；“十多年”作为duration绑定慢慢可接受；“小时候”作为age修饰并不符合语义目标。"
+      },
+      "no_hallucination": {
+        "score": 6,
+        "reason": "未出现明显对话中没有的信息；但gift(@d1,@d2)与对话“团子是朋友送的”不一致，且gift参数对象/方向错误（应与“团子被送”相关，而不是大黄赠给团子）。"
+      },
+      "format_compliance": {
+        "score": 7,
+        "reason": "整体遵循STL 3形式+注释的声明与$谓词语句；但未使用note($id, ...)（虽然可选），且第16条move的参数形式可能与参考约定不完全一致。语法看似可解析但语义结构与参考存在偏差。"
+      }
+    },
+    "overall_comment": "输出大体覆盖主要事实，但在“小时候养/搬家动作归属/朋友送团子”以及gift与move编码上存在明显语义与参数错误，导致完备性与准确性受损。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-mini",
+    "case_id": "po-qa-001",
+    "judge_ms": 7099,
+    "weighted_score": 7.7,
+    "scores": {
+      "completeness": {
+        "score": 7,
+        "reason": "覆盖了主要实体与多数事实（签证出差未显式表达、\"下个月\"时间缺失；\"南山区\"也未作为地点注释/分项体现）。"
+      },
+      "predicate_choice": {
+        "score": 6,
+        "reason": "部分谓词不一致于金标准/语义（如把肉骨茶用like而非recommend/推荐，asyncio仅作为概念且未与提问关联；\"编程\"用hobby不够贴合为学习问题）。"
+      },
+      "argument_correctness": {
+        "score": 7,
+        "reason": "大体参数指向正确（配偶Kevin、国籍美国、居住深圳南山区、女儿朵朵与年龄未给出）；但华为实体使用了\"华为海外事业部\"作为org可能过细且与金标准的海外事业部注释处理不同。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中无更正/撤回内容，未出现纠错意图或相关冲突。"
+      },
+      "modifier_attachment": {
+        "score": 5,
+        "reason": "\"下个月\"时间修饰出差计划未表达；\"最近在学\"等学习时间未体现；女儿三岁年龄也缺失。"
+      },
+      "no_hallucination": {
+        "score": 9,
+        "reason": "未发现明显凭空编造的新事实；仅谓词选择与粒度可能偏差（如like/hobby）。"
+      },
+      "format_compliance": {
+        "score": 10,
+        "reason": "STL语法形式正确，仅使用@id声明与$语句，未包含多余文本/代码/markdown。"
+      }
+    },
+    "overall_comment": "整体抓住了核心人物关系与部分兴趣/职业信息，但缺少金标准中的出差时间、女儿年龄、以及肉骨茶推荐/学习表述等关键修饰与谓词细节。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-mini",
+    "case_id": "po-retract-001",
+    "judge_ms": 5956,
+    "weighted_score": 5.8,
+    "scores": {
+      "completeness": {
+        "score": 6,
+        "reason": "包含了“老王不是养狗”的更正意图，但缺少对原先具体事实“养了一条金毛（狗）”的撤回记录（retract_intent）以及对“金毛/一条狗”的明确实体引用。"
+      },
+      "predicate_choice": {
+        "score": 5,
+        "reason": "使用了neg(own(...))来表达否定，但未使用参考中的retract_intent来处理更正语义；同时“邻居”关系的谓词与论元虽相似但未与引用@wang一致。"
+      },
+      "argument_correctness": {
+        "score": 6,
+        "reason": "neighbor(@self,@lw)结构合理，但neg(own(@lw,@dog1))中@dog1未在输出中声明，且金毛与“一条狗”的具体对应未正确建模。"
+      },
+      "correction_handling": {
+        "score": 1,
+        "reason": "对“我记错了”这种A→B更正，未使用retract_intent；同时未避免保留旧错事实的处理方式与参考不一致，因此更正处理不合要求。"
+      },
+      "modifier_attachment": {
+        "score": 10,
+        "reason": "对话中无时间/频率/数量等需额外修饰的明确修饰词（除“一条金毛”作为对象量），整体无明显修饰挂载错误。"
+      },
+      "no_hallucination": {
+        "score": 6,
+        "reason": "未看到明显凭空的新事件，但引入了@dog1且未在对话中明确该命名实体；此外用neg(own(...))表达并非完全不当，但缺乏对“金毛”对应的具体属性。"
+      },
+      "format_compliance": {
+        "score": 9,
+        "reason": "整体使用了STL实体声明、语句与note，语法接近可解析形式；但@dog1未声明可能导致解析/语义落地问题，仍基本符合格式要求。"
+      }
+    },
+    "overall_comment": "输出抓住了更正后的否定含义，但未按要求用retract_intent准确表达撤回，并且对“金毛/一条狗”与相关实体建模不充分。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-mini",
+    "case_id": "po-temporal-001",
+    "judge_ms": 4613,
+    "weighted_score": 8.0,
+    "scores": {
+      "completeness": {
+        "score": 7,
+        "reason": "Captures all core events (resign, start restaurant, move to Shenzhen) and their times, but misses the explicit entity distinction that the golden reference separates @dad and @sz; also no explicit $t/time entities beyond time statements."
+      },
+      "predicate_choice": {
+        "score": 9,
+        "reason": "Uses appropriate predicates resign, start, and move, matching the conversation intent."
+      },
+      "argument_correctness": {
+        "score": 7,
+        "reason": "Arguments are mostly aligned (resign/start/move take @p1), but time is represented as separate statements without the golden structure (time on an event) and the identity of place is passed as a raw string rather than a declared place entity."
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "No corrections were present in the conversation; output contains no correction markers."
+      },
+      "modifier_attachment": {
+        "score": 6,
+        "reason": "Time modifiers are present but attached via direct time statements without the exact event-time linking structure shown in the reference (e.g., time($e1, ...) is not represented as such)."
+      },
+      "no_hallucination": {
+        "score": 10,
+        "reason": "No additional facts beyond the conversation (国企辞职、开餐厅、搬到深圳、三年前/去年/上个月) are introduced."
+      },
+      "format_compliance": {
+        "score": 6,
+        "reason": "STL syntax is mostly respected, but the output uses @p1 entity declaration instead of matching the reference keys and lacks explicit place entity declaration; still, it does not violate the 3-form constraint."
+      }
+    },
+    "overall_comment": "The output accurately captures the stated facts and events with correct predicates, but diverges from the golden reference in entity declarations and the exact event-time attachment structure.",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-mini",
+    "case_id": "po-travel-001",
+    "judge_ms": 8315,
+    "weighted_score": 5.7,
+    "scores": {
+      "completeness": {
+        "score": 6,
+        "reason": "Major entities and several relations are present (cities/countries, 小敏/朴智勋/刘洋, 三星 job, plans). But key facts from the conversation/golden reference are missing or incorrect: 自己与小敏同学关系、朴智勋国籍/韩国人、首尔江南区的表述未以正确note/修饰方式呈现、去京都看红叶/吃芒果糯米饭等活动与“去年”时间连接不完整。"
+      },
+      "predicate_choice": {
+        "score": 3,
+        "reason": "Predicates deviate from reference and include likely wrong choices: using meet/eat with @self instead of visit/take action via correct framing; using marry(@p1,@p2) without linking spouse intent; using workplace instead of work_at; using emotion/want for怕冷/想去极光而不是 plan/intent structure used in reference."
+      },
+      "argument_correctness": {
+        "score": 4,
+        "reason": "Arguments are often mismatched: visit(@self, @c1/@c2/@c3) uses @c1..@c3 as countries rather than specific places (曼谷/京都/首尔) with correct mapping; plan(@self, $e2) passes an event id ($e2 is not an event in output); spouse(@self, @p3) directionality likely wrong; time attachments ($e19 plans with wrong types) indicate structural argument errors."
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "No correction/retraction behavior is present, so nothing to evaluate."
+      },
+      "modifier_attachment": {
+        "score": 4,
+        "reason": "Time modifiers exist but are attached incorrectly: '去年' applied to visit events but not consistently to eat/see-redleaf in a way matching the conversation; '今年' and '明年' are attached to visits rather than to plans (冰岛极光/明年蜜月) as in the reference."
+      },
+      "no_hallucination": {
+        "score": 7,
+        "reason": "No completely new countries/people/orgs are introduced, but there are added/altered facts not explicitly stated or not supported by the conversation framing (e.g., emotion(@p3,'怕冷'), want(@p3,'去冰岛'), and '蜜月' event modeled without the full predicate structure). Also '泰国/日本/韩国' are asserted as countries visited, which is not exactly what reference specifies (曼谷/京都/首尔)."
+      },
+      "format_compliance": {
+        "score": 5,
+        "reason": "STL-like syntax is used, but there are type/structure issues: note($id, ...) is not used for 江南区; plan(@self, $e2/$e3) uses $e2/$e3 entity ids that are predicates/placeholder ids not aligned to the expected event objects from earlier statements; visit targets use country entities rather than place entities, making the semantic structure inconsistent with STL modeling expectations."
+      }
+    },
+    "overall_comment": "Output captures many surface entities but suffers major predicate/argument mis-modeling (wrong targets for visits/plans, incorrect time/modifier attachment, and missing reference-level relations like nationality/classmate/正确note处理), leading to low overall semantic fidelity.",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-mini",
+    "case_id": "po-uncertainty-001",
+    "judge_ms": 5720,
+    "weighted_score": 5.4,
+    "scores": {
+      "completeness": {
+        "score": 4,
+        "reason": "提到了老板、上海、谷歌与不确定性，但丢失了“相信/不确定”分别指向“上海人”和“之前在谷歌工作过”的正确绑定；同时未包含任何注释note，且“上海人”未以“上海人”形式表达（改成了中国国籍）。"
+      },
+      "predicate_choice": {
+        "score": 5,
+        "reason": "使用了believe、nationality与work_at较接近目标，但把“上海人”错误映射为nationality=中国，并且缺少对“不确定/好像/可能”的注释表达。"
+      },
+      "argument_correctness": {
+        "score": 3,
+        "reason": "believe谓词的参数链接使用了$u2/$u4但缺少对$u2(国籍)与$u4(工作)为何成立的对齐语义；另外$u4是work_at谓词结果本应被believe引用但当前组织存在命名/引用不清且“上海人”的主体/对象映射不正确。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中无更正/撤回，因此未涉及correct_intent或retract_intent，满足要求。"
+      },
+      "modifier_attachment": {
+        "score": 2,
+        "reason": "“好像/可能”应作为不确定性修饰或用note标注，但输出未使用note，且未体现不确定性细节。"
+      },
+      "no_hallucination": {
+        "score": 6,
+        "reason": "主要内容与对话一致，但新增/替换了“上海人”被当作“国籍：中国”的事实，这属于对话未明确的细化/替换。"
+      },
+      "format_compliance": {
+        "score": 8,
+        "reason": "整体遵循@id实体声明与$id=谓词语句结构，但缺少note注释且存在引用变量命名不一致（$u1 等），可能仍可被解析但语义组织不够规范。"
+      }
+    },
+    "overall_comment": "输出保留了部分实体与工作关系，但将“上海人/不确定”处理错误（国籍映射与缺失note），导致关键语义与修饰信息缺失。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-mini",
+    "case_id": "po-vibecoding-001",
+    "judge_ms": 7805,
+    "weighted_score": 5.65,
+    "scores": {
+      "completeness": {
+        "score": 6,
+        "reason": "覆盖了部分关键信息（姓名、杭州、蚂蚁集团/PingCAP、摄影与索尼A7M4未体现、Vercel与域名siyuan.dev、哈工大与前端/五年经验/正在学Rust未体现为Rust技能）。不少事实缺失导致不完整。"
+      },
+      "predicate_choice": {
+        "score": 6,
+        "reason": "使用了education/skill/occupation等较合理谓词，但“前端开发五年经验”应体现在occupation或work经验的时长上；另外将“前端开发”既当作occupation又当作skill/教育相关不够一致。"
+      },
+      "argument_correctness": {
+        "score": 5,
+        "reason": "部分参数指向不匹配：education被直接填为“哈工大计算机系”字符串而非与gold中的拆分（hit+education计算机系）等价结构；此外 time(@e8, 五年)中@e8是skill/education相关而非work_at/occupation语义承载对象，且缺少Rust对应的skill参数。"
+      },
+      "correction_handling": {
+        "score": 3,
+        "reason": "对“不是PingCAP，是蚂蚁集团”的更正只保留了蚂蚁集团work_at，并用correct_intent标在@e3（蚂蚁集团）上，但缺少对旧错误事实（PingCAP工作）的retract_intent/更正链条（gold中明确对PingCAP→蚂蚁集团的更正）。也存在对更正机制使用不规范。"
+      },
+      "modifier_attachment": {
+        "score": 4,
+        "reason": "“五年经验”被作为time绑定在@e8（前端开发）上，但语义上更应绑定到该段工作的经验/occupation或work时长；“之前”也未正确出现（gold中有PingCAP之前）。"
+      },
+      "no_hallucination": {
+        "score": 7,
+        "reason": "未明显编造对话中不存在的新事实；但将Vercel和siyuan.dev以@o3/org/Vercel与object形式表达方式不在gold中，且“own(siyuan.dev)”属于对域名持有的合理推断但仍可能不严格（对话只说已买域名）。"
+      },
+      "format_compliance": {
+        "score": 9,
+        "reason": "整体使用了@id声明与$语句，符合STL三形式结构；未出现多余解释或Markdown。"
+      }
+    },
+    "overall_comment": "输出保留了部分核心要素但对更正机制、Rust/索尼A7M4/“之前”修饰等关键事实缺失或绑定不当，导致整体质量偏低。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-alias-001",
+    "judge_ms": 4425,
+    "weighted_score": 8.7,
+    "scores": {
+      "completeness": {
+        "score": 9,
+        "reason": "捕获了林小雨的人名、昵称、所在北大、研究生学习、专业方向计算机等主要事实；但少了友谊/称呼关系（与“我们都叫她小雨”的friend别名关系在参考中体现为friend(@self,@lxy)）。"
+      },
+      "predicate_choice": {
+        "score": 7,
+        "reason": "大体正确使用name/alias/study_at/education/skill；但参考中的friend(@self,@lxy)在输出中未体现，且输出使用student(@linxiaoyu,@pku)替代了参考关系，谓词选择与参考不一致。"
+      },
+      "argument_correctness": {
+        "score": 9,
+        "reason": "除缺失friend关系外，其余name/alias/study_at/education/skill的参数对象与语义指向一致，arg顺序与@ref链接无明显错误。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中无更正/撤回内容，输出未出现correction相关谓词，符合要求。"
+      },
+      "modifier_attachment": {
+        "score": 10,
+        "reason": "对话中未出现需要限定到特定谓词的时间/数量/频率等修饰信息；输出中无相关修饰偏差。"
+      },
+      "no_hallucination": {
+        "score": 8,
+        "reason": "未明显添加对话中不存在的新事实；但加入了student(@linxiaoyu,@pku)这一额外陈述，虽然可能与“在北大读研究生”相关，但其形式在参考中未出现，属于轻度超出参考范围。"
+      },
+      "format_compliance": {
+        "score": 8,
+        "reason": "总体STL语法合规（@/ $/note注释格式正确），但存在额外实体@self声明为person，且使用了与参考不同的谓词集合，虽然不一定违反语法但不完全贴合参考结构。"
+      }
+    },
+    "overall_comment": "输出准确提取了大部分关键信息（姓名/昵称/北大/研究生/计算机），但缺少参考中的friend(@self,@lxy)称呼关系，并用student谓词替代导致与黄金参考不一致。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-basic-001",
+    "judge_ms": 4342,
+    "weighted_score": 7.1,
+    "scores": {
+      "completeness": {
+        "score": 6,
+        "reason": "缺少明确的自我居住/生活地谓词（golden用live_in），但包含姓名、年龄、地点和职业等关键信息。"
+      },
+      "predicate_choice": {
+        "score": 5,
+        "reason": "职业使用概念/字符串表达基本合理，但地点相关谓词不符合golden（golden是live_in，而输出使用work_at和location）。"
+      },
+      "argument_correctness": {
+        "score": 6,
+        "reason": "name与age参数指向@self正确；职业谓词参数也指向@self正确；但地点谓词参数（work_at/ location）与golden中的语义关系不一致。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中无更正/撤回内容，不涉及correct_intent或retract_intent。"
+      },
+      "modifier_attachment": {
+        "score": 8,
+        "reason": "28岁作为age的参数正确；未出现需要额外修饰词的时间/频率/数量等复杂修饰。"
+      },
+      "no_hallucination": {
+        "score": 7,
+        "reason": "输出未明显引入对话中不存在的额外事实，但使用了额外的谓词work_at与location，可能属于语义偏差而非真实新增。"
+      },
+      "format_compliance": {
+        "score": 9,
+        "reason": "整体符合STL三种形式（实体声明与语句），未出现markdown或代码块；但与golden不同的谓词命名与变量略显不一致。"
+      }
+    },
+    "overall_comment": "输出抓住了姓名、年龄和职业，但对“杭州”的语义关系处理不一致（未用live_in），并引入了偏离golden的谓词。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-career-001",
+    "judge_ms": 6902,
+    "weighted_score": 4.55,
+    "scores": {
+      "completeness": {
+        "score": 4,
+        "reason": "缺少关键时间/时长与交换表述等：未正确捕捉“大二/一个学期”，高盛实习半年、摩根三年、29岁回国创业等关键信息；同时把多处信息用错误谓词或参数表达，导致事实覆盖不完整。"
+      },
+      "predicate_choice": {
+        "score": 2,
+        "reason": "大量谓词选择不符合参照与语义：用believe表示“特别卷”且未与学习/院校关联；用work_at把“企业级AI助手/概念”当岗位地点；用plan/engage/name/own/employ/decide等谓词对应方式不清晰且与金标不一致。"
+      },
+      "argument_correctness": {
+        "score": 1,
+        "reason": "多个参数位置或对象错误：location(@self,'香港',$e9)把事件参数塞到location谓词不符合金标；duration(@e6,0.5)将半年时长用0.5且未用“半年”文本；e3/交换、e2/fudan金融系、e13创业等都缺少与金标相同论元结构；e22/work_at(@self,'企业级AI助手', $e21)参数类型明显错位。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中没有出现更正/撤回类型的表述，因此无需处理更正意图。"
+      },
+      "modifier_attachment": {
+        "score": 3,
+        "reason": "修饰未正确附着到对应事件：缺少“大二/一个学期”对交换的时间时长；“半年/三年/29岁”未按金标方式与对应工作或创业事件绑定；“现在/主要做”也未形成稳定的时间/范围修饰结构。"
+      },
+      "no_hallucination": {
+        "score": 4,
+        "reason": "未在对话明确出现的结构性事实较多（如“特别卷”被当作believe、把‘企业级AI助手’当作可work_at对象、并引入quantity/own/employ等可能的未证实属性），虽有部分源自对话，但表示方式导致“事实化”的额外推断。"
+      },
+      "format_compliance": {
+        "score": 9,
+        "reason": "整体为STL三种形式与note/comment风格一致，语法大体可解析；但存在少量不合语义的额外参数/类型使用风险，仍未出现明显格式违规如markdown或代码块。"
+      }
+    },
+    "overall_comment": "整体信息提取不完整且谓词/论元/修饰绑定大量偏离金标准，导致语义结构错误与潜在额外事实化。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-comprehensive-001",
+    "judge_ms": 8920,
+    "weighted_score": 2.5,
+    "scores": {
+      "completeness": {
+        "score": 3,
+        "reason": "缺少/错误：未表达凯文是外科医生在梅奥而非约翰霍普金斯（更正处理混乱）；老婆不是单独的“spouse/婚姻关系对象”而用凯文的老婆命名；“结婚在大阪”存在但纠正意图未正确体现；也缺少与金标一致的“认识/会面在东京去年”的结构（且多处谓词/论元不对）。"
+      },
+      "predicate_choice": {
+        "score": 2,
+        "reason": "多处谓词选择不合适或不对应金标：work_at/occupation使用但更正指向不当；believe/不确定的表达方式错误（使用believe(uncertain = …)）；meet与marry的论元与结构混乱；correct_intent用于c2时谓词live_in不在对话中，且与纠正结婚地点无关。"
+      },
+      "argument_correctness": {
+        "score": 1,
+        "reason": "明显论元错误：believe($var = nationality(...))形式不符合应为单一论元的谓词；meet(@kevin, @kevinwife, @tokyo)的参数顺序/接口与金标不一致且后又单独time/ event 构造；correct_intent(@self, $c2 = live_in(...))使用了不存在的谓词live_in且$c2指向错误；多处变量未声明或类型不匹配（如$hopkins_hospital等）。"
+      },
+      "correction_handling": {
+        "score": 2,
+        "reason": "存在纠正但处理不符合规则：第一个更正试图对work_at(@kevin,@mayo)加correct_intent，但输出中同时仍保留work_at(@kevin,@hopkins)且note/更正注释缺失（金标有对应note）；第二个纠正使用correct_intent指向live_in(@osaka)且未正确指向marry的地点语句，且并未明确撤回“东京结婚”。"
+      },
+      "modifier_attachment": {
+        "score": 3,
+        "reason": "“去年”应修饰凯文与老婆在东京的相识/会面事件，但输出中把时间绑定到$time1=time(@kevinwife, '去年')，而不是绑定到meet事件语句；此外event(meet(...))与time未正确衔接。"
+      },
+      "no_hallucination": {
+        "score": 3,
+        "reason": "添加了对话中未出现且不合金标的内容/谓词结构：如live_in(@kevin,@osaka)（对话未提）、hopkins_hospital/不明实体@hopkins_hospital。"
+      },
+      "format_compliance": {
+        "score": 4,
+        "reason": "总体接近STL三种形式，但存在语法/结构问题：correct_intent与等号嵌套用法不符合@id/$id = pred(arg, ...)习惯；出现未声明变量（如$uncertain, $age_event 等）；believe(...)参数写法不规范。"
+      }
+    },
+    "overall_comment": "输出在实体层面有所覆盖但在谓词选择、论元连接、时间修饰及纠正机制上均出现明显错误，导致整体不符合金标与STL规范。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-correction-001",
+    "judge_ms": 5496,
+    "weighted_score": 6.25,
+    "scores": {
+      "completeness": {
+        "score": 6,
+        "reason": "包含“小李”“百度”“腾讯”以及更正意图，但缺少与金标准一致的 self 关联：正确应对 $p2=work_at(@li,@tencent) 进行 correct_intent(@self,...)，且更正注释（note）缺失。"
+      },
+      "predicate_choice": {
+        "score": 7,
+        "reason": "predicates 多数合理（coworker、work_at、correct_intent），但将“在百度上班”表示为 occupation(@li,\"上班\") 过于泛化且不在金标准中，且更正意图的对象应是正确的 work_at 语句。"
+      },
+      "argument_correctness": {
+        "score": 4,
+        "reason": "correct_intent 的第一个参数写成了 @li 而非 @self，且 correct_intent 对应的对象 $work1（@baidu）与金标准不同；同时使用了未在参考中出现的 occupation 参数形式。"
+      },
+      "correction_handling": {
+        "score": 3,
+        "reason": "存在更正，但 correct_intent 与被更正目标绑定错误（应对腾讯的 work_at 表达），并且缺少对更正的 note 注释；未见 retract_intent（不过对该对话仅应使用 correct_intent 即可）。"
+      },
+      "modifier_attachment": {
+        "score": 10,
+        "reason": "对话中没有明确时间/频率/数量等修饰语，输出不涉及复杂修饰绑定问题。"
+      },
+      "no_hallucination": {
+        "score": 7,
+        "reason": "未添加对话中不存在的核心实体关系，但加入了 occupation(@li,\"上班\") 属于合理推断以外的额外事实表达，且“同事”关系未明确对应 self 角色（虽然有 coworker(@self,@li)）。"
+      },
+      "format_compliance": {
+        "score": 9,
+        "reason": "STL语法基本合规，使用了 @id、$id、note/correct_intent 等结构；但未提供按参考要求的 note，且虽然语法能解析，语义格式与参考不一致。"
+      }
+    },
+    "overall_comment": "输出覆盖了主要实体与“百度→腾讯”的更正，但 correct_intent 的指向参数与对象绑定错误，并缺少金标准中的更正注释，整体纠错表达不合预期。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-family-001",
+    "judge_ms": 10339,
+    "weighted_score": 6.05,
+    "scores": {
+      "completeness": {
+        "score": 6,
+        "reason": "大部分人物与核心事实覆盖（福州/厦门/温州/义乌/广州、爷爷奶奶住址、职业、妻子医生、女儿幼儿园、亲属关系），但缺少若干关键谓词与修饰：未体现“爷爷现在身体还不错”的表述、对“女儿刚上幼儿园”的教育阶段用法不与参考一致（但仍有幼儿园信息）；另外爷爷奶奶未分别明确父母/母亲关系（参考里有father链接），以及未体现“大伯/小叔为爸爸兄弟”的对应父系兄弟结构（输出用location/own等替代）。"
+      },
+      "predicate_choice": {
+        "score": 4,
+        "reason": "多处谓词不匹配参考/语义：把“大伯在福州开海鲜餐厅”拆成兄弟+location+own（餐厅老板/经营关系谓词不当）；把“小叔在厦门大学当物理教授”里厦门大学使用workplace但参考是work_at；父/母兄弟关系也用到brother(@uncle,@parentfather)而不是参考的father:brother(@self,@uncle)。妻子姓名称在此系统里用name不在参考中出现。"
+      },
+      "argument_correctness": {
+        "score": 3,
+        "reason": "多处参数方向混乱：例如$r5$参考是spouse(@uncle2,@misaki)，输出su5=spouse(@mitaki,@uncle2)方向正确但前后命名不一致；最关键的是父系兄弟关系：参考以father:brother(@self,@uncle2)表达“表从父亲的兄弟是小叔”，输出用brother(@uncle1,@parentfather)且@parentfather=@self的father映射不成立；爷爷奶奶与自我的母亲/父亲关系也缺失。女儿/我表述也用child(@daughter,@self)方向可能与参考child(@self,@dd)不一致。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中无更正/撤回内容，因此未涉及correct_intent或retract_intent，满足要求。"
+      },
+      "modifier_attachment": {
+        "score": 6,
+        "reason": "对“90多岁”与爷爷age匹配；“刚上幼儿园”作为education:stage被表达为教育阶段但输出谓词参数略偏离参考（仍然算有正确修饰承载）；其他如地点修饰多数依附在location/live_in/工作场所上但与谓词选择不当有关，导致整体扣分。"
+      },
+      "no_hallucination": {
+        "score": 8,
+        "reason": "未明显杜撰新事件/关系（多为现有事实的改写），但存在轻微不一致：如“大伯的海鲜餐厅老板”用own/海鲜餐厅表达，虽未引入新事实但谓词与含义可能偏离；未包含“老婆叫林芳”对应name已给出（这是对话事实）。整体总体仍未出现明显额外事实。"
+      },
+      "format_compliance": {
+        "score": 5,
+        "reason": "整体使用了@id声明与$变量谓词语句，符合STL基本形式；但有几处与参考不一致的谓词体系（如location/own/name/sibling/education等）并不必然是格式错误。语法层面看无明显破坏（未出现markdown/解释），但语义谓词可能不被系统支持会影响有效性。"
+      }
+    },
+    "overall_comment": "输出覆盖了主要人物与多数事实，但在亲属关系谓词与参数方向、以及“大伯开餐厅/小叔在厦门大学工作”的谓词选择上偏离较大，导致语义正确性不足。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-food-001",
+    "judge_ms": 8560,
+    "weighted_score": 5.95,
+    "scores": {
+      "completeness": {
+        "score": 5,
+        "reason": "大部分要点覆盖（花生过敏、忌猪肉、意大利面偏好及频率、做饭烘焙、上周给姐做巴斯克、饮品偏好及咖啡因），但缺少“我对花生严重过敏/概念化过敏”的标准化谓词结构（反映在reference里为dislike:allergy），且姐的生日/送蛋糕的关联合理性不够严谨；另外泰国菜不能吃作为实体/谓词处理不一致且可能多余。"
+      },
+      "predicate_choice": {
+        "score": 4,
+        "reason": "部分谓词不符合reference习惯，如过敏/忌口用habit与dislike混用，且“birthday”与“made_cake/plan/eat”谓词选择偏离参考（参考使用gift与birthday(@sis)等更标准的语义）。咖啡因“相信believe”与对话表述（推测“可能”）较接近但仍比reference更含糊。"
+      },
+      "argument_correctness": {
+        "score": 4,
+        "reason": "frequency(@self, 3, ...) 参数顺序/形式与reference（frequency(@l1, '每周至少三次')）不一致；birthday(@self, @pei, '上周') 参数结构不符合reference的birthday(@sis)并再附time；“made_cake”用plan谓词且未形成reference中gift/送出关系；“eat(@self, @bask)”在对话中未明确“自己吃蛋糕”，更像是为姐过生日做蛋糕。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话无A→B纠正或撤回类型表述，输出也未引入correct_intent/retract_intent，属于正确处理。"
+      },
+      "modifier_attachment": {
+        "score": 6,
+        "reason": "“每周至少三次”与频率修饰基本出现；“一天三杯以上”与黑咖啡修饰基本到位；但“上周”既用于生日事件也用于birthday(@self,@pei,'上周')且语义可能错位；“可能太多了哈哈”作为degree附在drink_coffee上较合理但degree的对象/谓词结构与reference不一致。"
+      },
+      "no_hallucination": {
+        "score": 7,
+        "reason": "整体未明显加入对话没有的事实；但“eat(@self, @bask)”（自己吃巴斯克芝士蛋糕）与对话“给我姐过生日”不等价，属于轻微臆造/语义偏差。另“泰国菜不能吃”被建模为neg($cannot_eat_thai)但无对应drink/吃谓词主体，形式上也可能引入结构性不准确。"
+      },
+      "format_compliance": {
+        "score": 6,
+        "reason": "大体符合STL三种形式，但存在语法/结构问题：如@self: person缺少key引用定义（虽可接受但与reference一致性不足），且$cannot_eat_thai 作为未声明的变量直接取neg（$cannot_eat_thai = ?/neg表达不合标准），另外多处用habit/plan等谓词未按reference的更明确结构，整体仍接近但不完全稳健。"
+      }
+    },
+    "overall_comment": "输出覆盖了多数关键信息，但谓词选择与参数/语义连接（尤其是生日与蛋糕关系、忌口建模、以及“自己吃蛋糕”的错误推断）导致整体质量偏低。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-health-001",
+    "judge_ms": 5772,
+    "weighted_score": 6.9,
+    "scores": {
+      "completeness": {
+        "score": 6,
+        "reason": "覆盖了大部分关键信息（头疼/睡眠、持续两三周、35岁男、会计所、压力与年审、游泳停止、家族高血压、去年体检正常、不抽烟偶尔红酒、喝枸杞水、妻子护士协和医院着急）。但“老婆一直催我去”这一催促/催促意图未被明确表达；同时“还没去看医生”这一状态也未精确建模。"
+      },
+      "predicate_choice": {
+        "score": 5,
+        "reason": "多处谓词选择不贴合黄金：用believe表示压力大/对方或家庭史高血压/体检正常等，且用believe而非health等更语义化的谓词；婚姻中用spouse但妻子的职位用occupation@wife_rel且语义链不如参考一致；对“喝枸杞水/红酒”使用drink但缺少频率谓词。"
+      },
+      "argument_correctness": {
+        "score": 6,
+        "reason": "大多数@self/@father/@grandmother/@wife指向基本正确；父亲高血压、母系高血压的链接结构合理。但wife_job/waswo使用occupation(@wife_rel, ...)（把关系对象当主体）与参考使用@wife直接落谓词不一致；停游泳(stop)的参数是否对应“停止这一习惯”语义略松。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中没有A→B或A错误的更正关系需要retract_intent/correct_intent，输出也未引入相关更正谓词。"
+      },
+      "modifier_attachment": {
+        "score": 3,
+        "reason": "时间/频率修饰未正确或不充分：两三周/每天睡四五小时等用duration带值虽大体有，但游泳的“每周两次”未体现为frequency；枸杞水“每天”与红酒“偶尔”也未用频率谓词表示；另外“最近在忙年审/最近老是头疼”等“最近”多靠note而非作为明确修饰关系。"
+      },
+      "no_hallucination": {
+        "score": 9,
+        "reason": "未见明显捏造的新事实；主要都是对原话的改写与谓词选择差异。少量不确定之处在于“去看医生”的want与“还没去看医生”的当前状态虽相关但未完全对齐原句语气。"
+      },
+      "format_compliance": {
+        "score": 9,
+        "reason": "整体符合STL三形式与note用法，语法上看不出明显违规；但包含“# nothing to extract”注释虽可忽略，且本条不影响解析。"
+      }
+    },
+    "overall_comment": "信息覆盖较全面但在谓词选择与修饰/频率建模上偏离黄金参考较多，导致语义表达精度不足。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-multi-event-001",
+    "judge_ms": 5309,
+    "weighted_score": 6.7,
+    "scores": {
+      "completeness": {
+        "score": 6,
+        "reason": "Captures the meeting in Paris and engagement in London with the two time modifiers, but misses explicit entity relation (cousin/partner) and uses a different event structure/predicates than the reference (missing explicit engagement event type)."
+      },
+      "predicate_choice": {
+        "score": 4,
+        "reason": "Uses 'meet' appropriately, but 'engage' and 'start' are not aligned with the reference predicates ('event(...):engagement' and separate time/location predicates)."
+      },
+      "argument_correctness": {
+        "score": 4,
+        "reason": "Meeting location is embedded as an extra argument to 'meet' rather than linked via 'location', and 'start' is used with events; arguments/order likely do not match the intended STL predicate signatures."
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "No corrections or retract/correct intents appear; conversation has no correction events."
+      },
+      "modifier_attachment": {
+        "score": 5,
+        "reason": "Time modifiers are included for both events, but attachment is likely incorrect: '巴黎' is treated as a positional argument to 'meet' and times are attached via 'start' rather than dedicated time predicates."
+      },
+      "no_hallucination": {
+        "score": 10,
+        "reason": "No additional facts beyond the conversation (Paris/London, meeting/engagement, last year/last month) are introduced."
+      },
+      "format_compliance": {
+        "score": 8,
+        "reason": "Uses valid STL-like declarations/statements without markdown or extra text, but may violate expected predicate/arity conventions (e.g., meet with 3 args, start used for timing)."
+      }
+    },
+    "overall_comment": "The output covers the main facts but misrepresents predicate semantics and modifier attachment compared to the golden reference.",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-multi-value-001",
+    "judge_ms": 4399,
+    "weighted_score": 8.15,
+    "scores": {
+      "completeness": {
+        "score": 9,
+        "reason": "Captures all stated skills and hobbies (Chinese/English/a bit Japanese; running and playing guitar), with only a minor predicate/structure mismatch in representing '一点日语'."
+      },
+      "predicate_choice": {
+        "score": 7,
+        "reason": "Uses speak for languages correctly, but uses like for hobbies instead of the golden 'hobby' predicate."
+      },
+      "argument_correctness": {
+        "score": 8,
+        "reason": "Arguments are largely in correct positions (@self as subject; language strings as objects), but degree for '一点' is not modeled as a separate degree($p3,...) statement."
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "No corrections present in the conversation, so no correction errors."
+      },
+      "modifier_attachment": {
+        "score": 5,
+        "reason": "The '一点' qualifier is attached inside the language string ('一点日语') rather than as a degree modifier to the '日语' speech predicate."
+      },
+      "no_hallucination": {
+        "score": 10,
+        "reason": "No additional facts beyond the conversation are introduced."
+      },
+      "format_compliance": {
+        "score": 6,
+        "reason": "Syntactically acceptable STL-like $id = pred(...) statements, but missing the golden reference entity declarations (@id forms) and degree decomposition; still, no obvious syntax violations."
+      }
+    },
+    "overall_comment": "The output covers all core facts but degrades on modifier modeling ('一点') and hobby predicate choice compared to the golden reference.",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-negation-001",
+    "judge_ms": 5715,
+    "weighted_score": 7.85,
+    "scores": {
+      "completeness": {
+        "score": 7,
+        "reason": "包含“不喜欢吃香菜”和“很擅长做饭”，但游泳部分用的是neg(know(...))而非对“不会游泳”的对应语义谓词/结构，整体仍有信息不匹配。"
+      },
+      "predicate_choice": {
+        "score": 6,
+        "reason": "“香菜”使用dislike正确；“不会游泳”使用neg(know(...))不符合黄金参考的skill语义表达（应体现游泳能力为否定）。"
+      },
+      "argument_correctness": {
+        "score": 8,
+        "reason": "dislike与skill的主语(@self)和宾语（“香菜”“做饭”）位置正确；游泳否定语句的谓词选择导致论元语义链不一致。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话无更正/撤回内容，无需使用correct_intent或retract_intent。"
+      },
+      "modifier_attachment": {
+        "score": 10,
+        "reason": "无时间/频率/数量等修饰语需要附着；“很擅长”在输出中未显式量化但未引入错误修饰。"
+      },
+      "no_hallucination": {
+        "score": 9,
+        "reason": "未引入对话中不存在的新事实；仅在“不会游泳”的表达方式上偏离参考。"
+      },
+      "format_compliance": {
+        "score": 5,
+        "reason": "输出包含实体声明形式@food: literal（对话未提供且可能不必要），同时未按黄金参考那样将游泳否定结构为skill的否定谓词；总体仍是STL形式但可读性/一致性不足。"
+      }
+    },
+    "overall_comment": "大部分事实被捕获（香菜不喜欢、擅长做饭），但“不会游泳”的谓词建模与黄金参考不一致，且存在不必要的实体声明。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-pet-001",
+    "judge_ms": 7504,
+    "weighted_score": 5.55,
+    "scores": {
+      "completeness": {
+        "score": 6,
+        "reason": "抓沙发/温顺/金毛/英短蓝猫/调皮/养了十多年/从广州搬到上海等有覆盖，但遗漏了“慢慢是乌龟”“团子8个月”的关键年龄信息（实际写成age=0），以及“三只宠物中每只的宠物店/朋友来源、伴侣关系/购买对象”等存在偏差或多余。"
+      },
+      "predicate_choice": {
+        "score": 5,
+        "reason": "使用了 like/age/habit/pet/own/buy/move/friend 等但语义不一致：如“非常温顺”用habit不够贴切，“金毛/英短蓝猫”更应为品种/类型而非like；“老是抓沙发”用habit可以但缺少“抓沙发”作为对象；“慢慢是乌龟”未用正确谓词（写成habit=乌龟）。"
+      },
+      "argument_correctness": {
+        "score": 4,
+        "reason": "参数多处错误或不合常规：$14=friend(@p1,@self)与对话“团子朋友送的/男朋友小杰买的”对应关系不清；购买信息写成buy(@p1, '宠物店')而非buy(@bf, @dh)；@petcount=own(@self,'三只宠物')参数类型疑似不对（数量应为数值/关系）；move(@self,@gz,@sh)方向与ref一致但其余链接不可靠。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中没有A→B或A撤回的纠正，因此未出现不应有的correct_intent/retract_intent，处理无冲突。"
+      },
+      "modifier_attachment": {
+        "score": 3,
+        "reason": "关键年龄/时长多处不对：团子“8个月”被写成age=0；慢慢“十多年”写了duration 10和十多年两条（且与上下文类型不一致），并将“乌龟”误当作habit/属性。数量/时间修饰总体未准确附着到正确陈述。"
+      },
+      "no_hallucination": {
+        "score": 4,
+        "reason": "包含了对话未明确的事实或错误化事实：如为团子设置不在对话中的age=0、为慢慢设置habit=“乌龟”（应是物种/类型）、还有@petcount=own(...,'三只宠物')等表述不对应原始句式；其中部分是误注而非新增人物事件，但会导致等价事实错误。"
+      },
+      "format_compliance": {
+        "score": 6,
+        "reason": "整体符合STL三形式的基本写法，但出现了多处不规范：实体声明缺少类型key形式（如@pet1/@pet2/@pet3均无类型定义）、以及参数/谓词命名不符合参考风格；虽然未出现明显markdown，但语法严格性不足。"
+      }
+    },
+    "overall_comment": "输出覆盖了多数宠物的主题信息，但在关键年龄/类型表达、谓词选择与参数绑定（尤其购买/来源与慢慢是乌龟、团子8个月）方面存在较多错误与不规范。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-qa-001",
+    "judge_ms": 4807,
+    "weighted_score": 6.75,
+    "scores": {
+      "completeness": {
+        "score": 6,
+        "reason": "覆盖了大部分关键信息（新加坡/深圳南山区、本人华为海外事业部与市场运营、丈夫Kevin/美国人/去过新加坡与肉骨茶、女儿朵朵与3岁、Python/asyncio与想转数据分析、早教班问题）。但缺少一些黄金要素：本人想让公司行政代办签证（旅行社/代办意图层面未入模）、以及配偶访问应对应的推荐关系（黄金用recommend），此外本人自身的‘下个月出差’是对丈夫推导为event('出差',@sg)且自我主体不一致。"
+      },
+      "predicate_choice": {
+        "score": 5,
+        "reason": "部分谓词不够贴合：丈夫对肉骨茶应是recommend/推荐语义而非like与eat并存；本人对Python学习与转数据分析应更接近skill/want（黄金want转做数据分析），但输出使用education/hobby并将‘asyncio’硬并入skill。‘出差’用event而非plan与visit/出差规划关系不一致。"
+      },
+      "argument_correctness": {
+        "score": 4,
+        "reason": "存在明显主体/参数错配：@e1 = event(@p1,'出差',@sg)使用了‘我’作为出差主体，但原对话是‘我下个月去新加坡出差’虽可理解为我，但黄金参考用的是@self的plan（且关联‘下个月’到计划@plan1）。更关键的是：$e2 = visit(@k,@sg)与对话‘老公之前去过’一致主体为丈夫，但‘肉骨茶很好喝’是对丈夫推荐/说法，输出用eat/like可以，但论元结构与黄金的recommend不一致。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中无纠正/更正陈述，因此未涉及correct_intent或retract_intent，表现符合要求。"
+      },
+      "modifier_attachment": {
+        "score": 6,
+        "reason": "‘下个月’按note附在出差事件上，能够表达时间，但由于出差对应关系与黄金的plan(time)不一致，附件仍有偏差；其他如‘之前去过’与‘很好喝/最近在学编程’均用note表达，基本合理。"
+      },
+      "no_hallucination": {
+        "score": 8,
+        "reason": "未发现明显捏造新事实。但存在语义层面的额外细化/可能偏离：给肉骨茶增加了eat(@k2,'肉骨茶')（对话是‘很好喝’且丈夫说过，不一定等同于‘丈夫吃过’事件）；skill写成‘Python asyncio’把‘asyncio库怎么用’并入skill字符串，也可能过度合并。"
+      },
+      "format_compliance": {
+        "score": 9,
+        "reason": "主体形式基本符合STL语法（@id声明、$id=谓词、note）。少量问题：有一个@k2: person 'Kevin'的冒号写法与其他声明不完全一致，且person实体@p: 与@k: 未包含名字属性但也未被严格使用；整体仍接近可解析。"
+      }
+    },
+    "overall_comment": "总体抓住了大部分对话事实，但在谓词/主体语义（尤其肉骨茶推荐关系与出差计划结构）以及少量附件表达上与黄金参考存在偏差。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-retract-001",
+    "judge_ms": 4889,
+    "weighted_score": 5.95,
+    "scores": {
+      "completeness": {
+        "score": 6,
+        "reason": "包含老王为人、邻里关系、以及对“老王养了一条金毛”的撤回意图；但缺少对“没养狗/无狗”在同一语义层面的覆盖（输出反而新增了另一个所有权语句）。"
+      },
+      "predicate_choice": {
+        "score": 5,
+        "reason": "“own”用于表达养狗较合理，但对更正“没养狗”应以撤回原事实为主；另外新增的“own(@laowang, 狗)”不符合对否定的语境。"
+      },
+      "argument_correctness": {
+        "score": 7,
+        "reason": "retract_intent 的目标语句与原句一致（“老王养了一条金毛”），参数使用上与自/对齐基本正确；但新增的 $e2=own(@laowang, 狗) 参数语义上不应出现。"
+      },
+      "correction_handling": {
+        "score": 6,
+        "reason": "使用 retract_intent 对旧事实撤回是正确方向；但同时保留/补充了新的与“没养狗”冲突的陈述，属于更正后的“幽灵/冲突事实”。"
+      },
+      "modifier_attachment": {
+        "score": 10,
+        "reason": "对话中没有时间/数量/频率等修饰语，暂无可评估的修饰绑定问题。"
+      },
+      "no_hallucination": {
+        "score": 3,
+        "reason": "输出新增了“老王拥有一只‘狗’(own(@laowang, 狗))”及一个无说明的“@id: animal”声明；其中“拥有狗”与“老王没养狗”的否定直接冲突，属于凭空/不合对话的事实。"
+      },
+      "format_compliance": {
+        "score": 6,
+        "reason": "基本符合STL形式，但出现了 '@laowang' 之外的裸 '@id: animal'（语法/语义不统一），并且整体未包含邻里关系谓词neighbor(@self,@wang)（黄金参考要求）。"
+      }
+    },
+    "overall_comment": "总体能体现撤回“老王养金毛”的纠错意图，但新增了与否定事实冲突的所有权陈述，且遗漏了邻里关系等关键要素，导致质量不高。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-temporal-001",
+    "judge_ms": 3805,
+    "weighted_score": 7.4,
+    "scores": {
+      "completeness": {
+        "score": 7,
+        "reason": "基本覆盖辞职、开餐厅、搬到深圳及对应时间，但未用与参考一致的实体/谓词结构（如父子关系用father(@self,@dad)在输出中缺失为独立事实），并且“上个月刚搬到深圳”与“搬到深圳”的实体绑定语义未完全与参考对齐。"
+      },
+      "predicate_choice": {
+        "score": 8,
+        "reason": "resign/start/move均符合语义；但父子关系未显式用father谓词表达，且@rest被建模为food而参考使用餐厅作为抽象（虽不一定错误，但偏离参考）。"
+      },
+      "argument_correctness": {
+        "score": 5,
+        "reason": "move(@self,@sz)中@self未在输出中声明且与参考的@dad不一致；另外father关系缺失导致主语指向不清（辞职/开店使用@father1但搬迁用@self）。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中无纠正/更改事实，未使用ghost/correct_intent/retract_intent，符合要求。"
+      },
+      "modifier_attachment": {
+        "score": 6,
+        "reason": "时间信息主要通过note附在对应事件上，虽然可读但不如直接以time($e,\"...\")形式严格绑定；同时“刚”未单独建模为修饰。"
+      },
+      "no_hallucination": {
+        "score": 9,
+        "reason": "未添加对话中不存在的新事实；建模餐厅为food/国企为org可能是选择差异但不算明显捏造。"
+      },
+      "format_compliance": {
+        "score": 6,
+        "reason": "总体是STL三种形式为主，但@father1/@sz/等实体声明字段命名与参考不完全一致（仍属语法层面可疑），并且缺少time谓词结构；仍未出现明显格式违规（无多余文本）。"
+      }
+    },
+    "overall_comment": "输出覆盖了主要事件与时间点，但缺失父子关系主语建模，并且move事件使用了未声明的@self且时间未用time谓词规范绑定。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-travel-001",
+    "judge_ms": 5490,
+    "weighted_score": 6.8,
+    "scores": {
+      "completeness": {
+        "score": 6,
+        "reason": "Covers most entities/visits/plans/work/live-in/relationships and seasons, but misses key golden facts such as 本人于同学小敏同住于首尔江南区的“江南区”注释方式、以及“国籍/韩国人”对朴智勋的陈述；另外“我老公与她一起去冰岛看极光”的一起同行关系未被正确表达为同一个计划下的共同参与。"
+      },
+      "predicate_choice": {
+        "score": 5,
+        "reason": "部分谓词不符合参考：用 marry/partner/want 等替代了 spouse/classmate/plan。eat/meet 等谓词虽能表达但不在参考语义集合里且与标准谓词不一致；“工作芯片设计”拆为 work_at 未严格表达“芯片设计”为 occupation 事实。"
+      },
+      "argument_correctness": {
+        "score": 4,
+        "reason": "关键关系参数疑似错位：believe/want 与“今年打算去冰岛看极光”未与计划建立对应；plan_aurora 使用了看极光作为目标参数但谓词形式不等价于参考的 plan(@self, \"冰岛看极光\")；meet(@self,@lryang) 与同行意图不对应；marital/partner(@self,@lryang) 与“她的丈夫刘洋”语义不精确。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中没有更正/撤回内容，因此未出现错误的 correction_intent/retract_intent/ghost statement。"
+      },
+      "modifier_attachment": {
+        "score": 6,
+        "reason": "“去年/今年/明年”只以 note 和部分隐含方式出现，未像参考那样用 time($id, ...) 直接绑定到对应 visit/plan；吃饭与出行的先后关系也主要放在 note 中。"
+      },
+      "no_hallucination": {
+        "score": 9,
+        "reason": "未明显捏造新人物/地点/事件；但存在谓词层面的过度推断（如 visit(@self,@island) 与 want/fear/meet 的具体语义）仍属于可能偏离原意的结构化表述。"
+      },
+      "format_compliance": {
+        "score": 8,
+        "reason": "基本为 STL 3 形式与声明/语句，但多处使用了非参考的谓词签名（如 object、name、location、eat、marry、partner、want、meet、fear、time未使用），可能仍是可解析谓词但总体不如参考一致；同时缺少严格的 time 事实结构。"
+      }
+    },
+    "overall_comment": "输出大体覆盖了主要人物、地点、出行与计划，但在谓词选择、关键关系参数、时间修饰绑定方式上偏离参考且遗漏了朴智勋“韩国人”与部分同行/同行关系的规范表达。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-uncertainty-001",
+    "judge_ms": 2633,
+    "weighted_score": 5.2,
+    "scores": {
+      "completeness": {
+        "score": 4,
+        "reason": "缺少“好像/可能”相关的相信不确定表述（believe与注释note），以及工作地点/国籍应以“上海人(上海人)”而非“住在上海”来表达；同时未包含与之对应的两条注释。"
+      },
+      "predicate_choice": {
+        "score": 5,
+        "reason": "使用了believe与工作关系work_at较接近，但“上海人”应是nationality而输出用live_in；believe的参数组织也不符合参考语义结构。"
+      },
+      "argument_correctness": {
+        "score": 3,
+        "reason": "存在未定义或错误引用：$u1 = believe(boss, $u2)中boss未用@boss标识；$u3/$u4的相信主体也与参考不同，且@self/$u2等关系不一致。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话无更正/撤回内容，未见correction_intent或retract_intent的使用问题。"
+      },
+      "modifier_attachment": {
+        "score": 2,
+        "reason": "“好像/可能”是关键不确定修饰，但输出未用note或等价机制捕捉（相当于缺失修饰的承载）。"
+      },
+      "no_hallucination": {
+        "score": 6,
+        "reason": "输出未引入明显新事件/主体，但将“上海人”替换为“住在上海”属于语义偏差（可视为不严谨新增/替换事实）。"
+      },
+      "format_compliance": {
+        "score": 6,
+        "reason": "基本符合@/$语句形式，但出现了不符合约束的引用（boss而非@boss）与参数变量未与@self对齐，可能导致解析/语义不一致；整体仍是STL三形式风格。"
+      }
+    },
+    "overall_comment": "输出只部分覆盖了老板与谷歌工作关系，但对“上海人/不确定”的关键语义（nationality与note/ believe结构）处理不当且存在参数/引用错误。",
+    "parse_error": ""
+  },
+  {
+    "model": "gpt-5.4-nano",
+    "case_id": "po-vibecoding-001",
+    "judge_ms": 8639,
+    "weighted_score": 2.95,
+    "scores": {
+      "completeness": {
+        "score": 3,
+        "reason": "遗漏金参中的关键结构化事实（如坐标/作者名的绑定方式虽有，但缺少姓名实体@self/education拆分“计算机系”等；也缺少“目前在学”与Rust学习状态的标准化表达；关于摄影/索尼A7M4等多有但谓词与参数不一致），且对纠错相关事实未能正确建模为逐条替换。"
+      },
+      "predicate_choice": {
+        "score": 2,
+        "reason": "大量谓词不匹配或不在金参常用语义中（如像“like=摄影作品展示”“duration=五年经验”“plan=Next.js/部署到Vercel”“recommend/visit/buy/own”等），且纠错相关使用“correct_intent(@self, work_at(...))”参数形式不符合金参；语义类型与谓词选择偏离。"
+      },
+      "argument_correctness": {
+        "score": 2,
+        "reason": "出现错误/不稳定的参数绑定：例如 $p10 = plan(@self, @blog, \"Next.js\") 参数不清；$p12 用 use(@self,@a7m4,\"拍风景照\")不符合原意且第三参数含义不明确；$dp* 对“部署/Vercel/域名”参数关系不对；纠错 $re2 的 retract_intent 传入的是整句文本而非对应被撤回的陈述实体/引用。"
+      },
+      "correction_handling": {
+        "score": 1,
+        "reason": "存在纠错但处理错误：同时出现 correct_intent 与 retract_intent，且没有以“A→B”的替换结构呈现；retract_intent 并未撤回对应的 PingCAP 工作事实，而是放入一段原文长句文本，且还出现重复 work_at(@self,@rcompany) 多次，像是残留/ghost或混杂事实。"
+      },
+      "modifier_attachment": {
+        "score": 3,
+        "reason": "“五年经验”用 duration(@self,\"五年\",$p5)形式不可靠且与金参的 occupation/工作经历时间建模不一致；“之前/现在在学”等时间/状态未正确作为独立time/modifier附着到对应学习/工作陈述上（金参有 time($pw1,\"之前\")与 note/学习状态注释）。"
+      },
+      "no_hallucination": {
+        "score": 4,
+        "reason": "有一定与原文一致（Vercel、域名、姓名、杭州、哈工大、蚂蚁集团、摄影、索尼A7M4、Rust等），但也引入多项对话未出现的结构化事实/动作（如 visit(@self,@vercel,\"部署\")、recommend(@self,\"域名\",... )、buy(@self,\"索尼A7M4\",\"摄影设备\")、own(@self,\"个人博客\",\"Next.js\")等，属于推断或扩展超出原意）。"
+      },
+      "format_compliance": {
+        "score": 7,
+        "reason": "整体是STL 3形式语法为主，未出现明显代码围栏或说明性文本；但实体类型/谓词与参数使用不符合金参风格，且纠错谓词参数形式不确定，可能影响解析/一致性。"
+      }
+    },
+    "overall_comment": "输出包含部分对话要点，但谓词选择、参数绑定与纠错建模严重偏离金参，并夹杂多项疑似幻觉/不在原文中的动作与关系，整体质量较低。",
+    "parse_error": ""
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-alias-001",
+    "judge_ms": 4951,
+    "weighted_score": 6.05,
+    "scores": {
+      "completeness": {
+        "score": 4,
+        "reason": "遗漏了作为“闺蜜/朋友”关系（未用friend）、未明确“在北大读研究生”的education/skill结构，且未给出“计算机”为skill；同时还有若干表述偏离原意。"
+      },
+      "predicate_choice": {
+        "score": 3,
+        "reason": "使用了place“北京大学”但对齐应为org“北大”；study_at/@occupation/like等谓词不符合金参考与对话所表达的教育与技能（计算机）语义。"
+      },
+      "argument_correctness": {
+        "score": 4,
+        "reason": "@self与@lin的语义混用：@self被赋予姓名“我闺蜜”，而“小雨”为别名；like(@self,@lin)参数虽形式正确但谓词与论元语义不匹配。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中无更正内容，输出中也未出现correction意图或撤回/更正冲突。"
+      },
+      "modifier_attachment": {
+        "score": 10,
+        "reason": "对话中无时间/数量/频率等修饰信息需要绑定，当前无明显修饰错配。"
+      },
+      "no_hallucination": {
+        "score": 6,
+        "reason": "出现了“我闺蜜”“like”以及place“北京大学”等未在对话中直接陈述的额外事实/替换表达；其中“研究生/计算机/小雨/林小雨/在北大”相关信息部分存在但表达方式偏差。"
+      },
+      "format_compliance": {
+        "score": 8,
+        "reason": "整体为符合STL三种形式的声明与语句，但实体@self与@lin未按对话/金参考定义一致类型细节；语法形式上仍大体合规。"
+      }
+    },
+    "overall_comment": "输出只覆盖了部分姓名与就学地点信息，但谓词选择、论元指向与部分关键事实（朋友关系与计算机技能）缺失/偏离较多，且引入了不对应对话的like与姓名映射。",
+    "parse_error": ""
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-basic-001",
+    "judge_ms": 3599,
+    "weighted_score": 9.8,
+    "scores": {
+      "completeness": {
+        "score": 10,
+        "reason": "All stated facts (name, age, occupation, and that the person lives in Hangzhou) are captured."
+      },
+      "predicate_choice": {
+        "score": 10,
+        "reason": "Predicates used (place, name, age, occupation, live_in) match the conversation and reference."
+      },
+      "argument_correctness": {
+        "score": 10,
+        "reason": "Arguments are correctly attached, including linking live_in to the Hangzhou place entity."
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "No corrections are present in the conversation; no retract/correct intent needed."
+      },
+      "modifier_attachment": {
+        "score": 10,
+        "reason": "No additional time/quantity modifiers beyond age are present; age is attached correctly."
+      },
+      "no_hallucination": {
+        "score": 10,
+        "reason": "No extra entities or facts beyond the conversation appear."
+      },
+      "format_compliance": {
+        "score": 8,
+        "reason": "STL syntax is valid, but the place entity id differs from the golden reference (@hz vs @hangzhou), which is not a semantic error but a mismatch in identifiers."
+      }
+    },
+    "overall_comment": "The output is fully accurate semantically; only the place entity identifier naming differs from the reference.",
+    "parse_error": ""
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-career-001",
+    "judge_ms": 7319,
+    "weighted_score": 4.75,
+    "scores": {
+      "completeness": {
+        "score": 3,
+        "reason": "遗漏了多项关键信息：衡水中学、金融系/金融教育、MIT交换的“大二”与“一学期”时长、高盛实习“半年”与注释、摩根士丹利在“香港”且“三年”时长、合伙创业为AI公司“星辰智能”的性质与在杭州地点关系方式、公司规模“50多人”、做“企业级AI助手”、以及合伙人关系用partner而非coworker的准确语义。"
+      },
+      "predicate_choice": {
+        "score": 3,
+        "reason": "部分谓词不贴切或语义漂移：study_at用于MIT交换且缺少exchange语义；live_in(@self,@ms)不合理（应为在香港）；own/brand/coworker/occupation(创业者)未与原对话明确对应且与参考谓词体系不一致。"
+      },
+      "argument_correctness": {
+        "score": 4,
+        "reason": "参数连接多处不符合常规：move(@self,@hz)与“回国创业”语义不等价且缺少从哪到哪；time($p7,“29岁的时候”)绑定到move而非start创业；degree($p11,“CS的硕士”)变量$p11是occupation(创业者)而不是学习事件，导致论元对象不正确。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中没有A→B或撤回型纠错，因此无需使用correct_intent/retract_intent，输出也未引入相关纠错语句。"
+      },
+      "modifier_attachment": {
+        "score": 2,
+        "reason": "时间/时长修饰大量缺失或误挂：29岁应修饰“开始创业/回国创业”，但绑定到move；“中间”、CS硕士的“CS的硕士”与交换“大二/一个学期”等关键修饰均未正确附着到对应事件；高盛半年、摩根士丹利三年均未体现。"
+      },
+      "no_hallucination": {
+        "score": 4,
+        "reason": "存在疑似编造/不一致事实：live_in(@self,@ms)将地点与机构混用；@xczn被设为brand“星辰智能”，但对话只说“AI公司叫星辰智能”，虽然可能相关但谓词类型不稳；p11/degree等结构引入了未在原文直接出现的“创业者”职业细节与错误变量绑定。"
+      },
+      "format_compliance": {
+        "score": 8,
+        "reason": "整体遵循@id声明与$id = pred(...)语句的STL风格，没有明显语法噪声；但本次并未包含note/时间点拆分等参考格式细节，且部分谓词变量命名方式虽可解析但语义上不合逻辑。"
+      }
+    },
+    "overall_comment": "输出抓到了一些核心人物与机构（复旦、MIT、GS、MS、张韬、斯坦福、杭州、星辰智能），但大量关键事实（衡水、金融系、交换的时间与时长、高盛半年、MS三年与香港、公司规模与业务定位）缺失且多处谓词/论元/修饰挂接错误。",
+    "parse_error": ""
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-comprehensive-001",
+    "judge_ms": 6890,
+    "weighted_score": 5.4,
+    "scores": {
+      "completeness": {
+        "score": 6,
+        "reason": "覆盖了大部分事实（凯文身份、外科医生、工作地点更正、语言、妻子日本人、去年东京认识、婚在大阪），但遗漏了“妻子可能是日本人”的不确定性表达/相信谓词，也没有声明“认识是在东京”的主体关系语义（golden用meet且承载地点时间，本输出用meet但未表达不确定）。"
+      },
+      "predicate_choice": {
+        "score": 6,
+        "reason": "总体合理（brother、occupation、speak、nationality、meet、marry、correct_intent），但工作地点谓词用workplace且无一致性；且将“还会一点法语”用note而非degree谓词，不符合参考的谓词选择。"
+      },
+      "argument_correctness": {
+        "score": 5,
+        "reason": "存在明显参数/实体问题：@self被当作一个人但未在声明中定义；同时使用@w1但未声明对应的妻子实体（应为@wife或等价@id）。此外 @9=meet(@kevin,@w1,@tokyo) 与后续 location/time拆分不一致（参考为meet后再location/time）。"
+      },
+      "correction_handling": {
+        "score": 3,
+        "reason": "更正处理不正确：先保留了原错误事实（workplace(@kevin,@jhu)）但没有配套 retract_intent，且同时使用correct_intent分别指向 $3与$9，但没有体现“原说约翰霍普金斯，更正为梅奥诊所”的对应replacement关系（golden对工作更正是针对work_at陈述）。婚姻地点更正也错误地对 $9（meet在东京）做了correct_intent(@self,$9)，而不是对婚姻地点陈述进行更正。"
+      },
+      "modifier_attachment": {
+        "score": 5,
+        "reason": "“去年”作为时间修饰附在meet上是合理的；但“还会一点法语”的量级没有用degree修饰，而是放在note($6,...)，导致结构化修饰缺失。"
+      },
+      "no_hallucination": {
+        "score": 8,
+        "reason": "未见明显新增到对话之外的事实；主要问题在于使用了未定义的@w1以及谓词/修饰方式偏离参考，但就“内容”看基本来自对话。"
+      },
+      "format_compliance": {
+        "score": 4,
+        "reason": "整体是STL风格但语法/结构不稳：@self只出现为@self: person而非带key的对象类型声明；并且使用了@w1但未声明其@id实体。还把法语的量级作为note而不是声明degree（虽不致命，但不符合参考结构）。"
+      }
+    },
+    "overall_comment": "输出包含多项对话关键信息，但由于未正确定义妻子实体、参数/更正指向错误且缺少不确定性的表达，整体质量明显低于golden参考。",
+    "parse_error": ""
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-correction-001",
+    "judge_ms": 4748,
+    "weighted_score": 7.8,
+    "scores": {
+      "completeness": {
+        "score": 6,
+        "reason": "Captures coworker(@self,@li) and work_at(@li,@tencent) plus the correction concept, but omits the explicit correction annotation note present in the reference."
+      },
+      "predicate_choice": {
+        "score": 9,
+        "reason": "Uses reasonable predicates for coworker and work_at, and uses correct_intent for the replacement correction."
+      },
+      "argument_correctness": {
+        "score": 8,
+        "reason": "@self and @li are linked correctly for coworker and work_at; however, correct_intent is not linked to the exact $p2 entity identifier as in the reference ($2 points to work_at but differs in id naming, and missing @self declaration/typing consistency)."
+      },
+      "correction_handling": {
+        "score": 7,
+        "reason": "Uses correct_intent for the corrected fact, but does not include retract/correction rationale details and introduces a $baidu entity without any corrective linkage or note; also does not explicitly ensure the initial wrong predicate is only treated as part of the correction."
+      },
+      "modifier_attachment": {
+        "score": 10,
+        "reason": "No time/degree/quantity/frequency modifiers were mentioned, so none are needed."
+      },
+      "no_hallucination": {
+        "score": 8,
+        "reason": "Adds entities @self, @baidu, and predicates coworker/work_at consistent with the conversation; however, @baidu is declared as an entity not otherwise tied via retract/correction structures (still not clearly hallucination, but less faithful than reference)."
+      },
+      "format_compliance": {
+        "score": 8,
+        "reason": "Mostly valid STL syntax, but uses @self without a type label matching the reference (and entity typing is inconsistent: @self: person without quoting/label clarity), and omits the required note annotation."
+      }
+    },
+    "overall_comment": "The output captures the main corrected relationship but misses the reference note and has some weaker correction/linking and entity/typing consistency compared to the golden reference.",
+    "parse_error": ""
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-family-001",
+    "judge_ms": 9324,
+    "weighted_score": 5.9,
+    "scores": {
+      "completeness": {
+        "score": 6,
+        "reason": "多数关系列出（爷爷/奶奶/大伯/小叔/小姨/小豪/妻子/女儿及部分职业与居住），但缺少核心亲属关系谓词如 father/mother/brother/sister/child 以及“大伯是爸爸的兄弟、爸爸有两个兄弟”等关键语义链；同时“刚上幼儿园”只用职业/教育阶段不匹配（输出为“幼儿园学生”）。"
+      },
+      "predicate_choice": {
+        "score": 4,
+        "reason": "使用了 name/occupation/nationality/work_at/live_in/coworker 等但亲属关系谓词未用到（如兄弟/姐妹/父母/孩子）；另有 occupation(@daughter,\"幼儿园学生\")谓词不合适，教育阶段应更贴近“教育阶段/就读”。"
+      },
+      "argument_correctness": {
+        "score": 3,
+        "reason": "输出中存在大量未声明的实体引用（@grandfather/@grandmother/@uncle1/@uncle2/@wife_of_uncle2/@mother/@cousin/@self/@wife/@daughter 等未按@id规则声明），且谓词参数关系不清晰/不对应金标准；例如缺少 father(@self, @grandpa) 等对应论元结构。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话未出现更正/撤回语句，未涉及 correction_intent 或 retract_intent；因此在该维度无问题。"
+      },
+      "modifier_attachment": {
+        "score": 5,
+        "reason": "“90多岁”以 age(@grandfather,90)形式保留但未体现“刚上幼儿园”（金标准为教育阶段“幼儿园”）；另外居住地等未明确与特定人群谓词绑定到正确主语之外的亲属关系语义链。"
+      },
+      "no_hallucination": {
+        "score": 7,
+        "reason": "主要事实与对话一致（福州/厦门大学/美咲/日本人/义乌外贸/广州/中山大学附属医院/医生/女儿叫朵朵等），但“幼儿园学生”属于对话“刚上幼儿园”的不准确改写；且由于缺少亲属谓词，部分结构性信息可能被误表示（如 coworker 的使用未在金标准中作为必要事实）。"
+      },
+      "format_compliance": {
+        "score": 6,
+        "reason": "语法形式接近STL（@id与$id形式），但实际输出缺少大量 @id 声明（大量用到的变量未按@id: TYPE \"key\"声明），并引入不符合金标准类型的论元（如未声明person/org/place对应）。此外未出现 note/correction，但不影响格式主干。"
+      }
+    },
+    "overall_comment": "输出覆盖了不少人物与地点/职业信息，但因缺失关键亲属关系谓词、存在大量未声明实体引用且对女儿幼儿园表述不准确，整体语义抽取完整性与结构正确性不足。",
+    "parse_error": ""
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-food-001",
+    "judge_ms": 9777,
+    "weighted_score": 6.45,
+    "scores": {
+      "completeness": {
+        "score": 6,
+        "reason": "覆盖了大部分关键信息（花生过敏、不能吃猪肉、意大利面频率、擅长做饭/烘焙、上周做巴斯克芝士蛋糕、奶茶/可乐不喝、黑咖啡/茶、黑咖啡杯数），但缺少“美食爱好者/烹饪以美食为爱好”的明确建模（golden里是hobby@self），以及“姐过生日/是给姐过生日”的生日事实未单列；并且“自己咖啡因上瘾”是另一句转述，输出形式不一致。"
+      },
+      "predicate_choice": {
+        "score": 5,
+        "reason": "多处谓词不匹配：花生过敏使用like/dislike而非过敏谓词；不能吃泰国菜用neg(eat)不如golden的“dislike:allergy”；猪肉宗教原因使用cause不如golden的note/neg绑定方式；给蛋糕使用gift(@self,@cake,@sister)方向/谓词用法可能不稳；相信/因果谓词（believe）与原意“我姐老说”不等同。"
+      },
+      "argument_correctness": {
+        "score": 4,
+        "reason": "多个参数绑定不正确或疑似错位：gift的参数顺序与金标准不一致（golden里是gift(@self,@cake)并单独有sis生日）；$s18 = believe(@sister,$s17)中论元类型/指向频率语句的方式不清晰；$s19 的对象字符串“说@self咖啡因上瘾”未按会话表达进行结构化（应是姐经常说某人咖啡因上瘾，但这里把文本拼进了habit谓词的参数）。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中没有出现更正/撤回，因此无需处理更正意图，输出未引入correction_intent或retract_intent，符合要求。"
+      },
+      "modifier_attachment": {
+        "score": 7,
+        "reason": "时间“上周”正确附着在作品/制作事件make(@self,@cake)上；“每周至少三次”正确附着在like(@self,@pasta)上；“一天三杯以上”正确附着在黑咖啡喝的drink事件上；但“可能太多了哈哈/老说我咖啡因上瘾”的修饰与语义没有被恰当结构化（导致该部分相关修饰丢失/错配）。"
+      },
+      "no_hallucination": {
+        "score": 6,
+        "reason": "总体未明显捏造新事实，但使用了@thailand等中间实体以及“做/给的结构化方式”可能引入金标准未要求的额外假设；此外believe/习惯化habit对原句“老说我咖啡因上瘾”的语义映射不够准确，属于可能的语义漂移。"
+      },
+      "format_compliance": {
+        "score": 8,
+        "reason": "整体符合@/ $ /note的基本STL三形式语法，没有出现markdown或解释文本；但输出中$s1 = like(@self, \"美食\")将hobby与like混用且有多处谓词用法不确定（语法层面虽可解析，但与STL语义约束可能不一致）。"
+      }
+    },
+    "overall_comment": "输出覆盖了大部分会话事实，但在过敏/不吃、生日、以及“老说我咖啡因上瘾”的谓词与参数绑定上与金标准差异较大，导致完整性与语义对齐度偏低。",
+    "parse_error": ""
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-health-001",
+    "judge_ms": 6612,
+    "weighted_score": 4.55,
+    "scores": {
+      "completeness": {
+        "score": 4,
+        "reason": "遗漏了多项关键信息（如头疼持续约2-3周、睡眠不好/每天4-5小时、忙年审带来的压力、去年体检血压正常、当前未吃药等）；同时还出现多处与对话无关的内容（如姓名小明、杭州、工程师、情绪着急等）。"
+      },
+      "predicate_choice": {
+        "score": 3,
+        "reason": "多处谓词不符合语义：应体现‘高血压家族史’（father/grandmother hypertension），但用来表达枸杞/抽烟/红酒时谓词选用如like/dislike且方向含义不明确；‘抽烟’用like/dislike不如neg/habit；未使用对应‘喝枸杞水/红酒/偶尔’与否规则。"
+      },
+      "argument_correctness": {
+        "score": 4,
+        "reason": "部分参数能对应（如work_at(@wife,协和医院)较合理、frequency(@游泳,每周两次)合理），但抽烟表达通过neg($7)不正确（把‘游泳频率’当成抽烟习惯对象）；父母关系也存在错配：@he仅写作‘我爸’且未明确高血压史谓词关联。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中没有出现明确的事实更正/撤回，因此无需用correct_intent或retract_intent。"
+      },
+      "modifier_attachment": {
+        "score": 3,
+        "reason": "‘每周两次’正确挂在游泳上，但其他时间/频率修饰没有体现（如‘每天只能睡4-5小时’、‘枸杞水每天’、‘红酒偶尔’、以及‘持续两三周’），且抽烟/否定修饰被错误地附着在游泳频率谓词上。"
+      },
+      "no_hallucination": {
+        "score": 2,
+        "reason": "引入了对话未提及的事实：@self姓名‘小明’、地点‘杭州’、职业‘工程师’、以及‘情绪着急’等；还缺失了对话中的高血压家族史/睡眠头疼/未吃药等关键信息，导致整体偏离。"
+      },
+      "format_compliance": {
+        "score": 6,
+        "reason": "总体为STL形式（@声明、$语句、note），但谓词/变量使用存在问题（如$8 = neg($7)参数类型不合理）；未违反明显的语法结构，但语义层面不规范较多。"
+      }
+    },
+    "overall_comment": "输出在格式上大体接近STL，但在完整性、谓词/参数正确性、以及多处幻觉与关键事实缺失方面表现较差。",
+    "parse_error": ""
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-long-complex-001",
+    "judge_ms": 10316,
+    "weighted_score": 2.65,
+    "scores": {
+      "completeness": {
+        "score": 3,
+        "reason": "遗漏多项关键事实：周然为去年浙大毕业的“时间”未表达；周末常与老赵徒步未体现；日出观看未体现；周然不订婚/订婚更正相关意图未正确呈现；“压力太大、想转独立开发者”中“压力太大”未以note给出；老赵辞职为“上周辞职且去日本读CS博士”的部分有但与正确谓词/论元关系不一致。"
+      },
+      "predicate_choice": {
+        "score": 3,
+        "reason": "多处谓词不符合语义：用name/like/neg/meet/own/breed替代了参考中的兄弟关系、配偶/订婚考虑、访谈徒步方式、宠物/品种与饲养安排等；使用neg($z9)与正确意图纠错框架不匹配。"
+      },
+      "argument_correctness": {
+        "score": 2,
+        "reason": "论元多处错位：$z5=like(@z1,\"独立开发者\")把“想转做独立开发者”当成喜欢；$w相关的“去年毕业”时间缺失；纠错相关 $m2=believe(@self,$z9)且$z9=engage(...)用错实体/缺少defer/correct_intent结构；老赵辞职使用resign但雇佣变动对象与条件（去日本读CS博士）未正确连接到计划实体。"
+      },
+      "correction_handling": {
+        "score": 0,
+        "reason": "纠错处理几乎失败：对“订婚/不订婚（只是考虑）”“苏晴工作从UI设计更正为产品经理”未使用correct_intent/retract_intent，且出现不相干的 engage/neg/时间等“假纠错”组合；存在ghost/错误事实重述风险（订婚相关结构不符合参考且未正确表达‘只是考虑’）。"
+      },
+      "modifier_attachment": {
+        "score": 2,
+        "reason": "部分修饰附着不当或缺失：‘上个月’有用于meet但缺少“黄山看日出”的时间；‘两年’用于工作时长基本合理但未说明其与“之前在杭州阿里干过两年”紧密对应（且工作谓词/地点一致性整体较差）；‘去年毕业’完全缺失。"
+      },
+      "no_hallucination": {
+        "score": 2,
+        "reason": "包含多处未在对话明确出现或与黄金不同的表述：如“周然名字”为 name(@self,\"周然\")结构错误导致语义污染；‘饿我’未出现的‘妈妈/他妈家’等虽然部分来自表达但以live_in/他妈家替代‘让他妈帮忙养着’语义不严谨；且增加了关于品种的显式breed虽然对话有“拉布拉多/柯基”但在对话中并非一定作为breed谓词表达方式（仍算可接受信息，但整体因其他错误被扣分）。"
+      },
+      "format_compliance": {
+        "score": 8,
+        "reason": "整体为STL三形式为主，但包含非规范谓词/结构（如 $z10=neg(...)、habit/meet 等未在规则中保证；且缺少有些原子注释note）。未见明显非STL格式（如markdown/代码块/解释性文字）"
+      }
+    },
+    "overall_comment": "输出在实体覆盖上有部分对应，但谓词选择、纠错机制与论元/修饰的准确性明显偏离黄金参考，导致整体语义表达质量很低。",
+    "parse_error": ""
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-long-simple-001",
+    "judge_ms": 7240,
+    "weighted_score": 0.0,
+    "scores": {
+      "completeness": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "predicate_choice": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "argument_correctness": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "correction_handling": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "modifier_attachment": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "no_hallucination": {
+        "score": 0,
+        "reason": "judge response parse error"
+      },
+      "format_compliance": {
+        "score": 0,
+        "reason": "judge response parse error"
+      }
+    },
+    "overall_comment": "",
+    "parse_error": "JSON parse error: Expecting ',' delimiter: line 13 column 46 (char 590)"
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-multi-event-001",
+    "judge_ms": 5836,
+    "weighted_score": 5.7,
+    "scores": {
+      "completeness": {
+        "score": 4,
+        "reason": "遗漏了关键结构：会面事件/订婚事件的正确实体声明与engagement事件类型（如event(@cousin,@bf):engagement），且“男朋友/partner”为他人实体未明确为@bf person；时间/地点有记录但未覆盖黄金的事件建模。"
+      },
+      "predicate_choice": {
+        "score": 5,
+        "reason": "meet、location使用方向正确，但订婚使用了engage谓词而黄金为event(...):engagement；且partner谓词与“男朋友”可接受但缺少@bf实体。"
+      },
+      "argument_correctness": {
+        "score": 3,
+        "reason": "@cousin未正确生成，实际使用了@p1/@p2但未声明@p2为person；语句如cousin(@self,@p1)中@p1是name结果而非原始实体引用的链路不一致。time/location参数挂在$c2/$c4上虽然形式上像语句，但$c4对应的谓词与黄金的事件对象不一致。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中没有更正/撤回内容，因此无相关错误。"
+      },
+      "modifier_attachment": {
+        "score": 6,
+        "reason": "“去年”绑定到会面$c2上、“上个月”绑定到订婚$c4上，整体与对话对应；但由于订婚事件建模不匹配，时间/地点修饰的目标对象可能不符合参考结构。"
+      },
+      "no_hallucination": {
+        "score": 8,
+        "reason": "未出现明显对话中没有的额外事实；仅有谓词与实体建模方式偏离参考，属于表达问题而非新增事实。"
+      },
+      "format_compliance": {
+        "score": 4,
+        "reason": "使用了不符合STL结构的链式定义方式（如$c1 = cousin(@self, @p1)但@p1先后被name赋值、且未使用@id声明@p2为person；整体语法仍类似3表单但缺少必要的实体声明并存在引用不一致）。"
+      }
+    },
+    "overall_comment": "输出抓住了主要时间地点与会面/订婚关系，但缺少对关键实体与订婚事件类型的正确建模，且存在明显的参数引用与STL结构合规性问题。",
+    "parse_error": ""
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-multi-value-001",
+    "judge_ms": 3761,
+    "weighted_score": 8.25,
+    "scores": {
+      "completeness": {
+        "score": 8,
+        "reason": "Captured the three languages and both hobbies, but omitted the '一点' (a degree modifier) for Japanese."
+      },
+      "predicate_choice": {
+        "score": 7,
+        "reason": "Used speak for languages correctly; hobby was replaced with like for running and guitar, which is semantically close but not the intended predicate in the reference."
+      },
+      "argument_correctness": {
+        "score": 10,
+        "reason": "Arguments are attached correctly to @self with appropriate string values; no broken references."
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "No corrections or retractions present in the conversation/output."
+      },
+      "modifier_attachment": {
+        "score": 3,
+        "reason": "Did not attach '一点' to the Japanese speaking statement (missing degree($p3, '一点'))."
+      },
+      "no_hallucination": {
+        "score": 10,
+        "reason": "No additional facts beyond the provided languages and hobbies."
+      },
+      "format_compliance": {
+        "score": 8,
+        "reason": "Overall STL-like syntax is mostly compliant, but entity declaration uses '@self: person' instead of the specified '@id: TYPE \"key\"' form, and it omits the golden reference's degree statement."
+      }
+    },
+    "overall_comment": "The output correctly represents languages and hobbies but misses the key '一点日语' degree detail and uses a different predicate (like vs hobby), with minor format noncompliance.",
+    "parse_error": ""
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-negation-001",
+    "judge_ms": 4217,
+    "weighted_score": 8.7,
+    "scores": {
+      "completeness": {
+        "score": 8,
+        "reason": "包含不喜欢香菜、不会游泳（以否定表达）和擅长做饭，但“不会游泳”在输出中未与参考一致地用同一谓词结构表达。"
+      },
+      "predicate_choice": {
+        "score": 7,
+        "reason": "香菜使用dislike正确；游泳使用neg(skill(...))结构可表达否定但不如参考的方式直接对应“不会”；做饭用skill正确。"
+      },
+      "argument_correctness": {
+        "score": 9,
+        "reason": "所有语句均以@self为主体，参数位置正确；未见错误的实体/参数链接。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中无更正/撤回信息，输出未使用correction意图，符合要求。"
+      },
+      "modifier_attachment": {
+        "score": 10,
+        "reason": "对话中无时间/频率等修饰语需求；输出无需处理修饰。"
+      },
+      "no_hallucination": {
+        "score": 10,
+        "reason": "未引入对话中不存在的额外事实或实体。"
+      },
+      "format_compliance": {
+        "score": 7,
+        "reason": "基本符合$id = pred(...)与note/comment规则，但缺少对@self的实体声明形式（缺少@id: TYPE \"key\"样式），且使用了数字id作为$1/$2/$3不与参考一致。"
+      }
+    },
+    "overall_comment": "整体忠实覆盖了三句意图，但“不会游泳”的否定表达方式与黄金参考不一致，且格式上实体声明/ID命名不够规范。",
+    "parse_error": ""
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-pet-001",
+    "judge_ms": 8268,
+    "weighted_score": 7.6,
+    "scores": {
+      "completeness": {
+        "score": 8,
+        "reason": "Includes all main entities (大黄/团子/慢慢/小杰/广州/上海/朋友) and most stated facts (age, breed, temperament, buy/gift, move). However, bonding/ownership relations are inconsistent with reference (own vs pet) and move timeframe/age modifiers for 大黄 (5岁) present but pet_shop as separate entity is extra; also reference’s partner(@self,@bf) is not captured (uses gift to self instead)."
+      },
+      "predicate_choice": {
+        "score": 6,
+        "reason": "Uses own/name/breed/habit/duration/buy/gift/live_in/move, which broadly fit, but predicates differ from golden reference (partner, pet, move annotation). 'habit' may be less aligned for抓沙发/温顺 than a 'temperament' predicate, and ages are partially normalized (团子 age lacks '8个月' modifier text)."
+      },
+      "argument_correctness": {
+        "score": 7,
+        "reason": "Arguments are mostly attached to correct subjects (e.g., buy(xiao_jie, 大黄, 宠物店); gift(friend, 团子, self)). However, breed/age arguments are slightly off vs reference (age(@pet2, 8) instead of '8个月', losing the unit/modifier structure), and own(@self, ...) replaces pet(@self, ...) without clarity."
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "No corrections or retract/incorrect-to-correct transitions are present in the conversation; output contains no correction constructs."
+      },
+      "modifier_attachment": {
+        "score": 6,
+        "reason": "Some modifiers are attached but not consistently: 团子的 '8个月' is reduced to age(..., 8) (unit lost). 大黄的温顺/抓沙发 are treated as habit without explicit attachment structure. Move from 广州 to 上海 is present but free-text note in reference (“从广州搬到上海”) is not represented as note()."
+      },
+      "no_hallucination": {
+        "score": 7,
+        "reason": "No obvious invented events beyond what’s in the conversation, but adds extra modeled facts such as live_in(@self, @guangzhou) and live_in(@self, @shanghai) which are not explicitly stated as separate facts (only '搬到' implies them). Also introduces explicit entity '宠物店' in a way not present in reference."
+      },
+      "format_compliance": {
+        "score": 9,
+        "reason": "STL syntax is respected (only @id declarations and $ statements); no markdown/code/explanations. Minor issue: note() from reference omitted, but that’s not a syntax violation."
+      }
+    },
+    "overall_comment": "The output captures most conversation facts and entities, but differs from the golden reference in predicate choices, modifier representation (especially 团子的“8个月”), and missing the reference-style partner/note details, with a few potentially over-inferred location facts.",
+    "parse_error": ""
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-qa-001",
+    "judge_ms": 5277,
+    "weighted_score": 7.3,
+    "scores": {
+      "completeness": {
+        "score": 7,
+        "reason": "Captures most key entities and intents (Singapore business trip, Huawei employment, husband Kevin US, food ask, Python learning, child age, Shenzhen location) but misses several golden facts/nuances: trip timing modifier '下个月', explicit '肉骨茶很好喝/推荐' as recommend, explicit note '海外事业部', and does not represent visa办理为下个月出差计划 as in reference (uses a different plan predicate/label)."
+      },
+      "predicate_choice": {
+        "score": 6,
+        "reason": "Uses plausible predicates (plan, work_at, spouse, nationality, child, age, live_in) but misuses like/speak/hobby for content that in the reference is modeled as recommend, skill, and want; 'speak(@self, Python)' is an incorrect predicate choice for '怎么用'/'学习使用'."
+      },
+      "argument_correctness": {
+        "score": 6,
+        "reason": "Major arguments are attached reasonably (husband/spouse, child/age, self/live_in), but some predicate-argument semantics are off: like(@kevin,'肉骨茶') vs conversation is that husband said 肉骨茶很好喝/recommends; speak(@self,'Python') mismatches the intended relationship; the 'data analysis' item is modeled as like rather than a desire to switch."
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "No correction/retraction content in the conversation; output contains no correction intents."
+      },
+      "modifier_attachment": {
+        "score": 4,
+        "reason": "Does not attach '下个月' timing to the trip/plan statement; misses the reference's time modifier. Also '南山区' is partially included via 深圳南山区 place, but no explicit attachment as a note/annotation like the reference."
+      },
+      "no_hallucination": {
+        "score": 8,
+        "reason": "No clear invented entities/events beyond minor predicate/attribute interpretations (e.g., 'like' and 'speak' do not introduce new facts but reframe them). However, predicate choices imply emotions/skills not explicitly stated (e.g., Kevin 'likes' 肉骨茶; self 'speak' Python)."
+      },
+      "format_compliance": {
+        "score": 10,
+        "reason": "Output is valid STL syntax using only @id declarations and $ statements with correct form structure; no extraneous text."
+      }
+    },
+    "overall_comment": "The output covers most entities and core relationships but significantly misses timing/modifier details and uses several misaligned predicates (especially for Python and 肉骨茶) compared to the golden reference.",
+    "parse_error": ""
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-retract-001",
+    "judge_ms": 6351,
+    "weighted_score": 7.15,
+    "scores": {
+      "completeness": {
+        "score": 8,
+        "reason": "捕捉到“老王”和“他与狗/金毛”的核心更正，但未显式表达“撤回意图(retract_intent)”这一关键更正机制。"
+      },
+      "predicate_choice": {
+        "score": 6,
+        "reason": "“own”和“neg”能表达否定，但更正语义应使用 retract_intent/纠错意图而非仅否定谓词。"
+      },
+      "argument_correctness": {
+        "score": 7,
+        "reason": "neighbor(@self,@w)与自/邻居关系基本正确；否定的是自谓词own(@w,\"金毛\")，但金毛作为“养狗”的替换关系未与原“养了一条金毛”逐句对应到撤回意图。"
+      },
+      "correction_handling": {
+        "score": 2,
+        "reason": "未使用 retract_intent（黄金参考要求），且用“neg(own(...))”替代更正，可能产生“旧事实仍在但被否定”的歧义；也缺少明确的纠错意图标注。"
+      },
+      "modifier_attachment": {
+        "score": 9,
+        "reason": "“一条/金毛”未被单独建模为数量修饰，但金毛对象本身已出现，且本对话无更多需附着的时间/频率修饰。"
+      },
+      "no_hallucination": {
+        "score": 10,
+        "reason": "未加入对话中不存在的新事实；仅对“老王/金毛/没养狗”的内容做了否定表达。"
+      },
+      "format_compliance": {
+        "score": 9,
+        "reason": "STL语法基本符合（@声明、$语句、note均为允许形式），无明显格式违规。"
+      }
+    },
+    "overall_comment": "输出覆盖了主体与否定含义，但更正处理方式不符合参考要求，缺少应有的 retract_intent，导致纠错语义准确性不足。",
+    "parse_error": ""
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-temporal-001",
+    "judge_ms": 5261,
+    "weighted_score": 5.85,
+    "scores": {
+      "completeness": {
+        "score": 6,
+        "reason": "缺少上个月搬到深圳的主体是否为“我爸”在语义链路中被错误替换为@self对应的父亲关系；另外餐厅“自己开了一家餐厅”被部分覆盖为own/start但可能缺少与父亲实体的正确对应。"
+      },
+      "predicate_choice": {
+        "score": 7,
+        "reason": "father、resign、move大体匹配；但“去年自己开了一家餐厅”用start(@dad,'餐厅')更贴切，而输出用start(@f1,@restaurant)且own谓词未必等价于“开了一家餐厅”。"
+      },
+      "argument_correctness": {
+        "score": 2,
+        "reason": "父亲关系指向错误：输出定义了@self的father(@self,@f1)但@f1实体未声明；resign/move/start等论元主体链路也因此不正确。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话无纠正内容，未使用更正相关结构，符合要求。"
+      },
+      "modifier_attachment": {
+        "score": 8,
+        "reason": "时间“三年前/去年/上个月”分别连接到resign/start/move对应的语句上，整体匹配参考；但由于主体论元错误，仍有一定不确定性。"
+      },
+      "no_hallucination": {
+        "score": 4,
+        "reason": "引入了@restaurant类型为org以及谓词own，且还出现未声明实体@f1，属于结构性额外/不受控信息（难以确认是否来自原意）。"
+      },
+      "format_compliance": {
+        "score": 4,
+        "reason": "虽然遵循STL形式，但存在未声明的@f1实体（格式/引用一致性问题），影响可解析性与合规性。"
+      }
+    },
+    "overall_comment": "输出在谓词与时间连接上部分相符，但由于主体实体@f1未声明且论元绑定错误，整体语义对齐度很低。",
+    "parse_error": ""
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-travel-001",
+    "judge_ms": 7376,
+    "weighted_score": 7.7,
+    "scores": {
+      "completeness": {
+        "score": 7,
+        "reason": "主要事实均有：去年去泰国/京都/首尔、与小敏同学关系、结婚与配偶、居住江南区、三星芯片设计、今年冰岛看极光、明年马尔代夫蜜月、丈夫刘洋。但缺少“朴智勋是韩国人”的国籍谓词（nationality）。并且对‘跟我老公一起’的同伴/一起含义未显式表达（如与丈夫同游）。"
+      },
+      "predicate_choice": {
+        "score": 6,
+        "reason": "部分谓词偏差：classmate(@min,@self)与原意“找我大学同学小敏”方向更像‘self是小敏的同学’，但这是主从表述问题；marry作为配偶关系可接受但参考用spouse更一致；meet谓词不对应原文（原文是“找…小敏”，更接近找/会面/联系而非meet）。"
+      },
+      "argument_correctness": {
+        "score": 7,
+        "reason": "人物与地点参数基本对应（首尔/江南区、小敏/朴智勋/刘洋/三星/冰岛/马尔代夫）。但 classmate 的参数顺序可能反了（min 与 self），meet(@self,@min)与语义对应不清；e3 eat(@self,'芒果糯米饭')未体现‘在曼谷’，参考未用eat但也有‘先去了泰国曼谷吃…’的空间归属缺失。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中无更正/撤回事件，因此无需处理纠错。"
+      },
+      "modifier_attachment": {
+        "score": 5,
+        "reason": "‘去年’、‘今年’、‘明年’应分别修饰旅行/计划事件；实际输出只把“今年/明年”附在 plan 上，未给去年相关的visit事件加time修饰（且未对每次去年行程分别标注）。另外‘特别怕冷但是很想去哈哈’作为注释可，但未以修饰方式挂到“去冰岛看极光/与丈夫一起”的具体语句上。"
+      },
+      "no_hallucination": {
+        "score": 9,
+        "reason": "未发现明显新增未经提及的实体/关系。仅存在轻微语义超出：如在曼谷吃芒果糯米饭用eat(@self,...)但未限定地点（不是新增事实，只是表达方式）。"
+      },
+      "format_compliance": {
+        "score": 10,
+        "reason": "输出严格符合STL三形式与note/注释格式，无多余说明、无Markdown/代码围栏。"
+      }
+    },
+    "overall_comment": "整体结构与大部分事实捕获良好，但缺少朴智勋的国籍信息，并且对“去年”修饰缺失、个别谓词/参数方向与原句语义不够贴合。",
+    "parse_error": ""
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-uncertainty-001",
+    "judge_ms": 6928,
+    "weighted_score": 5.35,
+    "scores": {
+      "completeness": {
+        "score": 4,
+        "reason": "仅捕获了“老板/上海/谷歌/可能在谷歌工作过”部分，但缺少关键结构：应有boss实体、并正确表达“好像”与“可能”对应的相信语义；也未保留黄金中“上海人”的人群国籍属性谓词/声明。"
+      },
+      "predicate_choice": {
+        "score": 3,
+        "reason": "用origin(@boss,@sh)替代“nationality(@boss,'上海人')”且语义不一致；还把相信相关谓词结构混乱（出现believe(@self,$f1)但$f1又是origin语句的结果）。"
+      },
+      "argument_correctness": {
+        "score": 3,
+        "reason": "$b1引用了未正确声明且$f1被重用/覆盖的语义资源；缺少@boss与@google在正确关系中的对应声明（黄金里p1/p3等引用均缺失）。"
+      },
+      "correction_handling": {
+        "score": 10,
+        "reason": "对话中没有出现更正/撤回意图，因此未涉及correction_intent/retract_intent，符合要求。"
+      },
+      "modifier_attachment": {
+        "score": 5,
+        "reason": "“好像/可能”只通过note表达，但没有按黄金参考将其挂接到对应的believe语句层；另外“之前”未被结构化为时间修饰，且谓词也未体现“可能之前在谷歌工作过”的结构。"
+      },
+      "no_hallucination": {
+        "score": 7,
+        "reason": "未明显新增对话中不存在的新事件，但加入@sh作为“上海”地点实体虽在对话中合理推断，却与黄金“上海人(国籍/身份)”不一致，且note内容与结构谓词脱节。"
+      },
+      "format_compliance": {
+        "score": 6,
+        "reason": "基本符合STL三种形式，但存在明显结构错误/未定义引用（$f1同时作为语义语句与被后续believe引用的对象，且缺少黄金所需的$p1/$p3等引用链）。语法层面可能仍“可解析”，但语义引用不合规。"
+      }
+    },
+    "overall_comment": "输出覆盖了部分主题词与note注释，但在关键实体/谓词选择（上海人身份）、以及believe与引用链的正确构造上与黄金参考偏离较大。",
+    "parse_error": ""
+  },
+  {
+    "model": "mimo-v2-flash",
+    "case_id": "po-vibecoding-001",
+    "judge_ms": 7783,
+    "weighted_score": 5.4,
+    "scores": {
+      "completeness": {
+        "score": 6,
+        "reason": "Captured several core entities (陆思源、杭州、蚂蚁集团、哈工大、TypeScript、Rust、摄影/风景照、索尼A7M4、学业/工作变更、域名、Vercel、Next.js/博客功能), but misses key details and structure from the reference (e.g., PingCAP time context '之前', correct education predicate '毕业于…计算机系', name/occupation/skills mapping not aligned, and lacks the distinct '摄影' hobby + note '拍风景照')."
+      },
+      "predicate_choice": {
+        "score": 5,
+        "reason": "Some predicates are off: occupation is used for both '前端' and '前端开发五年经验' instead of modeling as reference does; 'like'/'own'/'plan' used instead of hobby/use/skill consistent with golden. 'buy' and 'plan' may not match intended predicate set."
+      },
+      "argument_correctness": {
+        "score": 6,
+        "reason": "Core links like work_at(@self, @ant) and live_in(@self,@hz) are correctly attached. However 'study_at' is used with @ha but loses the specific '计算机系' education detail; and the TS mapping to use(@self,@ts) is likely misattached (reference uses skill for TypeScript). Correction argument targets also differ from the reference (reference correct_intent applied to work_at(@self,@ant) / and a retract for PingCAP not present)."
+      },
+      "correction_handling": {
+        "score": 2,
+        "reason": "Does not follow the golden correction pattern. It uses correct_intent only once on $work (=work_at with 蚂蚁集团) and omits retract_intent for PingCAP. Also does not include the golden '之前' time modifier on PingCAP work. The old wrong workplace is not handled with proper correction semantics."
+      },
+      "modifier_attachment": {
+        "score": 3,
+        "reason": "No time modifier like '之前' is attached to the PingCAP work statement. Other modifiers like '五年经验', '部署到 Vercel', and domain details are represented as occupation/plan but not as properly attached temporal/quantity modifiers to the corresponding predicate in the way the reference models."
+      },
+      "no_hallucination": {
+        "score": 7,
+        "reason": "Most facts are grounded in the conversation. However introduces modeling choices not in the conversation as stated (e.g., predicates/attributes like @sony brand and @a7m4 object, and '部署到 Vercel' as a plan predicate) which may be acceptable but are not present in the reference framing; still no clearly new real-world facts beyond what was said."
+      },
+      "format_compliance": {
+        "score": 9,
+        "reason": "Uses only STL forms and comments structure (@id declarations and $id statements) without markdown or extraneous text. Syntax appears valid."
+      }
+    },
+    "overall_comment": "The output covers many mentioned entities but under-specifies and mis-handles the PingCAP→蚂蚁集团 correction (missing retract_intent and '之前' modifier) and uses several predicate choices that diverge from the golden reference.",
+    "parse_error": ""
+  }
+]

@@ -1,0 +1,18 @@
+{
+  "id": "po-correction-001",
+  "category": "correction",
+  "description": "纠正场景：工作地点更正，只输出新事实+correct_intent，不输出旧事实",
+  "turns": [
+    {
+      "messages": [
+        {"role": "user", "content": "我同事小李在百度上班。"}
+      ]
+    },
+    {
+      "messages": [
+        {"role": "user", "content": "不对，小李是在腾讯，不是百度。"}
+      ]
+    }
+  ],
+  "golden_stl": "@li: person \"小李\"\n@tencent: org \"腾讯\"\n$p1 = coworker(@self, @li)\n$p2 = work_at(@li, @tencent)\n$c1 = correct_intent(@self, $p2)\nnote($c1, \"CORRECTION: 原说百度，更正为腾讯\")"
+}
