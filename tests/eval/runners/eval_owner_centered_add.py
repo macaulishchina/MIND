@@ -32,7 +32,6 @@ TARGET_METRICS = {
     "ref_accuracy": 0.90,
     "statement_accuracy": 0.90,
     "evidence_accuracy": 0.90,
-    "update_accuracy": 0.90,
 }
 
 
@@ -61,8 +60,6 @@ class CaseResult:
     statement_total: int
     evidence_hits: int
     evidence_total: int
-    update_hits: int
-    update_total: int
     case_pass: bool
     failures: list[str]
     active_memories: list[dict[str, Any]]
@@ -133,6 +130,13 @@ def _case_owner_lookup(case: dict[str, Any]) -> str:
 
 def _sanitize_name(value: str) -> str:
     return re.sub(r"[^a-z0-9._-]+", "-", value.casefold()).strip("-") or "case"
+
+
+def _case_messages(case: dict[str, Any]) -> list[dict[str, str]]:
+    messages: list[dict[str, str]] = []
+    for turn in case.get("turns", []):
+        messages.extend(turn.get("messages", []))
+    return messages
 
 
 def _eval_config(cfg, case_id: str, temp_dir: str):
@@ -237,8 +241,6 @@ def _memory_matches(item: MemoryItem, expectation: dict[str, Any]) -> bool:
         actual_family = item.fact_family.value if getattr(item.fact_family, "value", None) else item.fact_family
         if actual_family != expectation["fact_family"]:
             return False
-    if expectation.get("versioned") is True and not item.version_of:
-        return False
     return True
 
 
@@ -298,24 +300,13 @@ def _evaluate_case(cfg, case: dict[str, Any]) -> CaseResult:
         eval_cfg = _eval_config(cfg, case["id"], temp_dir)
         memory = Memory(eval_cfg)
         try:
-            for turn in case.get("turns", []):
-                memory.add(
-                    messages=turn.get("messages", []),
-                    owner=owner_context,
-                    session_id=turn.get("session_id"),
-                    metadata=turn.get("metadata"),
-                )
+            memory.add(
+                messages=_case_messages(case),
+                owner=owner_context,
+            )
 
             owner_record = memory._history_store.resolve_owner(owner_context)
             active_memories = memory.get_all(owner_lookup, limit=500)
-            deleted_rows = memory._vector_store.list(
-                filters={"user_id": owner_lookup, "status": "deleted"},
-                limit=500,
-            )
-            deleted_memories = [
-                memory._payload_to_item(row["id"], row.get("payload", {}))
-                for row in deleted_rows
-            ]
             current_statements = memory._stl_store.query_statements(
                 owner_id=owner_record.owner_id,
                 is_current=True,
@@ -382,23 +373,6 @@ def _evaluate_case(cfg, case: dict[str, Any]) -> CaseResult:
         else:
             failures.append(f"missing_evidence:{expected}")
 
-    update_hits = 0
-    update_total = 0
-    for expected in case.get("expected_deleted_memories", []):
-        update_total += 1
-        if any(_memory_matches(item, expected) for item in deleted_memories):
-            update_hits += 1
-        else:
-            failures.append(f"missing_deleted:{expected}")
-
-    versioned_memories = [item for item in active_memories if item.version_of]
-    for expected in case.get("expected_versioned_active_memories", []):
-        update_total += 1
-        if any(_memory_matches(item, {**expected, "versioned": True}) for item in versioned_memories):
-            update_hits += 1
-        else:
-            failures.append(f"missing_versioned:{expected}")
-
     case_pass = not failures
     return CaseResult(
         case_id=case["id"],
@@ -417,8 +391,6 @@ def _evaluate_case(cfg, case: dict[str, Any]) -> CaseResult:
         statement_total=statement_total,
         evidence_hits=evidence_hits,
         evidence_total=evidence_total,
-        update_hits=update_hits,
-        update_total=update_total,
         case_pass=case_pass,
         failures=failures,
         active_memories=[_serialize_item(item) for item in active_memories],
@@ -465,9 +437,6 @@ def build_report(
     total_statements = sum(result.statement_total for result in case_results)
     total_evidence_hits = sum(result.evidence_hits for result in case_results)
     total_evidence = sum(result.evidence_total for result in case_results)
-    total_update_hits = sum(result.update_hits for result in case_results)
-    total_updates = sum(result.update_total for result in case_results)
-
     metrics = {
         "canonical_text_accuracy": _safe_ratio(total_canonical_hits, total_canonical),
         "subject_ref_accuracy": _safe_ratio(total_subject_hits, total_subject),
@@ -476,7 +445,6 @@ def build_report(
         "ref_accuracy": _safe_ratio(total_ref_hits, total_refs),
         "statement_accuracy": _safe_ratio(total_statement_hits, total_statements),
         "evidence_accuracy": _safe_ratio(total_evidence_hits, total_evidence),
-        "update_accuracy": _safe_ratio(total_update_hits, total_updates),
         "case_pass_rate": _safe_ratio(case_passes, len(case_results)),
     }
 

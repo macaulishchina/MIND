@@ -115,16 +115,5 @@
       "predicate": "correct_intent",
       "conf_range": [0.8, 1.0]
     }
-  ],
-  "expected_deleted_memories": [
-    {
-      "canonical_text_contains": "约翰霍普金斯"
-    }
-  ],
-  "expected_versioned_active_memories": [
-    {
-      "canonical_text_contains": "梅奥",
-      "subject_ref": "brother:凯文"
-    }
   ]
 }

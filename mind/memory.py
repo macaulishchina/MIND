@@ -183,7 +183,7 @@ class Memory:
         session_id: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> List[MemoryItem]:
-        """Extract facts from a conversation and store them as memories.
+        """Extract facts from one submitted dialogue chunk and store them.
 
         Uses the Semantic Translation Layer (STL) pipeline:
         1. Single LLM call → structured STL output
@@ -192,7 +192,8 @@ class Memory:
         4. Embed each statement for vector search
 
         Args:
-            messages: Chat messages [{"role": ..., "content": ...}].
+            messages: Ordered chat messages for one newly submitted dialogue
+                chunk, for example [{"role": ..., "content": ...}].
             user_id: Backward-compatible alias for ``owner.external_user_id``.
             owner: Structured owner identity.
             session_id: Optional session identifier for source tracking.
@@ -214,7 +215,7 @@ class Memory:
         stl_text = self._extract_stl(
             conversation,
             owner_id=owner_record.owner_id,
-            current_turn=len(messages),
+            message_count=len(messages),
         )
         if not stl_text.strip():
             elapsed = time.perf_counter() - add_t0
@@ -265,29 +266,18 @@ class Memory:
         )
 
         # ── Step 4: Project statements into owner-centered memories ──
-        results: List[MemoryItem] = []
         relation_subject_cache = self._build_relation_subject_cache(
             program=program,
             owner_record=owner_record,
         )
-        for stmt in program.statements:
-            envelope = self._statement_to_envelope(
-                stmt=stmt,
-                program=program,
-                owner_record=owner_record,
-                session_id=session_id,
-                source_context=conversation,
-                metadata=metadata,
-                relation_subject_cache=relation_subject_cache,
-            )
-            if envelope is None:
-                continue
-            try:
-                item = self._process_envelope(envelope)
-                if item is not None:
-                    results.append(item)
-            except Exception:
-                logger.exception("Failed to project/store statement $%s", stmt.local_id)
+        results = self._project_chunk_statements(
+            program=program,
+            owner_record=owner_record,
+            session_id=session_id,
+            source_context=conversation,
+            metadata=metadata,
+            relation_subject_cache=relation_subject_cache,
+        )
 
         elapsed = time.perf_counter() - add_t0
         logger.info(
@@ -647,7 +637,7 @@ class Memory:
         self,
         conversation: str,
         owner_id: str = "",
-        current_turn: int = 0,
+        message_count: int = 0,
     ) -> str:
         """Call LLM once to produce STL text from a conversation.
 
@@ -659,7 +649,7 @@ class Memory:
         if owner_id:
             try:
                 ref_rows = self._stl_store.query_recent_refs(owner_id)
-                focus_stack.bootstrap_from_refs(ref_rows, current_turn)
+                focus_stack.bootstrap_from_refs(ref_rows, message_count)
             except Exception:
                 logger.debug("Focus stack bootstrap failed", exc_info=True)
         active = focus_stack.top_k_for_prompt()
@@ -859,6 +849,117 @@ class Memory:
             metadata=metadata or {},
         )
 
+    def _project_chunk_statements(
+        self,
+        program,
+        owner_record: OwnerRecord,
+        session_id: Optional[str],
+        source_context: str,
+        metadata: Optional[Dict[str, Any]],
+        relation_subject_cache: Dict[str, Dict[str, str]],
+    ) -> List[MemoryItem]:
+        """Project one submitted chunk into owner memories using final statements only."""
+        current_stmt_ids = self._current_batch_statement_ids(
+            owner_id=owner_record.owner_id,
+            batch_id=program.batch_id,
+            expected=len(program.statements),
+        )
+        chunk_envelopes: List[FactEnvelope] = []
+        for stmt in program.statements:
+            stmt_id = f"{program.batch_id}_{stmt.local_id}"
+            if stmt_id not in current_stmt_ids:
+                continue
+            envelope = self._statement_to_envelope(
+                stmt=stmt,
+                program=program,
+                owner_record=owner_record,
+                session_id=session_id,
+                source_context=source_context,
+                metadata=metadata,
+                relation_subject_cache=relation_subject_cache,
+            )
+            if envelope is not None:
+                chunk_envelopes.append(envelope)
+        return self._process_chunk_envelopes(chunk_envelopes)
+
+    def _current_batch_statement_ids(
+        self,
+        owner_id: str,
+        batch_id: str,
+        expected: int,
+    ) -> set[str]:
+        """Return current statement IDs from the submitted STL batch."""
+        rows = self._stl_store.query_statements(
+            owner_id=owner_id,
+            is_current=True,
+            limit=max(500, expected * 4),
+        )
+        prefix = f"{batch_id}_"
+        return {
+            row["id"]
+            for row in rows
+            if isinstance(row.get("id"), str) and row["id"].startswith(prefix)
+        }
+
+    def _process_chunk_envelopes(
+        self,
+        envelopes: List[FactEnvelope],
+    ) -> List[MemoryItem]:
+        """Persist final owner-memory writes for one submitted dialogue chunk."""
+        results: List[MemoryItem] = []
+        grouped: Dict[tuple[str, str, str], List[FactEnvelope]] = {}
+        for envelope in envelopes:
+            key = (
+                envelope.subject_ref,
+                envelope.fact_family.value,
+                envelope.field_key,
+            )
+            grouped.setdefault(key, []).append(envelope)
+
+        for group in grouped.values():
+            mode = self._update_mode(group[-1])
+            try:
+                if mode == "single_value":
+                    item = self._process_envelope(group[-1])
+                    if item is not None:
+                        results.append(item)
+                    continue
+
+                if mode in {"append_only", "set_value"} or len(group) > 1:
+                    results.extend(self._process_chunk_group_as_additions(group))
+                    continue
+
+                item = self._process_envelope(group[0])
+                if item is not None:
+                    results.append(item)
+            except Exception:
+                logger.exception(
+                    "Failed to project/store chunk group %s/%s/%s",
+                    group[-1].subject_ref,
+                    group[-1].fact_family.value,
+                    group[-1].field_key,
+                )
+        return results
+
+    def _process_chunk_group_as_additions(
+        self,
+        group: List[FactEnvelope],
+    ) -> List[MemoryItem]:
+        """Add distinct final values from one chunk group without intra-chunk updates."""
+        results: List[MemoryItem] = []
+        seen_canonical: set[str] = set()
+        for envelope in group:
+            canonical_key = envelope.canonical_text.casefold()
+            if canonical_key in seen_canonical:
+                continue
+            seen_canonical.add(canonical_key)
+
+            fact_vector, similar, _ = self._retrieve_similar(envelope=envelope)
+            if self._has_exact_canonical_match(envelope, similar):
+                continue
+            results.append(self._execute_add(envelope=envelope, vector=fact_vector))
+        return results
+
     def _store_stl_memory(
         self,
         stmt,
@@ -987,7 +1088,7 @@ class Memory:
             return "append_only"
         if envelope.field_key in _SINGLE_VALUE_FIELDS:
             return "single_value"
-        if envelope.fact_family in _SET_VALUE_FAMILIES:
+        if envelope.fact_family in _SET_VALUE_FAMILIES or envelope.field_key == "attribute:speak":
             return "set_value"
         return "llm"
 
@@ -1067,6 +1168,8 @@ class Memory:
 
         mode = self._update_mode(envelope)
         if mode == "append_only":
+            return self._execute_add(envelope=envelope, vector=fact_vector)
+        if mode == "set_value":
             return self._execute_add(envelope=envelope, vector=fact_vector)
         if mode == "single_value":
             if not similar:

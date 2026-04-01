@@ -153,10 +153,11 @@ python tests/eval/runners/eval_llm_speed.py \
 
 每个 case 会：
 
-1. 按顺序调用 `Memory.add()`
-2. 检查当前 active memories
-3. 检查 STL persisted `refs / statements / evidence`
-4. 汇总 owner-centered 指标
+1. 先把 case 的 `turns` 展平成一个按原顺序排列的 message 列表
+2. 只调用一次 `Memory.add()`
+3. 检查当前 active memories
+4. 检查 STL persisted `refs / statements / evidence`
+5. 汇总 owner-centered 指标
 
 ### 什么时候用它
 
@@ -165,7 +166,7 @@ python tests/eval/runners/eval_llm_speed.py \
 - 改了 `Memory.add()`
 - 改了 STL parse/store
 - 改了 owner-centered projection
-- 改了 update / version / delete 逻辑
+- 改了单次对话片段提交后的最终落库结果
 - 想确认最终写入系统的数据是否正确
 
 ### 跑全部数据集
@@ -175,26 +176,18 @@ python tests/eval/runners/eval_owner_centered_add.py \
   --toml mindt.toml
 ```
 
-默认会自动跑 `tests/eval/cases/` 下所有套件目录：
+默认会自动跑 `tests/eval/cases/` 下全部案例文件：
 
-- `cases/add/` — 基础 add / self / relation / update
-- `cases/feature/` — STL frame 语义
-- `cases/relationship/` — 关系投影稳定性
-
-### 只跑一个套件
-
-```bash
-python tests/eval/runners/eval_owner_centered_add.py \
-  --toml mindt.toml \
-  --suite tests/eval/cases/relationship
-```
+- `owner-add-*` — 基础 add / self / relation / chunk-final-state
+- `owner-feature-*` — STL frame 语义
+- `owner-rel-*` — 关系投影稳定性
 
 ### 只跑单个案例
 
 ```bash
 python tests/eval/runners/eval_owner_centered_add.py \
   --toml mindt.toml \
-  --case tests/eval/cases/add/owner-add-001.json
+  --case tests/eval/cases/owner-add-001.json
 ```
 
 ### 打印更易读的 JSON 输出
@@ -202,7 +195,7 @@ python tests/eval/runners/eval_owner_centered_add.py \
 ```bash
 python tests/eval/runners/eval_owner_centered_add.py \
   --toml mindt.toml \
-  --suite tests/eval/cases/feature \
+  --case tests/eval/cases/owner-feature-003.json \
   --pretty
 ```
 
@@ -211,7 +204,7 @@ python tests/eval/runners/eval_owner_centered_add.py \
 ```bash
 python tests/eval/runners/eval_owner_centered_add.py \
   --toml mind.toml \
-  --suite tests/eval/cases/relationship \
+  --case tests/eval/cases/owner-rel-stable-001.json \
   --concurrency 4
 ```
 
@@ -231,13 +224,13 @@ python tests/eval/runners/eval_owner_centered_add.py \
 - `refs / statements / evidence` 是否保留下来
 - `subject_ref` 是否稳定
 - `canonical_text` 是否符合预期
-- update 是否正确产出 deleted 和 `version_of`
+- 单次提交的多轮内容是否只留下最终有效结果
 - `hope / say / believe / if` 这类 frame 语义是否在 STL persisted state 中保留
 
 ### 三套数据集分别关注什么
 
 - `cases/add/`
-  - 基础 add / self / relation / update 回归
+  - 基础 add / self / relation / chunk-final-state 回归
   - 用来判断主链是否正常
 - `cases/feature/`
   - STL frame 语义专项
@@ -259,7 +252,6 @@ python tests/eval/runners/eval_owner_centered_add.py \
 CLI 主要参数：
 
 - `--toml`: 运行 `Memory` 的配置文件
-- `--suite`: 套件目录或旧数据集文件
 - `--case`: 单个案例 JSON 文件
 - `--output`: JSON 报告输出位置
 - `--concurrency`: case 并发数
@@ -270,13 +262,12 @@ CLI 主要参数：
 
 - `owner`
 - `turns`
+  - 仅用于表达对话顺序和轮次结构，不代表多次 `Memory.add()`
 - `expected_active_count`
 - `expected_active_memories`
 - `expected_refs`
 - `expected_statements`
 - `expected_evidence`
-- `expected_deleted_memories`
-- `expected_versioned_active_memories`
 
 ### 输出
 
@@ -289,8 +280,6 @@ JSON 顶层字段主要有：
 
 - `dataset`
 - `dataset_name`
-- `dataset_focus`
-- `dataset_description`
 - `toml_path`
 - `total_cases`
 - `targets`
@@ -306,7 +295,6 @@ JSON 顶层字段主要有：
 - `ref_accuracy`
 - `statement_accuracy`
 - `evidence_accuracy`
-- `update_accuracy`
 - `case_pass_rate`
 
 ## 5. 如何看结果
@@ -328,7 +316,6 @@ JSON 顶层字段主要有：
 - `expected_refs`
 - `expected_statements`
 - `expected_evidence`
-- `expected_versioned_active_memories`
 
 ## 6. 对应的 Pytest
 

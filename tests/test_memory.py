@@ -51,6 +51,23 @@ class TestMemoryEndToEnd:
         assert old_item is not None
         assert old_item.status == MemoryStatus.DELETED
 
+    def test_single_chunk_keeps_only_final_single_value_memory(self, memory_config):
+        m = Memory(memory_config)
+
+        results = m.add(
+            messages=[
+                {"role": "user", "content": "My name is Dave"},
+                {"role": "user", "content": "My name is David"},
+            ],
+            user_id="bob-chunk",
+        )
+
+        all_memories = m.get_all(user_id="bob-chunk")
+        assert len(all_memories) == 1
+        assert all_memories[0].content == "[self] name=David"
+        assert all_memories[0].version_of is None
+        assert len(results) == 1
+
     def test_anonymous_owner_is_reused(self, memory_config):
         m = Memory(memory_config)
         owner = OwnerContext(anonymous_session_id="anon-session-1")

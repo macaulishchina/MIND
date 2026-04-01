@@ -4,9 +4,11 @@ import json
 from pathlib import Path
 
 from mind.config.manager import _DEFAULT_TEST_TOML
+from mind.memory import Memory
 from tests.eval.runners.eval_owner_centered_add import DatasetSpec
 from tests.eval.runners.eval_owner_centered_add import build_report
 from tests.eval.runners.eval_owner_centered_add import build_summary
+from tests.eval.runners.eval_owner_centered_add import _case_messages
 from tests.eval.runners.eval_owner_centered_add import _case_owner_lookup
 from tests.eval.runners.eval_owner_centered_add import _evaluate_case
 from tests.eval.runners.eval_owner_centered_add import _evaluate_dataset_cases
@@ -47,7 +49,7 @@ def test_case_owner_lookup_supports_known_and_anonymous_owners() -> None:
     ) == "anon-1"
 
 
-def test_owner_centered_eval_case_passes_for_update_scenario(memory_config) -> None:
+def test_owner_centered_eval_case_passes_for_chunk_final_state(memory_config) -> None:
     dataset = _load_dataset(CASES_DIR)
     update_case = next(case for case in dataset.cases if case["id"] == "owner-add-005")
 
@@ -56,8 +58,42 @@ def test_owner_centered_eval_case_passes_for_update_scenario(memory_config) -> N
     assert result.case_pass is True
     assert result.count_pass is True
     assert result.owner_pass is True
-    assert result.update_hits == result.update_total == 2
     assert result.failures == []
+
+
+def test_case_messages_flattens_turns_in_order() -> None:
+    case = {
+        "turns": [
+            {"messages": [{"role": "user", "content": "one"}]},
+            {"messages": [{"role": "assistant", "content": "two"}]},
+            {"messages": [{"role": "user", "content": "three"}]},
+        ]
+    }
+
+    assert _case_messages(case) == [
+        {"role": "user", "content": "one"},
+        {"role": "assistant", "content": "two"},
+        {"role": "user", "content": "three"},
+    ]
+
+
+def test_owner_centered_eval_calls_memory_add_once_per_case(memory_config, monkeypatch) -> None:
+    dataset = _load_dataset(CASES_DIR)
+    case = next(case for case in dataset.cases if case["id"] == "owner-add-005")
+    calls: list[list[dict[str, str]]] = []
+    original_add = Memory.add
+
+    def wrapped_add(self, *args, **kwargs):
+        calls.append(kwargs["messages"])
+        return original_add(self, *args, **kwargs)
+
+    monkeypatch.setattr(Memory, "add", wrapped_add)
+
+    result = _evaluate_case(memory_config, case)
+
+    assert result.case_pass is True
+    assert len(calls) == 1
+    assert calls[0] == _case_messages(case)
 
 
 def test_memory_config_forces_all_llm_stages_to_fake(memory_config) -> None:
@@ -83,6 +119,7 @@ def test_owner_centered_report_and_summary_render(tmp_path, memory_config) -> No
 
     assert report["metrics"]["case_pass_rate"] == 1.0
     assert report["metrics"]["canonical_text_accuracy"] == 1.0
+    assert "update_accuracy" not in report["metrics"]
     assert "Owner-Centered Add Evaluation Summary" in summary
 
 

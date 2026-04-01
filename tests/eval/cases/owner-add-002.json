@@ -1,6 +1,6 @@
 {
   "id": "owner-add-002",
-  "description": "anonymous owner is reused across multiple turns",
+  "description": "anonymous owner is reused across one multi-turn submitted chunk",
   "owner": {
     "anonymous_session_id": "eval_anon_001"
   },
