@@ -40,6 +40,25 @@
           "fact_family": "attribute"
         }
       ]
+    },
+    "stl_extract": {
+      "expected_stl": "@h: city \"Hangzhou\"\n$p1 = name(@s, \"June\")\n$p2 = live_in(@s, @h)",
+      "expected_statements": [
+        {
+          "predicate": "name",
+          "args": [
+            "@self",
+            "June"
+          ]
+        },
+        {
+          "predicate": "live_in",
+          "args_contains": [
+            "@self",
+            "Hangzhou"
+          ]
+        }
+      ]
     }
   }
 }

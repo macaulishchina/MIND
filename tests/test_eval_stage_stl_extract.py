@@ -26,7 +26,6 @@ def test_stl_extract_stage_evaluates_feature_case(memory_config) -> None:
     assert result.case_pass is True
     assert result.ref_hits == result.ref_total
     assert result.statement_hits == result.statement_total
-    assert result.evidence_hits == result.evidence_total
 
 
 def test_stl_extract_messages_flatten_shared_turns() -> None:

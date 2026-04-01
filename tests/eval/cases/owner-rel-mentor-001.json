@@ -32,6 +32,32 @@
           "fact_family": "attribute"
         }
       ]
+    },
+    "stl_extract": {
+      "expected_stl": "@p: person \"priya\"\n$p1 = mentor(@s, @p)\n$p2 = occupation(@p, \"designer\")",
+      "expected_refs": [
+        {
+          "scope": "named",
+          "ref_type": "person",
+          "key": "priya"
+        }
+      ],
+      "expected_statements": [
+        {
+          "predicate": "mentor",
+          "args": [
+            "@self",
+            "@person(\"priya\")"
+          ]
+        },
+        {
+          "predicate": "occupation",
+          "args": [
+            "@person(\"priya\")",
+            "designer"
+          ]
+        }
+      ]
     }
   }
 }

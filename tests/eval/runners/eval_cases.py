@@ -26,7 +26,19 @@ from mind.stl.prompt import (
     STL_EXTRACTION_USER_TEMPLATE,
     format_focus_stack,
 )
+from mind.stl.models import ParseLevel
 from mind.utils import parse_messages
+
+
+# ── helpers ──────────────────────────────────────────────────────────
+
+
+def _count_strict_lines(program) -> tuple[int, int]:
+    """Return (strict_count, total_count) for parsed elements in a program."""
+    all_items = list(program.refs) + list(program.statements) + list(program.notes)
+    total = len(all_items) + len(program.failed_lines)
+    strict = sum(1 for item in all_items if getattr(item, "parse_level", None) == ParseLevel.STRICT)
+    return strict, total
 
 DEFAULT_CASES_DIR = PROJECT_ROOT / "tests" / "eval" / "cases"
 DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "tests" / "eval" / "reports"
@@ -40,7 +52,7 @@ OWNER_ADD_TARGETS = {
 STL_EXTRACT_TARGETS = {
     "ref_accuracy": 0.90,
     "statement_accuracy": 0.90,
-    "evidence_accuracy": 0.90,
+    "stl_syntax_rate": 0.90,
     "case_pass_rate": 0.90,
 }
 SUPPORTED_STAGES = ("owner_add", "stl_extract")
@@ -78,14 +90,14 @@ class StlExtractCaseResult:
     ref_total: int
     statement_hits: int
     statement_total: int
-    evidence_hits: int
-    evidence_total: int
+    strict_lines: int
+    total_lines: int
     case_pass: bool
     failures: list[str]
     refs: list[dict[str, Any]]
     statements: list[dict[str, Any]]
-    evidence: list[dict[str, Any]]
     stl_text: str
+    expected_stl: str
 
 
 def _configure_runner_logging(cfg) -> None:
@@ -255,17 +267,6 @@ def _statement_matches(row: dict[str, Any], expectation: dict[str, Any]) -> bool
     return True
 
 
-def _evidence_matches(row: dict[str, Any], expectation: dict[str, Any]) -> bool:
-    if expectation.get("predicate") and row.get("predicate") != expectation["predicate"]:
-        return False
-    if expectation.get("span_contains") and expectation["span_contains"] not in (row.get("span") or ""):
-        return False
-    conf_range = expectation.get("conf_range")
-    if conf_range is not None and not (conf_range[0] <= row.get("conf", 0.0) <= conf_range[1]):
-        return False
-    return True
-
-
 def _stored_ref_rows(memory: Memory, owner_id: str) -> list[dict[str, Any]]:
     conn = memory._stl_store._get_conn()
     rows = conn.execute(
@@ -284,21 +285,6 @@ def _stored_ref_rows(memory: Memory, owner_id: str) -> list[dict[str, Any]]:
     return result
 
 
-def _stored_evidence_rows(memory: Memory, owner_id: str) -> list[dict[str, Any]]:
-    conn = memory._stl_store._get_conn()
-    rows = conn.execute(
-        """
-        SELECT e.target_id, e.conf, e.span, e.residual, e.batch_id, s.predicate
-        FROM evidence e
-        JOIN statements s ON s.id = e.target_id
-        WHERE s.owner_id = ? AND s.is_current = 1
-        ORDER BY e.target_id
-        """,
-        (owner_id,),
-    ).fetchall()
-    return [dict(row) for row in rows]
-
-
 def _render_stored_arg(arg: Any, refs_by_id: dict[str, dict[str, Any]]) -> Any:
     if isinstance(arg, list):
         return [_render_stored_arg(item, refs_by_id) for item in arg]
@@ -315,7 +301,7 @@ def _render_stored_arg(arg: Any, refs_by_id: dict[str, dict[str, Any]]) -> Any:
     ref_type = row.get("ref_type")
     key = row.get("key")
     if ref_type and key:
-        return f'@{row["scope"]}/{str(ref_type).casefold()}("{key}")'
+        return f'@{ref_type}("{key}")'
     return arg
 
 
@@ -340,8 +326,10 @@ def _render_parsed_ref_expr(expr: Any) -> str:
     ref_type = getattr(expr, "ref_type", None)
     key = getattr(expr, "key", None)
     if ref_type and key is not None:
-        return f'@{scope}/{str(ref_type).casefold()}("{key}")'
-    return f"@{scope}"
+        return f'@{str(ref_type).casefold()}("{key}")'
+    if ref_type:
+        return f"@{str(ref_type).casefold()}"
+    return "@unknown"
 
 
 def _render_parsed_arg(arg: Any, refs_by_local_id: dict[str, Any]) -> Any:
@@ -360,11 +348,6 @@ def _render_parsed_arg(arg: Any, refs_by_local_id: dict[str, Any]) -> Any:
         return int(value) if isinstance(value, float) and value.is_integer() else value
     if kind == "literal":
         return arg.value
-    if kind == "list":
-        return [_render_parsed_arg(item, refs_by_local_id) for item in arg.items]
-    if kind == "inline_pred":
-        inner = ", ".join(str(_render_parsed_arg(item, refs_by_local_id)) for item in arg.args)
-        return f"{arg.predicate}({inner})"
     return str(arg)
 
 
@@ -378,7 +361,7 @@ def _parsed_ref_rows(program) -> list[dict[str, Any]]:
                 "scope": getattr(expr.scope, "value", expr.scope),
                 "ref_type": str(expr.ref_type).casefold() if expr.ref_type else None,
                 "key": expr.key,
-                "aliases": list(expr.aliases),
+                "aliases": [],
             }
         )
     return rows
@@ -400,22 +383,6 @@ def _parsed_statement_rows(program) -> list[dict[str, Any]]:
                 "predicate": stmt.predicate,
                 "category": inferred_category,
                 "args": rendered_args,
-            }
-        )
-    return rows
-
-
-def _parsed_evidence_rows(program, statements: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    predicate_by_stmt = {row["id"]: row["predicate"] for row in statements}
-    rows = []
-    for ev in program.evidence:
-        rows.append(
-            {
-                "target_id": ev.target_local_id,
-                "predicate": predicate_by_stmt.get(ev.target_local_id),
-                "conf": ev.conf,
-                "span": ev.span,
-                "residual": ev.residual,
             }
         )
     return rows
@@ -510,7 +477,8 @@ def _evaluate_stl_extract_case(cfg, case: dict[str, Any]) -> StlExtractCaseResul
 
     refs = _parsed_ref_rows(program)
     statements = _parsed_statement_rows(program)
-    evidence = _parsed_evidence_rows(program, statements)
+    strict_lines, total_lines = _count_strict_lines(program)
+    expected_stl = stage.get("expected_stl", "")
     failures: list[str] = []
 
     ref_hits = 0
@@ -531,15 +499,6 @@ def _evaluate_stl_extract_case(cfg, case: dict[str, Any]) -> StlExtractCaseResul
         else:
             failures.append(f"missing_statement:{expected}")
 
-    evidence_hits = 0
-    evidence_total = 0
-    for expected in stage.get("expected_evidence", []):
-        evidence_total += 1
-        if any(_evidence_matches(row, expected) for row in evidence):
-            evidence_hits += 1
-        else:
-            failures.append(f"missing_evidence:{expected}")
-
     return StlExtractCaseResult(
         case_id=case["id"],
         description=case.get("description", ""),
@@ -547,14 +506,14 @@ def _evaluate_stl_extract_case(cfg, case: dict[str, Any]) -> StlExtractCaseResul
         ref_total=ref_total,
         statement_hits=statement_hits,
         statement_total=statement_total,
-        evidence_hits=evidence_hits,
-        evidence_total=evidence_total,
+        strict_lines=strict_lines,
+        total_lines=total_lines,
         case_pass=not failures,
         failures=failures,
         refs=refs,
         statements=statements,
-        evidence=evidence,
         stl_text=stl_text,
+        expected_stl=expected_stl,
     )
 
 
@@ -615,8 +574,8 @@ def _build_stl_extract_report(dataset: DatasetSpec, case_results: list[StlExtrac
     total_refs = sum(result.ref_total for result in case_results)
     total_statement_hits = sum(result.statement_hits for result in case_results)
     total_statements = sum(result.statement_total for result in case_results)
-    total_evidence_hits = sum(result.evidence_hits for result in case_results)
-    total_evidence = sum(result.evidence_total for result in case_results)
+    total_strict_lines = sum(result.strict_lines for result in case_results)
+    total_all_lines = sum(result.total_lines for result in case_results)
     report = {
         "stage": "stl_extract",
         "dataset": _display_path(dataset.path),
@@ -627,7 +586,7 @@ def _build_stl_extract_report(dataset: DatasetSpec, case_results: list[StlExtrac
         "metrics": {
             "ref_accuracy": _safe_ratio(total_ref_hits, total_refs),
             "statement_accuracy": _safe_ratio(total_statement_hits, total_statements),
-            "evidence_accuracy": _safe_ratio(total_evidence_hits, total_evidence),
+            "stl_syntax_rate": _safe_ratio(total_strict_lines, total_all_lines),
             "case_pass_rate": _safe_ratio(case_passes, len(case_results)),
         },
         "cases": [
@@ -637,8 +596,10 @@ def _build_stl_extract_report(dataset: DatasetSpec, case_results: list[StlExtrac
                 "failures": result.failures,
                 "refs": _json_ready(result.refs),
                 "statements": _json_ready(result.statements),
-                "evidence": _json_ready(result.evidence),
                 "stl_text": result.stl_text,
+                "expected_stl": result.expected_stl,
+                "strict_lines": result.strict_lines,
+                "total_lines": result.total_lines,
             }
             for result in case_results
         ],

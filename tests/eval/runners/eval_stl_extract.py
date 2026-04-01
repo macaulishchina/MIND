@@ -1,7 +1,7 @@
 """Single-case STL extraction inspector.
 
 Shows the full pipeline for one eval case:
-  conversation → STL raw text → parsed program (refs / statements / evidence)
+  conversation → STL raw text → parsed program (refs / statements)
 
 Usage:
   python tests/eval/runners/eval_stl_extract.py \
@@ -61,12 +61,7 @@ def _render_arg(arg: Any) -> str:
         return f"@{arg.ref_id}"
     if hasattr(arg, "prop_id"):
         return f"${arg.prop_id}"
-    if hasattr(arg, "items"):
-        inner = ", ".join(_render_arg(i) for i in arg.items)
-        return f"[{inner}]"
-    if hasattr(arg, "predicate") and hasattr(arg, "args"):
-        inner = ", ".join(_render_arg(a) for a in arg.args)
-        return f"{arg.predicate}({inner})"
+
     if hasattr(arg, "value"):
         v = arg.value
         if isinstance(v, str):
@@ -151,8 +146,8 @@ def main(argv: list[str] | None = None) -> int:
     _print_section("Parsed Refs")
     if program.refs:
         for ref in program.refs:
-            aliases = f"  aliases={ref.expr.aliases}" if ref.expr.aliases else ""
-            print(f"  @{ref.local_id} = {ref.expr.scope.value}/{ref.expr.ref_type}(\"{ref.expr.key}\"){aliases}")
+            key_part = f' "{ref.expr.key}"' if ref.expr.key else ""
+            print(f"  @{ref.local_id}: {ref.expr.ref_type or '?'}{key_part}")
     else:
         print("  (none)")
 
@@ -163,18 +158,6 @@ def main(argv: list[str] | None = None) -> int:
             cat = f"  [{stmt.category}]" if stmt.category else ""
             lvl = f"  (level: {stmt.parse_level.value})" if stmt.parse_level else ""
             print(f"  ${stmt.local_id} = {stmt.predicate}({args_str}){cat}{lvl}")
-    else:
-        print("  (none)")
-
-    _print_section("Parsed Evidence")
-    if program.evidence:
-        for ev in program.evidence:
-            parts = [f"conf={ev.conf}"]
-            if ev.span:
-                parts.append(f'span="{ev.span}"')
-            if ev.residual:
-                parts.append(f'residual="{ev.residual}"')
-            print(f"  ev(${ev.target_local_id}, {', '.join(parts)})")
     else:
         print("  (none)")
 
@@ -195,8 +178,7 @@ def main(argv: list[str] | None = None) -> int:
         stage = case.get("stages", {}).get("stl_extract", {})
         expected_stmts = stage.get("expected_statements", [])
         expected_refs = stage.get("expected_refs", [])
-        expected_ev = stage.get("expected_evidence", [])
-        has_expected = expected_stmts or expected_refs or expected_ev
+        has_expected = expected_stmts or expected_refs
         if has_expected:
             _print_section("Expected (from case file)")
             if expected_refs:
@@ -207,16 +189,11 @@ def main(argv: list[str] | None = None) -> int:
                 print("  statements:")
                 for s in expected_stmts:
                     print(f"    {s}")
-            if expected_ev:
-                print("  evidence:")
-                for e in expected_ev:
-                    print(f"    {e}")
 
     # ── Summary ──
     _print_section("Summary")
     print(f"  refs:       {len(program.refs)}")
     print(f"  statements: {len(program.statements)}")
-    print(f"  evidence:   {len(program.evidence)}")
     print(f"  notes:      {len(program.notes)}")
     print(f"  failed:     {len(program.failed_lines)}")
 

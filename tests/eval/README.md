@@ -40,7 +40,7 @@
 - `stages.owner_add`
   - 评估 `Memory.add()` 之后的最终 owner-centered memory state
 - `stages.stl_extract`
-  - 评估 STL 抽取结果中的 `refs / statements / evidence`
+  - 评估 STL 抽取结果中的 `refs / statements`
 
 ## 统一运行方式
 
@@ -121,7 +121,6 @@ python tests/eval/runners/eval_cases.py \
 
 - `expected_refs`
 - `expected_statements`
-- `expected_evidence`
 
 该阶段不会走完整 memory 写入链路，而是直接评估 STL 抽取结果。
 

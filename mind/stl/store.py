@@ -23,7 +23,6 @@ from datetime import date as _date, timedelta as _timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
 from mind.stl.models import (
-    ParsedEvidence,
     ParsedNote,
     ParsedProgram,
     ParsedRef,
@@ -33,8 +32,8 @@ from mind.stl.models import (
 )
 from mind.stl.vocab import (
     CORRECTION_PREDICATES,
-    QUALIFIER_PREDICATES,
-    SEED_CATEGORY_MAP,
+    MODIFIER_PREDICATES,
+    SEED_DOMAIN_MAP,
     SEED_VOCAB,
 )
 from mind.ops_logger import ops
@@ -119,17 +118,6 @@ class BaseSTLStore(ABC):
         self, stmt_id: str, position: int, ref_id: str,
     ) -> None:
         """Insert a stmt_refs row."""
-
-    @abstractmethod
-    def insert_evidence(
-        self,
-        target_id: str,
-        conf: float,
-        span: Optional[str] = None,
-        residual: Optional[str] = None,
-        batch_id: Optional[str] = None,
-    ) -> None:
-        """Insert an evidence row."""
 
     @abstractmethod
     def insert_note(
@@ -223,7 +211,7 @@ class BaseSTLStore(ABC):
             try:
                 self.upsert_vocab(
                     word=entry.word,
-                    category=entry.category,
+                    category=entry.domain,
                     arg_schema=entry.arg_schema,
                     definition=entry.definition,
                     source="seed",
@@ -233,7 +221,7 @@ class BaseSTLStore(ABC):
 
     def resolve_category(self, predicate: str) -> Optional[str]:
         """Resolve a predicate's category: check seed map first, then DB."""
-        cat = SEED_CATEGORY_MAP.get(predicate)
+        cat = SEED_DOMAIN_MAP.get(predicate)
         if cat:
             return cat
         return self.get_vocab_category(predicate)
@@ -330,7 +318,7 @@ class BaseSTLStore(ABC):
                     scope=ref.expr.scope.value,
                     ref_type=ref.expr.ref_type,
                     key=ref.expr.key,
-                    aliases=ref.expr.aliases,
+                    aliases=[],
                     owner_id=owner_id,
                 )
                 ref_map[ref.local_id] = resolved_id
@@ -367,7 +355,7 @@ class BaseSTLStore(ABC):
                         self.insert_stmt_ref(global_id, pos, arg_json)
 
                 # Detect time() qualifiers → populate temporal_specs
-                if stmt.predicate in QUALIFIER_PREDICATES and stmt.predicate == "time":
+                if stmt.predicate in MODIFIER_PREDICATES and stmt.predicate == "time":
                     self._handle_time_qualifier(global_id, args_json, anchor_date=anchor_date)
 
                 # Collect correct_intent / retract_intent for post-processing
@@ -378,23 +366,7 @@ class BaseSTLStore(ABC):
                 logger.warning("Failed to insert statement $%s: %s", stmt.local_id, e)
                 result.errors.append(f"stmt ${stmt.local_id}: {e}")
 
-        # 4. Insert evidence
-        for ev in program.evidence:
-            target_global = stmt_map.get(ev.target_local_id, f"{batch_id}_{ev.target_local_id}")
-            try:
-                self.insert_evidence(
-                    target_id=target_global,
-                    conf=ev.conf,
-                    span=ev.span,
-                    residual=ev.residual,
-                    batch_id=batch_id,
-                )
-                result.evidence_inserted += 1
-            except Exception as e:
-                logger.warning("Failed to insert evidence for $%s: %s", ev.target_local_id, e)
-                result.errors.append(f"ev ${ev.target_local_id}: {e}")
-
-        # 5. Insert notes + detect NEW_PRED
+        # 4. Insert notes + detect NEW_PRED
         # Collect CORRECTION: notes for matching old statements
         correction_note_map: Dict[str, str] = {}  # correction_stmt_global_id → note text
         for note in program.notes:
@@ -413,7 +385,7 @@ class BaseSTLStore(ABC):
                 logger.warning("Failed to insert note: %s", e)
                 result.errors.append(f"note: {e}")
 
-        # 6. Process correct_intent / retract_intent
+        # 5. Process correct_intent / retract_intent
         for global_id, stmt, args_json in correction_stmts:
             try:
                 self._handle_correction(
@@ -705,27 +677,9 @@ def _globalize_args(
             result.append(arg.value)
         elif kind == "number":
             result.append(arg.value)
-        elif kind == "list":
-            result.append([_globalize_single_arg(item, ref_map, stmt_map) for item in arg.items])
         else:
             result.append(str(arg))
     return result
-
-
-def _globalize_single_arg(arg: Any, ref_map: dict, stmt_map: dict) -> Any:
-    """Globalize a single arg (for list items)."""
-    kind = getattr(arg, "kind", None)
-    if kind == "ref":
-        g = ref_map.get(arg.ref_id, f"@{arg.ref_id}")
-        return f"@{g}" if not g.startswith("@") else g
-    if kind == "prop":
-        g = stmt_map.get(arg.prop_id, f"${arg.prop_id}")
-        return f"${g}" if not g.startswith("$") else g
-    if kind == "literal":
-        return arg.value
-    if kind == "number":
-        return arg.value
-    return str(arg)
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -794,18 +748,6 @@ CREATE TABLE IF NOT EXISTS stmt_refs (
 );
 CREATE INDEX IF NOT EXISTS idx_stmt_refs_ref ON stmt_refs (ref_id);
 
-CREATE TABLE IF NOT EXISTS evidence (
-    id          SERIAL PRIMARY KEY,
-    target_id   TEXT NOT NULL,
-    conf        REAL NOT NULL,
-    span        TEXT,
-    residual    TEXT,
-    batch_id    TEXT REFERENCES extraction_batches(id),
-    created_at  TIMESTAMPTZ DEFAULT NOW()
-);
-CREATE INDEX IF NOT EXISTS idx_evidence_target ON evidence (target_id);
-CREATE INDEX IF NOT EXISTS idx_evidence_batch ON evidence (batch_id);
-
 CREATE TABLE IF NOT EXISTS notes (
     id          SERIAL PRIMARY KEY,
     target_id   TEXT NOT NULL,
@@ -815,7 +757,7 @@ CREATE TABLE IF NOT EXISTS notes (
 
 CREATE TABLE IF NOT EXISTS vocab_registry (
     word         TEXT PRIMARY KEY,
-    category     TEXT NOT NULL CHECK (category IN ('prop','frame','qualifier','ref_type')),
+    category     TEXT NOT NULL,
     arg_schema   TEXT,
     definition   TEXT NOT NULL,
     source       TEXT DEFAULT 'seed',
@@ -919,18 +861,6 @@ CREATE TABLE IF NOT EXISTS stmt_refs (
 );
 CREATE INDEX IF NOT EXISTS idx_stmt_refs_ref ON stmt_refs (ref_id);
 
-CREATE TABLE IF NOT EXISTS evidence (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    target_id   TEXT NOT NULL,
-    conf        REAL NOT NULL,
-    span        TEXT,
-    residual    TEXT,
-    batch_id    TEXT REFERENCES extraction_batches(id),
-    created_at  TEXT DEFAULT (datetime('now'))
-);
-CREATE INDEX IF NOT EXISTS idx_evidence_target ON evidence (target_id);
-CREATE INDEX IF NOT EXISTS idx_evidence_batch ON evidence (batch_id);
-
 CREATE TABLE IF NOT EXISTS notes (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     target_id   TEXT NOT NULL,
@@ -940,7 +870,7 @@ CREATE TABLE IF NOT EXISTS notes (
 
 CREATE TABLE IF NOT EXISTS vocab_registry (
     word         TEXT PRIMARY KEY,
-    category     TEXT NOT NULL CHECK (category IN ('prop','frame','qualifier','ref_type')),
+    category     TEXT NOT NULL,
     arg_schema   TEXT,
     definition   TEXT NOT NULL,
     source       TEXT DEFAULT 'seed',
@@ -1118,22 +1048,6 @@ class SQLiteSTLStore(BaseSTLStore):
         conn.execute(
             "INSERT OR IGNORE INTO stmt_refs (stmt_id, position, ref_id) VALUES (?, ?, ?)",
             (stmt_id, position, ref_id),
-        )
-        conn.commit()
-
-    def insert_evidence(
-        self,
-        target_id: str,
-        conf: float,
-        span: Optional[str] = None,
-        residual: Optional[str] = None,
-        batch_id: Optional[str] = None,
-    ) -> None:
-        conn = self._get_conn()
-        conn.execute(
-            """INSERT INTO evidence (target_id, conf, span, residual, batch_id)
-               VALUES (?, ?, ?, ?, ?)""",
-            (target_id, conf, span, residual, batch_id),
         )
         conn.commit()
 
@@ -1436,22 +1350,6 @@ class PostgresSTLStore(BaseSTLStore):
                     """INSERT INTO stmt_refs (stmt_id, position, ref_id)
                        VALUES (%s, %s, %s) ON CONFLICT DO NOTHING""",
                     (stmt_id, position, ref_id),
-                )
-
-    def insert_evidence(
-        self,
-        target_id: str,
-        conf: float,
-        span: Optional[str] = None,
-        residual: Optional[str] = None,
-        batch_id: Optional[str] = None,
-    ) -> None:
-        with self._connect() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """INSERT INTO evidence (target_id, conf, span, residual, batch_id)
-                       VALUES (%s, %s, %s, %s, %s)""",
-                    (target_id, conf, span, residual, batch_id),
                 )
 
     def insert_note(self, target_id: str, content: str) -> None:

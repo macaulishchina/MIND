@@ -34,9 +34,10 @@
       ]
     },
     "stl_extract": {
+      "expected_stl": "@g: person \"green\"\n$p1 = friend(@s, @g)\n$p2 = occupation(@g, \"football player\")",
       "expected_refs": [
         {
-          "scope": "local",
+          "scope": "named",
           "ref_type": "person",
           "key": "green"
         }
@@ -46,13 +47,13 @@
           "predicate": "friend",
           "args": [
             "@self",
-            "@local/person(\"green\")"
+            "@person(\"green\")"
           ]
         },
         {
           "predicate": "occupation",
           "args": [
-            "@local/person(\"green\")",
+            "@person(\"green\")",
             "football player"
           ]
         }

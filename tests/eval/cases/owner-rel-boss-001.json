@@ -32,6 +32,32 @@
           "fact_family": "preference"
         }
       ]
+    },
+    "stl_extract": {
+      "expected_stl": "@m: person \"marcus\"\n$p1 = boss(@s, @m)\n$p2 = like(@m, \"jazz\")",
+      "expected_refs": [
+        {
+          "scope": "named",
+          "ref_type": "person",
+          "key": "marcus"
+        }
+      ],
+      "expected_statements": [
+        {
+          "predicate": "boss",
+          "args": [
+            "@self",
+            "@person(\"marcus\")"
+          ]
+        },
+        {
+          "predicate": "like",
+          "args": [
+            "@person(\"marcus\")",
+            "jazz"
+          ]
+        }
+      ]
     }
   }
 }

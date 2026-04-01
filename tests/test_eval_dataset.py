@@ -37,7 +37,7 @@ def test_stage_filtering_uses_shared_case_schema() -> None:
     stl_extract_dataset = _cases_for_stage(dataset, "stl_extract")
 
     assert len(owner_add_dataset.cases) == 14
-    assert len(stl_extract_dataset.cases) == 9
+    assert len(stl_extract_dataset.cases) == 18
     assert all("owner_add" in case["stages"] for case in owner_add_dataset.cases)
     assert all("stl_extract" in case["stages"] for case in stl_extract_dataset.cases)
 

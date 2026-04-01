@@ -69,14 +69,15 @@
       ]
     },
     "stl_extract": {
+      "expected_stl": "# Turn 1\n@k: person \"凯文\"\n@jh: org \"约翰霍普金斯医院\"\n$p1 = brother(@s, @k)\n$p2 = occupation(@k, \"外科医生\")\n$p3 = work_at(@k, @jh)\n$p4 = speak(@k, \"英语\")\n$p5 = speak(@k, \"普通话\")\n$p6 = speak(@k, \"法语\")\n\n# Turn 2\n@w: person \"凯文的老婆\"\n@tk: city \"东京\"\n$p7 = spouse(@k, @w)\n$p8 = nationality(@w, \"日本\")\n$f1 = believe(@s, $p8)\n$p9 = meet(@k, @w)\n$q1 = location($p9, @tk)\n$q2 = time($p9, \"去年\")\n\n# Turn 3 — corrections\n@mc: org \"梅奥诊所\"\n@os: city \"大阪\"\n$p10 = work_at(@k, @mc)\n$f2 = correct_intent(@s, $p10)\nnote($f2, \"CORRECTION: 凯文工作地点从约翰霍普金斯改为梅奥诊所\")\n$p11 = marry(@k, @w)\n$q3 = location($p11, @os)\n$f3 = correct_intent(@s, $q3)\nnote($f3, \"CORRECTION: 结婚地点从东京改为大阪\")",
       "expected_refs": [
         {
-          "scope": "local",
+          "scope": "named",
           "ref_type": "person",
           "key": "凯文"
         },
         {
-          "scope": "world",
+          "scope": "named",
           "ref_type": "org",
           "key": "梅奥诊所"
         }
@@ -86,7 +87,7 @@
           "predicate": "brother",
           "args": [
             "@self",
-            "@local/person(\"凯文\")"
+            "@person(\"凯文\")"
           ]
         },
         {
@@ -103,42 +104,10 @@
           ]
         },
         {
-          "predicate": "believe",
-          "category": "frame"
+          "predicate": "believe"
         },
         {
-          "predicate": "correct_intent",
-          "category": "frame"
-        }
-      ],
-      "expected_evidence": [
-        {
-          "predicate": "brother",
-          "conf_range": [
-            0.9,
-            1.0
-          ]
-        },
-        {
-          "predicate": "occupation",
-          "conf_range": [
-            0.8,
-            1.0
-          ]
-        },
-        {
-          "predicate": "believe",
-          "conf_range": [
-            0.4,
-            0.7
-          ]
-        },
-        {
-          "predicate": "correct_intent",
-          "conf_range": [
-            0.8,
-            1.0
-          ]
+          "predicate": "correct_intent"
         }
       ]
     }

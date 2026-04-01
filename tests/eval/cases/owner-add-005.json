@@ -34,6 +34,18 @@
           "fact_family": "attribute"
         }
       ]
+    },
+    "stl_extract": {
+      "expected_stl": "$p1 = name(@s, \"Dave\")\n$p2 = name(@s, \"David\")\n$f1 = correct_intent(@s, $p2)\nnote($f1, \"CORRECTION: name changed from Dave to David\")",
+      "expected_statements": [
+        {
+          "predicate": "name",
+          "args": [
+            "@self",
+            "David"
+          ]
+        }
+      ]
     }
   }
 }

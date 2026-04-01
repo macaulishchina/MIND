@@ -17,9 +17,10 @@
   ],
   "stages": {
     "stl_extract": {
+      "expected_stl": "@m: person \"mom\"\n$p1 = mother(@s, @m)\n$p2 = like(@m, \"gold necklace\")\n$f1 = believe(@s, $p2)",
       "expected_refs": [
         {
-          "scope": "local",
+          "scope": "named",
           "ref_type": "person",
           "key": "mom"
         }
@@ -29,28 +30,18 @@
           "predicate": "mother",
           "args": [
             "@self",
-            "@local/person(\"mom\")"
+            "@person(\"mom\")"
           ]
         },
         {
           "predicate": "like",
           "args": [
-            "@local/person(\"mom\")",
+            "@person(\"mom\")",
             "gold necklace"
           ]
         },
         {
-          "predicate": "believe",
-          "category": "frame"
-        }
-      ],
-      "expected_evidence": [
-        {
-          "predicate": "believe",
-          "conf_range": [
-            0.5,
-            0.7
-          ]
+          "predicate": "believe"
         }
       ]
     }

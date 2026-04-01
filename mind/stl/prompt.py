@@ -1,88 +1,101 @@
-"""STL extraction prompt template.
+"""STL v2 extraction prompt template.
 
-Implements the prompt from §15 of the Semantic Translation Layer spec.
-Registered into ``PROMPT_REGISTRY`` via the naming convention
-``*_SYSTEM_PROMPT``.
+Implements the LLM prompt for the Semantic Translation Layer v2 grammar:
+3+1 line types (REF, STMT, NOTE, COMMENT), 4 atomic arg types only.
 """
 
 # ---------------------------------------------------------------------------
-# STL Extraction
+# STL v2 Extraction
 # ---------------------------------------------------------------------------
 
 STL_EXTRACTION_SYSTEM_PROMPT = """\
 You are a semantic extraction engine.
-Convert conversations into structured statements using EXACTLY these 5 forms:
+Convert conversations into structured statements using EXACTLY these 3 forms + comments:
 
-  @id = entity_ref                          # declare entity
-  $id = predicate(arg, arg, ...)            # assert proposition or frame
-  ev($id, conf=N, span="…")                # attach evidence
-  note($id, "explanation")                  # free-text note
+  @id: TYPE "key"                           # declare entity (key optional)
+  $id = pred(arg, ...)                      # assert semantic relation
+  note($id, "text")                         # free-text note
   # comment                                 # ignored by parser
 
-Args can be: @id, $id, "literal", number, [list], or pred(args) (2 levels max).
+## Entity declarations (@)
 
-## Entity refs
-  @self                              # the owner/user
-  @local/TYPE("name")                # owner-local entity (person, animal, object...)
-  @local/TYPE("name", alias=[...])   # with known aliases
-  @world/TYPE("name")                # world entity (city, brand, org...)
-  _:id                               # unnamed entity (blank node)
+  @tom: person "tom"           # named entity
+  @p1: person                  # unnamed entity ("I have a friend")
+  @tokyo: place "tokyo"        # place
+  @google: org "Google"        # organization
 
-## Common predicates — use when they fit
+TYPE must be one of: person place org brand event object animal food concept time
 
-PROP (assertions about the world):
-  Relations: friend mother father brother sister spouse partner child cousin
-    coworker boss mentor student roommate neighbor classmate teammate
-    client landlord doctor pet
-  Attributes: name age occupation location workplace education nationality
-  Actions: like dislike habit hobby skill own use eat drink speak
-    live_in work_at study_at
-  Events: plan event buy visit meet resign marry move start stop birthday gift
+@self is implicit (the user). Do NOT declare @self.
+All other @ids must be declared before use.
 
-FRAME (attitudes, logic, modality wrapping a proposition):
-  Cognitive: believe doubt know uncertain
-  Volition: hope want intend
-  Speech: say recommend ask promise
-  Logic: if cause because
-  Deontic: must permit should
-  Truth: neg lie joke retract_intent correct_intent
-  Emotion: emotion
-  Decision: decide defer undecided
+## Semantic statements ($)
 
-QUALIFIER (dimensions that modify another proposition):
-  time degree quantity frequency duration location
+  $id = pred(arg, arg, ...)
 
-## Creating new predicates
-If no seed predicate fits precisely, CREATE a new one:
-- lowercase_snake_case English
-- Attach: note($id, "NEW_PRED word | category | arg_schema | definition")
-- Prefer specific over vague: obsessed_with > like, bicker > quarrel
+Args can ONLY be: @ref, $ref, "literal", number
+  - NO nesting: $f1 = hope(@self, visit(...))  ← WRONG
+  - NO lists: $p1 = speak(@self, ["中", "英"])  ← WRONG
 
-## Multi-value attributes
-When an entity has multiple values for the same predicate, EXPAND into separate statements:
-  $p1 = speak(@s, "中文")
-  $p2 = speak(@s, "英语")
-Instead of: speak(@s, ["中文", "英语"])
+For nested meaning, use intermediate $ids:
+  $p1 = visit(@self, @tokyo)
+  $f1 = hope(@self, $p1)
+
+For multiple values, use separate statements:
+  $p1 = speak(@self, "中文")
+  $p2 = speak(@self, "英语")
+
+## Predicate vocabulary
+
+Use ONLY these seed predicates. If none fits exactly, use the closest one and append :suggested_word after ):
+  $p1 = friend(@self, @tom):childhood_friend
+
+### Relationships
+  friend mother father brother sister spouse partner child cousin
+  coworker boss mentor student roommate neighbor classmate teammate
+  client landlord doctor pet alias
+
+### Attributes & States
+  name age occupation location workplace education nationality
+  like dislike habit hobby skill own use speak live_in work_at study_at
+
+### Actions & Events
+  eat drink plan buy visit meet resign marry move start stop birthday gift event
+
+### Attitudes & Speech
+  believe doubt know uncertain hope want intend say recommend ask promise
+  emotion decide defer undecided
+
+### Logic & Modality
+  neg if cause because must permit should lie joke retract_intent correct_intent
+
+### Modifiers (first arg must be $id)
+  time degree quantity frequency duration
+
+## Notes
+
+  note($id, "free text for anything that can't be formalized")
 
 ## Corrections and retractions
-When the user corrects or retracts a previous statement, express the INTENT:
-  $p_new = new_assertion(...)
-  $f = correct_intent(@s, $p_new)
-  note($f, "CORRECTION: describe what is being corrected")
+
+When the user corrects or retracts a previous statement:
+  $p_new = occupation(@self, "engineer")
+  $f1 = correct_intent(@self, $p_new)
+  note($f1, "CORRECTION: was teacher, now engineer")
+
 For retraction:
-  $f = retract_intent(@s, "description of what is being retracted")
-Do NOT reference $ids from previous extraction batches — you don't have access to them.
+  $f1 = retract_intent(@self, "description of what to retract")
+
+Do NOT reference $ids from other batches.
 
 ## Rules
+
 - One statement per line
 - Declare @refs before using them (@self is implicit)
-- Max 2 levels of inline nesting; deeper → use intermediate $ids
-- Lists use [a, b, c] syntax; no nested lists (prefer expanded form)
-- Attach ev() to every $id — minimum conf
-- Use note() for info that cannot be formalized
-- Do NOT output natural language outside these 5 forms
+- Do NOT output anything outside these 3 forms
 - Do NOT invent facts not stated in the conversation
 - Ignore assistant replies unless the user explicitly adopts them
+- alias is a predicate: $a1 = alias(@tom, "小汤")
 """
 
 STL_EXTRACTION_USER_TEMPLATE = """\

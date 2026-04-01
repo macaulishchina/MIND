@@ -227,7 +227,7 @@ class Memory:
 
         # ── Step 2: Parse ──
         program = parse_program(stl_text, batch_id=generate_id())
-        if not program.statements and not program.evidence:
+        if not program.statements:
             elapsed = time.perf_counter() - add_t0
             logger.info(
                 "📝 [ADD] ── DONE | owner=%s | 0 statements parsed | %.2fs ──",
@@ -236,10 +236,9 @@ class Memory:
             return []
 
         logger.info(
-            "Parsed %d refs, %d statements, %d evidence, %d notes (%d failed)",
+            "Parsed %d refs, %d statements, %d notes (%d failed)",
             len(program.refs),
             len(program.statements),
-            len(program.evidence),
             len(program.notes),
             len(program.failed_lines),
         )
@@ -257,10 +256,9 @@ class Memory:
         )
 
         logger.info(
-            "STL stored: %d refs, %d stmts, %d ev, %d notes, %d errors",
+            "STL stored: %d refs, %d stmts, %d notes, %d errors",
             storage_result.refs_upserted,
             storage_result.statements_inserted,
-            storage_result.evidence_inserted,
             storage_result.notes_inserted,
             len(storage_result.errors),
         )
@@ -694,23 +692,11 @@ class Memory:
             return arg.ref_id
         if kind == "prop":
             return f"${arg.prop_id}"
-        if kind == "list":
-            return [Memory._render_statement_arg(item, ref_map) for item in arg.items]
-        if kind == "inline_pred":
-            rendered = ", ".join(
-                str(Memory._render_statement_arg(item, ref_map)) for item in arg.args
-            )
-            return f"{arg.predicate}({rendered})"
         return str(arg)
 
     def _statement_confidence(self, stmt, program) -> float:
-        """Return the highest evidence confidence attached to a statement."""
-        matches = [
-            ev.conf
-            for ev in program.evidence
-            if ev.target_local_id == stmt.local_id
-        ]
-        return max(matches) if matches else 0.9
+        """Return a default confidence for a statement."""
+        return 0.9
 
     def _statement_subject(self, ref_id: str, ref_map: Dict[str, Any], relation_subject_cache: Dict[str, Dict[str, str]]) -> tuple[str, str]:
         """Resolve projected subject_ref and relation_type for a local ref."""

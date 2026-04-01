@@ -32,6 +32,37 @@
           "fact_family": "attribute"
         }
       ]
+    },
+    "stl_extract": {
+      "expected_stl": "@l: person \"lisa\"\n@t: city \"toronto\"\n$p1 = mother(@s, @l)\n$p2 = live_in(@l, @t)",
+      "expected_refs": [
+        {
+          "scope": "named",
+          "ref_type": "person",
+          "key": "lisa"
+        },
+        {
+          "scope": "named",
+          "ref_type": "city",
+          "key": "toronto"
+        }
+      ],
+      "expected_statements": [
+        {
+          "predicate": "mother",
+          "args": [
+            "@self",
+            "@person(\"lisa\")"
+          ]
+        },
+        {
+          "predicate": "live_in",
+          "args_contains": [
+            "lisa",
+            "toronto"
+          ]
+        }
+      ]
     }
   }
 }

@@ -32,6 +32,37 @@
           "fact_family": "attribute"
         }
       ]
+    },
+    "stl_extract": {
+      "expected_stl": "@o: person \"owen\"\n@d: city \"dublin\"\n$p1 = father(@s, @o)\n$p2 = live_in(@o, @d)",
+      "expected_refs": [
+        {
+          "scope": "named",
+          "ref_type": "person",
+          "key": "owen"
+        },
+        {
+          "scope": "named",
+          "ref_type": "city",
+          "key": "dublin"
+        }
+      ],
+      "expected_statements": [
+        {
+          "predicate": "father",
+          "args": [
+            "@self",
+            "@person(\"owen\")"
+          ]
+        },
+        {
+          "predicate": "live_in",
+          "args_contains": [
+            "owen",
+            "dublin"
+          ]
+        }
+      ]
     }
   }
 }

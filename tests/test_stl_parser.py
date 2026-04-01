@@ -1,24 +1,21 @@
-"""Tests for the STL parser — covers all 5 line types, cascade levels,
-inline expansion, and examples from §11 of the spec."""
+"""Tests for the STL v2 parser — covers all 3+1 line types, cascade levels,
+and examples from the v2 spec."""
 
 import pytest
 
-from mind.stl.parser import parse_program, split_args, parse_arg, parse_ref_expr
+from mind.stl.parser import parse_program, split_args, parse_arg
 from mind.stl.models import (
     ParseLevel,
     RefScope,
     ParsedProgram,
     ParsedRef,
     ParsedStatement,
-    ParsedEvidence,
     ParsedNote,
     FailedLine,
     RefArg,
     PropArg,
     LiteralArg,
     NumberArg,
-    ListArg,
-    InlinePredArg,
 )
 
 
@@ -28,19 +25,19 @@ from mind.stl.models import (
 
 class TestSplitArgs:
     def test_simple(self):
-        assert split_args('@s, "hello", 42') == ["@s", '"hello"', "42"]
-
-    def test_nested_parens(self):
-        assert split_args('@s, neg(rain("tomorrow"))') == ["@s", 'neg(rain("tomorrow"))']
-
-    def test_list_arg(self):
-        assert split_args('@s, ["a", "b"]') == ["@s", '["a", "b"]']
+        assert split_args('@self, "hello", 42') == ["@self", '"hello"', "42"]
 
     def test_quoted_comma(self):
         assert split_args('"a, b", @t') == ['"a, b"', "@t"]
 
     def test_empty(self):
         assert split_args("") == []
+
+    def test_multiple_refs(self):
+        assert split_args("@self, @tom") == ["@self", "@tom"]
+
+    def test_prop_and_literal(self):
+        assert split_args('$p1, "next_month"') == ["$p1", '"next_month"']
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -73,99 +70,53 @@ class TestParseArg:
         assert isinstance(arg, NumberArg)
         assert arg.value == 0.85
 
-    def test_list_arg(self):
-        arg = parse_arg('["a", "b", "c"]')
-        assert isinstance(arg, ListArg)
-        assert len(arg.items) == 3
-
-    def test_inline_pred(self):
-        arg = parse_arg('neg(rain("tomorrow"))')
-        assert isinstance(arg, InlinePredArg)
-        assert arg.predicate == "neg"
+    def test_unquoted_fallback(self):
+        """Unquoted non-number text should become LiteralArg."""
+        arg = parse_arg("football_player")
+        assert isinstance(arg, LiteralArg)
+        assert arg.value == "football_player"
 
 
 # ══════════════════════════════════════════════════════════════════════
-# parse_ref_expr
-# ══════════════════════════════════════════════════════════════════════
-
-class TestParseRefExpr:
-    def test_self(self):
-        expr = parse_ref_expr("@self")
-        assert expr.scope == RefScope.SELF
-
-    def test_local(self):
-        expr = parse_ref_expr('@local/person("tom")')
-        assert expr.scope == RefScope.LOCAL
-        assert expr.ref_type == "person"
-        assert expr.key == "tom"
-
-    def test_world(self):
-        expr = parse_ref_expr('@world/city("tokyo")')
-        assert expr.scope == RefScope.WORLD
-        assert expr.ref_type == "city"
-        assert expr.key == "tokyo"
-
-    def test_blank(self):
-        expr = parse_ref_expr("_:p1")
-        assert expr.scope == RefScope.BLANK
-        assert expr.key == "p1"
-
-    def test_local_with_alias(self):
-        expr = parse_ref_expr('@local/person("tom", alias=["tommy", "t"])')
-        assert expr.scope == RefScope.LOCAL
-        assert "tommy" in expr.aliases
-
-
-# ══════════════════════════════════════════════════════════════════════
-# parse_program — full programs from §11 examples
+# parse_program — full programs from v2 spec examples
 # ══════════════════════════════════════════════════════════════════════
 
 class TestParseProgram:
     def test_simple_relationship(self):
-        """§11.1: 我朋友 Tom 是足球运动员"""
+        """Simple relationship + attribute"""
         text = """\
-@s = @self
-@t = @local/person("tom")
-$p1 = friend(@s, @t)
-$p2 = occupation(@t, "football_player")
-ev($p1, conf=1.0)
-ev($p2, conf=1.0)
+@tom: person "tom"
+$p1 = friend(@self, @tom)
+$p2 = occupation(@tom, "football_player")
 """
         prog = parse_program(text, batch_id="test_batch")
-        assert len(prog.refs) == 2
+        assert len(prog.refs) == 1
         assert len(prog.statements) == 2
-        assert len(prog.evidence) == 2
         assert prog.statements[0].predicate == "friend"
         assert prog.statements[1].predicate == "occupation"
+        assert prog.refs[0].expr.scope == RefScope.NAMED
+        assert prog.refs[0].expr.ref_type == "person"
+        assert prog.refs[0].expr.key == "tom"
 
-    def test_blank_node(self):
-        """§11.2: 我有个朋友是足球运动员"""
+    def test_unnamed_entity(self):
+        """Unnamed entity (no key)"""
         text = """\
-@s = @self
-@u = _:p1
-$p1 = friend(@s, @u)
-$p2 = occupation(@u, "football_player")
-ev($p1, conf=1.0)
-ev($p2, conf=1.0)
+@p1: person
+$p1 = friend(@self, @p1)
+$p2 = occupation(@p1, "football_player")
 """
         prog = parse_program(text, batch_id="test_batch")
-        # @u should have blank scope
-        blank_refs = [r for r in prog.refs if r.expr.scope == RefScope.BLANK]
-        assert len(blank_refs) >= 1
+        unnamed = [r for r in prog.refs if r.expr.scope == RefScope.UNNAMED]
+        assert len(unnamed) == 1
         assert len(prog.statements) == 2
 
     def test_multivalue_expanded(self):
-        """§11.3: multi-value expanded form"""
+        """Multi-value expanded form"""
         text = """\
-@s = @self
-$p1 = speak(@s, "中文")
-$p2 = speak(@s, "英语")
-$p3 = speak(@s, "日语")
+$p1 = speak(@self, "中文")
+$p2 = speak(@self, "英语")
+$p3 = speak(@self, "日语")
 $p4 = degree($p3, "slight")
-ev($p1, conf=1.0)
-ev($p2, conf=1.0)
-ev($p3, conf=1.0)
-ev($p4, conf=0.8, span="一点点")
 """
         prog = parse_program(text, batch_id="test_batch")
         assert len(prog.statements) == 4
@@ -173,67 +124,58 @@ ev($p4, conf=0.8, span="一点点")
         assert preds.count("speak") == 3
         assert "degree" in preds
 
-    def test_hope_frame(self):
-        """§11.4: 我希望 Tom 来东京"""
+    def test_hope_with_intermediate_id(self):
+        """Nested meaning via intermediate $id"""
         text = """\
-@s = @self
-@t = @local/person("tom")
-@k = @world/city("tokyo")
-$p1 = come(@t, @k)
-$f1 = hope(@s, $p1)
-ev($f1, conf=0.9)
+@tom: person "tom"
+@tokyo: place "tokyo"
+$p1 = visit(@self, @tokyo)
+$f1 = hope(@self, $p1)
 """
         prog = parse_program(text, batch_id="test_batch")
-        assert len(prog.refs) == 3
+        assert len(prog.refs) == 2
         assert len(prog.statements) == 2
         hope_stmt = [s for s in prog.statements if s.predicate == "hope"][0]
-        # Second arg should be a PropArg referencing $p1
         assert any(getattr(a, "kind", None) == "prop" for a in hope_stmt.args)
 
-    def test_inline_predicate_expansion(self):
-        """§11.5: if(neg(rain("tomorrow")), $p1) — inline expansion"""
+    def test_suggested_pred(self):
+        """Suggested predicate via :suffix"""
         text = """\
-@s = @self
-$p1 = plan(@s, "running")
-$f1 = if(neg(rain("tomorrow")), $p1)
-ev($f1, conf=0.9)
+@tom: person "tom"
+$p1 = friend(@self, @tom):childhood_friend
 """
         prog = parse_program(text, batch_id="test_batch")
-        # The inline pred should be expanded
-        assert len(prog.statements) >= 2
+        assert len(prog.statements) == 1
+        assert prog.statements[0].predicate == "friend"
+        assert prog.statements[0].suggested_pred == "childhood_friend"
 
-    def test_evidence_fields(self):
+    def test_alias_as_stmt(self):
+        """alias is a STMT predicate"""
         text = """\
-@s = @self
-$p1 = resign(@s)
-ev($p1, conf=0.6, span="好像")
+@tom: person "tom"
+$a1 = alias(@tom, "小汤")
 """
         prog = parse_program(text, batch_id="test_batch")
-        assert len(prog.evidence) == 1
-        ev = prog.evidence[0]
-        assert ev.conf == 0.6
-        assert ev.span == "好像"
+        assert len(prog.statements) == 1
+        assert prog.statements[0].predicate == "alias"
 
-    def test_note_with_new_pred(self):
-        """§11.13: note with NEW_PRED"""
+    def test_note(self):
+        """NOTE parsing"""
         text = """\
-@s = @self
-$f1 = obsessed_with(@s, "long_distance_running")
-note($f1, "NEW_PRED obsessed_with | frame | experiencer,target | intense recent fascination")
-ev($f1, conf=0.8, span="迷上了")
+$p1 = resign(@self)
+note($p1, "用户说这句话时笑了")
 """
         prog = parse_program(text, batch_id="test_batch")
         assert len(prog.notes) == 1
-        assert "NEW_PRED" in prog.notes[0].text
-        assert len(prog.statements) == 1
+        assert prog.notes[0].target_local_id == "p1"
+        assert "笑了" in prog.notes[0].text
 
     def test_comments_ignored(self):
         text = """\
 # This is a comment
-@s = @self
+@tom: person "tom"
 # Another comment
-$p1 = name(@s, "Alice")
-ev($p1, conf=1.0)
+$p1 = name(@tom, "Tom")
 """
         prog = parse_program(text, batch_id="test_batch")
         assert len(prog.statements) == 1
@@ -242,11 +184,9 @@ ev($p1, conf=1.0)
     def test_empty_lines_ignored(self):
         text = """\
 
-@s = @self
+@tom: person "tom"
 
-$p1 = name(@s, "Alice")
-
-ev($p1, conf=1.0)
+$p1 = name(@tom, "Tom")
 
 """
         prog = parse_program(text, batch_id="test_batch")
@@ -255,20 +195,25 @@ ev($p1, conf=1.0)
     def test_fuzzy_repair_chinese_quotes(self):
         """Level 2: Chinese quotes should be repaired."""
         text = """\
-@s = @self
-@t = @local/person(\u201ctom\u201d)
-$p1 = friend(@s, @t)
-ev($p1, conf=1.0, src=\u201cturn_1\u201d)
+@tom: person \u201ctom\u201d
+$p1 = friend(@self, @tom)
 """
         prog = parse_program(text, batch_id="test_batch")
         assert len(prog.refs) >= 1  # Should parse after fuzzy repair
 
-    def test_parse_level_tracking(self):
-        """Easy lines should be STRICT, fuzzy repaired should be FUZZY."""
+    def test_fuzzy_repair_unbalanced_parens(self):
+        """Level 2: Missing closing paren should be repaired."""
         text = """\
-@s = @self
-$p1 = name(@s, "Alice")
-ev($p1, conf=1.0)
+$p1 = name(@self, "Alice"
+"""
+        prog = parse_program(text, batch_id="test_batch")
+        assert len(prog.statements) == 1
+
+    def test_parse_level_tracking(self):
+        """Easy lines should be STRICT."""
+        text = """\
+@tom: person "tom"
+$p1 = name(@tom, "Tom")
 """
         prog = parse_program(text, batch_id="test_batch")
         assert prog.refs[0].parse_level == ParseLevel.STRICT
@@ -277,31 +222,67 @@ ev($p1, conf=1.0)
     def test_failed_lines(self):
         """Unparseable lines should become FailedLine/notes."""
         text = """\
-@s = @self
 this is not valid STL syntax at all
-$p1 = name(@s, "Alice")
-ev($p1, conf=1.0)
+$p1 = name(@self, "Alice")
 """
         prog = parse_program(text, batch_id="test_batch")
         assert len(prog.failed_lines) == 1
         assert "this is not valid" in prog.failed_lines[0].raw_text
 
     def test_batch_id_propagated(self):
-        text = "$p1 = name(@self, \"Alice\")\nev($p1, conf=1.0)"
+        text = '$p1 = name(@self, "Alice")'
         prog = parse_program(text, batch_id="my_batch_123")
         assert prog.batch_id == "my_batch_123"
 
     def test_ref_ids_property(self):
         text = """\
-@s = @self
-@t = @local/person("tom")
-$p1 = friend(@s, @t)
-ev($p1, conf=1.0)
+@tom: person "tom"
+$p1 = friend(@self, @tom)
 """
         prog = parse_program(text, batch_id="test_batch")
         ids = prog.ref_ids
-        assert "s" in ids
-        assert "t" in ids
+        assert "tom" in ids
+
+    def test_self_cannot_be_declared(self):
+        """@self: ... should fail — @self is implicit."""
+        text = """\
+@self: person "me"
+$p1 = name(@self, "Alice")
+"""
+        prog = parse_program(text, batch_id="test_batch")
+        # @self declaration should fail, leaving it as a failed line
+        named_self = [r for r in prog.refs if r.local_id == "self"]
+        assert len(named_self) == 0
+
+    def test_undeclared_ref_creates_fallback(self):
+        """Undeclared @id should create fallback ref."""
+        text = '$p1 = friend(@self, @unknown_person)'
+        prog = parse_program(text, batch_id="test_batch")
+        assert len(prog.statements) == 1
+        fallback_refs = [r for r in prog.refs if r.local_id == "unknown_person"]
+        assert len(fallback_refs) == 1
+        assert fallback_refs[0].expr.scope == RefScope.UNKNOWN
+        assert fallback_refs[0].parse_level == ParseLevel.FALLBACK
+
+    def test_number_arg(self):
+        text = '$p1 = age(@self, 30)'
+        prog = parse_program(text, batch_id="test_batch")
+        assert len(prog.statements) == 1
+        age_arg = prog.statements[0].args[1]
+        assert isinstance(age_arg, NumberArg)
+        assert age_arg.value == 30
+
+    def test_modifier_with_prop_ref(self):
+        """Modifier predicates with $id first arg"""
+        text = """\
+@tom: person "tom"
+$p1 = resign(@tom)
+$p2 = time($p1, "next_month")
+"""
+        prog = parse_program(text, batch_id="test_batch")
+        assert len(prog.statements) == 2
+        time_stmt = [s for s in prog.statements if s.predicate == "time"][0]
+        assert isinstance(time_stmt.args[0], PropArg)
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -310,38 +291,33 @@ ev($p1, conf=1.0)
 
 class TestEdgeCases:
     def test_self_implicit_ref(self):
-        """@self should be usable without explicit @s = @self."""
-        text = '$p1 = name(@self, "Alice")\nev($p1, conf=1.0)'
+        """@self should be usable without explicit declaration."""
+        text = '$p1 = name(@self, "Alice")'
         prog = parse_program(text, batch_id="test_batch")
         assert len(prog.statements) == 1
 
     def test_long_program(self):
-        """§11.14-style: large program should parse without errors."""
+        """Large program should parse without errors."""
         text = """\
-@s  = @self
-@t  = @local/person("tom")
-@sa = @local/person("sarah")
-@m  = @local/person("mom")
-@mk = @world/place("樱花亭")
-@ik = @world/brand("KALLAX")
-_:b1 = _:b1
+@tom: person "tom"
+@sarah: person "sarah"
+@mom: person "妈妈"
+@mk: place "樱花亭"
 
-$p1 = eat_together(@s, @t)
-$p2 = location($p1, @mk)
-$p3 = time($p1, "today_noon")
-ev($p1, conf=1.0)
-ev($p2, conf=1.0)
+$p1 = friend(@self, @tom)
+$p2 = visit(@self, @mk)
+$p3 = time($p2, "today_noon")
 
-$p4 = plan(@t, resign(@t))
+$p4 = plan(@tom, "resign")
 $p5 = time($p4, "next_month")
-$f1 = say(@t, $p4)
-ev($f1, conf=0.85)
+$f1 = say(@tom, $p4)
 
-$p10 = spouse(@t, @sa)
-ev($p10, conf=0.9)
+$p10 = spouse(@tom, @sarah)
+$a1 = alias(@tom, "小汤")
+note($f1, "Tom 说话时有点犹豫")
 """
         prog = parse_program(text, batch_id="test_batch")
-        assert len(prog.refs) >= 6
+        assert len(prog.refs) == 4
         assert len(prog.statements) >= 7
-        assert len(prog.evidence) >= 4
+        assert len(prog.notes) == 1
         assert len(prog.failed_lines) == 0

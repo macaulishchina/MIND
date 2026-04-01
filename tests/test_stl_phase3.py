@@ -57,8 +57,8 @@ class TestFocusStack:
     def test_bootstrap_from_refs(self):
         fs = FocusStack()
         refs = [
-            {"id": "ref1", "scope": "local", "ref_type": "person", "key": "tom", "aliases": []},
-            {"id": "ref2", "scope": "world", "ref_type": "city", "key": "tokyo", "aliases": []},
+            {"id": "ref1", "scope": "named", "ref_type": "person", "key": "tom", "aliases": []},
+            {"id": "ref2", "scope": "named", "ref_type": "city", "key": "tokyo", "aliases": []},
         ]
         fs.bootstrap_from_refs(refs, current_turn=5)
         assert len(fs.entries) == 2
@@ -70,7 +70,7 @@ class TestFocusStack:
         fs = FocusStack()
         refs = [
             {"id": "self_001", "scope": "self", "ref_type": None, "key": None, "aliases": []},
-            {"id": "ref1", "scope": "local", "ref_type": "person", "key": "tom", "aliases": []},
+            {"id": "ref1", "scope": "named", "ref_type": "person", "key": "tom", "aliases": []},
         ]
         fs.bootstrap_from_refs(refs, current_turn=0)
         assert len(fs.entries) == 1
@@ -79,7 +79,7 @@ class TestFocusStack:
     def test_bootstrap_deduplicates(self):
         fs = FocusStack()
         refs = [
-            {"id": "ref1", "scope": "local", "ref_type": "person", "key": "tom", "aliases": []},
+            {"id": "ref1", "scope": "named", "ref_type": "person", "key": "tom", "aliases": []},
         ]
         fs.bootstrap_from_refs(refs, current_turn=0)
         fs.bootstrap_from_refs(refs, current_turn=1)  # same ref again
@@ -89,7 +89,7 @@ class TestFocusStack:
         """Score should decay with gap from last mention."""
         fs = FocusStack()
         refs = [
-            {"id": "ref1", "scope": "local", "ref_type": "person", "key": "tom", "aliases": []},
+            {"id": "ref1", "scope": "named", "ref_type": "person", "key": "tom", "aliases": []},
         ]
         fs.bootstrap_from_refs(refs, current_turn=0)
         score_at_0 = fs.entries[0].score
@@ -105,7 +105,7 @@ class TestFocusStack:
         program = ParsedProgram(
             batch_id="b1",
             refs=[
-                ParsedRef(local_id="t", expr=RefExpr(scope=RefScope.LOCAL, ref_type="person", key="tom")),
+                ParsedRef(local_id="t", expr=RefExpr(scope=RefScope.NAMED, ref_type="person", key="tom")),
             ],
             statements=[
                 ParsedStatement(
@@ -198,7 +198,7 @@ class TestFocusStack:
         program_subj = ParsedProgram(
             batch_id="b1",
             refs=[
-                ParsedRef(local_id="t", expr=RefExpr(scope=RefScope.LOCAL, ref_type="person", key="tom")),
+                ParsedRef(local_id="t", expr=RefExpr(scope=RefScope.NAMED, ref_type="person", key="tom")),
             ],
             statements=[
                 ParsedStatement(
@@ -216,7 +216,7 @@ class TestFocusStack:
         program_obj = ParsedProgram(
             batch_id="b2",
             refs=[
-                ParsedRef(local_id="t", expr=RefExpr(scope=RefScope.LOCAL, ref_type="person", key="tom")),
+                ParsedRef(local_id="t", expr=RefExpr(scope=RefScope.NAMED, ref_type="person", key="tom")),
             ],
             statements=[
                 ParsedStatement(
@@ -479,8 +479,8 @@ class TestStoreCoreference:
     def test_query_recent_refs(self):
         store = SQLiteSTLStore()
         # Insert some refs
-        store.upsert_ref("ref1", "local", "person", "tom", [], "owner1")
-        store.upsert_ref("ref2", "world", "city", "tokyo", [], "owner1")
+        store.upsert_ref("ref1", "named", "person", "tom", [], "owner1")
+        store.upsert_ref("ref2", "named", "city", "tokyo", [], "owner1")
         store.upsert_ref("self_owner1", "self", None, None, [], "owner1")
 
         refs = store.query_recent_refs("owner1")
@@ -493,7 +493,7 @@ class TestStoreCoreference:
     def test_query_recent_refs_limit(self):
         store = SQLiteSTLStore()
         for i in range(10):
-            store.upsert_ref(f"ref{i}", "local", "person", f"p{i}", [], "owner1")
+            store.upsert_ref(f"ref{i}", "named", "person", f"p{i}", [], "owner1")
 
         refs = store.query_recent_refs("owner1", limit=3)
         assert len(refs) == 3
@@ -507,18 +507,18 @@ class TestStoreCoreference:
         assert "believe" in words
         assert "time" in words
 
-    def test_seed_vocab_has_all_spec_categories(self):
-        """SEED_VOCAB should cover all 4 categories from §9."""
-        from mind.stl.vocab import SEED_VOCAB, SEED_CATEGORY_MAP
-        categories = {e.category for e in SEED_VOCAB}
-        assert categories == {"prop", "frame", "qualifier"}
-        # Verify key predicates from each spec section
-        assert SEED_CATEGORY_MAP["brother"] == "prop"
-        assert SEED_CATEGORY_MAP["spouse"] == "prop"
-        assert SEED_CATEGORY_MAP["nationality"] == "prop"
-        assert SEED_CATEGORY_MAP["work_at"] == "prop"
-        assert SEED_CATEGORY_MAP["birthday"] == "prop"
-        assert SEED_CATEGORY_MAP["gift"] == "prop"
+    def test_seed_vocab_has_all_spec_domains(self):
+        """SEED_VOCAB should cover all 6 semantic domains from v2."""
+        from mind.stl.vocab import SEED_VOCAB, SEED_DOMAIN_MAP
+        domains = {e.domain for e in SEED_VOCAB}
+        assert domains == {"relationships", "attributes", "actions", "attitudes", "logic", "modifiers"}
+        # Verify key predicates from each domain
+        assert SEED_DOMAIN_MAP["brother"] == "relationships"
+        assert SEED_DOMAIN_MAP["spouse"] == "relationships"
+        assert SEED_DOMAIN_MAP["nationality"] == "attributes"
+        assert SEED_DOMAIN_MAP["work_at"] == "attributes"
+        assert SEED_DOMAIN_MAP["birthday"] == "actions"
+        assert SEED_DOMAIN_MAP["gift"] == "actions"
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -595,7 +595,6 @@ class TestStoreProgramAnchorDate:
                     args=[PropArg(prop_id="p1"), LiteralArg(value="next_month")],
                 ),
             ],
-            evidence=[],
         )
 
         result = store.store_program(
@@ -636,7 +635,6 @@ class TestStoreProgramAnchorDate:
                     args=[PropArg(prop_id="p1"), LiteralArg(value="recent")],
                 ),
             ],
-            evidence=[],
         )
 
         result = store.store_program(

@@ -32,6 +32,32 @@
           "fact_family": "habit"
         }
       ]
+    },
+    "stl_extract": {
+      "expected_stl": "@a: person \"alex\"\n$p1 = neighbor(@s, @a)\n$p2 = drink(@a, \"green tea\")",
+      "expected_refs": [
+        {
+          "scope": "named",
+          "ref_type": "person",
+          "key": "alex"
+        }
+      ],
+      "expected_statements": [
+        {
+          "predicate": "neighbor",
+          "args": [
+            "@self",
+            "@person(\"alex\")"
+          ]
+        },
+        {
+          "predicate": "drink",
+          "args": [
+            "@person(\"alex\")",
+            "green tea"
+          ]
+        }
+      ]
     }
   }
 }

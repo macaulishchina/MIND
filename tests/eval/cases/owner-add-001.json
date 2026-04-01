@@ -34,6 +34,7 @@
       ]
     },
     "stl_extract": {
+      "expected_stl": "$p1 = name(@s, \"John\")\n$p2 = age(@s, 30)",
       "expected_statements": [
         {
           "predicate": "name",
@@ -47,22 +48,6 @@
           "args": [
             "@self",
             30
-          ]
-        }
-      ],
-      "expected_evidence": [
-        {
-          "predicate": "name",
-          "conf_range": [
-            0.8,
-            1.0
-          ]
-        },
-        {
-          "predicate": "age",
-          "conf_range": [
-            0.8,
-            1.0
           ]
         }
       ]

@@ -17,19 +17,20 @@
   ],
   "stages": {
     "stl_extract": {
+      "expected_stl": "@m: person \"mike\"\n@t: person \"tom\"\n@k: city \"tokyo\"\n$p1 = live_in(@t, @k)\n$f1 = say(@m, $p1)",
       "expected_refs": [
         {
-          "scope": "local",
+          "scope": "named",
           "ref_type": "person",
           "key": "mike"
         },
         {
-          "scope": "local",
+          "scope": "named",
           "ref_type": "person",
           "key": "tom"
         },
         {
-          "scope": "world",
+          "scope": "named",
           "ref_type": "city",
           "key": "tokyo"
         }
@@ -38,22 +39,12 @@
         {
           "predicate": "live_in",
           "args": [
-            "@local/person(\"tom\")",
-            "@world/city(\"tokyo\")"
+            "@person(\"tom\")",
+            "@city(\"tokyo\")"
           ]
         },
         {
-          "predicate": "say",
-          "category": "frame"
-        }
-      ],
-      "expected_evidence": [
-        {
-          "predicate": "say",
-          "conf_range": [
-            0.7,
-            1.0
-          ]
+          "predicate": "say"
         }
       ]
     }

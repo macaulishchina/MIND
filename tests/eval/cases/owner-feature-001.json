@@ -17,14 +17,15 @@
   ],
   "stages": {
     "stl_extract": {
+      "expected_stl": "@t: person \"tom\"\n@k: city \"tokyo\"\n$p1 = come(@t, @k)\n$f1 = hope(@s, $p1)",
       "expected_refs": [
         {
-          "scope": "local",
+          "scope": "named",
           "ref_type": "person",
           "key": "tom"
         },
         {
-          "scope": "world",
+          "scope": "named",
           "ref_type": "city",
           "key": "tokyo"
         }
@@ -33,22 +34,12 @@
         {
           "predicate": "come",
           "args": [
-            "@local/person(\"tom\")",
-            "@world/city(\"tokyo\")"
+            "@person(\"tom\")",
+            "@city(\"tokyo\")"
           ]
         },
         {
-          "predicate": "hope",
-          "category": "frame"
-        }
-      ],
-      "expected_evidence": [
-        {
-          "predicate": "hope",
-          "conf_range": [
-            0.8,
-            1.0
-          ]
+          "predicate": "hope"
         }
       ]
     }

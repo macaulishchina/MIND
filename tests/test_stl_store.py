@@ -8,13 +8,13 @@ from mind.stl.models import (
     ParsedProgram,
     ParsedRef,
     ParsedStatement,
-    ParsedEvidence,
     ParsedNote,
     FailedLine,
     RefExpr,
     RefScope,
     RefArg,
     LiteralArg,
+    PropArg,
     ParseLevel,
 )
 
@@ -47,7 +47,7 @@ class TestSchema:
         table_names = {t["name"] for t in tables}
         expected = {
             "conversations", "turns", "extraction_batches",
-            "refs", "statements", "stmt_refs", "evidence",
+            "refs", "statements", "stmt_refs",
             "notes", "vocab_registry", "coreference",
             "coref_pending", "temporal_specs",
         }
@@ -123,14 +123,6 @@ class TestCRUD:
         assert len(rows) == 1
         assert rows[0]["predicate"] == "friend"
 
-    def test_insert_evidence(self, memory_store):
-        memory_store.insert_evidence(
-            target_id="s1", conf=0.9, span="我朋友",
-        )
-        conn = memory_store._get_conn()
-        row = conn.execute("SELECT * FROM evidence WHERE target_id = 's1'").fetchone()
-        assert row["conf"] == 0.9
-
     def test_insert_note(self, memory_store):
         memory_store.insert_note("s1", "Some explanation")
         conn = memory_store._get_conn()
@@ -180,7 +172,7 @@ class TestStoreProgram:
                 ),
                 ParsedRef(
                     local_id="t",
-                    expr=RefExpr(scope=RefScope.LOCAL, ref_type="person", key="tom"),
+                    expr=RefExpr(scope=RefScope.NAMED, ref_type="person", key="tom"),
                     parse_level=ParseLevel.STRICT,
                 ),
             ],
@@ -198,16 +190,6 @@ class TestStoreProgram:
                     parse_level=ParseLevel.STRICT,
                 ),
             ],
-            evidence=[
-                ParsedEvidence(
-                    target_local_id="p1", conf=1.0,
-                ),
-                ParsedEvidence(
-                    target_local_id="p2", conf=0.9,
-                ),
-            ],
-            notes=[],
-            failed=[],
         )
 
     def test_store_program_basic(self, memory_store):
@@ -216,7 +198,6 @@ class TestStoreProgram:
         result = memory_store.store_program(prog, owner_id="owner1", conv_id="conv1")
         assert result.refs_upserted >= 1
         assert result.statements_inserted == 2
-        assert result.evidence_inserted == 2
         assert len(result.errors) == 0
 
     def test_self_ref_auto_created(self, memory_store):
@@ -251,14 +232,12 @@ class TestStoreProgram:
                     parse_level=ParseLevel.STRICT,
                 ),
             ],
-            evidence=[],
             notes=[
                 ParsedNote(
                     target_local_id="f1",
                     text="NEW_PRED obsessed_with | frame | experiencer,target | intense recent fascination",
                 ),
             ],
-            failed=[],
         )
         memory_store.create_conversation("conv2")
         result = memory_store.store_program(prog, owner_id="owner1", conv_id="conv2")

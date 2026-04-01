@@ -1,6 +1,18 @@
 # Spec Delta: STL Evidence Provenance
 
-## MODIFIED Requirements
+> **STATUS: SUPERSEDED** by `stl-v2-grammar` spec.
+>
+> STL v2 removed all EV lines — evidence is system-side only.
+> The `evidence` table DDL has been removed from store.py.
+> See `.ai/specs/stl-v2-grammar/spec.md` for the current grammar.
+
+---
+
+_Original v1 content below preserved for historical reference._
+
+---
+
+## MODIFIED Requirements (v1 — no longer active)
 
 ### Requirement: ev-syntax
 

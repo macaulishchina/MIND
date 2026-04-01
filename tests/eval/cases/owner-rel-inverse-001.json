@@ -32,6 +32,32 @@
           "fact_family": "preference"
         }
       ]
+    },
+    "stl_extract": {
+      "expected_stl": "@g: person \"green\"\n$p1 = friend(@s, @g)\n$p2 = like(@g, \"jazz\")",
+      "expected_refs": [
+        {
+          "scope": "named",
+          "ref_type": "person",
+          "key": "green"
+        }
+      ],
+      "expected_statements": [
+        {
+          "predicate": "friend",
+          "args": [
+            "@self",
+            "@person(\"green\")"
+          ]
+        },
+        {
+          "predicate": "like",
+          "args": [
+            "@person(\"green\")",
+            "jazz"
+          ]
+        }
+      ]
     }
   }
 }

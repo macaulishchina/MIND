@@ -32,6 +32,32 @@
           "fact_family": "habit"
         }
       ]
+    },
+    "stl_extract": {
+      "expected_stl": "@d: person \"dana\"\n$p1 = coworker(@s, @d)\n$p2 = drink(@d, \"oat milk\")\n$q1 = frequency($p2, \"every morning\")",
+      "expected_refs": [
+        {
+          "scope": "named",
+          "ref_type": "person",
+          "key": "dana"
+        }
+      ],
+      "expected_statements": [
+        {
+          "predicate": "coworker",
+          "args": [
+            "@self",
+            "@person(\"dana\")"
+          ]
+        },
+        {
+          "predicate": "drink",
+          "args_contains": [
+            "dana",
+            "oat milk"
+          ]
+        }
+      ]
     }
   }
 }

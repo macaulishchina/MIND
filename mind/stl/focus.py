@@ -140,12 +140,14 @@ class FocusStack:
             if ref.expr.scope == RefScope.SELF:
                 continue
             global_id = ref_map.get(ref.local_id, ref.local_id)
-            scope = ref.expr.scope.value
             ref_type = ref.expr.ref_type or ""
             key = ref.expr.key or ""
-            ref_expr = (
-                f"@{scope}/{ref_type}(\"{key}\")" if ref_type else f"@{scope}(\"{key}\")"
-            )
+            if key:
+                ref_expr = f'@{ref.local_id}: {ref_type} "{key}"'
+            elif ref_type:
+                ref_expr = f"@{ref.local_id}: {ref_type}"
+            else:
+                ref_expr = f"@{ref.local_id}"
             if global_id not in mentioned:
                 mentioned[global_id] = _MentionInfo(ref_expr=ref_expr)
 

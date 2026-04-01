@@ -1,177 +1,156 @@
-"""Seed vocabulary for the Semantic Translation Layer.
+"""Seed vocabulary for the Semantic Translation Layer (v2).
 
-Contains ~30 predefined predicates grouped by category (prop, frame, qualifier).
-These are pre-populated into ``vocab_registry`` on store initialization,
-following §9 of the spec.
+Contains 85 seed predicates grouped by semantic domain.
+v2: no prop/frame/qualifier category distinction — all are unified STMT.
 """
 
 from __future__ import annotations
 
-from typing import Dict, List, NamedTuple, Optional
+from typing import Dict, List, NamedTuple, Optional, Set
 
 
 class SeedEntry(NamedTuple):
     word: str
-    category: str            # "prop" | "frame" | "qualifier"
+    domain: str              # semantic domain for prompt grouping
     arg_schema: Optional[str]
     definition: str
 
 
-# ── Frame seed predicates (~20) ──────────────────────────────────────
-# Organized by sub-category per §9
+# ── Relationships (22) ───────────────────────────────────────────────
 
-_FRAME_COGNITIVE = [
-    SeedEntry("believe", "frame", "experiencer,content", "epistemic belief"),
-    SeedEntry("doubt", "frame", "experiencer,content", "epistemic doubt"),
-    SeedEntry("know", "frame", "experiencer,content", "epistemic knowledge"),
-    SeedEntry("uncertain", "frame", "experiencer,content", "epistemic uncertainty"),
+_RELATIONSHIPS = [
+    SeedEntry("friend", "relationships", "person_a,person_b", "friendship"),
+    SeedEntry("mother", "relationships", "child,parent", "mother relation"),
+    SeedEntry("father", "relationships", "child,parent", "father relation"),
+    SeedEntry("brother", "relationships", "person_a,person_b", "brother relation"),
+    SeedEntry("sister", "relationships", "person_a,person_b", "sister relation"),
+    SeedEntry("spouse", "relationships", "person_a,person_b", "spouse relation"),
+    SeedEntry("partner", "relationships", "person_a,person_b", "partner relation"),
+    SeedEntry("child", "relationships", "parent,child", "child relation"),
+    SeedEntry("cousin", "relationships", "person_a,person_b", "cousin relation"),
+    SeedEntry("coworker", "relationships", "person_a,person_b", "coworker relation"),
+    SeedEntry("boss", "relationships", "employee,boss", "boss relation"),
+    SeedEntry("mentor", "relationships", "mentee,mentor", "mentor relation"),
+    SeedEntry("student", "relationships", "student,institution_or_teacher", "student relation"),
+    SeedEntry("roommate", "relationships", "person_a,person_b", "roommate relation"),
+    SeedEntry("neighbor", "relationships", "person_a,person_b", "neighbor relation"),
+    SeedEntry("classmate", "relationships", "person_a,person_b", "classmate relation"),
+    SeedEntry("teammate", "relationships", "person_a,person_b", "teammate relation"),
+    SeedEntry("client", "relationships", "provider,client", "client relation"),
+    SeedEntry("landlord", "relationships", "tenant,landlord", "landlord relation"),
+    SeedEntry("doctor", "relationships", "patient,doctor", "doctor relation"),
+    SeedEntry("pet", "relationships", "owner,pet", "pet ownership"),
+    SeedEntry("alias", "relationships", "entity,alias_name", "alternate name"),
 ]
 
-_FRAME_VOLITIONAL = [
-    SeedEntry("hope", "frame", "experiencer,content", "volitional hope"),
-    SeedEntry("want", "frame", "experiencer,content", "volitional desire"),
-    SeedEntry("intend", "frame", "experiencer,content", "volitional intention"),
+# ── Attributes & States (18) ────────────────────────────────────────
+
+_ATTRIBUTES = [
+    SeedEntry("name", "attributes", "entity,name_value", "name"),
+    SeedEntry("age", "attributes", "entity,age_value", "age"),
+    SeedEntry("occupation", "attributes", "entity,occupation_value", "occupation"),
+    SeedEntry("location", "attributes", "entity_or_stmt,place_value", "location"),
+    SeedEntry("workplace", "attributes", "entity,workplace_value", "workplace"),
+    SeedEntry("education", "attributes", "entity,education_value", "education"),
+    SeedEntry("nationality", "attributes", "entity,nationality_value", "nationality"),
+    SeedEntry("like", "attributes", "experiencer,target", "preference"),
+    SeedEntry("dislike", "attributes", "experiencer,target", "dislike"),
+    SeedEntry("habit", "attributes", "entity,habit_desc", "habitual behavior"),
+    SeedEntry("hobby", "attributes", "entity,hobby_desc", "hobby/interest"),
+    SeedEntry("skill", "attributes", "entity,skill_desc", "skill/ability"),
+    SeedEntry("own", "attributes", "owner,object", "ownership"),
+    SeedEntry("use", "attributes", "user,object", "usage"),
+    SeedEntry("speak", "attributes", "speaker,language", "language spoken"),
+    SeedEntry("live_in", "attributes", "entity,place", "residence"),
+    SeedEntry("work_at", "attributes", "entity,workplace", "work at"),
+    SeedEntry("study_at", "attributes", "entity,institution", "study at"),
 ]
 
-_FRAME_SPEECH = [
-    SeedEntry("say", "frame", "speaker,content", "speech act: report"),
-    SeedEntry("recommend", "frame", "speaker,content", "speech act: recommendation"),
-    SeedEntry("ask", "frame", "speaker,content", "speech act: question"),
-    SeedEntry("promise", "frame", "speaker,content", "speech act: promise"),
+# ── Actions & Events (14) ───────────────────────────────────────────
+
+_ACTIONS = [
+    SeedEntry("eat", "actions", "eater,food", "eating"),
+    SeedEntry("drink", "actions", "drinker,beverage", "drinking"),
+    SeedEntry("plan", "actions", "agent,content", "plan/intention"),
+    SeedEntry("buy", "actions", "buyer,object", "purchase"),
+    SeedEntry("visit", "actions", "visitor,destination", "visit/travel"),
+    SeedEntry("meet", "actions", "person_a,person_b", "meeting"),
+    SeedEntry("resign", "actions", "agent", "resignation"),
+    SeedEntry("marry", "actions", "person_a,person_b", "marriage"),
+    SeedEntry("move", "actions", "agent,destination", "relocation"),
+    SeedEntry("start", "actions", "agent,activity", "starting"),
+    SeedEntry("stop", "actions", "agent,activity", "stopping"),
+    SeedEntry("birthday", "actions", "entity", "birthday event"),
+    SeedEntry("gift", "actions", "giver,receiver,object", "gift giving"),
+    SeedEntry("event", "actions", "participant,event_desc", "generic event"),
 ]
 
-_FRAME_LOGIC = [
-    SeedEntry("if", "frame", "condition,consequence", "conditional"),
-    SeedEntry("cause", "frame", "cause,effect", "causal relation"),
-    SeedEntry("because", "frame", "effect,cause", "causal explanation"),
+# ── Attitudes & Speech (15) ─────────────────────────────────────────
+
+_ATTITUDES = [
+    SeedEntry("believe", "attitudes", "experiencer,content", "belief"),
+    SeedEntry("doubt", "attitudes", "experiencer,content", "doubt"),
+    SeedEntry("know", "attitudes", "experiencer,content", "knowledge"),
+    SeedEntry("uncertain", "attitudes", "experiencer,content", "uncertainty"),
+    SeedEntry("hope", "attitudes", "experiencer,content", "hope"),
+    SeedEntry("want", "attitudes", "experiencer,content", "desire"),
+    SeedEntry("intend", "attitudes", "experiencer,content", "intention"),
+    SeedEntry("say", "attitudes", "speaker,content", "speech: report"),
+    SeedEntry("recommend", "attitudes", "speaker,content", "speech: recommendation"),
+    SeedEntry("ask", "attitudes", "speaker,content", "speech: question"),
+    SeedEntry("promise", "attitudes", "speaker,content", "speech: promise"),
+    SeedEntry("emotion", "attitudes", "experiencer,emotion_type", "emotional state"),
+    SeedEntry("decide", "attitudes", "agent,content", "decision made"),
+    SeedEntry("defer", "attitudes", "agent,content", "decision deferred"),
+    SeedEntry("undecided", "attitudes", "agent,content", "decision pending"),
 ]
 
-_FRAME_DEONTIC = [
-    SeedEntry("must", "frame", "obligee,content", "deontic obligation"),
-    SeedEntry("permit", "frame", "authority,content", "deontic permission"),
-    SeedEntry("should", "frame", "obligee,content", "deontic suggestion"),
+# ── Logic & Modality (11) ───────────────────────────────────────────
+
+_LOGIC = [
+    SeedEntry("neg", "logic", "content", "negation"),
+    SeedEntry("if", "logic", "condition,consequence", "conditional"),
+    SeedEntry("cause", "logic", "cause,effect", "causal (cause→effect)"),
+    SeedEntry("because", "logic", "effect,cause", "causal (effect←cause)"),
+    SeedEntry("must", "logic", "obligee,content", "obligation"),
+    SeedEntry("permit", "logic", "authority,content", "permission"),
+    SeedEntry("should", "logic", "obligee,content", "suggestion"),
+    SeedEntry("lie", "logic", "speaker,content", "false narrative"),
+    SeedEntry("joke", "logic", "speaker,content", "humorous/non-serious"),
+    SeedEntry("retract_intent", "logic", "speaker,content_desc", "retraction intent"),
+    SeedEntry("correct_intent", "logic", "speaker,content", "correction intent"),
 ]
 
-_FRAME_TRUTH = [
-    SeedEntry("neg", "frame", "content", "negation"),
-    SeedEntry("lie", "frame", "speaker,content", "false narrative"),
-    SeedEntry("joke", "frame", "speaker,content", "humorous/non-serious"),
-    SeedEntry("retract_intent", "frame", "speaker,content", "retraction intent"),
-    SeedEntry("correct_intent", "frame", "speaker,content", "correction intent"),
-]
+# ── Modifiers (5) ───────────────────────────────────────────────────
+# First arg must be $id (the modified STMT).
 
-_FRAME_EMOTION = [
-    SeedEntry("emotion", "frame", "experiencer,emotion_type", "emotional state"),
-]
-
-_FRAME_DECISION = [
-    SeedEntry("decide", "frame", "agent,content", "decision made"),
-    SeedEntry("defer", "frame", "agent,content", "decision deferred"),
-    SeedEntry("undecided", "frame", "agent,content", "decision pending"),
-]
-
-# ── Qualifier seed predicates (~6) ───────────────────────────────────
-
-_QUALIFIERS = [
-    SeedEntry("time", "qualifier", "target,value", "temporal anchor"),
-    SeedEntry("degree", "qualifier", "target,value", "degree modifier"),
-    SeedEntry("quantity", "qualifier", "target,value", "quantity modifier"),
-    SeedEntry("frequency", "qualifier", "target,value", "frequency modifier"),
-    SeedEntry("duration", "qualifier", "target,value", "duration modifier"),
-    SeedEntry("location", "qualifier", "target,ref_or_value", "location modifier"),
-]
-
-# ── Common prop seed predicates ──────────────────────────────────────
-# Full set per §9 of the spec
-
-_PROPS_RELATION = [
-    SeedEntry("friend", "prop", "person1,person2", "friendship relation"),
-    SeedEntry("mother", "prop", "child,parent", "mother relation"),
-    SeedEntry("father", "prop", "child,parent", "father relation"),
-    SeedEntry("brother", "prop", "person1,person2", "brother relation"),
-    SeedEntry("sister", "prop", "person1,person2", "sister relation"),
-    SeedEntry("spouse", "prop", "person1,person2", "spouse relation"),
-    SeedEntry("partner", "prop", "person1,person2", "partner relation"),
-    SeedEntry("child", "prop", "parent,child", "child relation"),
-    SeedEntry("cousin", "prop", "person1,person2", "cousin relation"),
-    SeedEntry("coworker", "prop", "person1,person2", "coworker relation"),
-    SeedEntry("boss", "prop", "employee,boss", "boss relation"),
-    SeedEntry("mentor", "prop", "mentee,mentor", "mentor relation"),
-    SeedEntry("student", "prop", "student,institution_or_teacher", "student relation"),
-    SeedEntry("roommate", "prop", "person1,person2", "roommate relation"),
-    SeedEntry("neighbor", "prop", "person1,person2", "neighbor relation"),
-    SeedEntry("classmate", "prop", "person1,person2", "classmate relation"),
-    SeedEntry("teammate", "prop", "person1,person2", "teammate relation"),
-    SeedEntry("client", "prop", "provider,client", "client relation"),
-    SeedEntry("landlord", "prop", "tenant,landlord", "landlord relation"),
-    SeedEntry("doctor", "prop", "patient,doctor", "doctor relation"),
-    SeedEntry("pet", "prop", "owner,animal", "pet ownership"),
-]
-
-_PROPS_ATTRIBUTE = [
-    SeedEntry("name", "prop", "entity,value", "name attribute"),
-    SeedEntry("age", "prop", "person,value", "age attribute"),
-    SeedEntry("occupation", "prop", "person,job", "occupation/job"),
-    SeedEntry("workplace", "prop", "person,org", "workplace"),
-    SeedEntry("language", "prop", "person,lang", "language spoken"),
-    SeedEntry("education", "prop", "person,value", "education background"),
-    SeedEntry("nationality", "prop", "person,value", "nationality"),
-]
-
-_PROPS_ACTION = [
-    SeedEntry("like", "prop", "experiencer,target", "preference"),
-    SeedEntry("dislike", "prop", "experiencer,target", "dislike"),
-    SeedEntry("habit", "prop", "person,activity", "habitual behavior"),
-    SeedEntry("hobby", "prop", "person,activity", "hobby/interest"),
-    SeedEntry("skill", "prop", "person,ability", "skill/ability"),
-    SeedEntry("own", "prop", "owner,object", "ownership"),
-    SeedEntry("use", "prop", "user,object", "usage"),
-    SeedEntry("eat", "prop", "person,food", "eating"),
-    SeedEntry("drink", "prop", "person,beverage", "drinking"),
-    SeedEntry("speak", "prop", "person,language", "language speaking"),
-    SeedEntry("live_in", "prop", "person,place", "residence"),
-    SeedEntry("work_at", "prop", "person,org", "workplace"),
-    SeedEntry("study_at", "prop", "person,institution", "study place"),
-]
-
-_PROPS_EVENT = [
-    SeedEntry("plan", "prop", "agent,content", "plan/intention content"),
-    SeedEntry("event", "prop", "participant,description", "generic event"),
-    SeedEntry("buy", "prop", "buyer,item", "purchase"),
-    SeedEntry("visit", "prop", "visitor,destination", "visit/travel"),
-    SeedEntry("meet", "prop", "person1,person2", "meeting"),
-    SeedEntry("resign", "prop", "person", "resignation"),
-    SeedEntry("marry", "prop", "person1,person2", "marriage"),
-    SeedEntry("move", "prop", "person,destination", "relocation"),
-    SeedEntry("start", "prop", "agent,activity", "starting something"),
-    SeedEntry("stop", "prop", "agent,activity", "stopping something"),
-    SeedEntry("birthday", "prop", "person", "birthday event"),
-    SeedEntry("gift", "prop", "giver,recipient,item", "gift giving"),
+_MODIFIERS = [
+    SeedEntry("time", "modifiers", "target,time_value", "temporal anchor"),
+    SeedEntry("degree", "modifiers", "target,degree_value", "degree modifier"),
+    SeedEntry("quantity", "modifiers", "target,quantity_value", "quantity modifier"),
+    SeedEntry("frequency", "modifiers", "target,freq_value", "frequency modifier"),
+    SeedEntry("duration", "modifiers", "target,duration_value", "duration modifier"),
 ]
 
 # ── Aggregate ────────────────────────────────────────────────────────
 
 SEED_VOCAB: List[SeedEntry] = (
-    _FRAME_COGNITIVE
-    + _FRAME_VOLITIONAL
-    + _FRAME_SPEECH
-    + _FRAME_LOGIC
-    + _FRAME_DEONTIC
-    + _FRAME_TRUTH
-    + _FRAME_EMOTION
-    + _FRAME_DECISION
-    + _QUALIFIERS
-    + _PROPS_RELATION
-    + _PROPS_ATTRIBUTE
-    + _PROPS_ACTION
-    + _PROPS_EVENT
+    _RELATIONSHIPS
+    + _ATTRIBUTES
+    + _ACTIONS
+    + _ATTITUDES
+    + _LOGIC
+    + _MODIFIERS
 )
 
-# Fast lookup: word → category
-SEED_CATEGORY_MAP: Dict[str, str] = {e.word: e.category for e in SEED_VOCAB}
+# Fast lookup: word → domain
+SEED_DOMAIN_MAP: Dict[str, str] = {e.word: e.domain for e in SEED_VOCAB}
 
-# Set of qualifier predicate names for quick checks
-QUALIFIER_PREDICATES: set = {e.word for e in _QUALIFIERS}
+# All seed words as a set (for validation)
+SEED_WORDS: Set[str] = set(SEED_DOMAIN_MAP.keys())
+
+# Set of modifier predicate names for quick checks
+MODIFIER_PREDICATES: Set[str] = {e.word for e in _MODIFIERS}
 
 # Set of correction-related predicates
-CORRECTION_PREDICATES: set = {"correct_intent", "retract_intent"}
+CORRECTION_PREDICATES: Set[str] = {"correct_intent", "retract_intent"}

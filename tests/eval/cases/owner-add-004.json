@@ -32,6 +32,7 @@
       ]
     },
     "stl_extract": {
+      "expected_stl": "@x: entity\n$p1 = friend(@s, @x)\n$p2 = attribute(@x, \"gay\")",
       "expected_statements": [
         {
           "predicate": "friend",

@@ -17,6 +17,7 @@
   ],
   "stages": {
     "stl_extract": {
+      "expected_stl": "$p1 = plan(@s, \"work from home\")\n$p2 = event(\"rain\")\n$f1 = if($p2, $p1)\n$q1 = time($p2, \"tomorrow\")",
       "expected_statements": [
         {
           "predicate": "plan",
@@ -26,17 +27,7 @@
           ]
         },
         {
-          "predicate": "if",
-          "category": "frame"
-        }
-      ],
-      "expected_evidence": [
-        {
-          "predicate": "if",
-          "conf_range": [
-            0.8,
-            1.0
-          ]
+          "predicate": "if"
         }
       ]
     }
