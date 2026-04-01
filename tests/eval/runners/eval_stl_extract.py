@@ -43,7 +43,10 @@ from mind.utils import parse_messages
 
 def _load_case(path: Path) -> dict[str, Any]:
     with path.open("r", encoding="utf-8") as f:
-        return json.load(f)
+        case = json.load(f)
+    if "stages" not in case:
+        raise ValueError(f"Case {path} is missing required 'stages' block")
+    return case
 
 
 def _case_to_conversation(case: dict[str, Any]) -> str:
@@ -189,9 +192,10 @@ def main(argv: list[str] | None = None) -> int:
 
     # ── Compare with expected (if case) ──
     if case:
-        expected_stmts = case.get("expected_statements", [])
-        expected_refs = case.get("expected_refs", [])
-        expected_ev = case.get("expected_evidence", [])
+        stage = case.get("stages", {}).get("stl_extract", {})
+        expected_stmts = stage.get("expected_statements", [])
+        expected_refs = stage.get("expected_refs", [])
+        expected_ev = stage.get("expected_evidence", [])
         has_expected = expected_stmts or expected_refs or expected_ev
         if has_expected:
             _print_section("Expected (from case file)")

@@ -1,5 +1,6 @@
 {
   "id": "owner-add-001",
+  "suite": "add",
   "description": "self facts become canonical self memories",
   "owner": {
     "external_user_id": "eval_known_self_001"
@@ -14,51 +15,57 @@
       ]
     }
   ],
-  "expected_active_count": 2,
-  "expected_active_memories": [
-    {
-      "canonical_text": "[self] name=John",
-      "subject_ref": "self",
-      "field_key": "name",
-      "fact_family": "attribute"
-    },
-    {
-      "canonical_text": "[self] age=30",
-      "subject_ref": "self",
-      "field_key": "age",
-      "fact_family": "attribute"
-    }
-  ],
-  "expected_statements": [
-    {
-      "predicate": "name",
-      "args": [
-        "@self",
-        "John"
+  "stages": {
+    "owner_add": {
+      "expected_active_count": 2,
+      "expected_active_memories": [
+        {
+          "canonical_text": "[self] name=John",
+          "subject_ref": "self",
+          "field_key": "name",
+          "fact_family": "attribute"
+        },
+        {
+          "canonical_text": "[self] age=30",
+          "subject_ref": "self",
+          "field_key": "age",
+          "fact_family": "attribute"
+        }
       ]
     },
-    {
-      "predicate": "age",
-      "args": [
-        "@self",
-        30
+    "stl_extract": {
+      "expected_statements": [
+        {
+          "predicate": "name",
+          "args": [
+            "@self",
+            "John"
+          ]
+        },
+        {
+          "predicate": "age",
+          "args": [
+            "@self",
+            30
+          ]
+        }
+      ],
+      "expected_evidence": [
+        {
+          "predicate": "name",
+          "conf_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "predicate": "age",
+          "conf_range": [
+            0.8,
+            1.0
+          ]
+        }
       ]
     }
-  ],
-  "expected_evidence": [
-    {
-      "predicate": "name",
-      "conf_range": [
-        0.8,
-        1.0
-      ]
-    },
-    {
-      "predicate": "age",
-      "conf_range": [
-        0.8,
-        1.0
-      ]
-    }
-  ]
+  }
 }

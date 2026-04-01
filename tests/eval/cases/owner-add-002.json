@@ -1,5 +1,6 @@
 {
   "id": "owner-add-002",
+  "suite": "add",
   "description": "anonymous owner is reused across one multi-turn submitted chunk",
   "owner": {
     "anonymous_session_id": "eval_anon_001"
@@ -22,19 +23,23 @@
       ]
     }
   ],
-  "expected_active_count": 2,
-  "expected_active_memories": [
-    {
-      "canonical_text": "[self] name=June",
-      "subject_ref": "self",
-      "field_key": "name",
-      "fact_family": "attribute"
-    },
-    {
-      "canonical_text": "[self] location=Hangzhou",
-      "subject_ref": "self",
-      "field_key": "location",
-      "fact_family": "attribute"
+  "stages": {
+    "owner_add": {
+      "expected_active_count": 2,
+      "expected_active_memories": [
+        {
+          "canonical_text": "[self] name=June",
+          "subject_ref": "self",
+          "field_key": "name",
+          "fact_family": "attribute"
+        },
+        {
+          "canonical_text": "[self] location=Hangzhou",
+          "subject_ref": "self",
+          "field_key": "location",
+          "fact_family": "attribute"
+        }
+      ]
     }
-  ]
+  }
 }

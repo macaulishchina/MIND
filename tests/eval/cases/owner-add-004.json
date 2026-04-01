@@ -1,5 +1,6 @@
 {
   "id": "owner-add-004",
+  "suite": "add",
   "description": "unnamed third party reuses a placeholder subject within one turn",
   "owner": {
     "external_user_id": "eval_rel_002"
@@ -14,31 +15,37 @@
       ]
     }
   ],
-  "expected_active_count": 2,
-  "expected_active_memories": [
-    {
-      "canonical_text_contains": "relation_to_owner=friend",
-      "field_key": "relation_to_owner",
-      "fact_family": "relation"
-    },
-    {
-      "canonical_text_contains": "=gay",
-      "field_key": "attribute:attribute",
-      "fact_family": "attribute"
-    }
-  ],
-  "expected_statements": [
-    {
-      "predicate": "friend",
-      "args_contains": [
-        "@self"
+  "stages": {
+    "owner_add": {
+      "expected_active_count": 2,
+      "expected_active_memories": [
+        {
+          "canonical_text_contains": "relation_to_owner=friend",
+          "field_key": "relation_to_owner",
+          "fact_family": "relation"
+        },
+        {
+          "canonical_text_contains": "=gay",
+          "field_key": "attribute:attribute",
+          "fact_family": "attribute"
+        }
       ]
     },
-    {
-      "predicate": "attribute",
-      "args_contains": [
-        "gay"
+    "stl_extract": {
+      "expected_statements": [
+        {
+          "predicate": "friend",
+          "args_contains": [
+            "@self"
+          ]
+        },
+        {
+          "predicate": "attribute",
+          "args_contains": [
+            "gay"
+          ]
+        }
       ]
     }
-  ]
+  }
 }

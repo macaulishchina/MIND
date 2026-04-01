@@ -1,5 +1,6 @@
 {
   "id": "owner-feature-002",
+  "suite": "feature",
   "description": "say frame keeps speaker and quoted proposition",
   "owner": {
     "external_user_id": "feature_say_001"
@@ -14,43 +15,47 @@
       ]
     }
   ],
-  "expected_refs": [
-    {
-      "scope": "local",
-      "ref_type": "person",
-      "key": "mike"
-    },
-    {
-      "scope": "local",
-      "ref_type": "person",
-      "key": "tom"
-    },
-    {
-      "scope": "world",
-      "ref_type": "city",
-      "key": "tokyo"
-    }
-  ],
-  "expected_statements": [
-    {
-      "predicate": "live_in",
-      "args": [
-        "@local/person(\"tom\")",
-        "@world/city(\"tokyo\")"
+  "stages": {
+    "stl_extract": {
+      "expected_refs": [
+        {
+          "scope": "local",
+          "ref_type": "person",
+          "key": "mike"
+        },
+        {
+          "scope": "local",
+          "ref_type": "person",
+          "key": "tom"
+        },
+        {
+          "scope": "world",
+          "ref_type": "city",
+          "key": "tokyo"
+        }
+      ],
+      "expected_statements": [
+        {
+          "predicate": "live_in",
+          "args": [
+            "@local/person(\"tom\")",
+            "@world/city(\"tokyo\")"
+          ]
+        },
+        {
+          "predicate": "say",
+          "category": "frame"
+        }
+      ],
+      "expected_evidence": [
+        {
+          "predicate": "say",
+          "conf_range": [
+            0.7,
+            1.0
+          ]
+        }
       ]
-    },
-    {
-      "predicate": "say",
-      "category": "frame"
     }
-  ],
-  "expected_evidence": [
-    {
-      "predicate": "say",
-      "conf_range": [
-        0.7,
-        1.0
-      ]
-    }
-  ]
+  }
 }

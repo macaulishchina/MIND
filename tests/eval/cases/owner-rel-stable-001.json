@@ -1,5 +1,6 @@
 {
   "id": "owner-rel-stable-001",
+  "suite": "relationship",
   "description": "named friend relation should project stable relation and occupation memories",
   "owner": {
     "external_user_id": "owner_rel_stable_001"
@@ -14,42 +15,48 @@
       ]
     }
   ],
-  "expected_active_count": 2,
-  "expected_active_memories": [
-    {
-      "canonical_text": "[friend:green] relation_to_owner=friend",
-      "subject_ref": "friend:green",
-      "field_key": "relation_to_owner",
-      "fact_family": "relation"
-    },
-    {
-      "canonical_text": "[friend:green] occupation=football player",
-      "subject_ref": "friend:green",
-      "field_key": "occupation",
-      "fact_family": "attribute"
-    }
-  ],
-  "expected_refs": [
-    {
-      "scope": "local",
-      "ref_type": "person",
-      "key": "green"
-    }
-  ],
-  "expected_statements": [
-    {
-      "predicate": "friend",
-      "args": [
-        "@self",
-        "@local/person(\"green\")"
+  "stages": {
+    "owner_add": {
+      "expected_active_count": 2,
+      "expected_active_memories": [
+        {
+          "canonical_text": "[friend:green] relation_to_owner=friend",
+          "subject_ref": "friend:green",
+          "field_key": "relation_to_owner",
+          "fact_family": "relation"
+        },
+        {
+          "canonical_text": "[friend:green] occupation=football player",
+          "subject_ref": "friend:green",
+          "field_key": "occupation",
+          "fact_family": "attribute"
+        }
       ]
     },
-    {
-      "predicate": "occupation",
-      "args": [
-        "@local/person(\"green\")",
-        "football player"
+    "stl_extract": {
+      "expected_refs": [
+        {
+          "scope": "local",
+          "ref_type": "person",
+          "key": "green"
+        }
+      ],
+      "expected_statements": [
+        {
+          "predicate": "friend",
+          "args": [
+            "@self",
+            "@local/person(\"green\")"
+          ]
+        },
+        {
+          "predicate": "occupation",
+          "args": [
+            "@local/person(\"green\")",
+            "football player"
+          ]
+        }
       ]
     }
-  ]
+  }
 }

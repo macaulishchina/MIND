@@ -1,5 +1,6 @@
 {
   "id": "owner-feature-003",
+  "suite": "feature",
   "description": "belief frame preserves owner stance toward a third-party preference",
   "owner": {
     "external_user_id": "feature_belief_001"
@@ -14,40 +15,44 @@
       ]
     }
   ],
-  "expected_refs": [
-    {
-      "scope": "local",
-      "ref_type": "person",
-      "key": "mom"
-    }
-  ],
-  "expected_statements": [
-    {
-      "predicate": "mother",
-      "args": [
-        "@self",
-        "@local/person(\"mom\")"
+  "stages": {
+    "stl_extract": {
+      "expected_refs": [
+        {
+          "scope": "local",
+          "ref_type": "person",
+          "key": "mom"
+        }
+      ],
+      "expected_statements": [
+        {
+          "predicate": "mother",
+          "args": [
+            "@self",
+            "@local/person(\"mom\")"
+          ]
+        },
+        {
+          "predicate": "like",
+          "args": [
+            "@local/person(\"mom\")",
+            "gold necklace"
+          ]
+        },
+        {
+          "predicate": "believe",
+          "category": "frame"
+        }
+      ],
+      "expected_evidence": [
+        {
+          "predicate": "believe",
+          "conf_range": [
+            0.5,
+            0.7
+          ]
+        }
       ]
-    },
-    {
-      "predicate": "like",
-      "args": [
-        "@local/person(\"mom\")",
-        "gold necklace"
-      ]
-    },
-    {
-      "predicate": "believe",
-      "category": "frame"
     }
-  ],
-  "expected_evidence": [
-    {
-      "predicate": "believe",
-      "conf_range": [
-        0.5,
-        0.7
-      ]
-    }
-  ]
+  }
 }

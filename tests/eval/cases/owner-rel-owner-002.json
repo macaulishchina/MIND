@@ -1,5 +1,6 @@
 {
   "id": "owner-rel-owner-002",
+  "suite": "relationship",
   "description": "coworker drink habit should keep relation and projected habit memory",
   "owner": {
     "external_user_id": "owner_rel_owner_002"
@@ -14,19 +15,23 @@
       ]
     }
   ],
-  "expected_active_count": 2,
-  "expected_active_memories": [
-    {
-      "canonical_text": "[coworker:dana] relation_to_owner=coworker",
-      "subject_ref": "coworker:dana",
-      "field_key": "relation_to_owner",
-      "fact_family": "relation"
-    },
-    {
-      "canonical_text": "[coworker:dana] habit:drink=oat milk every morning",
-      "subject_ref": "coworker:dana",
-      "field_key": "habit:drink",
-      "fact_family": "habit"
+  "stages": {
+    "owner_add": {
+      "expected_active_count": 2,
+      "expected_active_memories": [
+        {
+          "canonical_text": "[coworker:dana] relation_to_owner=coworker",
+          "subject_ref": "coworker:dana",
+          "field_key": "relation_to_owner",
+          "fact_family": "relation"
+        },
+        {
+          "canonical_text": "[coworker:dana] habit:drink=oat milk every morning",
+          "subject_ref": "coworker:dana",
+          "field_key": "habit:drink",
+          "fact_family": "habit"
+        }
+      ]
     }
-  ]
+  }
 }

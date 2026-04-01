@@ -1,5 +1,6 @@
 {
   "id": "owner-add-005",
+  "suite": "add",
   "description": "single-value fields keep only the chunk-final value when one submitted chunk contains a correction",
   "owner": {
     "external_user_id": "eval_update_001"
@@ -22,13 +23,17 @@
       ]
     }
   ],
-  "expected_active_count": 1,
-  "expected_active_memories": [
-    {
-      "canonical_text": "[self] name=David",
-      "subject_ref": "self",
-      "field_key": "name",
-      "fact_family": "attribute"
+  "stages": {
+    "owner_add": {
+      "expected_active_count": 1,
+      "expected_active_memories": [
+        {
+          "canonical_text": "[self] name=David",
+          "subject_ref": "self",
+          "field_key": "name",
+          "fact_family": "attribute"
+        }
+      ]
     }
-  ]
+  }
 }

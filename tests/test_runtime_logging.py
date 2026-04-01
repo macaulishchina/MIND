@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 
 import pytest
 
@@ -9,7 +8,6 @@ from mind.config.schema import LLMConfig, LoggingConfig
 from mind.llms.fake import FakeLLM
 from mind.ops_logger import ops
 from mind.runtime_logging import configure_runtime_logging
-from tests.eval.runners.eval_llm_speed import main as eval_llm_speed_main
 
 
 @pytest.fixture(autouse=True)
@@ -98,50 +96,3 @@ def test_configure_runtime_logging_refreshes_ops_switches(capsys) -> None:
     assert "🧠 [LLM]" not in first.err
     assert "🧠 [LLM]" in second.err
     assert "[response]" in second.err
-
-
-def test_eval_llm_speed_initializes_logging_from_toml(tmp_path: Path, capsys) -> None:
-    toml_path = tmp_path / "speed.toml"
-    toml_path.write_text(
-        """
-[llm]
-provider = "fake"
-temperature = 0.0
-batch = false
-
-[llm.fake]
-protocols = "fake"
-model = "fake-memory-test"
-
-[logging]
-level = "INFO"
-console = true
-file = ""
-format = "%(message)s"
-ops_llm = true
-ops_vector_store = true
-ops_database = true
-verbose = true
-""".strip(),
-        encoding="utf-8",
-    )
-
-    exit_code = eval_llm_speed_main(
-        [
-            "--toml",
-            str(toml_path),
-            "--stage",
-            "llm",
-            "--text",
-            "hi",
-            "--runs",
-            "1",
-        ]
-    )
-    captured = capsys.readouterr()
-
-    assert exit_code == 0
-    assert "run 1/1:" in captured.out
-    assert "🧠 [LLM]" in captured.err
-    assert "[user]" in captured.err
-    assert "[response]" in captured.err

@@ -1,5 +1,6 @@
 {
   "id": "owner-rel-split-001",
+  "suite": "relationship",
   "description": "mother location case should project relation and location separately",
   "owner": {
     "external_user_id": "owner_rel_split_001"
@@ -14,19 +15,23 @@
       ]
     }
   ],
-  "expected_active_count": 2,
-  "expected_active_memories": [
-    {
-      "canonical_text": "[mother:lisa] relation_to_owner=mother",
-      "subject_ref": "mother:lisa",
-      "field_key": "relation_to_owner",
-      "fact_family": "relation"
-    },
-    {
-      "canonical_text": "[mother:lisa] location=Toronto",
-      "subject_ref": "mother:lisa",
-      "field_key": "location",
-      "fact_family": "attribute"
+  "stages": {
+    "owner_add": {
+      "expected_active_count": 2,
+      "expected_active_memories": [
+        {
+          "canonical_text": "[mother:lisa] relation_to_owner=mother",
+          "subject_ref": "mother:lisa",
+          "field_key": "relation_to_owner",
+          "fact_family": "relation"
+        },
+        {
+          "canonical_text": "[mother:lisa] location=Toronto",
+          "subject_ref": "mother:lisa",
+          "field_key": "location",
+          "fact_family": "attribute"
+        }
+      ]
     }
-  ]
+  }
 }

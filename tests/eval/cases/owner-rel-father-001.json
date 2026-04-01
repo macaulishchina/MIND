@@ -1,5 +1,6 @@
 {
   "id": "owner-rel-father-001",
+  "suite": "relationship",
   "description": "father location case should keep relation and location memories",
   "owner": {
     "external_user_id": "owner_rel_father_001"
@@ -14,19 +15,23 @@
       ]
     }
   ],
-  "expected_active_count": 2,
-  "expected_active_memories": [
-    {
-      "canonical_text": "[father:owen] relation_to_owner=father",
-      "subject_ref": "father:owen",
-      "field_key": "relation_to_owner",
-      "fact_family": "relation"
-    },
-    {
-      "canonical_text": "[father:owen] location=Dublin",
-      "subject_ref": "father:owen",
-      "field_key": "location",
-      "fact_family": "attribute"
+  "stages": {
+    "owner_add": {
+      "expected_active_count": 2,
+      "expected_active_memories": [
+        {
+          "canonical_text": "[father:owen] relation_to_owner=father",
+          "subject_ref": "father:owen",
+          "field_key": "relation_to_owner",
+          "fact_family": "relation"
+        },
+        {
+          "canonical_text": "[father:owen] location=Dublin",
+          "subject_ref": "father:owen",
+          "field_key": "location",
+          "fact_family": "attribute"
+        }
+      ]
     }
-  ]
+  }
 }

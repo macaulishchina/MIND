@@ -1,5 +1,6 @@
 {
   "id": "owner-rel-inverse-001",
+  "suite": "relationship",
   "description": "inverse phrasing still keeps a stable friend subject",
   "owner": {
     "external_user_id": "owner_rel_inverse_001"
@@ -14,19 +15,23 @@
       ]
     }
   ],
-  "expected_active_count": 2,
-  "expected_active_memories": [
-    {
-      "canonical_text": "[friend:green] relation_to_owner=friend",
-      "subject_ref": "friend:green",
-      "field_key": "relation_to_owner",
-      "fact_family": "relation"
-    },
-    {
-      "canonical_text": "[friend:green] preference:like=jazz",
-      "subject_ref": "friend:green",
-      "field_key": "preference:like",
-      "fact_family": "preference"
+  "stages": {
+    "owner_add": {
+      "expected_active_count": 2,
+      "expected_active_memories": [
+        {
+          "canonical_text": "[friend:green] relation_to_owner=friend",
+          "subject_ref": "friend:green",
+          "field_key": "relation_to_owner",
+          "fact_family": "relation"
+        },
+        {
+          "canonical_text": "[friend:green] preference:like=jazz",
+          "subject_ref": "friend:green",
+          "field_key": "preference:like",
+          "fact_family": "preference"
+        }
+      ]
     }
-  ]
+  }
 }

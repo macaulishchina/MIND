@@ -1,5 +1,6 @@
 {
   "id": "owner-feature-001",
+  "suite": "feature",
   "description": "hope frame preserves both proposition and frame",
   "owner": {
     "external_user_id": "feature_hope_001"
@@ -14,38 +15,42 @@
       ]
     }
   ],
-  "expected_refs": [
-    {
-      "scope": "local",
-      "ref_type": "person",
-      "key": "tom"
-    },
-    {
-      "scope": "world",
-      "ref_type": "city",
-      "key": "tokyo"
-    }
-  ],
-  "expected_statements": [
-    {
-      "predicate": "come",
-      "args": [
-        "@local/person(\"tom\")",
-        "@world/city(\"tokyo\")"
+  "stages": {
+    "stl_extract": {
+      "expected_refs": [
+        {
+          "scope": "local",
+          "ref_type": "person",
+          "key": "tom"
+        },
+        {
+          "scope": "world",
+          "ref_type": "city",
+          "key": "tokyo"
+        }
+      ],
+      "expected_statements": [
+        {
+          "predicate": "come",
+          "args": [
+            "@local/person(\"tom\")",
+            "@world/city(\"tokyo\")"
+          ]
+        },
+        {
+          "predicate": "hope",
+          "category": "frame"
+        }
+      ],
+      "expected_evidence": [
+        {
+          "predicate": "hope",
+          "conf_range": [
+            0.8,
+            1.0
+          ]
+        }
       ]
-    },
-    {
-      "predicate": "hope",
-      "category": "frame"
     }
-  ],
-  "expected_evidence": [
-    {
-      "predicate": "hope",
-      "conf_range": [
-        0.8,
-        1.0
-      ]
-    }
-  ]
+  }
 }

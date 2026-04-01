@@ -1,5 +1,6 @@
 {
   "id": "owner-comprehensive-001",
+  "suite": "comprehensive",
   "description": "多轮中文对话：涵盖关系、框架、事件、限定词、纠正、多值属性、不同置信度",
   "owner": {
     "external_user_id": "eval_comprehensive_001"
@@ -30,90 +31,116 @@
       ]
     }
   ],
-  "expected_active_count": 7,
-  "expected_active_memories": [
-    {
-      "subject_ref": "brother:凯文",
-      "field_key": "relation_to_owner",
-      "fact_family": "relation"
+  "stages": {
+    "owner_add": {
+      "expected_active_count": 7,
+      "expected_active_memories": [
+        {
+          "subject_ref": "brother:凯文",
+          "field_key": "relation_to_owner",
+          "fact_family": "relation"
+        },
+        {
+          "subject_ref": "brother:凯文",
+          "field_key": "occupation",
+          "fact_family": "attribute"
+        },
+        {
+          "canonical_text_contains": "梅奥",
+          "subject_ref": "brother:凯文",
+          "fact_family": "attribute"
+        },
+        {
+          "canonical_text_contains": "英语",
+          "subject_ref": "brother:凯文"
+        },
+        {
+          "canonical_text_contains": "普通话",
+          "subject_ref": "brother:凯文"
+        },
+        {
+          "canonical_text_contains": "结婚",
+          "subject_ref": "brother:凯文"
+        },
+        {
+          "canonical_text_contains": "大阪",
+          "subject_ref": "brother:凯文"
+        }
+      ]
     },
-    {
-      "subject_ref": "brother:凯文",
-      "field_key": "occupation",
-      "fact_family": "attribute"
-    },
-    {
-      "canonical_text_contains": "梅奥",
-      "subject_ref": "brother:凯文",
-      "fact_family": "attribute"
-    },
-    {
-      "canonical_text_contains": "英语",
-      "subject_ref": "brother:凯文"
-    },
-    {
-      "canonical_text_contains": "普通话",
-      "subject_ref": "brother:凯文"
-    },
-    {
-      "canonical_text_contains": "结婚",
-      "subject_ref": "brother:凯文"
-    },
-    {
-      "canonical_text_contains": "大阪",
-      "subject_ref": "brother:凯文"
+    "stl_extract": {
+      "expected_refs": [
+        {
+          "scope": "local",
+          "ref_type": "person",
+          "key": "凯文"
+        },
+        {
+          "scope": "world",
+          "ref_type": "org",
+          "key": "梅奥诊所"
+        }
+      ],
+      "expected_statements": [
+        {
+          "predicate": "brother",
+          "args": [
+            "@self",
+            "@local/person(\"凯文\")"
+          ]
+        },
+        {
+          "predicate": "occupation",
+          "args_contains": [
+            "凯文",
+            "外科医生"
+          ]
+        },
+        {
+          "predicate": "speak",
+          "args_contains": [
+            "凯文"
+          ]
+        },
+        {
+          "predicate": "believe",
+          "category": "frame"
+        },
+        {
+          "predicate": "correct_intent",
+          "category": "frame"
+        }
+      ],
+      "expected_evidence": [
+        {
+          "predicate": "brother",
+          "conf_range": [
+            0.9,
+            1.0
+          ]
+        },
+        {
+          "predicate": "occupation",
+          "conf_range": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "predicate": "believe",
+          "conf_range": [
+            0.4,
+            0.7
+          ]
+        },
+        {
+          "predicate": "correct_intent",
+          "conf_range": [
+            0.8,
+            1.0
+          ]
+        }
+      ]
     }
-  ],
-  "expected_refs": [
-    {
-      "scope": "local",
-      "ref_type": "person",
-      "key": "凯文"
-    },
-    {
-      "scope": "world",
-      "ref_type": "org",
-      "key": "梅奥诊所"
-    }
-  ],
-  "expected_statements": [
-    {
-      "predicate": "brother",
-      "args": ["@self", "@local/person(\"凯文\")"]
-    },
-    {
-      "predicate": "occupation",
-      "args_contains": ["凯文", "外科医生"]
-    },
-    {
-      "predicate": "speak",
-      "args_contains": ["凯文"]
-    },
-    {
-      "predicate": "believe",
-      "category": "frame"
-    },
-    {
-      "predicate": "correct_intent",
-      "category": "frame"
-    }
-  ],
-  "expected_evidence": [
-    {
-      "predicate": "brother",
-      "conf_range": [0.9, 1.0]
-    },
-    {
-      "predicate": "occupation",
-      "conf_range": [0.8, 1.0]
-    },
-    {
-      "predicate": "believe",
-      "conf_range": [0.4, 0.7]
-    },
-    {
-      "predicate": "correct_intent",
-      "conf_range": [0.8, 1.0]
-    }
-  ]
+  }
 }

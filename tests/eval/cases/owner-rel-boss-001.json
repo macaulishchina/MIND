@@ -1,5 +1,6 @@
 {
   "id": "owner-rel-boss-001",
+  "suite": "relationship",
   "description": "boss preference case should map to projected preference memory",
   "owner": {
     "external_user_id": "owner_rel_boss_001"
@@ -14,19 +15,23 @@
       ]
     }
   ],
-  "expected_active_count": 2,
-  "expected_active_memories": [
-    {
-      "canonical_text": "[boss:marcus] relation_to_owner=boss",
-      "subject_ref": "boss:marcus",
-      "field_key": "relation_to_owner",
-      "fact_family": "relation"
-    },
-    {
-      "canonical_text": "[boss:marcus] preference:like=jazz",
-      "subject_ref": "boss:marcus",
-      "field_key": "preference:like",
-      "fact_family": "preference"
+  "stages": {
+    "owner_add": {
+      "expected_active_count": 2,
+      "expected_active_memories": [
+        {
+          "canonical_text": "[boss:marcus] relation_to_owner=boss",
+          "subject_ref": "boss:marcus",
+          "field_key": "relation_to_owner",
+          "fact_family": "relation"
+        },
+        {
+          "canonical_text": "[boss:marcus] preference:like=jazz",
+          "subject_ref": "boss:marcus",
+          "field_key": "preference:like",
+          "fact_family": "preference"
+        }
+      ]
     }
-  ]
+  }
 }

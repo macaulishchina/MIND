@@ -1,5 +1,6 @@
 {
   "id": "owner-rel-neighbor-001",
+  "suite": "relationship",
   "description": "neighbor drink case should keep relation and projected drink memory",
   "owner": {
     "external_user_id": "owner_rel_neighbor_001"
@@ -14,19 +15,23 @@
       ]
     }
   ],
-  "expected_active_count": 2,
-  "expected_active_memories": [
-    {
-      "canonical_text": "[neighbor:alex] relation_to_owner=neighbor",
-      "subject_ref": "neighbor:alex",
-      "field_key": "relation_to_owner",
-      "fact_family": "relation"
-    },
-    {
-      "canonical_text": "[neighbor:alex] habit:drink=green tea",
-      "subject_ref": "neighbor:alex",
-      "field_key": "habit:drink",
-      "fact_family": "habit"
+  "stages": {
+    "owner_add": {
+      "expected_active_count": 2,
+      "expected_active_memories": [
+        {
+          "canonical_text": "[neighbor:alex] relation_to_owner=neighbor",
+          "subject_ref": "neighbor:alex",
+          "field_key": "relation_to_owner",
+          "fact_family": "relation"
+        },
+        {
+          "canonical_text": "[neighbor:alex] habit:drink=green tea",
+          "subject_ref": "neighbor:alex",
+          "field_key": "habit:drink",
+          "fact_family": "habit"
+        }
+      ]
     }
-  ]
+  }
 }
