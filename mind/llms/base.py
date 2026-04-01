@@ -1,6 +1,7 @@
 """Base class for LLM implementations."""
 
 import logging
+import re
 import time
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
@@ -9,6 +10,8 @@ from mind.ops_logger import ops
 from mind.prompts import PROMPT_REGISTRY
 
 logger = logging.getLogger(__name__)
+
+_RE_THINK_BLOCK = re.compile(r"<think>.*?</think>\s*", re.DOTALL)
 
 
 def _estimate_tokens(text: str) -> int:
@@ -69,6 +72,9 @@ class BaseLLM(ABC):
             elapsed = time.perf_counter() - t0
             ops.llm_error(provider, model, n_msgs, in_tokens, elapsed)
             raise
+
+        # Strip <think>...</think> blocks that some models emit spontaneously.
+        result = _RE_THINK_BLOCK.sub("", result)
 
         elapsed = time.perf_counter() - t0
         out_tokens = _estimate_tokens(result)
