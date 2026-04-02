@@ -1,0 +1,63 @@
+{
+  "date": "2026-04-02",
+  "config": "mind.frontend-smoke.toml.example",
+  "base_url": "http://127.0.0.1:18000",
+  "chat_models": [
+    {
+      "id": "fake-default",
+      "label": "Fake Default",
+      "provider": "fake",
+      "model": "fake-memory-test",
+      "is_default": true
+    },
+    {
+      "id": "fake-alt",
+      "label": "Fake Alt",
+      "provider": "fake",
+      "model": "fake-memory-alt",
+      "is_default": false
+    }
+  ],
+  "known_owner_incremental_submit": {
+    "owner": {
+      "external_user_id": "smoke-known-v2"
+    },
+    "session_id": "smoke-conv-v2",
+    "first_chat_reply": "echo: I love black coffee",
+    "first_ingest_count": 1,
+    "second_chat_reply": "echo: I drink americano",
+    "second_ingest_count": 1,
+    "list_count_after_two_submits": 2,
+    "list_items": [
+      "[self] habit:drink=americano",
+      "[self] preference:like=black coffee"
+    ]
+  },
+  "memory_crud_followup": {
+    "owner": {
+      "external_user_id": "smoke-known"
+    },
+    "update_status": 200,
+    "history_after_update": [
+      "ADD",
+      "UPDATE"
+    ],
+    "delete_status": 204,
+    "history_after_delete": [
+      "ADD",
+      "UPDATE",
+      "DELETE"
+    ]
+  },
+  "anonymous_owner_flow": {
+    "owner": {
+      "anonymous_session_id": "smoke-anon"
+    },
+    "chat_reply": "echo: I love green tea",
+    "ingest_count": 1,
+    "list_count": 1
+  },
+  "notes": [
+    "The fake backend only extracts patterns it knows. During exploratory smoke, 'I also drink americano' returned 0 new memories while 'I drink americano' returned 1, so the recorded incremental-submit evidence uses the latter phrasing."
+  ]
+}

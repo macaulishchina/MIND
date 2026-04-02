@@ -8,6 +8,18 @@
 - 当前已有稳定事实写入 `.ai/specs/`，覆盖 owner-centered memory、STL 语法与评测、runtime logging 等能力
 - 日常回归基线是 `pytest tests/`，更细的阶段级验证和提示词/模型评测位于 `tests/eval/`
 - 在线 STL 抽取默认策略已经独立于全局 LLM 默认值维护，不应假设所有阶段天然共用同一模型
+- 仓库现在还维护了一层高于 `mind.Memory` 的 application layer，以及第一个 REST adapter；
+  后续 MCP / CLI / 前端应优先复用这层，而不是直接耦合内核
+- 仓库还维护了一个独立的 `frontend/` 内部工作台，用于体验和测试 MIND；
+  它只能通过 REST adapter 对接，不应直接 import Python 内部实现
+- 前端工作台当前已经是 chat-first 形态；主页面是标准对话窗口，memory submit
+  是附加测试动作，不再把多消息 ingestion 表单当作主入口
+- 前端可切换的聊天模型来自 `mind.toml` 中单独维护的 `[chat]` curated profiles；
+  STL extraction / decision 模型仍属于后端内部策略，不应暴露给前端切换
+- 仓库现在还维护了一条可复跑的前后端 live smoke 路径，使用 fake/local 的
+  REST 配置就能验证前端工作台与真实 HTTP API 的联调，而不需要 live provider
+- 仓库还维护了一条 compose 化的 `postgres -> rest -> web` 启动路径；
+  起 `web` 时会自动带起 API 和数据库，默认读取工作区根目录 `mind.toml`
 - MVP 还维护一份 point-in-time 的真实 `owner_add` live baseline，用于版本对比；
   它是补充证据，不是替代日常回归的默认 gate
 

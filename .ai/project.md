@@ -16,6 +16,24 @@ should inherit.
 - The maintained online STL extraction default currently uses the base STL
   prompt with a stage-specific extraction model profile rather than relying on
   the global LLM default accidentally.
+- The repository now also maintains an application layer above `mind.Memory`
+  plus a first REST adapter, so future MCP / CLI / frontend work should build
+  on those interfaces rather than coupling directly to the kernel.
+- The repository also maintains an independent frontend workbench under
+  `frontend/` for internal experience and testing; it must integrate only
+  through the maintained REST adapter rather than importing Python internals.
+- The maintained frontend workbench is now chat-first: the homepage behaves
+  like a normal LLM chat surface, and memory submission is a secondary action
+  that writes only the newly added conversation turns.
+- The repository now maintains a curated chat profile registry in `mind.toml`;
+  frontend-selectable chat models must come from that `[chat]` config rather
+  than exposing backend stage models such as STL extraction or decision.
+- The repository now maintains a reproducible local live-smoke path for the
+  frontend workbench using a safe fake/local REST config, so frontend/REST
+  integration can be rerun without live provider credentials.
+- The repository also maintains a Compose deployment path for `postgres`,
+  `rest`, and `web`, with `web -> rest -> postgres` dependency pull-up and a
+  default config source of the workspace `mind.toml`.
 
 ## Working Boundaries
 
@@ -64,6 +82,9 @@ Anything else must use `.ai/changes/<change-id>/`.
   change-local verification report.
 - The maintained automated regression command is `pytest tests/` (via the
   checked-in pytest config).
+- The maintained frontend regression commands are `npm run test` and
+  `npm run build` under `frontend/` when a change affects the chat workbench or
+  the REST/web integration surface.
 - Use targeted eval runners in `tests/eval/` when a change needs stage-level or
   prompt/model evidence in addition to the core pytest suite.
 - Map concrete commands onto the existing verification checks rather than

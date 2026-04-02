@@ -142,6 +142,44 @@ class PromptsConfig(BaseModel):
     """Append STL_EXTRACTION_SUPPLEMENT to the STL extraction system prompt."""
 
 
+class RestConfig(BaseModel):
+    """REST runtime configuration."""
+
+    host: str = "127.0.0.1"
+    port: int = 8000
+    cors_allowed_origins: list[str] = Field(
+        default_factory=lambda: [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+        ]
+    )
+
+
+class ChatProfileOverrideConfig(BaseModel):
+    """Curated chat profile override before full provider resolution."""
+
+    label: str = ""
+    provider: str = ""
+    model: str = ""
+    temperature: Optional[float] = None
+    timeout: Optional[float] = None
+
+
+class ChatProfileConfig(BaseModel):
+    """Resolved frontend-selectable chat profile."""
+
+    id: str
+    label: str
+    llm: LLMConfig
+
+
+class ChatConfig(BaseModel):
+    """Curated chat runtime configuration exposed to upper adapters."""
+
+    default_profile_id: str = "default"
+    profiles: Dict[str, ChatProfileConfig] = Field(default_factory=dict)
+
+
 class MemoryConfig(BaseModel):
     """Top-level configuration — the single output of ConfigManager.
 
@@ -156,5 +194,7 @@ class MemoryConfig(BaseModel):
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
     concurrency: ConcurrencyConfig = Field(default_factory=ConcurrencyConfig)
     prompts: PromptsConfig = Field(default_factory=PromptsConfig)
+    rest: RestConfig = Field(default_factory=RestConfig)
+    chat: ChatConfig = Field(default_factory=ChatConfig)
     providers: Dict[str, ProviderConfig] = Field(default_factory=dict)
     llm_stages: Dict[str, LLMConfig] = Field(default_factory=dict)

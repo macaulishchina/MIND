@@ -1,6 +1,9 @@
 # =============================================================================
 # MIND — Docker Compose
-# 启动：docker compose up -d
+# 示例：
+#   docker compose up rest
+#   docker compose up web
+#   docker compose --profile qdrant up qdrant
 # =============================================================================
 
 services:
@@ -22,9 +25,65 @@ services:
       timeout: 5s
       retries: 5
 
+  rest:
+    build:
+      context: .
+      dockerfile: docker/rest.Dockerfile
+    container_name: mind-rest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command:
+      - /bin/sh
+      - -lc
+      - python -m mind.interfaces.rest.run --compose-adapt --toml ${MIND_TOML_PATH:-/app/mind.toml}
+    environment:
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - type: bind
+        source: ./mind.toml
+        target: /app/mind.toml
+        read_only: true
+        bind:
+          create_host_path: false
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen("http://127.0.0.1:8000/healthz", timeout=5).read()
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+      args:
+        VITE_API_BASE_URL: ""
+    container_name: mind-web
+    restart: unless-stopped
+    depends_on:
+      rest:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
   qdrant:
     image: qdrant/qdrant:latest
     container_name: mind-qdrant
+    profiles: ["qdrant"]
     restart: unless-stopped
     ports:
       - "6333:6333"   # REST API

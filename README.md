@@ -126,6 +126,181 @@ m = Memory(overrides={"llm": {"temperature": 0.5}})
 - `[friend:green] relation_to_owner=friend`
 - `[friend:green] occupation=football player`
 
+## 应用层与 REST API
+
+仓库现在维护一层统一应用层 `mind.application.MindService`，作为
+REST / MCP / CLI 等上层接口的统一调用入口。
+
+当前首个已实现的上层接口是 REST API，固定前缀为 `/api/v1`：
+
+- `GET /healthz`
+- `GET /api/v1/capabilities`
+- `GET /api/v1/chat/models`
+- `POST /api/v1/chat/completions`
+- `POST /api/v1/ingestions`
+- `POST /api/v1/memories/search`
+- `GET /api/v1/memories`
+- `GET /api/v1/memories/{memory_id}`
+- `PATCH /api/v1/memories/{memory_id}`
+- `DELETE /api/v1/memories/{memory_id}`
+- `GET /api/v1/memories/{memory_id}/history`
+
+REST 层使用 canonical `owner` selector：
+
+- `external_user_id`
+- `anonymous_session_id`
+
+两者必须二选一；不再把旧 `user_id` 作为未来对外接口的 request shape。
+
+### 启动 REST API
+
+在 `mind.toml` 或模板里配置：
+
+```toml
+[rest]
+host = "127.0.0.1"
+port = 8000
+cors_allowed_origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
+```
+
+然后运行：
+
+```bash
+python -m mind.interfaces.rest.run
+```
+
+更详细的 REST 使用说明见
+[`mind/interfaces/rest/README.md`](/home/huyidong/workspace/MIND/mind/interfaces/rest/README.md)。
+
+## 前端工作台
+
+仓库还维护了一个独立的内部前端项目 [`frontend/`](/home/huyidong/workspace/MIND/frontend)，
+用于通过 REST 体验和测试 MIND，而不是直接访问 Python 内部对象。
+
+它现在固定提供两个工作区：
+
+- `Chat Workspace`：标准聊天窗口、owner 选择、chat model 选择、发送消息、增量提交 memory
+- `Memory Explorer`：owner 维度列表、详情、update、delete、history
+
+本地启动方式：
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+前端只读取一个环境变量：
+
+```bash
+VITE_API_BASE_URL=http://127.0.0.1:8000
+```
+
+建议和 REST API 一起启动：
+
+```bash
+python -m mind.interfaces.rest.run
+cd frontend && npm run dev
+```
+
+更具体的前端说明见 [`frontend/README.md`](/home/huyidong/workspace/MIND/frontend/README.md)。
+
+主页面现在是 chat-first：
+
+- 像普通 LLM 产品一样发消息和收回复
+- chat model 只能从 TOML 维护的 curated profiles 中选择
+- `Submit Memory` 只会提交当前会话里自上次成功提交之后的新 turn
+- STL extraction / decision 模型仍然只能在后端 TOML 中配置，前端不可切换
+
+### 前后端 Live Smoke
+
+如果要跑不依赖真实模型的本地联调 smoke，使用仓库内维护的安全配置：
+
+```bash
+python -m mind.interfaces.rest.run --toml tests/fixtures/frontend-smoke.toml.example
+cd frontend && VITE_API_BASE_URL=http://127.0.0.1:18000 npm run dev
+```
+
+这条路径会把 REST adapter 指向 fake/local backend，用于验证前端工作台和
+真实 HTTP API 的联调，不把 live provider 调用混进 smoke 证据。
+
+## Docker Compose
+
+仓库现在也维护了一个可快速拉起的 compose 栈：
+
+- `postgres`：默认数据底座（pgvector）
+- `rest`：维护中的 REST API
+- `web`：独立前端工作台
+- `qdrant`：可选 profile，不参与默认 `rest/web` 路径
+
+默认 compose 路径会把工作区根目录的 `mind.toml` 挂载进 `rest` 容器，并把它作为默认配置源。
+
+如果你要跑不依赖真实模型的本地联调，请继续使用
+[`frontend-smoke.toml.example`](/home/huyidong/workspace/MIND/tests/fixtures/frontend-smoke.toml.example)
+走手工 smoke 路径，而不是 compose 默认路径。
+
+常用命令：
+
+```bash
+# 只起 API（会自动带起 postgres）
+docker compose up rest
+
+# 起完整 web 体验面（会自动带起 rest + postgres）
+docker compose up web
+
+# 如需单独起 qdrant
+docker compose --profile qdrant up qdrant
+
+# 只改了前端
+docker compose up -d --build --force-recreate web
+
+# 如果后端 / TOML 也改了
+docker compose up -d --build --force-recreate rest web
+```
+
+访问地址：
+
+- REST: `http://127.0.0.1:8000`
+- Web: `http://127.0.0.1:8080`
+
+说明：
+
+- `web` 通过反向代理把 `/api/` 转发到 `rest`，前端不会直接耦合 Python 内部实现
+- compose 默认读取的是你工作区根目录的 `mind.toml`
+- `mind.toml` 通过 bind mount 进入 `rest` 容器，而不是通过镜像构建打包进去
+- 因为 `mind.toml` 往往写的是本机开发地址，compose 启动时会对容器内运行做最小适配：
+  - `rest.host = 127.0.0.1 / localhost` 会改成 `0.0.0.0`
+  - Postgres / pgvector / STL DSN 中的 `localhost / 127.0.0.1` 会改成 `postgres`
+- 这意味着 compose 仍然以同一个 `mind.toml` 为配置源，但不会因为容器内的
+  loopback 语义不同而直接启动失败
+- 如果你改的是前端代码，需要重新 build `web`
+- 如果你改的是后端 Python 代码，需要重新 build `rest`
+- 如果你改的是 `mind.toml` 配置，只需要重启 `rest` 让它重新读取配置
+- 最常用的生效命令：
+
+```bash
+# 只改了前端页面
+docker compose up -d --build web
+
+# 改了 REST / Python / TOML 配置
+docker compose up -d --build rest
+
+# 前后端都改了
+docker compose up -d --build rest web
+```
+
+```bash
+# 只改了 mind.toml 配置
+docker compose restart rest
+```
+
+- 如果你本地还没有 `mind.toml`，compose 默认路径就无法正确启动 `rest`；
+  这种情况下请先复制：
+
+```bash
+cp mind.toml.example mind.toml
+```
+
 ## 配置说明
 
 所有配置集中在 `mind.toml`，无环境变量依赖。
@@ -142,10 +317,33 @@ mind.toml
 ├── [embedding]              ← Embedding 独立配置
 ├── [vector_store]           ← 向量存储配置（支持 pgvector / Qdrant）
 ├── [history_store]          ← 历史记录配置（支持 Postgres / SQLite）
+├── [chat]                   ← 前端可切换的聊天模型白名单
 └── [retrieval]              ← 检索参数
 ```
 
 切换 LLM 只需改一行：`provider = "openai"` / `"anthropic"` / `"deepseek"` 等。
+
+前端聊天模型不是直接暴露全部 `[llm.*]` provider，而是通过 `[chat]` 单独维护：
+
+```toml
+[chat]
+default_profile_id = "fast"
+
+[chat.profiles.fast]
+label = "Fast"
+provider = "leihuo"
+model = "qwen3.5-flash"
+temperature = 0.2
+
+[chat.profiles.openai]
+label = "OpenAI Nano"
+provider = "openai"
+model = "gpt-5.4-nano"
+temperature = 0.2
+```
+
+这样前端只能切换“允许公开给交互体验层”的聊天模型，而不会暴露 STL /
+decision 阶段的后端内部策略。
 
 当前维护中的默认在线 STL 抽取策略是：
 
@@ -210,19 +408,23 @@ python tests/eval/runners/eval_cases.py \
 
 - 当前默认只正式化了 STL 抽取阶段的在线策略，decision 阶段仍跟随全局 `llm` 默认值
 - 公共 `search()` 当前返回 owner-centered active memories，不把底层 STL statement 直接暴露成用户结果
-- MVP 不包含 Web UI、发布打包、多 agent 协作、遗忘机制、查询分解或图记忆
+- 当前提供的是内部 REST workbench，而不是带鉴权、部署方案和产品化包装的正式 Web 产品
+- MVP 仍不包含多 agent 协作、遗忘机制、查询分解或图记忆
 - 更偏质量增强的工作属于 v1.5/v2 范围，不属于当前 MVP 收尾
 
 ## 项目结构
 
 ```
 mind.toml                         # 所有配置的唯一来源
+frontend/                         # 独立 React + Vite 内部工作台（仅通过 REST）
 mind/
 ├── __init__.py                   # 包导出
 ├── memory.py                     # Memory 主类（系统入口）
 ├── prompts.py                    # LLM Prompt 模板
+├── application/                  # 统一应用层（MindService + DTOs）
 ├── storage.py                    # History store 实现与工厂
 ├── utils.py                      # 工具函数
+├── interfaces/                   # 上层接口适配器（REST / MCP / CLI）
 ├── config/                       # 配置子系统（独立模块）
 │   ├── manager.py                #   ConfigManager（加载、合并、解析）
 │   ├── schema.py                 #   配置结构定义
@@ -233,7 +435,9 @@ mind/
 tests/
 ├── conftest.py                   # 共享 fixtures
 ├── test_storage.py               # SQLite 测试
-└── test_memory.py                # 端到端测试
+├── test_memory.py                # 端到端测试
+├── test_application_service.py   # 应用层测试
+└── test_rest_api.py              # REST API 测试
 ```
 
 ## 技术栈
@@ -241,6 +445,7 @@ tests/
 | 组件 | 选择 |
 |------|------|
 | 语言 | Python |
+| 前端工作台 | React + Vite + TypeScript |
 | LLM | OpenAI / Anthropic / Google 三协议 + 自定义 provider |
 | Embedding | OpenAI 兼容协议 |
 | 向量存储 | PostgreSQL + pgvector（默认） / Qdrant |

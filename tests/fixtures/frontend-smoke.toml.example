@@ -1,0 +1,100 @@
+# =============================================================================
+# MIND frontend/REST live smoke config
+# Safe local config for running the internal frontend workbench against a real
+# REST adapter without hitting live providers.
+# =============================================================================
+
+[llm]
+provider = "fake"
+temperature = 0.0
+timeout = 15.0
+batch = false
+
+[llm.stl_extraction]
+provider = "fake"
+model = "fake-memory-test"
+temperature = 0.0
+timeout = 15.0
+batch = false
+
+[llm.decision]
+provider = "fake"
+model = "fake-memory-test"
+temperature = 0.0
+timeout = 15.0
+batch = false
+
+[llm.fake]
+protocols = "fake"
+api_key = ""
+base_url = ""
+sdk_base = ""
+llm_suffix = ""
+embed_suffix = ""
+model = "fake-memory-test"
+
+[embedding]
+protocols = "fake-embedding"
+model = "fake-memory-embedding"
+api_key = ""
+base_url = ""
+sdk_base = "/v1"
+embed_suffix = "/embeddings"
+dimensions = 128
+
+[vector_store]
+provider = "qdrant"
+collection_name = "mind_frontend_smoke"
+url = ""
+api_key = ""
+on_disk = false
+
+[history_store]
+provider = "sqlite"
+db_path = "frontend_smoke_history.db"
+
+[stl_store]
+provider = "sqlite"
+db_path = "frontend_smoke_stl.db"
+
+[logging]
+level = "INFO"
+console = true
+file = ""
+ops_llm = true
+ops_vector_store = true
+ops_database = true
+verbose = false
+
+[retrieval]
+search_top_k = 5
+similarity_top_k = 5
+
+[concurrency]
+max_workers = 8
+min_available_workers = 2
+
+[rest]
+host = "127.0.0.1"
+port = 18000
+cors_allowed_origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
+
+[chat]
+default_profile_id = "fake-default"
+
+[chat.profiles.fake-default]
+label = "Fake Default"
+provider = "fake"
+model = "fake-memory-test"
+temperature = 0.0
+timeout = 15.0
+
+[chat.profiles.fake-alt]
+label = "Fake Alt"
+provider = "fake"
+model = "fake-memory-alt"
+temperature = 0.3
+timeout = 15.0
+
+[prompts]
+stl_extraction_supplement = false

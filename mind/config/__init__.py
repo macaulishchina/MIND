@@ -14,18 +14,25 @@ from mind.config.models import (
     SubjectRecord,
 )
 from mind.config.schema import (
+    ChatConfig,
+    ChatProfileConfig,
+    ChatProfileOverrideConfig,
     EmbeddingConfig,
     HistoryStoreConfig,
     LLMConfig,
     LLMStageOverrideConfig,
     MemoryConfig,
     ProviderConfig,
+    RestConfig,
     VectorStoreConfig,
 )
 from mind.config.manager import ConfigManager
 
 __all__ = [
     "ConfigManager",
+    "ChatConfig",
+    "ChatProfileConfig",
+    "ChatProfileOverrideConfig",
     "EmbeddingConfig",
     "FactEnvelope",
     "FactFamily",
@@ -42,6 +49,7 @@ __all__ = [
     "OwnerRecord",
     "OwnerType",
     "ProviderConfig",
+    "RestConfig",
     "SubjectRecord",
     "VectorStoreConfig",
 ]

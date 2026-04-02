@@ -1,0 +1,14 @@
+{
+  "frontend_url": "http://127.0.0.1:5173",
+  "api_url": "http://127.0.0.1:18000",
+  "known_owner": {
+    "owner_id": "demo-user",
+    "created_memory": "[self] preference:like=black coffee",
+    "updated_memory": "preference:like=americano",
+    "delete_state": "Load memories to inspect this owner."
+  },
+  "anonymous_owner": {
+    "owner_id": "anon-live-smoke-1",
+    "created_memory": "[self] preference:like=green tea"
+  }
+}

@@ -1,5 +1,7 @@
 """Unit tests for pgvector helper behavior that does not require a live database."""
 
+from types import SimpleNamespace
+
 from psycopg import sql
 
 from mind.vector_stores.pgvector import PgVectorStore
@@ -100,3 +102,63 @@ class TestPgVectorStoreHelpers:
             assert "Unsupported pgvector filter key" in str(exc)
         else:
             raise AssertionError("Expected ValueError for unsupported filter key")
+
+    def test_create_collection_formats_jsonb_default_without_placeholder_error(
+        self,
+        monkeypatch,
+    ):
+        class FakeCursor:
+            def __init__(self):
+                self.executed = []
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+            def execute(self, query, params=None):
+                self.executed.append((query, params))
+
+        class FakeConnection:
+            def __init__(self):
+                self.cursor_obj = FakeCursor()
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+            def cursor(self):
+                return self.cursor_obj
+
+        store = PgVectorStore(
+            SimpleNamespace(
+                dsn="postgresql://postgres:postgres@localhost:5432/mind",
+                collection_name="mind_memories",
+            )
+        )
+        fake_conn = FakeConnection()
+
+        monkeypatch.setattr(store, "_connect", lambda register_types=False: fake_conn)
+        monkeypatch.setattr(
+            store,
+            "_load_modules",
+            lambda: (
+                object(),
+                object(),
+                lambda _conn: None,
+                sql,
+                object(),
+                object(),
+            ),
+        )
+
+        store.create_collection(128)
+
+        rendered = "\n".join(
+            query.as_string(None) if hasattr(query, "as_string") else str(query)
+            for query, _params in fake_conn.cursor_obj.executed
+        )
+        assert "DEFAULT '{}'::jsonb" in rendered

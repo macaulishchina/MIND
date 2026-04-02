@@ -24,6 +24,9 @@ except ModuleNotFoundError:
     import tomli as tomllib              # fallback for 3.10
 
 from mind.config.schema import (
+    ChatConfig,
+    ChatProfileConfig,
+    ChatProfileOverrideConfig,
     ConcurrencyConfig,
     EmbeddingConfig,
     HistoryStoreConfig,
@@ -33,6 +36,7 @@ from mind.config.schema import (
     MemoryConfig,
     ProviderConfig,
     PromptsConfig,
+    RestConfig,
     RetrievalConfig,
     STLStoreConfig,
     VectorStoreConfig,
@@ -196,6 +200,18 @@ class ConfigManager:
             if k in PromptsConfig.model_fields
         })
 
+        rest_raw = raw.get("rest", {})
+        rest_cfg = RestConfig(**{
+            k: v for k, v in rest_raw.items()
+            if k in RestConfig.model_fields
+        })
+        chat_cfg = self._resolve_chat_config(
+            raw=raw.get("chat", {}),
+            globals_cfg=llm_globals,
+            resolved_providers=resolved_providers,
+            default_llm_cfg=llm_cfg,
+        )
+
         config = MemoryConfig(
             llm=llm_cfg,
             embedding=emb_cfg,
@@ -206,6 +222,8 @@ class ConfigManager:
             logging=log_cfg,
             concurrency=concurrency_cfg,
             prompts=prompts_cfg,
+            rest=rest_cfg,
+            chat=chat_cfg,
             providers=providers,
             llm_stages=llm_stages,
         )
@@ -275,6 +293,61 @@ class ConfigManager:
             batch=batch,
             batch_base_url=provider_cfg.get("batch_base_url", ""),
             batch_timeout=batch_timeout,
+        )
+
+    @staticmethod
+    def _resolve_chat_config(
+        raw: Dict[str, Any],
+        globals_cfg: Dict[str, Any],
+        resolved_providers: Dict[str, Dict[str, Any]],
+        default_llm_cfg: LLMConfig,
+    ) -> ChatConfig:
+        """Resolve curated frontend-selectable chat profiles."""
+        chat_raw = raw if isinstance(raw, dict) else {}
+        default_profile_id = str(chat_raw.get("default_profile_id", "default")).strip() or "default"
+        raw_profiles = chat_raw.get("profiles", {})
+        profiles: Dict[str, ChatProfileConfig] = {}
+
+        if isinstance(raw_profiles, dict):
+            for profile_id, profile_raw in raw_profiles.items():
+                if not isinstance(profile_raw, dict):
+                    continue
+
+                override = ChatProfileOverrideConfig(**{
+                    k: v for k, v in profile_raw.items()
+                    if k in ChatProfileOverrideConfig.model_fields
+                })
+                llm_cfg = ConfigManager._resolve_llm_config(
+                    globals_cfg=globals_cfg,
+                    stage_override=LLMStageOverrideConfig(
+                        provider=override.provider,
+                        model=override.model,
+                        temperature=override.temperature,
+                        timeout=override.timeout,
+                    ),
+                    resolved_providers=resolved_providers,
+                )
+                profile_key = str(profile_id)
+                profiles[profile_key] = ChatProfileConfig(
+                    id=profile_key,
+                    label=override.label or profile_key,
+                    llm=llm_cfg,
+                )
+
+        if not profiles:
+            profiles["default"] = ChatProfileConfig(
+                id="default",
+                label="Default Chat",
+                llm=default_llm_cfg,
+            )
+            default_profile_id = "default"
+
+        if default_profile_id not in profiles:
+            default_profile_id = next(iter(profiles))
+
+        return ChatConfig(
+            default_profile_id=default_profile_id,
+            profiles=profiles,
         )
 
     # ------------------------------------------------------------------

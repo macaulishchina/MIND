@@ -1,0 +1,95 @@
+name: mind
+services:
+  postgres:
+    container_name: mind-postgres
+    environment:
+      POSTGRES_DB: mind
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U postgres -d mind
+      timeout: 5s
+      interval: 10s
+      retries: 5
+    image: pgvector/pgvector:pg17
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 5432
+        published: "5432"
+        protocol: tcp
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: postgres_data
+        target: /var/lib/postgresql/data
+        volume: {}
+  rest:
+    build:
+      context: /home/huyidong/workspace/MIND
+      dockerfile: docker/rest.Dockerfile
+    command:
+      - /bin/sh
+      - -lc
+      - python -m mind.interfaces.rest.run --toml mind.compose.toml.example
+    container_name: mind-rest
+    depends_on:
+      postgres:
+        condition: service_healthy
+        required: true
+    environment:
+      PYTHONUNBUFFERED: "1"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen("http://127.0.0.1:8000/healthz", timeout=5).read()
+      timeout: 5s
+      interval: 10s
+      retries: 10
+      start_period: 10s
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 8000
+        published: "8000"
+        protocol: tcp
+    restart: unless-stopped
+  web:
+    build:
+      context: /home/huyidong/workspace/MIND
+      dockerfile: docker/web.Dockerfile
+      args:
+        VITE_API_BASE_URL: ""
+    container_name: mind-web
+    depends_on:
+      rest:
+        condition: service_healthy
+        required: true
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget -qO- http://127.0.0.1/ >/dev/null 2>&1 || exit 1
+      timeout: 5s
+      interval: 10s
+      retries: 10
+      start_period: 5s
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 80
+        published: "8080"
+        protocol: tcp
+    restart: unless-stopped
+networks:
+  default:
+    name: mind_default
+volumes:
+  postgres_data:
+    name: mind_postgres_data

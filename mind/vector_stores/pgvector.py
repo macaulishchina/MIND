@@ -111,16 +111,7 @@ class PgVectorStore(BaseVectorStore):
                         sql.Identifier(self.collection_name),
                     )
                 )
-                for statement in (
-                    "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS owner_id TEXT",
-                    "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS subject_ref TEXT",
-                    "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS fact_family TEXT",
-                    "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS relation_type TEXT",
-                    "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS field_key TEXT",
-                    "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS field_value_json JSONB NOT NULL DEFAULT '{}'::jsonb",
-                    "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS canonical_text TEXT",
-                    "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS raw_text TEXT",
-                ):
+                for statement in self._migration_statements():
                     cur.execute(
                         sql.SQL(statement).format(
                             table=sql.Identifier(self.collection_name),
@@ -156,6 +147,20 @@ class PgVectorStore(BaseVectorStore):
                         sql.Identifier(self.collection_name),
                     )
                 )
+
+    @staticmethod
+    def _migration_statements() -> Sequence[str]:
+        """DDL statements used to keep existing pgvector tables up to date."""
+        return (
+            "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS owner_id TEXT",
+            "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS subject_ref TEXT",
+            "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS fact_family TEXT",
+            "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS relation_type TEXT",
+            "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS field_key TEXT",
+            "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS field_value_json JSONB NOT NULL DEFAULT '{{}}'::jsonb",
+            "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS canonical_text TEXT",
+            "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS raw_text TEXT",
+        )
 
     def _insert(
         self,

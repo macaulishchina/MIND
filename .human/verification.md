@@ -16,6 +16,8 @@
 当前仓库里已经有一个维护中的基础自动化回归入口：`pytest tests/`。
 当改动涉及阶段行为、评测数据或提示词/模型策略时，再补充 `tests/eval/`
 下的 runner 或人工评审证据，而不是只看单个脚本是否成功。
+当前前端工作台也维护独立回归：`frontend` 下的 `npm run test` 和
+`npm run build`，当 change 影响 REST / web 交互面时，应把它们纳入验证证据。
 对真实模型的 live eval，默认把它视为“按需留档的 point-in-time 证据”，
 而不是每次 change 都必须重复通过的 deterministic gate。
 
