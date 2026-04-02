@@ -50,6 +50,7 @@ class OpenAILLM(BaseLLM):
             self.client = OpenAI(
                 api_key=config.api_key,
                 base_url=sdk_base,
+                timeout=config.timeout,
             )
 
     def _generate(

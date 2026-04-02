@@ -931,6 +931,8 @@ class SQLiteSTLStore(BaseSTLStore):
         if conn is None:
             conn = sqlite3.connect(self.db_path)
             conn.row_factory = sqlite3.Row
+            conn.execute("PRAGMA journal_mode = WAL")
+            conn.execute("PRAGMA synchronous = NORMAL")
             conn.execute("PRAGMA foreign_keys = ON")
             self._local.conn = conn
         return conn
@@ -938,6 +940,23 @@ class SQLiteSTLStore(BaseSTLStore):
     def create_schema(self) -> None:
         conn = self._get_conn()
         conn.executescript(_SQLITE_SCHEMA_DDL)
+        conn.commit()
+
+    def seed_vocab(self) -> None:
+        """Batch-insert seed vocab with a single commit (much faster on file-backed SQLite)."""
+        conn = self._get_conn()
+        rows = [
+            (entry.word, entry.domain, entry.arg_schema, entry.definition, "seed")
+            for entry in SEED_VOCAB
+        ]
+        conn.executemany(
+            """INSERT INTO vocab_registry (word, category, arg_schema, definition, source)
+               VALUES (?, ?, ?, ?, ?)
+               ON CONFLICT (word) DO UPDATE SET
+                   usage_count = vocab_registry.usage_count + 1,
+                   last_used = datetime('now')""",
+            rows,
+        )
         conn.commit()
 
     def upsert_ref(

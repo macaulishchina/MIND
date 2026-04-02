@@ -36,6 +36,7 @@ class LLMConfig(BaseModel):
     base_url: str = ""
     sdk_base: str = ""
     llm_suffix: str = ""
+    timeout: float = 120.0          # SDK timeout (seconds) for normal requests
     batch: bool = False             # global switch: route to batch endpoint
     batch_base_url: str = ""        # resolved from provider's batch_base_url
     batch_timeout: float = 3600.0   # SDK timeout (seconds) when batch is active
@@ -129,6 +130,17 @@ class ConcurrencyConfig(BaseModel):
     Must be strictly less than max_workers."""
 
 
+class PromptsConfig(BaseModel):
+    """Prompt enhancement configuration.
+
+    Controls whether extended / supplementary prompt text is appended
+    to base system prompts. Useful for trading extra tokens for better
+    extraction quality on price-insensitive models.
+    """
+    stl_extraction_supplement: bool = False
+    """Append STL_EXTRACTION_SUPPLEMENT to the STL extraction system prompt."""
+
+
 class MemoryConfig(BaseModel):
     """Top-level configuration — the single output of ConfigManager.
 
@@ -142,5 +154,6 @@ class MemoryConfig(BaseModel):
     retrieval: RetrievalConfig = Field(default_factory=RetrievalConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
     concurrency: ConcurrencyConfig = Field(default_factory=ConcurrencyConfig)
+    prompts: PromptsConfig = Field(default_factory=PromptsConfig)
     providers: Dict[str, ProviderConfig] = Field(default_factory=dict)
     llm_stages: Dict[str, LLMConfig] = Field(default_factory=dict)

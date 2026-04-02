@@ -253,6 +253,7 @@ def test_openai_llm_uses_normal_url_when_batch_disabled(mock_openai_cls):
     mock_openai_cls.assert_called_once_with(
         api_key="test-key",
         base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+        timeout=120.0,
     )
 
 
@@ -277,6 +278,7 @@ def test_openai_llm_fallback_when_batch_url_empty(mock_openai_cls, caplog):
     mock_openai_cls.assert_called_once_with(
         api_key="test-key",
         base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+        timeout=120.0,
     )
     assert "falling back to normal endpoint" in caplog.text
 

@@ -2,6 +2,10 @@
 
 Implements the LLM prompt for the Semantic Translation Layer v2 grammar:
 3+1 line types (REF, STMT, NOTE, COMMENT), 4 atomic arg types only.
+
+``STL_EXTRACTION_SUPPLEMENT`` is an optional block that can be appended to the
+base prompt for models where token cost is not a concern, adding richer
+examples and edge-case guidance to improve extraction quality.
 """
 
 # ---------------------------------------------------------------------------
@@ -100,6 +104,65 @@ Attach time/location/degree/etc. to the specific event they modify, not to the w
   $p2 = occupation(@self, "工程师")
   $p3 = live_in(@self, @hz)
 """
+
+# ---------------------------------------------------------------------------
+# STL v2 Extraction — Supplement (optional)
+# ---------------------------------------------------------------------------
+
+STL_EXTRACTION_SUPPLEMENT = """\
+
+## Correction & Retraction Reminders
+
+correct_intent: output ONLY the new/correct fact, then wrap it. NEVER output the old fact.
+retract_intent: do NOT output the denied fact as $ statement. Only retract_intent() itself.
+All non-corrected, non-retracted facts MUST still be extracted.
+
+## neg() vs Dedicated Predicates
+
+- Use a specific predicate when one exists: dislike() for 不喜欢, neg() only when no specific predicate fits.
+- neg() takes exactly one argument: a $id. Define the base fact first, then wrap.
+  $s = skill(@self, "游泳")  $n = neg($s)
+
+## Multi-event & Modifier Attachment
+
+Each distinct event gets its OWN $ statement. Do NOT merge events.
+Attach time/degree/frequency/etc. to the SPECIFIC $id they modify:
+
+  @lw: person "老王"
+  @paris: place "巴黎"
+  @tokyo: place "东京"
+  $e1 = meet(@self, @lw, @paris)
+  $t1 = time($e1, "去年")
+  $e2 = meet(@self, @lw, @tokyo)
+  $t2 = time($e2, "今年")
+
+## Completeness
+
+- When a person is introduced, extract ALL stated attributes (name, age, occupation, education, etc.) — not just the relationship.
+- Every user turn may contain extractable facts. Scan ALL turns.
+- A single turn can contain multiple independent facts — extract each one.
+- If the assistant states a fact and the user confirms it, extract it.
+
+## Format Strictness
+
+- Declare ALL @refs BEFORE any $ statement that uses them.
+- @self is built-in. Never output @self as a declaration line.
+- Use ONLY seed predicates. Only use `:suffix` when absolutely no seed predicate is even close.
+- Every "literal" and note() text must be in the conversation's language.
+- One statement per line. No markdown, no code fences, no inline comments, no extra text."""
+
+
+def build_stl_extraction_prompt(*, supplement: bool = False) -> str:
+    """Return the full STL extraction system prompt.
+
+    Args:
+        supplement: When True, append STL_EXTRACTION_SUPPLEMENT to the
+            base prompt for richer guidance and worked examples.
+    """
+    if supplement:
+        return STL_EXTRACTION_SYSTEM_PROMPT + STL_EXTRACTION_SUPPLEMENT
+    return STL_EXTRACTION_SYSTEM_PROMPT
+
 
 STL_EXTRACTION_USER_TEMPLATE = """\
 Extract structured memories from the following conversation.

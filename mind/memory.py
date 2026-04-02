@@ -45,6 +45,7 @@ from mind.stl.parser import parse_program
 from mind.stl.prompt import (
     STL_EXTRACTION_SYSTEM_PROMPT,
     STL_EXTRACTION_USER_TEMPLATE,
+    build_stl_extraction_prompt,
     format_focus_stack,
 )
 from mind.stl.store import STLStoreFactory
@@ -652,8 +653,11 @@ class Memory:
                 logger.debug("Focus stack bootstrap failed", exc_info=True)
         active = focus_stack.top_k_for_prompt()
         focus_stack_text = format_focus_stack(active)
+        system_prompt = build_stl_extraction_prompt(
+            supplement=self._config.prompts.stl_extraction_supplement,
+        )
         messages = [
-            {"role": "system", "content": STL_EXTRACTION_SYSTEM_PROMPT},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": STL_EXTRACTION_USER_TEMPLATE.format(
                 focus_stack=focus_stack_text,
                 conversation=conversation,

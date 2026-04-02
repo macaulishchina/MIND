@@ -32,6 +32,7 @@ from mind.config.schema import (
     LoggingConfig,
     MemoryConfig,
     ProviderConfig,
+    PromptsConfig,
     RetrievalConfig,
     STLStoreConfig,
     VectorStoreConfig,
@@ -189,6 +190,12 @@ class ConfigManager:
             if k in ConcurrencyConfig.model_fields
         })
 
+        prompts_raw = raw.get("prompts", {})
+        prompts_cfg = PromptsConfig(**{
+            k: v for k, v in prompts_raw.items()
+            if k in PromptsConfig.model_fields
+        })
+
         config = MemoryConfig(
             llm=llm_cfg,
             embedding=emb_cfg,
@@ -198,6 +205,7 @@ class ConfigManager:
             retrieval=ret_cfg,
             logging=log_cfg,
             concurrency=concurrency_cfg,
+            prompts=prompts_cfg,
             providers=providers,
             llm_stages=llm_stages,
         )
