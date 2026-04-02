@@ -207,6 +207,63 @@ def test_stl_extraction_stage_override_is_resolved():
     assert cfg.llm_stages["stl_extraction"].temperature == 0.2
 
 
+def test_global_timeout_is_resolved():
+    """Resolved LLM config carries the normal request timeout from [llm]."""
+    mgr = ConfigManager.from_dict({
+        "llm": {
+            "provider": "test",
+            "timeout": 42.0,
+            "test": {
+                "protocols": "fake",
+                "model": "base-model",
+            },
+        },
+    })
+    cfg = mgr.get()
+    assert cfg.llm.timeout == 42.0
+
+
+def test_stl_extraction_stage_override_can_set_timeout():
+    """Stage-specific extraction timeout overrides the global timeout."""
+    mgr = ConfigManager.from_dict({
+        "llm": {
+            "provider": "test",
+            "timeout": 120.0,
+            "test": {
+                "protocols": "fake",
+                "model": "base-model",
+            },
+            "alt": {
+                "protocols": "fake",
+                "model": "alt-model",
+            },
+            "stl_extraction": {
+                "provider": "alt",
+                "timeout": 10.0,
+            },
+        },
+    })
+    cfg = mgr.get()
+
+    assert cfg.llm.timeout == 120.0
+    assert cfg.llm_stages["stl_extraction"].provider == "alt"
+    assert cfg.llm_stages["stl_extraction"].model == "alt-model"
+    assert cfg.llm_stages["stl_extraction"].timeout == 10.0
+
+
+def test_default_mind_toml_formalizes_stl_runtime_strategy():
+    """The tracked config template pins the STL extraction runtime profile."""
+    cfg = ConfigManager(toml_path="mind.toml.example").get()
+
+    assert cfg.llm.provider == "leihuo"
+    assert cfg.llm.model == "qwen3.5-flash"
+    assert cfg.llm.timeout == 120.0
+    assert cfg.llm_stages["stl_extraction"].provider == "leihuo"
+    assert cfg.llm_stages["stl_extraction"].model == "gpt-5.4-mini"
+    assert cfg.llm_stages["stl_extraction"].timeout == 10.0
+    assert cfg.prompts.stl_extraction_supplement is False
+
+
 # ── OpenAILLM routing tests ─────────────────────────────────────────
 
 

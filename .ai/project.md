@@ -6,11 +6,16 @@ should inherit.
 
 ## Current State
 
-- This repository currently contains workflow scaffolding only.
-- Product requirements, runtime architecture, and implementation stack are not
-  yet defined in durable form.
-- Until those details exist, do not invent fixed constraints that the repo has
-  not committed to.
+- This repository contains an implemented Python memory system plus the
+  spec-driven workflow that governs ongoing changes.
+- Durable project facts already exist in `.ai/specs/` for owner-centered
+  memory, STL grammar/evaluation, and runtime logging behavior.
+- The maintained regression baseline is the pytest suite under `tests/`; the
+  repository also contains eval runners and prompt-optimization reports under
+  `tests/eval/`.
+- The maintained online STL extraction default currently uses the base STL
+  prompt with a stage-specific extraction model profile rather than relying on
+  the global LLM default accidentally.
 
 ## Working Boundaries
 
@@ -57,9 +62,12 @@ Anything else must use `.ai/changes/<change-id>/`.
 
 - Verification is defined by policy, reusable profiles, reusable checks, and a
   change-local verification report.
-- No repository-wide verification command is standardized yet.
-- When the repo gains automation later, map concrete commands to the existing
-  verification checks rather than replacing the model with a script path.
+- The maintained automated regression command is `pytest tests/` (via the
+  checked-in pytest config).
+- Use targeted eval runners in `tests/eval/` when a change needs stage-level or
+  prompt/model evidence in addition to the core pytest suite.
+- Map concrete commands onto the existing verification checks rather than
+  replacing the model with a script path.
 
 ## Terminology
 
@@ -81,8 +89,6 @@ Anything else must use `.ai/changes/<change-id>/`.
 When the project matures, extend this file with:
 
 - project purpose and user outcomes
-- real tech stack and repo layout
 - architecture principles
 - interface stability rules
-- verification commands mapped onto the verification framework
 - glossary entries tied to the product domain

@@ -49,6 +49,7 @@ class LLMStageOverrideConfig(BaseModel):
     model: str = ""
     temperature: Optional[float] = None
     extraction_temperature: Optional[float] = None
+    timeout: Optional[float] = None
     batch: Optional[bool] = None
     batch_timeout: Optional[float] = None
 

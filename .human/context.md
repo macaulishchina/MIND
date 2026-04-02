@@ -4,9 +4,10 @@
 
 ## 当前状态
 
-- 仓库目前主要包含 spec-driven workflow 脚手架
-- 产品需求、运行时架构和实现技术栈还没有形成稳定事实
-- 在这些事实没有被正式写入之前，不要擅自把假设写成硬规则
+- 仓库已经不只是 workflow 脚手架，而是包含可运行的 Python 记忆系统实现
+- 当前已有稳定事实写入 `.ai/specs/`，覆盖 owner-centered memory、STL 语法与评测、runtime logging 等能力
+- 日常回归基线是 `pytest tests/`，更细的阶段级验证和提示词/模型评测位于 `tests/eval/`
+- 在线 STL 抽取默认策略已经独立于全局 LLM 默认值维护，不应假设所有阶段天然共用同一模型
 
 ## 工作边界
 

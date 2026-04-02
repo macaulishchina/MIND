@@ -245,6 +245,11 @@ class ConfigManager:
             if stage_override and stage_override.extraction_temperature is not None
             else globals_cfg.get("extraction_temperature")
         )
+        timeout = (
+            stage_override.timeout
+            if stage_override and stage_override.timeout is not None
+            else globals_cfg.get("timeout", 120.0)
+        )
         batch = (
             stage_override.batch
             if stage_override and stage_override.batch is not None
@@ -266,6 +271,7 @@ class ConfigManager:
             base_url=provider_cfg.get("base_url", ""),
             sdk_base=provider_cfg.get("sdk_base", ""),
             llm_suffix=provider_cfg.get("llm_suffix", ""),
+            timeout=timeout,
             batch=batch,
             batch_base_url=provider_cfg.get("batch_base_url", ""),
             batch_timeout=batch_timeout,

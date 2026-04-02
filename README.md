@@ -25,7 +25,11 @@ pip install -r requirements.txt
 
 ### 2. 配置 mind.toml
 
-在项目根目录的 `mind.toml` 中填入你的 API Key 和 Embedding 服务地址：
+先复制模板，再在项目根目录的 `mind.toml` 中填入你的 API Key 和 Embedding 服务地址：
+
+```bash
+cp mind.toml.example mind.toml
+```
 
 ```toml
 [llm]
@@ -112,7 +116,7 @@ m = Memory(overrides={"llm": {"temperature": 0.5}})
 当前 `add()` 流程走 STL-native 主链：
 
 1. 单次 LLM 调用把对话翻译成 STL
-2. 解析并持久化 `refs / statements / evidence`
+2. 解析并持久化 `refs / statements / notes`
 3. 再把 statement 投影成 owner-centered memory
 
 最终以结构标签式文本落库，例如：
@@ -128,7 +132,7 @@ m = Memory(overrides={"llm": {"temperature": 0.5}})
 
 ```
 mind.toml
-├── [llm]                    ← 通用设置：provider + temperature
+├── [llm]                    ← 通用设置：provider + temperature + timeout
 │   ├── [llm.stl_extraction] ← 可选：STL 抽取阶段覆盖
 │   ├── [llm.decision]       ← 可选：投影更新决策阶段覆盖
 │   ├── [llm.openai]         ← 完整 provider 定义
@@ -142,6 +146,30 @@ mind.toml
 ```
 
 切换 LLM 只需改一行：`provider = "openai"` / `"anthropic"` / `"deepseek"` 等。
+
+当前维护中的默认在线 STL 抽取策略是：
+
+```toml
+[llm]
+provider = "leihuo"
+timeout = 120.0
+
+[llm.stl_extraction]
+provider = "leihuo"
+model = "gpt-5.4-mini"
+timeout = 10.0
+
+[prompts]
+stl_extraction_supplement = false
+```
+
+含义：
+
+- 全局 `llm` 仍作为通用默认与 decision 阶段默认
+- STL 抽取阶段单独固定到 `gpt-5.4-mini`
+- 在线抽取默认使用基础提示词，不自动追加 supplement
+- 这个策略已经同步写入 `mind.toml.example`；复制模板即可获得相同默认值
+- 10s 是 STL 抽取阶段的默认在线预算，来自 `tests/eval/prompt_opt/REPORT.md` 中完成的跨模型评测结论
 
 ## 运行测试
 
