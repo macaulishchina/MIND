@@ -181,12 +181,26 @@ python -m pytest tests/test_storage.py -v
 python -m pytest tests/test_memory.py -v
 
 # STL-native add 评估
-python tests/eval/runners/eval_owner_centered_add.py --toml mindt.toml --pretty
+python tests/eval/runners/eval_cases.py --stage owner_add --toml mindt.toml --pretty
 ```
 
 说明：
 - `mindt.toml` 的默认 LLM provider 现在与 `mind.toml` 对齐；手动跑 eval 可能会触发真实模型调用
 - 更详细的评估说明、真实 LLM 运行方式和并发参数见 `tests/eval/README.md`。
+
+## MVP 推荐路径
+
+- 配置：从 [mind.toml.example](/home/huyidong/workspace/MIND/mind.toml.example) 复制出 `mind.toml`
+- 运行组合：沿用模板中的 `Postgres + pgvector + Postgres history/STL store`
+- 抽取策略：沿用模板中的 STL 阶段覆盖，不要在 MVP 收尾阶段继续改 prompt
+- 基线验证：先跑 `python -m pytest tests/`，再按需跑 `eval_cases.py --stage owner_add`
+
+## MVP 已知限制
+
+- 当前默认只正式化了 STL 抽取阶段的在线策略，decision 阶段仍跟随全局 `llm` 默认值
+- 公共 `search()` 当前返回 owner-centered active memories，不把底层 STL statement 直接暴露成用户结果
+- MVP 不包含 Web UI、发布打包、多 agent 协作、遗忘机制、查询分解或图记忆
+- 更偏质量增强的工作属于 v1.5/v2 范围，不属于当前 MVP 收尾
 
 ## 项目结构
 

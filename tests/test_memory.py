@@ -148,3 +148,50 @@ class TestMemoryEndToEnd:
         m._extract_stl("User: My name is Alice")
 
         assert captured["temperature"] == 0.42
+
+    def test_mvp_public_api_smoke_path(self, memory_config):
+        """Exercise the maintained MVP public API surface in one flow."""
+        m = Memory(memory_config)
+
+        added = m.add(
+            messages=[{"role": "user", "content": "I love black coffee"}],
+            user_id="mvp-user",
+        )
+        assert len(added) == 1
+        memory_id = added[0].id
+
+        search_results = m.search("What should I drink?", user_id="mvp-user")
+        assert any("black coffee" in item.content.lower() for item in search_results)
+
+        fetched = m.get(memory_id)
+        assert fetched is not None
+        assert fetched.content == added[0].content
+
+        all_memories = m.get_all("mvp-user")
+        assert [item.id for item in all_memories] == [memory_id]
+
+        updated = m.update(memory_id, "[self] preference:like=americano")
+        assert updated is not None
+        assert updated.canonical_text == "[self] preference:like=americano"
+
+        history_after_update = m.history(memory_id)
+        assert [row["operation"] for row in history_after_update] == [
+            "ADD",
+            "UPDATE",
+        ]
+
+        assert m.delete(memory_id) is True
+
+        deleted = m.get(memory_id)
+        assert deleted is not None
+        assert deleted.status == MemoryStatus.DELETED
+
+        assert m.get_all("mvp-user") == []
+        assert m.search("What should I drink?", user_id="mvp-user") == []
+
+        history_after_delete = m.history(memory_id)
+        assert [row["operation"] for row in history_after_delete] == [
+            "ADD",
+            "UPDATE",
+            "DELETE",
+        ]

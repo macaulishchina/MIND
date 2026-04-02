@@ -340,9 +340,7 @@ class Memory:
     ) -> List[MemoryItem]:
         """Search for memories relevant to the query.
 
-        Executes a hybrid search:
-        1. Vector similarity search (existing, always runs)
-        2. STL structured query (predicate/ref-based, when applicable)
+        Executes vector search against the active owner-centered memory surface.
 
         Args:
             query: The search query.
@@ -359,46 +357,10 @@ class Memory:
         )
 
         items = []
-        seen_ids = set()
         for r in raw_results:
             item = self._payload_to_item(r["id"], r.get("payload", {}))
             item.score = r.get("score")
             items.append(item)
-            seen_ids.add(r["id"])
-
-        # ── Structured STL search (supplement) ──
-        try:
-            owner_ctx = self._coerce_owner_context(user_id=user_id, owner=None)
-            owner_record = self._history_store.resolve_owner(owner_ctx)
-            stl_rows = self._stl_store.query_statements(
-                owner_id=owner_record.owner_id,
-                limit=limit,
-            )
-            for row in stl_rows:
-                stmt_id = row.get("id", "")
-                if stmt_id in seen_ids:
-                    continue
-                # Convert STL row to MemoryItem for a unified response
-                import json as _json
-                args = row.get("args", [])
-                if isinstance(args, str):
-                    args = _json.loads(args)
-                canonical = f"{row.get('predicate', '')}({', '.join(str(a) for a in args)})"
-                item = MemoryItem(
-                    id=stmt_id,
-                    user_id=user_id,
-                    owner_id=row.get("owner_id"),
-                    content=canonical,
-                    hash=generate_hash(canonical),
-                    created_at=row.get("created_at"),
-                    updated_at=row.get("created_at"),
-                    status=MemoryStatus.ACTIVE,
-                    canonical_text=canonical,
-                )
-                items.append(item)
-                seen_ids.add(stmt_id)
-        except Exception:
-            logger.debug("STL structured search supplement failed", exc_info=True)
 
         return items[:limit]
 
