@@ -1,0 +1,819 @@
+{
+  "stage": "owner_add",
+  "dataset": "tests/eval/cases",
+  "dataset_name": "cases",
+  "toml_path": "mind.toml",
+  "total_cases": 14,
+  "targets": {
+    "canonical_text_accuracy": 0.95,
+    "subject_ref_accuracy": 0.95,
+    "count_accuracy": 0.95,
+    "owner_accuracy": 1.0,
+    "case_pass_rate": 0.95
+  },
+  "metrics": {
+    "canonical_text_accuracy": 0.6666666666666666,
+    "subject_ref_accuracy": 0.6666666666666666,
+    "count_accuracy": 0.7142857142857143,
+    "owner_accuracy": 1.0,
+    "case_pass_rate": 0.6428571428571429
+  },
+  "cases": [
+    {
+      "id": "owner-add-001",
+      "description": "self facts become canonical self memories",
+      "failures": [
+        "missing_active:[self] name=John",
+        "missing_active:[self] age=30"
+      ],
+      "active_memories": [
+        {
+          "id": "8a99a87f-940f-48d4-8fa5-7f2f16eb58fd",
+          "user_id": "eval_known_self_001",
+          "owner_id": "b4bfcc39-368c-4335-ae8b-fd173b04c4b8",
+          "content": "[person:john] name=John",
+          "hash": "bcdc318bbbcd4e4213e6e814b8ec53a3",
+          "metadata": {},
+          "created_at": "2026-04-02T11:33:20.469610+00:00",
+          "updated_at": "2026-04-02T11:33:20.469610+00:00",
+          "confidence": 0.9,
+          "status": "active",
+          "source_context": "User: My name is John and I am 30 years old",
+          "source_session_id": null,
+          "version_of": null,
+          "importance": null,
+          "type": null,
+          "subject_ref": "person:john",
+          "fact_family": "attribute",
+          "relation_type": "person",
+          "field_key": "name",
+          "field_value_json": {
+            "value": "John"
+          },
+          "canonical_text": "[person:john] name=John",
+          "raw_text": "$p2 = name(John, John)",
+          "score": null
+        },
+        {
+          "id": "d358332a-d9b4-44b3-90e4-3b5785e1dbd4",
+          "user_id": "eval_known_self_001",
+          "owner_id": "b4bfcc39-368c-4335-ae8b-fd173b04c4b8",
+          "content": "[person:john] age=30",
+          "hash": "7f12b8a03af4d01902e324d06b975191",
+          "metadata": {},
+          "created_at": "2026-04-02T11:33:20.687570+00:00",
+          "updated_at": "2026-04-02T11:33:20.687570+00:00",
+          "confidence": 0.9,
+          "status": "active",
+          "source_context": "User: My name is John and I am 30 years old",
+          "source_session_id": null,
+          "version_of": null,
+          "importance": null,
+          "type": null,
+          "subject_ref": "person:john",
+          "fact_family": "attribute",
+          "relation_type": "person",
+          "field_key": "age",
+          "field_value_json": {
+            "value": 30
+          },
+          "canonical_text": "[person:john] age=30",
+          "raw_text": "$p3 = age(John, 30)",
+          "score": null
+        }
+      ]
+    },
+    {
+      "id": "owner-add-002",
+      "description": "anonymous owner is reused across one multi-turn submitted chunk",
+      "failures": [],
+      "active_memories": [
+        {
+          "id": "24b36334-619f-4014-8805-7de27cc8fc60",
+          "user_id": "eval_anon_001",
+          "owner_id": "3af411eb-17fc-45f1-ba7b-17daf1464c1a",
+          "content": "[self] location=Hangzhou",
+          "hash": "705654fe90386efab00a35a4e5cd189a",
+          "metadata": {},
+          "created_at": "2026-04-02T11:33:23.264537+00:00",
+          "updated_at": "2026-04-02T11:33:23.264537+00:00",
+          "confidence": 0.9,
+          "status": "active",
+          "source_context": "User: My name is June\nUser: I live in Hangzhou",
+          "source_session_id": null,
+          "version_of": null,
+          "importance": null,
+          "type": null,
+          "subject_ref": "self",
+          "fact_family": "attribute",
+          "relation_type": "self",
+          "field_key": "location",
+          "field_value_json": {
+            "value": "Hangzhou"
+          },
+          "canonical_text": "[self] location=Hangzhou",
+          "raw_text": "$e2 = live_in(self, Hangzhou)",
+          "score": null
+        },
+        {
+          "id": "473c946b-ed40-40ce-a5ab-a29aa28f40c6",
+          "user_id": "eval_anon_001",
+          "owner_id": "3af411eb-17fc-45f1-ba7b-17daf1464c1a",
+          "content": "[self] name=June",
+          "hash": "f7e18fd456a0278864f86f963c462ef9",
+          "metadata": {},
+          "created_at": "2026-04-02T11:33:23.078987+00:00",
+          "updated_at": "2026-04-02T11:33:23.078987+00:00",
+          "confidence": 0.9,
+          "status": "active",
+          "source_context": "User: My name is June\nUser: I live in Hangzhou",
+          "source_session_id": null,
+          "version_of": null,
+          "importance": null,
+          "type": null,
+          "subject_ref": "self",
+          "fact_family": "attribute",
+          "relation_type": "self",
+          "field_key": "name",
+          "field_value_json": {
+            "value": "June"
+          },
+          "canonical_text": "[self] name=June",
+          "raw_text": "$e1 = name(self, June)",
+          "score": null
+        }
+      ]
+    },
+    {
+      "id": "owner-add-003",
+      "description": "named third party creates relation and attribute memories",
+      "failures": [],
+      "active_memories": [
+        {
+          "id": "dbd4c21f-35ec-4172-a645-a51beff167f9",
+          "user_id": "eval_rel_001",
+          "owner_id": "69b5c3ac-213d-429d-a0c3-962ed354d930",
+          "content": "[friend:green] occupation=football player",
+          "hash": "43b15f421903b544f2b5fbf8d9f71fb7",
+          "metadata": {},
+          "created_at": "2026-04-02T11:33:26.530052+00:00",
+          "updated_at": "2026-04-02T11:33:26.530052+00:00",
+          "confidence": 0.9,
+          "status": "active",
+          "source_context": "User: My friend Green is a football player",
+          "source_session_id": null,
+          "version_of": null,
+          "importance": null,
+          "type": null,
+          "subject_ref": "friend:green",
+          "fact_family": "attribute",
+          "relation_type": "friend",
+          "field_key": "occupation",
+          "field_value_json": {
+            "value": "football player"
+          },
+          "canonical_text": "[friend:green] occupation=football player",
+          "raw_text": "$p3 = occupation(Green, football player)",
+          "score": null
+        },
+        {
+          "id": "f93ddb6a-46a4-466f-820b-12ae3e6572b5",
+          "user_id": "eval_rel_001",
+          "owner_id": "69b5c3ac-213d-429d-a0c3-962ed354d930",
+          "content": "[friend:green] relation_to_owner=friend",
+          "hash": "010355ff9981e714290ca98d1fafd108",
+          "metadata": {},
+          "created_at": "2026-04-02T11:33:26.360851+00:00",
+          "updated_at": "2026-04-02T11:33:26.360851+00:00",
+          "confidence": 0.9,
+          "status": "active",
+          "source_context": "User: My friend Green is a football player",
+          "source_session_id": null,
+          "version_of": null,
+          "importance": null,
+          "type": null,
+          "subject_ref": "friend:green",
+          "fact_family": "relation",
+          "relation_type": "friend",
+          "field_key": "relation_to_owner",
+          "field_value_json": {
+            "value": "friend"
+          },
+          "canonical_text": "[friend:green] relation_to_owner=friend",
+          "raw_text": "$p2 = friend(self, Green)",
+          "score": null
+        }
+      ]
+    },
+    {
+      "id": "owner-add-004",
+      "description": "unnamed third party reuses a placeholder subject within one turn",
+      "failures": [
+        "count:0 != 2",
+        "missing_active:relation_to_owner=friend",
+        "missing_active:=gay"
+      ],
+      "active_memories": []
+    },
+    {
+      "id": "owner-add-005",
+      "description": "single-value fields keep only the chunk-final value when one submitted chunk contains a correction",
+      "failures": [
+        "count:2 != 1"
+      ],
+      "active_memories": [
+        {
+          "id": "836373df-ea47-48f7-8bf2-660197582f0a",
+          "user_id": "eval_update_001",
+          "owner_id": "0bc98e5e-42b8-461f-b8e1-5570b3f21990",
+          "content": "[self] name=David",
+          "hash": "10e70ecbf5fd2a746a2e63334669cf65",
+          "metadata": {},
+          "created_at": "2026-04-02T11:33:31.133019+00:00",
+          "updated_at": "2026-04-02T11:33:31.133019+00:00",
+          "confidence": 0.9,
+          "status": "active",
+          "source_context": "User: My name is Dave\nUser: My name is David",
+          "source_session_id": null,
+          "version_of": null,
+          "importance": null,
+          "type": null,
+          "subject_ref": "self",
+          "fact_family": "attribute",
+          "relation_type": "self",
+          "field_key": "name",
+          "field_value_json": {
+            "value": "David"
+          },
+          "canonical_text": "[self] name=David",
+          "raw_text": "$3 = name(self, David)",
+          "score": null
+        },
+        {
+          "id": "aeef9603-060d-460a-8241-2bf6d16a27d0",
+          "user_id": "eval_update_001",
+          "owner_id": "0bc98e5e-42b8-461f-b8e1-5570b3f21990",
+          "content": "[self] attribute:correct_intent=$3",
+          "hash": "c8f8cb9103cd10dca0386beb4f1d0d5f",
+          "metadata": {},
+          "created_at": "2026-04-02T11:33:34.378826+00:00",
+          "updated_at": "2026-04-02T11:33:34.378826+00:00",
+          "confidence": 0.9,
+          "status": "active",
+          "source_context": "User: My name is Dave\nUser: My name is David",
+          "source_session_id": null,
+          "version_of": null,
+          "importance": null,
+          "type": null,
+          "subject_ref": "self",
+          "fact_family": "attribute",
+          "relation_type": "self",
+          "field_key": "attribute:correct_intent",
+          "field_value_json": {
+            "value": "$3"
+          },
+          "canonical_text": "[self] attribute:correct_intent=$3",
+          "raw_text": "$2 = correct_intent(self, $3)",
+          "score": null
+        }
+      ]
+    },
+    {
+      "id": "owner-comprehensive-001",
+      "description": "多轮中文对话：涵盖关系、框架、事件、限定词、纠正、多值属性、不同置信度",
+      "failures": [
+        "count:0 != 7",
+        "missing_active:{'subject_ref': 'brother:凯文', 'field_key': 'relation_to_owner', 'fact_family': 'relation'}",
+        "missing_active:{'subject_ref': 'brother:凯文', 'field_key': 'occupation', 'fact_family': 'attribute'}",
+        "missing_active:梅奥",
+        "missing_active:英语",
+        "missing_active:普通话",
+        "missing_active:结婚",
+        "missing_active:大阪"
+      ],
+      "active_memories": []
+    },
+    {
+      "id": "owner-rel-boss-001",
+      "description": "boss preference case should map to projected preference memory",
+      "failures": [],
+      "active_memories": [
+        {
+          "id": "10e16907-e7e4-4f18-b079-c5d3885fc4fd",
+          "user_id": "owner_rel_boss_001",
+          "owner_id": "826a7522-3e12-4dcc-87c9-ad1dadb55d1c",
+          "content": "[boss:marcus] preference:like=jazz",
+          "hash": "a36eaa53be4c294912fa1ddb10163a18",
+          "metadata": {},
+          "created_at": "2026-04-02T11:33:39.794275+00:00",
+          "updated_at": "2026-04-02T11:33:39.794275+00:00",
+          "confidence": 0.9,
+          "status": "active",
+          "source_context": "User: My boss Marcus likes jazz",
+          "source_session_id": null,
+          "version_of": null,
+          "importance": null,
+          "type": null,
+          "subject_ref": "boss:marcus",
+          "fact_family": "preference",
+          "relation_type": "boss",
+          "field_key": "preference:like",
+          "field_value_json": {
+            "value": "jazz"
+          },
+          "canonical_text": "[boss:marcus] preference:like=jazz",
+          "raw_text": "$2 = like(Marcus, jazz)",
+          "score": null
+        },
+        {
+          "id": "369f1836-6a3f-4936-bf1d-3e31e22bdf89",
+          "user_id": "owner_rel_boss_001",
+          "owner_id": "826a7522-3e12-4dcc-87c9-ad1dadb55d1c",
+          "content": "[boss:marcus] relation_to_owner=boss",
+          "hash": "718eb4260444ebc25a7d4602734a5359",
+          "metadata": {},
+          "created_at": "2026-04-02T11:33:39.586216+00:00",
+          "updated_at": "2026-04-02T11:33:39.586216+00:00",
+          "confidence": 0.9,
+          "status": "active",
+          "source_context": "User: My boss Marcus likes jazz",
+          "source_session_id": null,
+          "version_of": null,
+          "importance": null,
+          "type": null,
+          "subject_ref": "boss:marcus",
+          "fact_family": "relation",
+          "relation_type": "boss",
+          "field_key": "relation_to_owner",
+          "field_value_json": {
+            "value": "boss"
+          },
+          "canonical_text": "[boss:marcus] relation_to_owner=boss",
+          "raw_text": "$1 = boss(self, Marcus)",
+          "score": null
+        }
+      ]
+    },
+    {
+      "id": "owner-rel-father-001",
+      "description": "father location case should keep relation and location memories",
+      "failures": [],
+      "active_memories": [
+        {
+          "id": "094a661f-87d3-4423-9836-0e15b8011b99",
+          "user_id": "owner_rel_father_001",
+          "owner_id": "6e563544-3313-4fa0-b2fc-7ca2f0544048",
+          "content": "[father:owen] relation_to_owner=father",
+          "hash": "f27925d01f44fecd69a12b8daffc0927",
+          "metadata": {},
+          "created_at": "2026-04-02T11:33:42.203923+00:00",
+          "updated_at": "2026-04-02T11:33:42.203923+00:00",
+          "confidence": 0.9,
+          "status": "active",
+          "source_context": "User: My father Owen lives in Dublin",
+          "source_session_id": null,
+          "version_of": null,
+          "importance": null,
+          "type": null,
+          "subject_ref": "father:owen",
+          "fact_family": "relation",
+          "relation_type": "father",
+          "field_key": "relation_to_owner",
+          "field_value_json": {
+            "value": "father"
+          },
+          "canonical_text": "[father:owen] relation_to_owner=father",
+          "raw_text": "$p1 = father(self, Owen)",
+          "score": null
+        },
+        {
+          "id": "b7f6dc29-22ec-47bc-baa0-fc4b7013606e",
+          "user_id": "owner_rel_father_001",
+          "owner_id": "6e563544-3313-4fa0-b2fc-7ca2f0544048",
+          "content": "[father:owen] location=Dublin",
+          "hash": "b2bbbf139b4d6f027fffa45f01532110",
+          "metadata": {},
+          "created_at": "2026-04-02T11:33:42.460534+00:00",
+          "updated_at": "2026-04-02T11:33:42.460534+00:00",
+          "confidence": 0.9,
+          "status": "active",
+          "source_context": "User: My father Owen lives in Dublin",
+          "source_session_id": null,
+          "version_of": null,
+          "importance": null,
+          "type": null,
+          "subject_ref": "father:owen",
+          "fact_family": "attribute",
+          "relation_type": "father",
+          "field_key": "location",
+          "field_value_json": {
+            "value": "Dublin"
+          },
+          "canonical_text": "[father:owen] location=Dublin",
+          "raw_text": "$p2 = live_in(Owen, Dublin)",
+          "score": null
+        }
+      ]
+    },
+    {
+      "id": "owner-rel-inverse-001",
+      "description": "inverse phrasing still keeps a stable friend subject",
+      "failures": [],
+      "active_memories": [
+        {
+          "id": "89fe2732-13ff-43ba-8c50-52f4df7ed29b",
+          "user_id": "owner_rel_inverse_001",
+          "owner_id": "09367c28-9372-492e-b976-80abaa93f430",
+          "content": "[friend:green] preference:like=jazz",
+          "hash": "93c4975def1503df06eda0fd28254425",
+          "metadata": {},
+          "created_at": "2026-04-02T11:33:45.800094+00:00",
+          "updated_at": "2026-04-02T11:33:45.800094+00:00",
+          "confidence": 0.9,
+          "status": "active",
+          "source_context": "User: Green is my friend and he likes jazz",
+          "source_session_id": null,
+          "version_of": null,
+          "importance": null,
+          "type": null,
+          "subject_ref": "friend:green",
+          "fact_family": "preference",
+          "relation_type": "friend",
+          "field_key": "preference:like",
+          "field_value_json": {
+            "value": "jazz"
+          },
+          "canonical_text": "[friend:green] preference:like=jazz",
+          "raw_text": "$e2 = like(Green, jazz)",
+          "score": null
+        },
+        {
+          "id": "a312743e-718a-4bca-be0b-f0418d8d1a4c",
+          "user_id": "owner_rel_inverse_001",
+          "owner_id": "09367c28-9372-492e-b976-80abaa93f430",
+          "content": "[friend:green] relation_to_owner=friend",
+          "hash": "010355ff9981e714290ca98d1fafd108",
+          "metadata": {},
+          "created_at": "2026-04-02T11:33:45.613351+00:00",
+          "updated_at": "2026-04-02T11:33:45.613351+00:00",
+          "confidence": 0.9,
+          "status": "active",
+          "source_context": "User: Green is my friend and he likes jazz",
+          "source_session_id": null,
+          "version_of": null,
+          "importance": null,
+          "type": null,
+          "subject_ref": "friend:green",
+          "fact_family": "relation",
+          "relation_type": "friend",
+          "field_key": "relation_to_owner",
+          "field_value_json": {
+            "value": "friend"
+          },
+          "canonical_text": "[friend:green] relation_to_owner=friend",
+          "raw_text": "$e1 = friend(self, Green)",
+          "score": null
+        }
+      ]
+    },
+    {
+      "id": "owner-rel-mentor-001",
+      "description": "mentor occupation case should keep relation and occupation memories",
+      "failures": [],
+      "active_memories": [
+        {
+          "id": "78425c53-3064-41d1-b0b3-1937597505f8",
+          "user_id": "owner_rel_mentor_001",
+          "owner_id": "ef9489a3-e06c-4cd3-8593-41f279ee5777",
+          "content": "[mentor:priya] occupation=designer",
+          "hash": "8f003a3d32da283a81a1e73168819b58",
+          "metadata": {},
+          "created_at": "2026-04-02T11:33:48.751740+00:00",
+          "updated_at": "2026-04-02T11:33:48.751740+00:00",
+          "confidence": 0.9,
+          "status": "active",
+          "source_context": "User: My mentor Priya is a designer",
+          "source_session_id": null,
+          "version_of": null,
+          "importance": null,
+          "type": null,
+          "subject_ref": "mentor:priya",
+          "fact_family": "attribute",
+          "relation_type": "mentor",
+          "field_key": "occupation",
+          "field_value_json": {
+            "value": "designer"
+          },
+          "canonical_text": "[mentor:priya] occupation=designer",
+          "raw_text": "$e2 = occupation(Priya, designer)",
+          "score": null
+        },
+        {
+          "id": "daa9de6d-fa09-4484-ba85-9078beffb7ba",
+          "user_id": "owner_rel_mentor_001",
+          "owner_id": "ef9489a3-e06c-4cd3-8593-41f279ee5777",
+          "content": "[mentor:priya] relation_to_owner=mentor",
+          "hash": "8ce110f53c51dbdb27f9de246396058a",
+          "metadata": {},
+          "created_at": "2026-04-02T11:33:48.576551+00:00",
+          "updated_at": "2026-04-02T11:33:48.576551+00:00",
+          "confidence": 0.9,
+          "status": "active",
+          "source_context": "User: My mentor Priya is a designer",
+          "source_session_id": null,
+          "version_of": null,
+          "importance": null,
+          "type": null,
+          "subject_ref": "mentor:priya",
+          "fact_family": "relation",
+          "relation_type": "mentor",
+          "field_key": "relation_to_owner",
+          "field_value_json": {
+            "value": "mentor"
+          },
+          "canonical_text": "[mentor:priya] relation_to_owner=mentor",
+          "raw_text": "$e1 = mentor(self, Priya)",
+          "score": null
+        }
+      ]
+    },
+    {
+      "id": "owner-rel-neighbor-001",
+      "description": "neighbor drink case should keep relation and projected drink memory",
+      "failures": [],
+      "active_memories": [
+        {
+          "id": "1ae3c61a-3d9c-432f-af37-e2a51d049dbe",
+          "user_id": "owner_rel_neighbor_001",
+          "owner_id": "04eb84e2-5735-4c3f-8778-03f85ae25163",
+          "content": "[neighbor:alex] relation_to_owner=neighbor",
+          "hash": "e1ce42470a3f9f8b51290858eadabe54",
+          "metadata": {},
+          "created_at": "2026-04-02T11:33:52.742728+00:00",
+          "updated_at": "2026-04-02T11:33:52.742728+00:00",
+          "confidence": 0.9,
+          "status": "active",
+          "source_context": "User: My neighbor Alex drinks green tea",
+          "source_session_id": null,
+          "version_of": null,
+          "importance": null,
+          "type": null,
+          "subject_ref": "neighbor:alex",
+          "fact_family": "relation",
+          "relation_type": "neighbor",
+          "field_key": "relation_to_owner",
+          "field_value_json": {
+            "value": "neighbor"
+          },
+          "canonical_text": "[neighbor:alex] relation_to_owner=neighbor",
+          "raw_text": "$e1 = neighbor(self, Alex)",
+          "score": null
+        },
+        {
+          "id": "beb0b91a-f2fb-48d1-bf09-41a87205398f",
+          "user_id": "owner_rel_neighbor_001",
+          "owner_id": "04eb84e2-5735-4c3f-8778-03f85ae25163",
+          "content": "[neighbor:alex] habit:drink=green tea",
+          "hash": "adb36dbdb436a1f052825af36518a53e",
+          "metadata": {},
+          "created_at": "2026-04-02T11:33:52.928389+00:00",
+          "updated_at": "2026-04-02T11:33:52.928389+00:00",
+          "confidence": 0.9,
+          "status": "active",
+          "source_context": "User: My neighbor Alex drinks green tea",
+          "source_session_id": null,
+          "version_of": null,
+          "importance": null,
+          "type": null,
+          "subject_ref": "neighbor:alex",
+          "fact_family": "habit",
+          "relation_type": "neighbor",
+          "field_key": "habit:drink",
+          "field_value_json": {
+            "value": "green tea"
+          },
+          "canonical_text": "[neighbor:alex] habit:drink=green tea",
+          "raw_text": "$e2 = drink(Alex, green tea)",
+          "score": null
+        }
+      ]
+    },
+    {
+      "id": "owner-rel-owner-002",
+      "description": "coworker drink habit should keep relation and projected habit memory",
+      "failures": [
+        "count:3 != 2",
+        "missing_active:[coworker:dana] habit:drink=oat milk every morning"
+      ],
+      "active_memories": [
+        {
+          "id": "438ec59b-c00a-4c40-9b92-c7acf530613c",
+          "user_id": "owner_rel_owner_002",
+          "owner_id": "fc0d3626-cb6d-4b98-b012-fe22f1aeb28e",
+          "content": "[self] attribute:time=every morning",
+          "hash": "0c5392859971ffcb36c83d67e4979e56",
+          "metadata": {},
+          "created_at": "2026-04-02T11:34:01.259730+00:00",
+          "updated_at": "2026-04-02T11:34:01.259730+00:00",
+          "confidence": 0.9,
+          "status": "active",
+          "source_context": "User: My coworker Dana drinks oat milk every morning",
+          "source_session_id": null,
+          "version_of": null,
+          "importance": null,
+          "type": null,
+          "subject_ref": "self",
+          "fact_family": "attribute",
+          "relation_type": "self",
+          "field_key": "attribute:time",
+          "field_value_json": {
+            "value": "every morning"
+          },
+          "canonical_text": "[self] attribute:time=every morning",
+          "raw_text": "$e3 = time($e2, every morning)",
+          "score": null
+        },
+        {
+          "id": "c7648199-e787-4acb-8059-d5f8671fea20",
+          "user_id": "owner_rel_owner_002",
+          "owner_id": "fc0d3626-cb6d-4b98-b012-fe22f1aeb28e",
+          "content": "[coworker:dana] habit:drink=oat milk",
+          "hash": "4615945513787ae87935338a82689322",
+          "metadata": {},
+          "created_at": "2026-04-02T11:33:57.408446+00:00",
+          "updated_at": "2026-04-02T11:33:57.408446+00:00",
+          "confidence": 0.9,
+          "status": "active",
+          "source_context": "User: My coworker Dana drinks oat milk every morning",
+          "source_session_id": null,
+          "version_of": null,
+          "importance": null,
+          "type": null,
+          "subject_ref": "coworker:dana",
+          "fact_family": "habit",
+          "relation_type": "coworker",
+          "field_key": "habit:drink",
+          "field_value_json": {
+            "value": "oat milk"
+          },
+          "canonical_text": "[coworker:dana] habit:drink=oat milk",
+          "raw_text": "$e2 = drink(Dana, oat milk)",
+          "score": null
+        },
+        {
+          "id": "de24717d-5247-4c9d-84a3-e43e22df09b3",
+          "user_id": "owner_rel_owner_002",
+          "owner_id": "fc0d3626-cb6d-4b98-b012-fe22f1aeb28e",
+          "content": "[coworker:dana] relation_to_owner=coworker",
+          "hash": "58a4545f7ad4531e746bc0a7c398b862",
+          "metadata": {},
+          "created_at": "2026-04-02T11:33:57.227764+00:00",
+          "updated_at": "2026-04-02T11:33:57.227764+00:00",
+          "confidence": 0.9,
+          "status": "active",
+          "source_context": "User: My coworker Dana drinks oat milk every morning",
+          "source_session_id": null,
+          "version_of": null,
+          "importance": null,
+          "type": null,
+          "subject_ref": "coworker:dana",
+          "fact_family": "relation",
+          "relation_type": "coworker",
+          "field_key": "relation_to_owner",
+          "field_value_json": {
+            "value": "coworker"
+          },
+          "canonical_text": "[coworker:dana] relation_to_owner=coworker",
+          "raw_text": "$e1 = coworker(self, Dana)",
+          "score": null
+        }
+      ]
+    },
+    {
+      "id": "owner-rel-split-001",
+      "description": "mother location case should project relation and location separately",
+      "failures": [],
+      "active_memories": [
+        {
+          "id": "0eeadb65-85e2-4748-9dba-46f3eec93bb0",
+          "user_id": "owner_rel_split_001",
+          "owner_id": "cc4f5376-51bb-4691-9462-d1af53d25ec7",
+          "content": "[mother:lisa] relation_to_owner=mother",
+          "hash": "dd440fb8c20c041dac492c31297c9707",
+          "metadata": {},
+          "created_at": "2026-04-02T11:34:03.928598+00:00",
+          "updated_at": "2026-04-02T11:34:03.928598+00:00",
+          "confidence": 0.9,
+          "status": "active",
+          "source_context": "User: My mother Lisa lives in Toronto",
+          "source_session_id": null,
+          "version_of": null,
+          "importance": null,
+          "type": null,
+          "subject_ref": "mother:lisa",
+          "fact_family": "relation",
+          "relation_type": "mother",
+          "field_key": "relation_to_owner",
+          "field_value_json": {
+            "value": "mother"
+          },
+          "canonical_text": "[mother:lisa] relation_to_owner=mother",
+          "raw_text": "$1 = mother(self, Lisa)",
+          "score": null
+        },
+        {
+          "id": "76158229-b897-4927-a91c-079b6689cacd",
+          "user_id": "owner_rel_split_001",
+          "owner_id": "cc4f5376-51bb-4691-9462-d1af53d25ec7",
+          "content": "[mother:lisa] location=Toronto",
+          "hash": "7ab7ce18bc41f1afc1227a7757915a88",
+          "metadata": {},
+          "created_at": "2026-04-02T11:34:04.578326+00:00",
+          "updated_at": "2026-04-02T11:34:04.578326+00:00",
+          "confidence": 0.9,
+          "status": "active",
+          "source_context": "User: My mother Lisa lives in Toronto",
+          "source_session_id": null,
+          "version_of": null,
+          "importance": null,
+          "type": null,
+          "subject_ref": "mother:lisa",
+          "fact_family": "attribute",
+          "relation_type": "mother",
+          "field_key": "location",
+          "field_value_json": {
+            "value": "Toronto"
+          },
+          "canonical_text": "[mother:lisa] location=Toronto",
+          "raw_text": "$2 = live_in(Lisa, Toronto)",
+          "score": null
+        }
+      ]
+    },
+    {
+      "id": "owner-rel-stable-001",
+      "description": "named friend relation should project stable relation and occupation memories",
+      "failures": [],
+      "active_memories": [
+        {
+          "id": "959806bc-0042-4921-98b5-a120079b553f",
+          "user_id": "owner_rel_stable_001",
+          "owner_id": "93f1a79d-1b8a-4705-b6a8-be08a9e5bb55",
+          "content": "[friend:green] occupation=football player",
+          "hash": "43b15f421903b544f2b5fbf8d9f71fb7",
+          "metadata": {},
+          "created_at": "2026-04-02T11:34:07.615729+00:00",
+          "updated_at": "2026-04-02T11:34:07.615729+00:00",
+          "confidence": 0.9,
+          "status": "active",
+          "source_context": "User: My friend Green is a football player",
+          "source_session_id": null,
+          "version_of": null,
+          "importance": null,
+          "type": null,
+          "subject_ref": "friend:green",
+          "fact_family": "attribute",
+          "relation_type": "friend",
+          "field_key": "occupation",
+          "field_value_json": {
+            "value": "football player"
+          },
+          "canonical_text": "[friend:green] occupation=football player",
+          "raw_text": "$e2 = occupation(Green, football player)",
+          "score": null
+        },
+        {
+          "id": "99810d8f-da06-4303-b5e8-94e5d6d3899e",
+          "user_id": "owner_rel_stable_001",
+          "owner_id": "93f1a79d-1b8a-4705-b6a8-be08a9e5bb55",
+          "content": "[friend:green] relation_to_owner=friend",
+          "hash": "010355ff9981e714290ca98d1fafd108",
+          "metadata": {},
+          "created_at": "2026-04-02T11:34:07.123441+00:00",
+          "updated_at": "2026-04-02T11:34:07.123441+00:00",
+          "confidence": 0.9,
+          "status": "active",
+          "source_context": "User: My friend Green is a football player",
+          "source_session_id": null,
+          "version_of": null,
+          "importance": null,
+          "type": null,
+          "subject_ref": "friend:green",
+          "fact_family": "relation",
+          "relation_type": "friend",
+          "field_key": "relation_to_owner",
+          "field_value_json": {
+            "value": "friend"
+          },
+          "canonical_text": "[friend:green] relation_to_owner=friend",
+          "raw_text": "$e1 = friend(self, Green)",
+          "score": null
+        }
+      ]
+    }
+  ],
+  "models": {
+    "default": "leihuo/qwen3.5-flash",
+    "stl_extraction": "leihuo/gpt-5.4-mini"
+  }
+}

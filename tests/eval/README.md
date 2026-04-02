@@ -88,6 +88,23 @@ python tests/eval/runners/eval_cases.py \
   --concurrency 4
 ```
 
+### 6. MVP live baseline 留档
+
+```bash
+python tests/eval/runners/eval_cases.py \
+  --stage owner_add \
+  --toml mind.toml \
+  --pretty \
+  --output tests/eval/reports/mvp_live_owner_add_baseline_YYYY-MM-DD.json
+```
+
+说明：
+
+- `mind.toml` 路径用于记录真实模型下的 point-in-time 基线
+- 这类结果适合作为留档证据和版本对比，不适合作为每次改动都必须稳定通过的 deterministic gate
+- 当前维护中的一份 MVP live baseline 已归档到
+  `.ai/archive/mvp-live-eval-baseline/artifacts/owner_add_live_baseline_2026-04-02.md`
+
 常用参数：
 
 - `--stage`: `owner_add` 或 `stl_extract`

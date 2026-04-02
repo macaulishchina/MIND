@@ -8,6 +8,8 @@
 - 当前已有稳定事实写入 `.ai/specs/`，覆盖 owner-centered memory、STL 语法与评测、runtime logging 等能力
 - 日常回归基线是 `pytest tests/`，更细的阶段级验证和提示词/模型评测位于 `tests/eval/`
 - 在线 STL 抽取默认策略已经独立于全局 LLM 默认值维护，不应假设所有阶段天然共用同一模型
+- MVP 还维护一份 point-in-time 的真实 `owner_add` live baseline，用于版本对比；
+  它是补充证据，不是替代日常回归的默认 gate
 
 ## 工作边界
 

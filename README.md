@@ -182,11 +182,21 @@ python -m pytest tests/test_memory.py -v
 
 # STL-native add 评估
 python tests/eval/runners/eval_cases.py --stage owner_add --toml mindt.toml --pretty
+
+# MVP 真实模型基线（会触发在线调用）
+python tests/eval/runners/eval_cases.py \
+  --stage owner_add \
+  --toml mind.toml \
+  --pretty \
+  --output tests/eval/reports/mvp_live_owner_add_baseline_YYYY-MM-DD.json
 ```
 
 说明：
 - `mindt.toml` 的默认 LLM provider 现在与 `mind.toml` 对齐；手动跑 eval 可能会触发真实模型调用
 - 更详细的评估说明、真实 LLM 运行方式和并发参数见 `tests/eval/README.md`。
+- 当前维护中的 point-in-time MVP live baseline 摘要位于
+  `.ai/archive/mvp-live-eval-baseline/artifacts/owner_add_live_baseline_2026-04-02.md`，
+  用于后续和 v1.5 质量改动做前后对比。
 
 ## MVP 推荐路径
 
@@ -194,6 +204,7 @@ python tests/eval/runners/eval_cases.py --stage owner_add --toml mindt.toml --pr
 - 运行组合：沿用模板中的 `Postgres + pgvector + Postgres history/STL store`
 - 抽取策略：沿用模板中的 STL 阶段覆盖，不要在 MVP 收尾阶段继续改 prompt
 - 基线验证：先跑 `python -m pytest tests/`，再按需跑 `eval_cases.py --stage owner_add`
+- Live 基线：只在需要记录真实模型现状时，使用 `mind.toml` 跑一次 `owner_add` 并把结果留档；它不是日常 CI gate
 
 ## MVP 已知限制
 
