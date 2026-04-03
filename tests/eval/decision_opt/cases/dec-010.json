@@ -1,0 +1,17 @@
+{
+  "id": "dec-010",
+  "description": "A retraction marker should prefer deleting the targeted memory instead of storing a new memory",
+  "new_fact": "[self] attribute:retract=pet_name",
+  "existing_memories": [
+    {
+      "id": "0",
+      "content": "[self] attribute:pet_name=Mochi"
+    }
+  ],
+  "expected_action": "DELETE",
+  "acceptable_actions": ["DELETE", "NONE"],
+  "expected_id": "0",
+  "text_must_be_empty": true,
+  "difficulty": "hard",
+  "cluster": "contradiction_delete"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "dec-009",
+  "description": "UPDATE text should stay in canonical memory format",
+  "new_fact": "[self] attribute:time=every weekday morning",
+  "existing_memories": [
+    {
+      "id": "0",
+      "content": "[self] attribute:time=every morning"
+    }
+  ],
+  "expected_action": "UPDATE",
+  "acceptable_actions": ["UPDATE"],
+  "expected_id": "0",
+  "text_must_contain": [
+    "[self] attribute:time=every weekday morning"
+  ],
+  "difficulty": "medium",
+  "cluster": "text_discipline"
+}

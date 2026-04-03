@@ -20,6 +20,10 @@
 `npm run build`，当 change 影响 REST / web 交互面时，应把它们纳入验证证据。
 对真实模型的 live eval，默认把它视为“按需留档的 point-in-time 证据”，
 而不是每次 change 都必须重复通过的 deterministic gate。
+当 change 影响 `UPDATE_DECISION_SYSTEM_PROMPT` 或 decision-stage 规则时，
+应优先补 `tests/eval/runners/eval_decision_ab.py` 的 direct decision 证据；
+需要自动迭代时，再补 `tests/eval/decision_opt/optimize_decision_prompt.py`
+ 的离线 campaign 证据，而不是只看 `owner_add` 汇总结果。
 
 ## Profile 怎么选
 

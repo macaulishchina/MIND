@@ -1,0 +1,19 @@
+{
+  "id": "dec-007",
+  "description": "A different subject with the same field should ADD, not hijack another id",
+  "new_fact": "[friend:alex] attribute:favorite_music=jazz",
+  "existing_memories": [
+    {
+      "id": "0",
+      "content": "[friend:sam] attribute:favorite_music=rock"
+    }
+  ],
+  "expected_action": "ADD",
+  "acceptable_actions": ["ADD"],
+  "text_must_contain": [
+    "[friend:alex] attribute:favorite_music=jazz"
+  ],
+  "difficulty": "medium",
+  "cluster": "subject_mismatch_add",
+  "protected": true
+}

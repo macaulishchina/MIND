@@ -1,0 +1,19 @@
+{
+  "id": "dec-003",
+  "description": "A distinct canonical fact should ADD with null id",
+  "new_fact": "[self] attribute:pet_name=Mochi",
+  "existing_memories": [
+    {
+      "id": "0",
+      "content": "[self] attribute:favorite_snack=seaweed chips"
+    }
+  ],
+  "expected_action": "ADD",
+  "acceptable_actions": ["ADD"],
+  "text_must_contain": [
+    "[self] attribute:pet_name=Mochi"
+  ],
+  "difficulty": "easy",
+  "cluster": "unrelated_add",
+  "protected": true
+}

@@ -1,0 +1,27 @@
+{
+  "id": "dec-011",
+  "description": "When one exact field match exists among many memories, choose that temp id",
+  "new_fact": "[self] attribute:favorite_drink=oolong tea",
+  "existing_memories": [
+    {
+      "id": "0",
+      "content": "[self] attribute:favorite_snack=seaweed chips"
+    },
+    {
+      "id": "1",
+      "content": "[self] attribute:favorite_drink=green tea"
+    },
+    {
+      "id": "2",
+      "content": "[self] attribute:pet_name=Mochi"
+    }
+  ],
+  "expected_action": "UPDATE",
+  "acceptable_actions": ["UPDATE"],
+  "expected_id": "1",
+  "text_must_contain": [
+    "[self] attribute:favorite_drink=oolong tea"
+  ],
+  "difficulty": "medium",
+  "cluster": "id_integrity"
+}

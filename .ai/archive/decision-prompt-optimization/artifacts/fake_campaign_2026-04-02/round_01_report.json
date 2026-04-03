@@ -1,0 +1,391 @@
+{
+  "stage": "decision_prompt_ab",
+  "prompt_a": {
+    "label": "control-r01",
+    "model": "fake-memory-test",
+    "lines": 71,
+    "characters": 3015
+  },
+  "prompt_b": {
+    "label": "candidate-r01",
+    "model": "fake-memory-test",
+    "lines": 57,
+    "characters": 3088
+  },
+  "judge_model": null,
+  "cases": [
+    {
+      "case_id": "dec-001",
+      "description": "Exact duplicate canonical memory should become NONE",
+      "cluster": "exact_duplicate",
+      "protected": true,
+      "arm_a": {
+        "arm": "A",
+        "prompt_label": "control-r01",
+        "case_id": "dec-001",
+        "description": "Exact duplicate canonical memory should become NONE",
+        "cluster": "exact_duplicate",
+        "protected": true,
+        "model": "fake-memory-test",
+        "provider": "fake",
+        "elapsed_s": 0.013,
+        "parsed": {
+          "action": "NONE",
+          "id": null,
+          "text": "",
+          "reason": "already captured",
+          "raw_response": "{\"action\": \"NONE\", \"id\": null, \"text\": \"\", \"reason\": \"already captured\"}",
+          "parse_success": true,
+          "parse_error": ""
+        },
+        "score": {
+          "parse_success": true,
+          "exact_action_pass": true,
+          "acceptable_action_pass": true,
+          "id_pass": true,
+          "text_constraint_pass": true,
+          "reason_constraint_pass": true,
+          "case_pass": true,
+          "judge_weighted_score": null,
+          "composite_score": 0.9
+        },
+        "judge_details": {}
+      },
+      "arm_b": {
+        "arm": "B",
+        "prompt_label": "candidate-r01",
+        "case_id": "dec-001",
+        "description": "Exact duplicate canonical memory should become NONE",
+        "cluster": "exact_duplicate",
+        "protected": true,
+        "model": "fake-memory-test",
+        "provider": "fake",
+        "elapsed_s": 0.013,
+        "parsed": {
+          "action": "NONE",
+          "id": null,
+          "text": "",
+          "reason": "already captured",
+          "raw_response": "{\"action\": \"NONE\", \"id\": null, \"text\": \"\", \"reason\": \"already captured\"}",
+          "parse_success": true,
+          "parse_error": ""
+        },
+        "score": {
+          "parse_success": true,
+          "exact_action_pass": true,
+          "acceptable_action_pass": true,
+          "id_pass": true,
+          "text_constraint_pass": true,
+          "reason_constraint_pass": true,
+          "case_pass": true,
+          "judge_weighted_score": null,
+          "composite_score": 0.9
+        },
+        "judge_details": {}
+      },
+      "winner": "TIE",
+      "notes": []
+    },
+    {
+      "case_id": "dec-002",
+      "description": "A more specific replacement for the same slot should UPDATE",
+      "cluster": "refinement_update",
+      "protected": true,
+      "arm_a": {
+        "arm": "A",
+        "prompt_label": "control-r01",
+        "case_id": "dec-002",
+        "description": "A more specific replacement for the same slot should UPDATE",
+        "cluster": "refinement_update",
+        "protected": true,
+        "model": "fake-memory-test",
+        "provider": "fake",
+        "elapsed_s": 0.013,
+        "parsed": {
+          "action": "UPDATE",
+          "id": "0",
+          "text": "[self] attribute:favorite_snack=spicy seaweed chips",
+          "reason": "same topic with newer or better detail",
+          "raw_response": "{\"action\": \"UPDATE\", \"id\": \"0\", \"text\": \"[self] attribute:favorite_snack=spicy seaweed chips\", \"reason\": \"same topic with newer or better detail\"}",
+          "parse_success": true,
+          "parse_error": ""
+        },
+        "score": {
+          "parse_success": true,
+          "exact_action_pass": true,
+          "acceptable_action_pass": true,
+          "id_pass": true,
+          "text_constraint_pass": true,
+          "reason_constraint_pass": true,
+          "case_pass": true,
+          "judge_weighted_score": null,
+          "composite_score": 0.9
+        },
+        "judge_details": {}
+      },
+      "arm_b": {
+        "arm": "B",
+        "prompt_label": "candidate-r01",
+        "case_id": "dec-002",
+        "description": "A more specific replacement for the same slot should UPDATE",
+        "cluster": "refinement_update",
+        "protected": true,
+        "model": "fake-memory-test",
+        "provider": "fake",
+        "elapsed_s": 0.014,
+        "parsed": {
+          "action": "UPDATE",
+          "id": "0",
+          "text": "[self] attribute:favorite_snack=spicy seaweed chips",
+          "reason": "same topic with newer or better detail",
+          "raw_response": "{\"action\": \"UPDATE\", \"id\": \"0\", \"text\": \"[self] attribute:favorite_snack=spicy seaweed chips\", \"reason\": \"same topic with newer or better detail\"}",
+          "parse_success": true,
+          "parse_error": ""
+        },
+        "score": {
+          "parse_success": true,
+          "exact_action_pass": true,
+          "acceptable_action_pass": true,
+          "id_pass": true,
+          "text_constraint_pass": true,
+          "reason_constraint_pass": true,
+          "case_pass": true,
+          "judge_weighted_score": null,
+          "composite_score": 0.9
+        },
+        "judge_details": {}
+      },
+      "winner": "TIE",
+      "notes": []
+    },
+    {
+      "case_id": "dec-003",
+      "description": "A distinct canonical fact should ADD with null id",
+      "cluster": "unrelated_add",
+      "protected": true,
+      "arm_a": {
+        "arm": "A",
+        "prompt_label": "control-r01",
+        "case_id": "dec-003",
+        "description": "A distinct canonical fact should ADD with null id",
+        "cluster": "unrelated_add",
+        "protected": true,
+        "model": "fake-memory-test",
+        "provider": "fake",
+        "elapsed_s": 0.013,
+        "parsed": {
+          "action": "UPDATE",
+          "id": "0",
+          "text": "[self] attribute:pet_name=Mochi",
+          "reason": "same topic with newer or better detail",
+          "raw_response": "{\"action\": \"UPDATE\", \"id\": \"0\", \"text\": \"[self] attribute:pet_name=Mochi\", \"reason\": \"same topic with newer or better detail\"}",
+          "parse_success": true,
+          "parse_error": ""
+        },
+        "score": {
+          "parse_success": true,
+          "exact_action_pass": false,
+          "acceptable_action_pass": false,
+          "id_pass": true,
+          "text_constraint_pass": true,
+          "reason_constraint_pass": true,
+          "case_pass": false,
+          "judge_weighted_score": null,
+          "composite_score": 0.45
+        },
+        "judge_details": {}
+      },
+      "arm_b": {
+        "arm": "B",
+        "prompt_label": "candidate-r01",
+        "case_id": "dec-003",
+        "description": "A distinct canonical fact should ADD with null id",
+        "cluster": "unrelated_add",
+        "protected": true,
+        "model": "fake-memory-test",
+        "provider": "fake",
+        "elapsed_s": 0.013,
+        "parsed": {
+          "action": "UPDATE",
+          "id": "0",
+          "text": "[self] attribute:pet_name=Mochi",
+          "reason": "same topic with newer or better detail",
+          "raw_response": "{\"action\": \"UPDATE\", \"id\": \"0\", \"text\": \"[self] attribute:pet_name=Mochi\", \"reason\": \"same topic with newer or better detail\"}",
+          "parse_success": true,
+          "parse_error": ""
+        },
+        "score": {
+          "parse_success": true,
+          "exact_action_pass": false,
+          "acceptable_action_pass": false,
+          "id_pass": true,
+          "text_constraint_pass": true,
+          "reason_constraint_pass": true,
+          "case_pass": false,
+          "judge_weighted_score": null,
+          "composite_score": 0.45
+        },
+        "judge_details": {}
+      },
+      "winner": "TIE",
+      "notes": []
+    },
+    {
+      "case_id": "dec-004",
+      "description": "A corrected scalar attribute should prefer UPDATE and not keep the contradicted value",
+      "cluster": "contradiction_update",
+      "protected": false,
+      "arm_a": {
+        "arm": "A",
+        "prompt_label": "control-r01",
+        "case_id": "dec-004",
+        "description": "A corrected scalar attribute should prefer UPDATE and not keep the contradicted value",
+        "cluster": "contradiction_update",
+        "protected": false,
+        "model": "fake-memory-test",
+        "provider": "fake",
+        "elapsed_s": 0.012,
+        "parsed": {
+          "action": "UPDATE",
+          "id": "0",
+          "text": "[self] attribute:smoker=no",
+          "reason": "same topic with newer or better detail",
+          "raw_response": "{\"action\": \"UPDATE\", \"id\": \"0\", \"text\": \"[self] attribute:smoker=no\", \"reason\": \"same topic with newer or better detail\"}",
+          "parse_success": true,
+          "parse_error": ""
+        },
+        "score": {
+          "parse_success": true,
+          "exact_action_pass": true,
+          "acceptable_action_pass": true,
+          "id_pass": true,
+          "text_constraint_pass": true,
+          "reason_constraint_pass": true,
+          "case_pass": true,
+          "judge_weighted_score": null,
+          "composite_score": 0.9
+        },
+        "judge_details": {}
+      },
+      "arm_b": {
+        "arm": "B",
+        "prompt_label": "candidate-r01",
+        "case_id": "dec-004",
+        "description": "A corrected scalar attribute should prefer UPDATE and not keep the contradicted value",
+        "cluster": "contradiction_update",
+        "protected": false,
+        "model": "fake-memory-test",
+        "provider": "fake",
+        "elapsed_s": 0.012,
+        "parsed": {
+          "action": "UPDATE",
+          "id": "0",
+          "text": "[self] attribute:smoker=no",
+          "reason": "same topic with newer or better detail",
+          "raw_response": "{\"action\": \"UPDATE\", \"id\": \"0\", \"text\": \"[self] attribute:smoker=no\", \"reason\": \"same topic with newer or better detail\"}",
+          "parse_success": true,
+          "parse_error": ""
+        },
+        "score": {
+          "parse_success": true,
+          "exact_action_pass": true,
+          "acceptable_action_pass": true,
+          "id_pass": true,
+          "text_constraint_pass": true,
+          "reason_constraint_pass": true,
+          "case_pass": true,
+          "judge_weighted_score": null,
+          "composite_score": 0.9
+        },
+        "judge_details": {}
+      },
+      "winner": "TIE",
+      "notes": []
+    }
+  ],
+  "summary": {
+    "wins": {
+      "A": 0,
+      "B": 0,
+      "TIE": 4
+    },
+    "arm_a": {
+      "total_cases": 4,
+      "parse_success_rate": 1.0,
+      "exact_action_accuracy": 0.75,
+      "acceptable_action_accuracy": 0.75,
+      "id_accuracy": 1.0,
+      "text_constraint_pass_rate": 1.0,
+      "reason_constraint_pass_rate": 1.0,
+      "case_pass_rate": 0.75,
+      "protected_case_pass_rate": 0.6667,
+      "judge_quality": null,
+      "composite_score": 0.7875,
+      "cluster_breakdown": {
+        "contradiction_update": {
+          "cases": 1,
+          "case_pass_rate": 1.0,
+          "acceptable_action_accuracy": 1.0,
+          "composite_score": 0.9
+        },
+        "exact_duplicate": {
+          "cases": 1,
+          "case_pass_rate": 1.0,
+          "acceptable_action_accuracy": 1.0,
+          "composite_score": 0.9
+        },
+        "refinement_update": {
+          "cases": 1,
+          "case_pass_rate": 1.0,
+          "acceptable_action_accuracy": 1.0,
+          "composite_score": 0.9
+        },
+        "unrelated_add": {
+          "cases": 1,
+          "case_pass_rate": 0.0,
+          "acceptable_action_accuracy": 0.0,
+          "composite_score": 0.45
+        }
+      }
+    },
+    "arm_b": {
+      "total_cases": 4,
+      "parse_success_rate": 1.0,
+      "exact_action_accuracy": 0.75,
+      "acceptable_action_accuracy": 0.75,
+      "id_accuracy": 1.0,
+      "text_constraint_pass_rate": 1.0,
+      "reason_constraint_pass_rate": 1.0,
+      "case_pass_rate": 0.75,
+      "protected_case_pass_rate": 0.6667,
+      "judge_quality": null,
+      "composite_score": 0.7875,
+      "cluster_breakdown": {
+        "contradiction_update": {
+          "cases": 1,
+          "case_pass_rate": 1.0,
+          "acceptable_action_accuracy": 1.0,
+          "composite_score": 0.9
+        },
+        "exact_duplicate": {
+          "cases": 1,
+          "case_pass_rate": 1.0,
+          "acceptable_action_accuracy": 1.0,
+          "composite_score": 0.9
+        },
+        "refinement_update": {
+          "cases": 1,
+          "case_pass_rate": 1.0,
+          "acceptable_action_accuracy": 1.0,
+          "composite_score": 0.9
+        },
+        "unrelated_add": {
+          "cases": 1,
+          "case_pass_rate": 0.0,
+          "acceptable_action_accuracy": 0.0,
+          "composite_score": 0.45
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "id": "dec-001",
+  "description": "Exact duplicate canonical memory should become NONE",
+  "new_fact": "[self] attribute:favorite_snack=seaweed chips",
+  "existing_memories": [
+    {
+      "id": "0",
+      "content": "[self] attribute:favorite_snack=seaweed chips"
+    }
+  ],
+  "expected_action": "NONE",
+  "acceptable_actions": ["NONE"],
+  "text_must_be_empty": true,
+  "difficulty": "easy",
+  "cluster": "exact_duplicate",
+  "protected": true
+}

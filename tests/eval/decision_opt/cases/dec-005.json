@@ -1,0 +1,11 @@
+{
+  "id": "dec-005",
+  "description": "A low-value smalltalk fact should be suppressed with NONE",
+  "new_fact": "[self] attribute:smalltalk=thanks again",
+  "existing_memories": [],
+  "expected_action": "NONE",
+  "acceptable_actions": ["NONE"],
+  "text_must_be_empty": true,
+  "difficulty": "medium",
+  "cluster": "low_value_none"
+}

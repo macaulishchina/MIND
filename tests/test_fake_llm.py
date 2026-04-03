@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from mind.config.schema import LLMConfig
 from mind.llms.fake import FakeLLM
+from mind.prompts import UPDATE_DECISION_USER_TEMPLATE
 from mind.stl.prompt import STL_EXTRACTION_SYSTEM_PROMPT, STL_EXTRACTION_USER_TEMPLATE
 
 
@@ -101,3 +102,25 @@ def test_fake_llm_supports_generic_chat_prompt() -> None:
     )
 
     assert response == "echo: hi"
+
+
+def test_fake_llm_recognizes_decision_prompt_shape_without_exact_system_text() -> None:
+    fake_llm = FakeLLM(LLMConfig(protocols="fake", model="fake-memory-test"))
+
+    response = fake_llm.generate(
+        messages=[
+            {
+                "role": "system",
+                "content": "Decision prompt candidate variant with different wording.",
+            },
+            {
+                "role": "user",
+                "content": UPDATE_DECISION_USER_TEMPLATE.format(
+                    existing_memories="[0] [self] attribute:favorite_snack=seaweed chips",
+                    new_fact="[self] attribute:favorite_snack=seaweed chips",
+                ),
+            },
+        ],
+    )
+
+    assert '"action": "NONE"' in response

@@ -1,0 +1,27 @@
+{
+  "id": "dec-006",
+  "description": "Choose the matching subject and field instead of the value lookalike",
+  "new_fact": "[friend:alex] attribute:favorite_music=jazz",
+  "existing_memories": [
+    {
+      "id": "0",
+      "content": "[friend:alex] attribute:favorite_music=rock"
+    },
+    {
+      "id": "1",
+      "content": "[friend:sam] attribute:favorite_music=jazz"
+    }
+  ],
+  "expected_action": "UPDATE",
+  "acceptable_actions": ["UPDATE"],
+  "expected_id": "0",
+  "text_must_contain": [
+    "[friend:alex] attribute:favorite_music=jazz"
+  ],
+  "text_must_not_contain": [
+    "[friend:sam]"
+  ],
+  "difficulty": "hard",
+  "cluster": "multi_candidate_disambiguation",
+  "protected": true
+}

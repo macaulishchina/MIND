@@ -1,0 +1,20 @@
+{
+  "id": "dec-002",
+  "description": "A more specific replacement for the same slot should UPDATE",
+  "new_fact": "[self] attribute:favorite_snack=spicy seaweed chips",
+  "existing_memories": [
+    {
+      "id": "0",
+      "content": "[self] attribute:favorite_snack=seaweed chips"
+    }
+  ],
+  "expected_action": "UPDATE",
+  "acceptable_actions": ["UPDATE"],
+  "expected_id": "0",
+  "text_must_contain": [
+    "[self] attribute:favorite_snack=spicy seaweed chips"
+  ],
+  "difficulty": "easy",
+  "cluster": "refinement_update",
+  "protected": true
+}

@@ -1,0 +1,94 @@
+{
+  "promote": false,
+  "reasons": [
+    "composite_improves"
+  ],
+  "protected_regressions": [],
+  "metrics": {
+    "control": {
+      "total_cases": 4,
+      "parse_success_rate": 1.0,
+      "exact_action_accuracy": 0.75,
+      "acceptable_action_accuracy": 0.75,
+      "id_accuracy": 1.0,
+      "text_constraint_pass_rate": 1.0,
+      "reason_constraint_pass_rate": 1.0,
+      "case_pass_rate": 0.75,
+      "protected_case_pass_rate": 0.6667,
+      "judge_quality": null,
+      "composite_score": 0.7875,
+      "cluster_breakdown": {
+        "contradiction_update": {
+          "cases": 1,
+          "case_pass_rate": 1.0,
+          "acceptable_action_accuracy": 1.0,
+          "composite_score": 0.9
+        },
+        "exact_duplicate": {
+          "cases": 1,
+          "case_pass_rate": 1.0,
+          "acceptable_action_accuracy": 1.0,
+          "composite_score": 0.9
+        },
+        "refinement_update": {
+          "cases": 1,
+          "case_pass_rate": 1.0,
+          "acceptable_action_accuracy": 1.0,
+          "composite_score": 0.9
+        },
+        "unrelated_add": {
+          "cases": 1,
+          "case_pass_rate": 0.0,
+          "acceptable_action_accuracy": 0.0,
+          "composite_score": 0.45
+        }
+      }
+    },
+    "candidate": {
+      "total_cases": 4,
+      "parse_success_rate": 1.0,
+      "exact_action_accuracy": 0.75,
+      "acceptable_action_accuracy": 0.75,
+      "id_accuracy": 1.0,
+      "text_constraint_pass_rate": 1.0,
+      "reason_constraint_pass_rate": 1.0,
+      "case_pass_rate": 0.75,
+      "protected_case_pass_rate": 0.6667,
+      "judge_quality": null,
+      "composite_score": 0.7875,
+      "cluster_breakdown": {
+        "contradiction_update": {
+          "cases": 1,
+          "case_pass_rate": 1.0,
+          "acceptable_action_accuracy": 1.0,
+          "composite_score": 0.9
+        },
+        "exact_duplicate": {
+          "cases": 1,
+          "case_pass_rate": 1.0,
+          "acceptable_action_accuracy": 1.0,
+          "composite_score": 0.9
+        },
+        "refinement_update": {
+          "cases": 1,
+          "case_pass_rate": 1.0,
+          "acceptable_action_accuracy": 1.0,
+          "composite_score": 0.9
+        },
+        "unrelated_add": {
+          "cases": 1,
+          "case_pass_rate": 0.0,
+          "acceptable_action_accuracy": 0.0,
+          "composite_score": 0.45
+        }
+      }
+    },
+    "checks": {
+      "parse_success_non_regression": true,
+      "acceptable_action_non_regression": true,
+      "id_accuracy_non_regression": true,
+      "composite_improves": false,
+      "protected_cases_hold": true
+    }
+  }
+}

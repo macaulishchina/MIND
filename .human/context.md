@@ -22,6 +22,9 @@
   起 `web` 时会自动带起 API 和数据库，默认读取工作区根目录 `mind.toml`
 - MVP 还维护一份 point-in-time 的真实 `owner_add` live baseline，用于版本对比；
   它是补充证据，不是替代日常回归的默认 gate
+- 仓库现在还维护了 `UPDATE_DECISION_SYSTEM_PROMPT` 的专用评测与离线优化链路；
+  decision prompt 的质量改动应优先通过 direct decision harness 观察，而不是只看
+  `owner_add` 端到端结果
 
 ## 工作边界
 

@@ -1,0 +1,19 @@
+{
+  "id": "dec-012",
+  "description": "A refined recurring activity can be UPDATE or ADD, but if it updates it should keep the richer text",
+  "new_fact": "[self] attribute:weekend_activity=farmer's market on Saturdays",
+  "existing_memories": [
+    {
+      "id": "0",
+      "content": "[self] attribute:weekend_activity=farmer's market"
+    }
+  ],
+  "expected_action": "UPDATE",
+  "acceptable_actions": ["UPDATE", "ADD"],
+  "expected_id": "0",
+  "text_must_contain": [
+    "farmer's market on Saturdays"
+  ],
+  "difficulty": "medium",
+  "cluster": "ambiguous_but_acceptable"
+}

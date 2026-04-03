@@ -1,0 +1,22 @@
+{
+  "id": "dec-004",
+  "description": "A corrected scalar attribute should prefer UPDATE and not keep the contradicted value",
+  "new_fact": "[self] attribute:smoker=no",
+  "existing_memories": [
+    {
+      "id": "0",
+      "content": "[self] attribute:smoker=yes"
+    }
+  ],
+  "expected_action": "UPDATE",
+  "acceptable_actions": ["UPDATE", "DELETE"],
+  "expected_id": "0",
+  "text_must_contain": [
+    "[self] attribute:smoker=no"
+  ],
+  "text_must_not_contain": [
+    "[self] attribute:smoker=yes"
+  ],
+  "difficulty": "medium",
+  "cluster": "contradiction_update"
+}

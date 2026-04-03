@@ -1,0 +1,274 @@
+{
+  "baseline_summary": {
+    "total_cases": 4,
+    "parse_success_rate": 1.0,
+    "exact_action_accuracy": 0.75,
+    "acceptable_action_accuracy": 0.75,
+    "id_accuracy": 1.0,
+    "text_constraint_pass_rate": 1.0,
+    "reason_constraint_pass_rate": 1.0,
+    "case_pass_rate": 0.75,
+    "protected_case_pass_rate": 0.6667,
+    "judge_quality": null,
+    "composite_score": 0.7875,
+    "cluster_breakdown": {
+      "contradiction_update": {
+        "cases": 1,
+        "case_pass_rate": 1.0,
+        "acceptable_action_accuracy": 1.0,
+        "composite_score": 0.9
+      },
+      "exact_duplicate": {
+        "cases": 1,
+        "case_pass_rate": 1.0,
+        "acceptable_action_accuracy": 1.0,
+        "composite_score": 0.9
+      },
+      "refinement_update": {
+        "cases": 1,
+        "case_pass_rate": 1.0,
+        "acceptable_action_accuracy": 1.0,
+        "composite_score": 0.9
+      },
+      "unrelated_add": {
+        "cases": 1,
+        "case_pass_rate": 0.0,
+        "acceptable_action_accuracy": 0.0,
+        "composite_score": 0.45
+      }
+    }
+  },
+  "final_summary": {
+    "total_cases": 4,
+    "parse_success_rate": 1.0,
+    "exact_action_accuracy": 0.75,
+    "acceptable_action_accuracy": 0.75,
+    "id_accuracy": 1.0,
+    "text_constraint_pass_rate": 1.0,
+    "reason_constraint_pass_rate": 1.0,
+    "case_pass_rate": 0.75,
+    "protected_case_pass_rate": 0.6667,
+    "judge_quality": null,
+    "composite_score": 0.7875,
+    "cluster_breakdown": {
+      "contradiction_update": {
+        "cases": 1,
+        "case_pass_rate": 1.0,
+        "acceptable_action_accuracy": 1.0,
+        "composite_score": 0.9
+      },
+      "exact_duplicate": {
+        "cases": 1,
+        "case_pass_rate": 1.0,
+        "acceptable_action_accuracy": 1.0,
+        "composite_score": 0.9
+      },
+      "refinement_update": {
+        "cases": 1,
+        "case_pass_rate": 1.0,
+        "acceptable_action_accuracy": 1.0,
+        "composite_score": 0.9
+      },
+      "unrelated_add": {
+        "cases": 1,
+        "case_pass_rate": 0.0,
+        "acceptable_action_accuracy": 0.0,
+        "composite_score": 0.45
+      }
+    }
+  },
+  "final_prompt": "You decide how one NEW canonical memory fact relates to a short list of\nEXISTING canonical memories.\n\nInputs:\n1. EXISTING memories, each shown as [temporary_id] canonical_text\n2. NEW fact, already rendered as one canonical_text string\n\nChoose exactly one action:\n- ADD: The new fact is a distinct memory that should be stored separately.\n- UPDATE: One existing memory is the same memory slot, and the new fact is the\n  better replacement.\n- DELETE: One existing memory should be removed with no replacement text kept.\n- NONE: The new fact is already covered, already implied by a stricter\n  existing memory, or not worth storing.\n\nDecision rules:\n- Compare subject and field first. The best match usually shares the same\n  [subject] prefix and the same field key before '='.\n- Choose NONE when an existing memory already says the same thing or a more\n  complete version of the same thing.\n- Choose UPDATE when exactly one existing memory clearly represents the same\n  subject and field, and the new fact is newer, more specific, corrected, or\n  otherwise the better replacement.\n- Choose ADD when the new fact is about a different subject, a different field,\n  or a separate fact that should coexist.\n- Choose DELETE only for a clear contradiction where no replacement text\n  should remain. If the new fact provides the replacement value, prefer UPDATE\n  instead of DELETE.\n- If multiple memories look similar, choose the single best temporary id. Do\n  not reference an id from a different subject just because the value wording\n  is similar.\n\nID rules:\n- Use only the provided temporary ids exactly as shown.\n- For ADD and NONE, set \"id\" to null.\n- For UPDATE and DELETE, set \"id\" to one provided temporary id.\n\nText rules:\n- For ADD, \"text\" must be the one canonical memory string to store.\n- For UPDATE, \"text\" must be the one canonical memory string that should\n  replace the target memory.\n- Preserve canonical format: \"[subject] field=value\".\n- Preserve the correct subject prefix from the new fact unless one listed\n  memory proves that the replacement must stay on another subject.\n- Do not output multiple memories, bullet lists, markdown, or explanation text\n  inside \"text\".\n- For DELETE and NONE, set \"text\" to \"\".\n\nTie-breakers:\n- Same subject + same field beats same subject only.\n- Same subject only beats similar wording with a different subject.\n- Exact duplicate or strictly subsumed fact -> NONE.\n- One clear replacement memory slot -> UPDATE.\n- Uncertain and distinct -> ADD.\n\nRespond with JSON only:\n{\n  \"action\": \"ADD\" | \"UPDATE\" | \"DELETE\" | \"NONE\",\n  \"id\": null | \"temporary_id\",\n  \"text\": \"canonical memory text for ADD/UPDATE, otherwise empty string\",\n  \"reason\": \"brief explanation of your decision\"\n}\n\nCanonical example:\nExisting memories:\n[0] [self] attribute:favorite_season=spring\n\nNew fact: [self] attribute:favorite_season=late spring\n\nResponse:\n{\"action\":\"UPDATE\",\"id\":\"0\",\"text\":\"[self] attribute:favorite_season=late spring\",\"reason\":\"same subject and field, newer replacement\"}\n",
+  "rounds": [
+    {
+      "round": 1,
+      "focus_category": "action_selection",
+      "candidate": {
+        "prompt_text": "You decide how one NEW canonical memory fact relates to a short list of EXISTING canonical memories.\n\nInputs:\n1. EXISTING memories, each shown as [temporary_id] canonical_text\n2. NEW fact, already rendered as one canonical_text string\n\nChoose exactly one action:\n- ADD: The new fact is a distinct memory that should be stored separately.\n- UPDATE: One existing memory is the same memory slot, and the new fact is the better replacement.\n- DELETE: One existing memory should be removed with no replacement text kept.\n- NONE: The new fact is already covered, already implied by a stricter existing memory, or not worth storing.\n\nDecision rules:\n- Compare subject and field first. The best match usually shares the same [subject] prefix and the same field key before '='.\n- Choose NONE when an existing memory already says the same thing or a more complete version of the same thing.\n- Choose UPDATE when exactly one existing memory clearly represents the same subject and field, and the new fact is newer, more specific, corrected, or otherwise the better replacement.\n- Choose ADD when the new fact is about a different subject, a different field, or a separate fact that should coexist.\n- Choose DELETE only for a clear contradiction where no replacement text should remain. If the new fact provides the replacement value, prefer UPDATE instead of DELETE.\n- If multiple memories look similar, choose the single best temporary id. Do not reference an id from a different subject just because the value wording is similar.\n\nID rules:\n- Use only the provided temporary ids exactly as shown.\n- For ADD and NONE, set \"id\" to null.\n- For UPDATE and DELETE, set \"id\" to one provided temporary id.\n\nText rules:\n- For ADD, \"text\" must be the one canonical memory string to store.\n- For UPDATE, \"text\" must be the one canonical memory string that should replace the target memory.\n- Preserve canonical format: \"[subject] field=value\".\n- Preserve the correct subject prefix from the new fact unless one listed memory proves that the replacement must stay on another subject.\n- Do not output multiple memories, bullet lists, markdown, or explanation text inside \"text\".\n- For DELETE and NONE, set \"text\" to \"\".\n\nTie-breakers:\n- Same subject + same field beats same subject only.\n- Same subject only beats similar wording with a different subject.\n- Exact duplicate or strictly subsumed fact -> NONE.\n- One clear replacement memory slot -> UPDATE.\n- Uncertain and distinct -> ADD.\n- Focus this round: tighten the boundary between NONE, UPDATE, and ADD by comparing subject and field before wording.\n\nRespond with JSON only:\n{\n  \"action\": \"ADD\" | \"UPDATE\" | \"DELETE\" | \"NONE\",\n  \"id\": null | \"temporary_id\",\n  \"text\": \"canonical memory text for ADD/UPDATE, otherwise empty string\",\n  \"reason\": \"brief explanation\"\n}\n\nCanonical example:\nExisting memories:\n[0] [self] attribute:favorite_season=spring\n\nNew fact: [self] attribute:favorite_season=late spring\n\nResponse:\n{\"action\":\"UPDATE\",\"id\":\"0\",\"text\":\"[self] attribute:favorite_season=late spring\",\"reason\":\"same subject and field, newer replacement\"}\n",
+        "change_category": "action_selection",
+        "rationale": "heuristic round 1 candidate emphasizing action_selection",
+        "source": "heuristic",
+        "raw_response": "",
+        "parse_error": ""
+      },
+      "gate": {
+        "promote": false,
+        "reasons": [
+          "composite_improves"
+        ],
+        "protected_regressions": [],
+        "metrics": {
+          "control": {
+            "total_cases": 4,
+            "parse_success_rate": 1.0,
+            "exact_action_accuracy": 0.75,
+            "acceptable_action_accuracy": 0.75,
+            "id_accuracy": 1.0,
+            "text_constraint_pass_rate": 1.0,
+            "reason_constraint_pass_rate": 1.0,
+            "case_pass_rate": 0.75,
+            "protected_case_pass_rate": 0.6667,
+            "judge_quality": null,
+            "composite_score": 0.7875,
+            "cluster_breakdown": {
+              "contradiction_update": {
+                "cases": 1,
+                "case_pass_rate": 1.0,
+                "acceptable_action_accuracy": 1.0,
+                "composite_score": 0.9
+              },
+              "exact_duplicate": {
+                "cases": 1,
+                "case_pass_rate": 1.0,
+                "acceptable_action_accuracy": 1.0,
+                "composite_score": 0.9
+              },
+              "refinement_update": {
+                "cases": 1,
+                "case_pass_rate": 1.0,
+                "acceptable_action_accuracy": 1.0,
+                "composite_score": 0.9
+              },
+              "unrelated_add": {
+                "cases": 1,
+                "case_pass_rate": 0.0,
+                "acceptable_action_accuracy": 0.0,
+                "composite_score": 0.45
+              }
+            }
+          },
+          "candidate": {
+            "total_cases": 4,
+            "parse_success_rate": 1.0,
+            "exact_action_accuracy": 0.75,
+            "acceptable_action_accuracy": 0.75,
+            "id_accuracy": 1.0,
+            "text_constraint_pass_rate": 1.0,
+            "reason_constraint_pass_rate": 1.0,
+            "case_pass_rate": 0.75,
+            "protected_case_pass_rate": 0.6667,
+            "judge_quality": null,
+            "composite_score": 0.7875,
+            "cluster_breakdown": {
+              "contradiction_update": {
+                "cases": 1,
+                "case_pass_rate": 1.0,
+                "acceptable_action_accuracy": 1.0,
+                "composite_score": 0.9
+              },
+              "exact_duplicate": {
+                "cases": 1,
+                "case_pass_rate": 1.0,
+                "acceptable_action_accuracy": 1.0,
+                "composite_score": 0.9
+              },
+              "refinement_update": {
+                "cases": 1,
+                "case_pass_rate": 1.0,
+                "acceptable_action_accuracy": 1.0,
+                "composite_score": 0.9
+              },
+              "unrelated_add": {
+                "cases": 1,
+                "case_pass_rate": 0.0,
+                "acceptable_action_accuracy": 0.0,
+                "composite_score": 0.45
+              }
+            }
+          },
+          "checks": {
+            "parse_success_non_regression": true,
+            "acceptable_action_non_regression": true,
+            "id_accuracy_non_regression": true,
+            "composite_improves": false,
+            "protected_cases_hold": true
+          }
+        }
+      },
+      "summary": {
+        "wins": {
+          "A": 0,
+          "B": 0,
+          "TIE": 4
+        },
+        "arm_a": {
+          "total_cases": 4,
+          "parse_success_rate": 1.0,
+          "exact_action_accuracy": 0.75,
+          "acceptable_action_accuracy": 0.75,
+          "id_accuracy": 1.0,
+          "text_constraint_pass_rate": 1.0,
+          "reason_constraint_pass_rate": 1.0,
+          "case_pass_rate": 0.75,
+          "protected_case_pass_rate": 0.6667,
+          "judge_quality": null,
+          "composite_score": 0.7875,
+          "cluster_breakdown": {
+            "contradiction_update": {
+              "cases": 1,
+              "case_pass_rate": 1.0,
+              "acceptable_action_accuracy": 1.0,
+              "composite_score": 0.9
+            },
+            "exact_duplicate": {
+              "cases": 1,
+              "case_pass_rate": 1.0,
+              "acceptable_action_accuracy": 1.0,
+              "composite_score": 0.9
+            },
+            "refinement_update": {
+              "cases": 1,
+              "case_pass_rate": 1.0,
+              "acceptable_action_accuracy": 1.0,
+              "composite_score": 0.9
+            },
+            "unrelated_add": {
+              "cases": 1,
+              "case_pass_rate": 0.0,
+              "acceptable_action_accuracy": 0.0,
+              "composite_score": 0.45
+            }
+          }
+        },
+        "arm_b": {
+          "total_cases": 4,
+          "parse_success_rate": 1.0,
+          "exact_action_accuracy": 0.75,
+          "acceptable_action_accuracy": 0.75,
+          "id_accuracy": 1.0,
+          "text_constraint_pass_rate": 1.0,
+          "reason_constraint_pass_rate": 1.0,
+          "case_pass_rate": 0.75,
+          "protected_case_pass_rate": 0.6667,
+          "judge_quality": null,
+          "composite_score": 0.7875,
+          "cluster_breakdown": {
+            "contradiction_update": {
+              "cases": 1,
+              "case_pass_rate": 1.0,
+              "acceptable_action_accuracy": 1.0,
+              "composite_score": 0.9
+            },
+            "exact_duplicate": {
+              "cases": 1,
+              "case_pass_rate": 1.0,
+              "acceptable_action_accuracy": 1.0,
+              "composite_score": 0.9
+            },
+            "refinement_update": {
+              "cases": 1,
+              "case_pass_rate": 1.0,
+              "acceptable_action_accuracy": 1.0,
+              "composite_score": 0.9
+            },
+            "unrelated_add": {
+              "cases": 1,
+              "case_pass_rate": 0.0,
+              "acceptable_action_accuracy": 0.0,
+              "composite_score": 0.45
+            }
+          }
+        }
+      }
+    }
+  ]
+}

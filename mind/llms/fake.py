@@ -38,7 +38,14 @@ class FakeLLM(BaseLLM):
             m.get("content", "") for m in messages if m.get("role") == "user"
         )
 
-        if UPDATE_DECISION_SYSTEM_PROMPT in system_text:
+        if (
+            UPDATE_DECISION_SYSTEM_PROMPT in system_text
+            or (
+                "Existing memories:" in user_text
+                and "New fact:" in user_text
+                and "Decide what action to take." in user_text
+            )
+        ):
             return self._decision_response(user_text)
         if STL_EXTRACTION_SYSTEM_PROMPT in system_text:
             return self._extract_stl_response(user_text)
@@ -83,8 +90,8 @@ class FakeLLM(BaseLLM):
                 return json.dumps(
                     {
                         "action": "NONE",
-                        "id": temp_id,
-                        "text": existing_text,
+                        "id": None,
+                        "text": "",
                         "reason": "already captured",
                     }
                 )

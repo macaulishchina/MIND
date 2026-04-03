@@ -1,0 +1,21 @@
+{
+  "id": "dec-008",
+  "description": "A duplicate in a larger list should still choose NONE",
+  "new_fact": "[mentor:priya] attribute:project=atlas",
+  "existing_memories": [
+    {
+      "id": "0",
+      "content": "[mentor:priya] attribute:project=atlas"
+    },
+    {
+      "id": "1",
+      "content": "[mentor:priya] attribute:language=Hindi"
+    }
+  ],
+  "expected_action": "NONE",
+  "acceptable_actions": ["NONE"],
+  "text_must_be_empty": true,
+  "difficulty": "easy",
+  "cluster": "exact_duplicate",
+  "protected": true
+}
